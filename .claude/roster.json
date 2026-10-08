@@ -1,0 +1,13 @@
+{
+  "people": { "gir": "Girish", "hem": "Hemang", "har": "Harshit" },
+  "lanes": {
+    "fe":       { "holder": "har", "write": ["frontend/**", "amplify.yml"] },
+    "data":     { "holder": "gir", "write": ["data/**", "backend/firms/**"] },
+    "agent":    { "holder": "hem", "write": ["backend/agent/**"] },
+    "infra":    { "holder": "gir", "write": ["infra/**"] },
+    "contract": { "holder": "*",   "write": ["contracts/**"] },
+    "lead":     { "holder": "gir", "write": ["AGENTS.md", "CLAUDE.md", ".claude/**", ".github/**", ".gitattributes",
+                                             ".gitignore", ".worktreeinclude", "docs/features.json", "scripts/**"] }
+  },
+  "always": ["docs/decisions/**"]
+}

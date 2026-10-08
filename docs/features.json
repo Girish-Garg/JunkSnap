@@ -1,0 +1,16 @@
+{
+  "_note": "Never-cut checklist. Only the integration lead edits this file, and only flips `passes` after an end-to-end check on the deployed URL. `issue` is filled once the GitHub issue exists.",
+  "features": [
+    { "id": "pin",          "issue": null, "lane": "fe",    "demo_step": "0:00-0:15", "passes": false, "what": "Map opens on Jodhpur; dropping a pin on a seed site opens its panel" },
+    { "id": "timeline",     "issue": null, "lane": "data",  "demo_step": "0:15-0:45", "passes": false, "what": "Dated Sentinel-2 frames for each seed site, one clear frame per month Oct-May, 2019-2026" },
+    { "id": "timeline-ui",  "issue": null, "lane": "fe",    "demo_step": "0:15-0:45", "passes": false, "what": "Timeline slider and before/after swipe in the site panel" },
+    { "id": "fires",        "issue": null, "lane": "data",  "demo_step": "0:45-1:00", "passes": false, "what": "FIRMS thermal anomalies near each seed site, with source-type labels" },
+    { "id": "corpus",       "issue": null, "lane": "agent", "demo_step": "1:00-1:35", "passes": false, "what": "Hashed e-Gazette S.O. 388(E), rules JSON, Knowledge Base on S3 Vectors returning relevant clauses" },
+    { "id": "draft",        "issue": null, "lane": "agent", "demo_step": "1:00-1:35", "passes": false, "what": "Cited Hindi complaint draft addressed to JMC, RSPCB Jodhpur and the Collector" },
+    { "id": "draft-ui",     "issue": null, "lane": "fe",    "demo_step": "1:00-1:35", "passes": false, "what": "Draft panel with a citation card beside each cited sentence; print to PDF" },
+    { "id": "verifier",     "issue": null, "lane": "agent", "demo_step": "1:35-1:50", "passes": false, "what": "Every quoted clause found word for word in the hashed gazette, shown on screen" },
+    { "id": "photo-hash",   "issue": null, "lane": "agent", "demo_step": "1:35-1:50", "passes": false, "what": "Uploaded photo hashed with SHA-256 at upload; hash shown in the evidence pack" },
+    { "id": "deployed",     "issue": null, "lane": "infra", "demo_step": "2:05-2:35", "passes": false, "what": "Never-cut path works on the deployed Amplify URL for three seed sites" },
+    { "id": "demo-mode",    "issue": null, "lane": "fe",    "demo_step": "all",       "passes": false, "what": "?demo=1 replays real recorded outputs if a live call fails during recording" }
+  ]
+}

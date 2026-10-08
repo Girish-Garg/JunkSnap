@@ -1,0 +1,43 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# AWS / infra
+.aws-sam/
+cdk.out/
+.amplify/
+amplify/#current-cloud-backend/
+
+# Data (large rasters and embeddings stay in S3)
+data/raw/
+*.tif
+*.parquet
+
+# Agents: per-person and per-worktree files stay local
+.claude/worktrees/
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Duplicate copies of docs/ made when the session moved here
+reports/
+research_notes/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

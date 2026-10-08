@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Validate fixtures against schemas
+        run: uv run scripts/validate_contracts.py
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lint, typecheck, test, build
+        shell: bash
+        run: |
+          if [ ! -f frontend/package.json ]; then
+            echo "No frontend/package.json yet, skipping"
+            exit 0
+          fi
+          cd frontend
+          npm ci
+          npm run lint --if-present
+          if [ -f tsconfig.json ]; then npx tsc --noEmit; fi
+          npm test --if-present -- --run
+          npm run build
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Lint and test each Python lane
+        shell: bash
+        run: |
+          found=0
+          for d in data backend/agent backend/firms; do
+            if [ -f "$d/pyproject.toml" ]; then
+              found=1
+              echo "::group::$d"
+              (cd "$d" && uv sync --locked && uv run ruff check . && uv run pytest -q)
+              echo "::endgroup::"
+            fi
+          done
+          if [ "$found" = 0 ]; then echo "No Python lanes with pyproject.toml yet, skipping"; fi
