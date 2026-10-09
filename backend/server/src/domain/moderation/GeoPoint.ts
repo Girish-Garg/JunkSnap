@@ -1,8 +1,6 @@
-const EARTH_RADIUS_M = 6_371_000;
+import { radians } from "./utils.js";
 
-function radians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
+const EARTH_RADIUS_M = 6_371_000;
 
 export class GeoPoint {
   readonly lat: number;

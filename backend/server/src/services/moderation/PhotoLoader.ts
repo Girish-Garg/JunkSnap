@@ -24,7 +24,7 @@ export class PhotoLoader {
   }
 
   async load(submission: PhotoSubmission): Promise<PhotoLoad> {
-    const original = await this.#store.readOriginal(submission.photoId.originalKey(), MAX_UPLOAD_BYTES);
+    const original = await this.#store.readOriginal(submission.photoId.privateOriginalKey(), MAX_UPLOAD_BYTES);
     if (original === null) {
       return { invalid: "over_8_mb" };
     }

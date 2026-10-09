@@ -1,6 +1,7 @@
 import { type DynamoDBDocumentClient, QueryCommand, type QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 import ngeohash from "ngeohash";
 import { z } from "zod";
+import { InternalDataError } from "../../domain/errors.js";
 import { GeoPoint } from "../../domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../../domain/moderation/PerceptualHash.js";
 import type { HashIndex, IndexedPhoto } from "../../ports/moderation/HashIndex.js";
@@ -17,7 +18,6 @@ const GEOHASH_PRECISION = 4;
 const METRES_PER_DEGREE = 111_320;
 
 const SiteItem = z.object({ site_id: z.string(), lat: z.number(), lon: z.number() });
-// A report still being processed has no moderation_result yet, so it fails this shape and is left out.
 const ReportItem = z.object({
   report_id: z.string(),
   gps: z.object({ lat: z.number(), lon: z.number() }),
@@ -47,7 +47,7 @@ export class DynamoHashIndex implements HashIndex {
     const pages = await Promise.all(cells.map((cell) => this.#queryAll(this.#siteQuery(cell))));
     return pages
       .flat()
-      .flatMap((item) => SiteItem.safeParse(item).data ?? [])
+      .map((item) => this.#parse(SiteItem, item, "site"))
       .filter((site) => new GeoPoint(site.lat, site.lon).distanceTo(point) <= radiusM)
       .map((site) => site.site_id);
   }
@@ -60,10 +60,10 @@ export class DynamoHashIndex implements HashIndex {
       ExpressionAttributeValues: { ":site": siteId },
       ProjectionExpression: "report_id, gps, moderation_result.phash",
     });
-    return items.flatMap((item) => {
-      const report = ReportItem.safeParse(item).data;
-      return report === undefined ? [] : [this.#toPhoto(report)];
-    });
+    // A report still being processed has no moderation_result yet.
+    return items
+      .filter((item) => item.moderation_result !== undefined)
+      .map((item) => this.#toPhoto(this.#parse(ReportItem, item, "report")));
   }
 
   #siteQuery(cell: string): QueryCommandInput {
@@ -74,6 +74,14 @@ export class DynamoHashIndex implements HashIndex {
       ExpressionAttributeValues: { ":cell": cell },
       ProjectionExpression: "site_id, lat, lon",
     };
+  }
+
+  #parse<T>(shape: z.ZodType<T>, item: Record<string, unknown>, kind: string): T {
+    const parsed = shape.safeParse(item);
+    if (!parsed.success) {
+      throw new InternalDataError(`unreadable ${kind} row in the duplicate index: ${z.prettifyError(parsed.error)}`);
+    }
+    return parsed.data;
   }
 
   #toPhoto(report: z.infer<typeof ReportItem>): IndexedPhoto {

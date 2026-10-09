@@ -37,7 +37,6 @@ export class PerceptualHash {
     return this.#bits.toString(16).padStart(16, "0");
   }
 
-  // Hamming distance: the number of differing bits.
   distanceTo(other: PerceptualHash): number {
     let diff = this.#bits ^ other.#bits;
     let count = 0;

@@ -53,6 +53,6 @@ export class ModerationRecord {
 
   #blurFields(): Pick<ModerationResult, "blurred_key" | "blur"> {
     const { blur, photoId } = this.#parts;
-    return blur === null ? { blurred_key: null, blur: null } : { blurred_key: photoId.blurredKey(), blur: blur.toContract() };
+    return blur === null ? { blurred_key: null, blur: null } : { blurred_key: photoId.publicBlurredKey(), blur: blur.toContract() };
   }
 }

@@ -28,7 +28,7 @@ export class PrivacyBlur {
     const { faces, plates, blurrer, store } = this.#ports;
     const [foundFaces, foundPlates] = await Promise.all([faces.find(photo.detectorCopy), plates.find(photo.detectorCopy)]);
     const boxes = [...foundFaces.boxes, ...foundPlates.boxes].map((box) => box.grow(GROWTH));
-    await store.writePublic(photoId.blurredKey(), await blurrer.obscure(photo.original, boxes));
+    await store.writePublic(photoId.publicBlurredKey(), await blurrer.obscure(photo.original, boxes));
     return new BlurRecord(foundFaces, foundPlates);
   }
 }

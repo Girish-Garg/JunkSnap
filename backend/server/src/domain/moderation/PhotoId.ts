@@ -34,13 +34,11 @@ export class PhotoId {
     return `${KINDS[this.kind].prefix}_${this.#suffix}`;
   }
 
-  // Key in the private originals bucket.
-  originalKey(): string {
+  privateOriginalKey(): string {
     return `${KINDS[this.kind].folder}/${UPLOAD_PREFIX}${this.#suffix}.jpg`;
   }
 
-  // Key in the public bucket.
-  blurredKey(): string {
+  publicBlurredKey(): string {
     return `media/${KINDS[this.kind].folder}/${this.value}.jpg`;
   }
 }

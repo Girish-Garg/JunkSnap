@@ -8,6 +8,10 @@ export function median(values: readonly number[]): number {
   return sorted.length % 2 === 1 ? at(sorted, middle) : (at(sorted, middle - 1) + at(sorted, middle)) / 2;
 }
 
+export function radians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
 export function unique(values: readonly string[]): string[] {
   return [...new Set(values)];
 }

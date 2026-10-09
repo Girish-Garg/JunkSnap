@@ -3,15 +3,18 @@ import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import { S3Client } from "@aws-sdk/client-s3";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
+import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { DynamoHashIndex } from "../../src/adapters/moderation/DynamoHashIndex.js";
 import { RekognitionFaceFinder } from "../../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../src/adapters/moderation/RekognitionPlateFinder.js";
 import { S3ImageStore } from "../../src/adapters/moderation/S3ImageStore.js";
-import { ConfigError, ExternalServiceError } from "../../src/domain/errors.js";
+import { ConfigError, ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import { ModerationServiceFactory } from "../../src/handlers/moderation/ModerationServiceFactory.js";
 import { ModerationService } from "../../src/services/moderation/ModerationService.js";
+import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { ModerationSettings } from "../../src/settings/ModerationSettings.js";
+import { LogSink } from "../LogSink.js";
 import { FakeDeviceRegistry, JODHPUR } from "./fakes.js";
 
 interface SentCommand {
@@ -129,6 +132,12 @@ describe("S3ImageStore", () => {
     expect(sent[0]?.input).toEqual({ Bucket: "originals-bucket", Key: "reports/upl_x.jpg", Range: "bytes=0-10" });
   });
 
+  it("reads an empty object, which S3 answers with InvalidRange, as no bytes", async () => {
+    const client = new S3Client({ region: "ap-south-1" });
+    stub(client, () => Object.assign(new Error("The requested range is not satisfiable"), { name: "InvalidRange" }));
+    expect(await new S3ImageStore(client, buckets).readOriginal("reports/upl_x.jpg", 10)).toEqual(new Uint8Array());
+  });
+
   it("writes the blurred copy as a JPEG to the public bucket", async () => {
     const client = new S3Client({ region: "ap-south-1" });
     const sent = stub(client, () => ({}));
@@ -156,6 +165,19 @@ describe("DynamoHashIndex", () => {
   });
 });
 
+describe("DynamoHashIndex on bad rows", () => {
+  it("refuses a moderated report row without a readable pHash", async () => {
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: "ap-south-1" }));
+    stub(client, (command) =>
+      command.input.IndexName === "by-geohash"
+        ? { Items: [{ site_id: "site_near", lat: JODHPUR.lat, lon: JODHPUR.lon }] }
+        : { Items: [{ report_id: "rpt_a", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon }, moderation_result: { phash: "zz" } }] },
+    );
+    const index = new DynamoHashIndex(client, { reports: "reports-table", sites: "sites-table" });
+    await expect(index.near(JODHPUR, 100)).rejects.toThrow(InternalDataError);
+  });
+});
+
 describe("ModerationSettings and ModerationServiceFactory", () => {
   const env = {
     ORIGINALS_BUCKET: "junksnap-dev-originals-1",
@@ -171,8 +193,11 @@ describe("ModerationSettings and ModerationServiceFactory", () => {
     expect(ModerationSettings.fromEnv({ ...env, ASSETS_DIR: "/assets" }, "/x").assetsDir.replaceAll("\\", "/")).toMatch(/\/assets$/);
   });
 
-  it("builds the service graph without calling AWS", () => {
-    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(env));
-    expect(factory.create({ devices: new FakeDeviceRegistry() })).toBeInstanceOf(ModerationService);
+  it("builds the worker's service graph, LLM router included, without calling AWS", () => {
+    const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
+    const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage: "dev" });
+    const service = ModerationServiceFactory.forWorker({ settings: core, logger, env }, new FakeDeviceRegistry());
+    expect(service).toBeInstanceOf(ModerationService);
+    expect(() => ModerationServiceFactory.forWorker({ settings: core, logger, env: {} }, new FakeDeviceRegistry())).toThrow(ConfigError);
   });
 });

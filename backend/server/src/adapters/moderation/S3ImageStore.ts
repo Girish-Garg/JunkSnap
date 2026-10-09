@@ -21,15 +21,25 @@ export class S3ImageStore implements ImageStore {
 
   // Asks for one byte more than the limit, so an oversized upload is never downloaded whole.
   async readOriginal(key: string, maxBytes: number): Promise<Uint8Array | null> {
-    const command = new GetObjectCommand({ Bucket: this.#buckets.originals, Key: key, Range: `bytes=0-${maxBytes}` });
-    const bytes = await callService("S3 GetObject", async () => {
+    const bytes = await callService("S3 GetObject", () => this.#firstBytes(key, maxBytes + 1));
+    return bytes.byteLength > maxBytes ? null : bytes;
+  }
+
+  async #firstBytes(key: string, count: number): Promise<Uint8Array> {
+    const command = new GetObjectCommand({ Bucket: this.#buckets.originals, Key: key, Range: `bytes=0-${count - 1}` });
+    try {
       const response = await this.#client.send(command);
       if (response.Body === undefined) {
         throw new ExternalServiceError(`S3 object ${key} has no body`);
       }
-      return response.Body.transformToByteArray();
-    });
-    return bytes.byteLength > maxBytes ? null : bytes;
+      return await response.Body.transformToByteArray();
+    } catch (error) {
+      // An empty object has no byte 0, so S3 answers the ranged GET with InvalidRange; the loader rejects it as not a JPEG.
+      if (error instanceof Error && error.name === "InvalidRange") {
+        return new Uint8Array();
+      }
+      throw error;
+    }
   }
 
   async writePublic(key: string, jpeg: Uint8Array): Promise<void> {

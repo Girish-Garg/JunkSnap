@@ -27,7 +27,6 @@ export class Box {
     return new Box(left, top, right - left, bottom - top);
   }
 
-  // Keeps the first of any boxes that cover the same region.
   static distinct(boxes: readonly Box[]): Box[] {
     const kept: Box[] = [];
     for (const box of boxes) {
