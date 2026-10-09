@@ -9,6 +9,7 @@ from ward_crawler.adapters.page_text import HtmlText, PageTextReader, PdfText
 from ward_crawler.domain.errors import ExtractionError, FetchError
 from ward_crawler.domain.utils import looks_garbled, ward_window
 from ward_crawler.domain.values import CouncillorSeat, OfficeContact, Seat
+from ward_crawler.services.fact_check import FactCheck
 
 
 def answer(**ward: object) -> str:
@@ -116,8 +117,26 @@ def test_snippets_must_be_on_the_page_word_for_word() -> None:
 
     assert page.supports("3  3 जोध्ुर- दक्षिण 7656 सीमा")
     assert not page.supports("3 3 जोध्ुर- दक्षिण 7656 सीमा रावो की बगेची से वन विभाग")
-    assert page.mentions("रावो की बगेची")
-    assert not page.mentions("रावो का बगीचा")
+    assert page.shows("रावो की बगेची")
+    assert not page.shows("रावो का बगीचा")
+    assert not page.shows("बगेची की रावो")
+
+
+def test_fact_check_needs_whole_values_on_the_page() -> None:
+    check = FactCheck(make_page("https://x.gov.in", "area 2 5 sq km\nseat 122-Jodhpur\n"))
+
+    assert not check.holds(2.5, None)
+    assert check.holds(Seat("Jodhpur", "122"), None)
+    assert not check.holds(Seat("Jodhpur", "12"), None)
+
+
+def test_tokens_must_match_whole_numbers_and_unbroken_runs() -> None:
+    page = make_page("https://x.gov.in", "112 4500 सीमा\narea 2 5 sq km\nseat 122-Jodhpur\n")
+
+    assert not page.supports("12 4500 सीमा")
+    assert page.supports("112 4500 सीमा")
+    assert not page.shows("2.5")
+    assert page.shows("Jodhpur") and page.shows("122")
 
 
 def test_ward_window_runs_from_the_ward_number_to_the_next_rows_number() -> None:

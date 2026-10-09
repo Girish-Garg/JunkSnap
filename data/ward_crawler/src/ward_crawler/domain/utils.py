@@ -7,7 +7,14 @@ from datetime import UTC, datetime
 
 from ward_crawler.domain.values import FactValue
 
-_SEPARATORS = re.compile(r"[\s|,;:()\[\]{}'\"\-–/.]+")
+# A number keeps its decimal point (2.5 stays one token); words split at spaces and punctuation.
+_TOKEN = re.compile(r"[0-9]+(?:\.[0-9]+)*|[^\s|,;:()\[\]{}'\"\-–/.]+")
+_JOIN = "\x1f"
+# Text with an honorific is naming a person.
+_HONORIFIC = re.compile(
+    r"\b(shri|shree|smt|shrimati|sushri|kumari|mr|mrs|ms|miss|dr)\b|श्री|श्रीमती|सुश्री|डॉ",
+    re.IGNORECASE,
+)
 
 
 def squash(text: str) -> str:
@@ -15,9 +22,10 @@ def squash(text: str) -> str:
     return "".join(text.split()).casefold()
 
 
-def words(text: str) -> set[str]:
-    """Casefolded words, split at spaces and punctuation."""
-    return {word.casefold() for word in _SEPARATORS.split(text)} - {""}
+def token_line(text: str) -> str:
+    """Casefolded tokens joined by a separator, so `in` matches whole tokens in a row."""
+    found = _TOKEN.findall(ascii_digits(text).casefold())
+    return _JOIN + _JOIN.join(found) + _JOIN if found else ""
 
 
 def ascii_digits(text: str) -> str:
@@ -45,6 +53,10 @@ def looks_garbled(text: str) -> bool:
     starts = any(unicodedata.category(word[0]) in ("Mn", "Mc") for word in text.split())
     stray = any(not (char.isascii() or "ऀ" <= char <= "ॿ") for char in text)
     return starts or stray
+
+
+def has_honorific(text: str) -> bool:
+    return _HONORIFIC.search(text) is not None
 
 
 def utc_z(moment: datetime) -> str:

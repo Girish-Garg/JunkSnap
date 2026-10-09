@@ -1,3 +1,6 @@
+from dataclasses import replace
+from types import MappingProxyType
+
 from fakes import (
     SCHEMA,
     FakeMapLayerFinder,
@@ -246,3 +249,21 @@ def test_the_row_pattern_overrides_a_model_value_it_disagrees_with() -> None:
 
     assert result.records[0].facts["ward_name"].value == "Pavta"
     assert "corrected by the row pattern: 12" in result.sources[0].detail
+
+
+ZONE_ROWS = "23 िवȨाधर नगर 23 x\n24 िकशनपोल 24 x\n25 श्री नगर 25 x\n"
+ZONE_PATTERN = r"(?m)^(?P<ward>\d{1,3}) (?P<zone>\D+?) (?P=ward) "
+
+
+def test_row_zones_pass_only_through_aliases_and_the_name_guard() -> None:
+    source = Source(LIST_URL, "ward list", "jodhpur-uttar-mc", ("zone",), ZONE_PATTERN)
+    aliases = MappingProxyType({"िवȨाधर नगर": "विद्याधर नगर"})
+    city = replace(make_city(source), aliases=aliases)
+    nothing = FakeRecordExtractor(lambda _request: Extraction((), MODEL))
+    service, _ = build(nothing, {LIST_URL: ZONE_ROWS})
+
+    zones = {record.key.number: record.facts.get("zone") for record in service.run(city).records}
+
+    assert zones[23] is not None and zones[23].value == "विद्याधर नगर"
+    assert zones[24] is None  # garbled and no alias
+    assert zones[25] is None  # an honorific names a person

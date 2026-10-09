@@ -3,7 +3,7 @@
 from ward_crawler.domain.extraction import ExtractedWard, Extraction
 from ward_crawler.domain.provenance import Sourced
 from ward_crawler.domain.sources import CitySources, Page, Source
-from ward_crawler.domain.utils import looks_garbled, ward_window
+from ward_crawler.domain.utils import has_honorific, looks_garbled, ward_window
 from ward_crawler.domain.values import FactValue
 from ward_crawler.domain.ward import ModelInfo, WardKey, WardRecord
 from ward_crawler.services.fact_check import FactCheck
@@ -48,6 +48,6 @@ class RecordBuilder:
             return None
         if not isinstance(value, str):
             return value
-        # Garbled PDF text is used only through a hand-checked alias.
+        # Garbled PDF text passes only through a hand-checked alias; places never name a person.
         clean = self._city.aliases.get(value, value)
-        return None if looks_garbled(clean) else clean
+        return None if looks_garbled(clean) or has_honorific(clean) else clean

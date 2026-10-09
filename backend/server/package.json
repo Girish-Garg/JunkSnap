@@ -30,6 +30,7 @@
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "aws-jwt-verify": "^5.2.1",
     "fastify": "^5.12.5",
     "ngeohash": "^0.6.4",
     "pino": "^10.4.0",

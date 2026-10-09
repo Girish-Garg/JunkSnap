@@ -1,0 +1,13 @@
+# Human only: eksctl create cluster -f infra/eks/cluster.yaml, then add the metrics-server add-on.
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: junksnap
+  region: ap-south-1
+  tags:
+    project: junksnap
+autoModeConfig:
+  enabled: true
+vpc:
+  nat:
+    gateway: Single

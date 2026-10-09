@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 from ward_crawler.adapters.answer_schema import ANSWER_SCHEMA
 from ward_crawler.domain.errors import ExtractionError
 from ward_crawler.domain.extraction import ExtractedWard
+from ward_crawler.domain.utils import has_honorific
 from ward_crawler.domain.values import CouncillorSeat, FactValue, OfficeContact, Population, Seat
 
 # An office must name a post or a unit; anything else may be a person.
@@ -17,11 +18,6 @@ _DESIGNATION = re.compile(
     r"councillor|parshad|officer|inspector|commissioner|engineer|supervisor|office|department"
     r"|cell|zone|ward|health|sanitation|control room|helpline"
     r"|पार्षद|अधिकारी|निरीक्षक|आयुक्त|अभियंता|कार्यालय|विभाग|जोन|ज़ोन|वार्ड|स्वास्थ्य|सफाई",
-    re.IGNORECASE,
-)
-# Text with an honorific is naming a person, so the fact is dropped.
-_HONORIFIC = re.compile(
-    r"\b(shri|shree|smt|shrimati|sushri|kumari|mr|mrs|ms|miss|dr)\b|श्री|श्रीमती|सुश्री|डॉ",
     re.IGNORECASE,
 )
 
@@ -71,11 +67,11 @@ class AnswerParser:
 
     def _place(self, raw: str) -> str | None:
         place = self._text(raw)
-        return None if place is None or _HONORIFIC.search(place) else place
+        return None if place is None or has_honorific(place) else place
 
     def _post(self, raw: str | None) -> str | None:
         post = self._text(raw or "")
-        if post is None or _HONORIFIC.search(post) or not _DESIGNATION.search(post):
+        if post is None or has_honorific(post) or not _DESIGNATION.search(post):
             return None
         return post
 

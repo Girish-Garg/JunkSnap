@@ -8,7 +8,7 @@ from functools import cached_property
 from types import MappingProxyType
 
 from ward_crawler.domain.provenance import Provenance
-from ward_crawler.domain.utils import squash, words
+from ward_crawler.domain.utils import squash, token_line
 
 MIN_SNIPPET = 4
 
@@ -81,18 +81,14 @@ class Page:
         return tuple(pieces)
 
     def supports(self, snippet: str) -> bool:
-        """True when the snippet is on the page word for word (spacing and case ignored)."""
-        needle = squash(snippet)
-        return len(needle) >= MIN_SNIPPET and needle in self._squashed
+        """A ward's snippet: at least a few characters, shown on the page token for token."""
+        return len(squash(snippet)) >= MIN_SNIPPET and self.shows(snippet)
 
-    def mentions(self, text: str) -> bool:
-        """True when every word of the text is a word on the page."""
-        return bool(words(text)) and words(text) <= self._words
-
-    @cached_property
-    def _words(self) -> set[str]:
-        return words(self.text)
+    def shows(self, text: str) -> bool:
+        """True when the text's tokens appear on the page as one unbroken run."""
+        needle = token_line(text)
+        return bool(needle) and needle in self._tokens
 
     @cached_property
-    def _squashed(self) -> str:
-        return squash(self.text)
+    def _tokens(self) -> str:
+        return token_line(self.text)
