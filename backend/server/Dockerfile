@@ -10,6 +10,9 @@ COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
+# Placeholder for the "data" build context, so a build without --build-context fails instead of pulling an image named data.
+FROM scratch AS data
+
 FROM node:24-slim
 ENV NODE_ENV=production
 WORKDIR /app
