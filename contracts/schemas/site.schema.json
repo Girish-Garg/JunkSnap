@@ -66,7 +66,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["state", "district", "town", "local_body", "ward", "assembly_seat", "loksabha_seat", "representatives"],
-          "description": "The full location_lookup minus lat, lon and provenance. The worker writes it when merging; the agent reads it from the sites table, so letters and the site panel need no extra lookup. Ids link to GET /areas/{kind}/{id}/scores.",
+          "description": "The full location_lookup minus lat, lon and provenance. The worker writes it when merging; the api reads it from the sites table, so letters and the site panel need no extra lookup. Ids link to GET /areas/{kind}/{id}/scores.",
           "properties": {
             "state": { "type": "string" },
             "district": { "$ref": "#/$defs/area_ref" },
@@ -88,11 +88,11 @@
               ]
             },
             "ward": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null where no open ward map exists." },
-            "assembly_seat": { "$ref": "#/$defs/area_ref" },
-            "loksabha_seat": { "$ref": "#/$defs/area_ref" },
+            "assembly_seat": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null outside Rajasthan, where no assembly boundaries are loaded yet." },
+            "loksabha_seat": { "$ref": "#/$defs/loksabha_ref" },
             "representatives": {
               "type": "array",
-              "description": "Offices and seats only; no names, no party.",
+              "description": "Offices and seats only; no names, no party. No councillor row without a ward, no mla row without an assembly seat.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
@@ -125,7 +125,78 @@
         "first_reported_at": { "type": "string", "format": "date-time" },
         "last_reported_at": { "type": "string", "format": "date-time" },
         "cleaned_at": { "type": ["string", "null"], "format": "date-time", "description": "Last confirmed cleanup; null if never cleaned." },
-        "pilot": { "type": "boolean", "description": "True inside the Jodhpur pilot area." }
+        "pilot": { "type": "boolean", "description": "True inside the Jodhpur pilot area." },
+        "insights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reports", "composition", "size_class", "hazards", "near"],
+          "description": "Merged insights (decision 20261010-0202) of the site's reports that were not rejected; verification says whether they are confirmed. Not in required so v1 producers stay valid; the worker always writes it.",
+          "properties": {
+            "reports": { "type": "integer", "minimum": 0, "description": "Reports whose verification_result.insights were merged." },
+            "composition": {
+              "type": "array",
+              "maxItems": 9,
+              "description": "One entry per material, largest first. share_pct is the mean over the merged reports, a missing material counting as 0.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["material", "share_pct", "reports", "sources"],
+                "properties": {
+                  "material": { "$ref": "#/$defs/material" },
+                  "share_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+                  "reports": { "type": "integer", "minimum": 1, "description": "Merged reports that estimated this material." },
+                  "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/insight_source" } }
+                }
+              }
+            },
+            "size_class": {
+              "description": "Most common size class over the merged reports, ties going to the larger; never tonnage. Null when none was estimated.",
+              "anyOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["value", "reports", "sources"],
+                  "properties": {
+                    "value": { "enum": ["small", "medium", "large"] },
+                    "reports": { "type": "integer", "minimum": 1 },
+                    "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/insight_source" } }
+                  }
+                }
+              ]
+            },
+            "hazards": {
+              "type": "array",
+              "maxItems": 5,
+              "description": "Hazards any merged report showed; burning here also sets the burning flag above.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hazard", "reports", "sources"],
+                "properties": {
+                  "hazard": { "enum": ["burning", "medical_waste", "e_waste", "dead_animal", "chemicals"] },
+                  "reports": { "type": "integer", "minimum": 1 },
+                  "sources": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/insight_source" } }
+                }
+              }
+            },
+            "near": {
+              "type": "array",
+              "description": "Sensitive places within 100 m, nearest first, from the ward crawler's OpenStreetMap layers (map_layers in data/wards/<city>.json): school, hospital, water (water bodies) and drain (open drains). The worker computes it in the location step. Empty when none or when the city has no crawled layers.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "distance_m", "ref", "source"],
+                "properties": {
+                  "kind": { "enum": ["school", "hospital", "water", "drain"] },
+                  "distance_m": { "type": "number", "minimum": 0, "maximum": 100 },
+                  "ref": { "type": "string", "pattern": "^osm:(node|way|relation)/[0-9]+$", "description": "The layer feature's ref, for example osm:way/123." },
+                  "source": { "$ref": "#/$defs/layer_source" }
+                }
+              }
+            }
+          }
+        }
       },
       "allOf": [
         { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
@@ -143,6 +214,42 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
         "name": { "type": "string" }
+      }
+    },
+    "material": { "enum": ["plastic", "organic", "construction_debris", "paper", "glass", "metal", "textile", "e_waste", "medical"] },
+    "insight_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "provider", "model", "version"],
+      "properties": {
+        "signal": { "enum": ["rekognition_labels", "yolo", "embedding_classifier", "vision_judge"] },
+        "provider": { "enum": ["bedrock", "openai", "openrouter", "rekognition", "comprehend", "junksnap"] },
+        "model": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "loksabha_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" },
+        "status": {
+          "enum": ["current", "outdated", null],
+          "description": "outdated where the loaded boundary predates a re-delimitation (Assam, Jammu and Kashmir, Ladakh); letters never Cc the MP of an outdated seat. Null when unknown."
+        }
+      }
+    },
+    "layer_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_url", "fetched_at", "page_sha256"],
+      "description": "The provenance of the map layer the place came from, as the ward crawler writes it.",
+      "properties": {
+        "source_url": { "type": "string", "pattern": "^https?://" },
+        "fetched_at": { "type": "string", "format": "date-time" },
+        "page_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
       }
     }
   }

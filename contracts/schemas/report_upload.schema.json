@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/report_upload.schema.json",
   "title": "report_upload",
-  "description": "Body of POST /reports, sent after the photo was PUT to the presigned URL. The server re-checks everything; hints from the phone are never trusted.",
+  "description": "Body of POST /reports, sent after the photo was PUT to the presigned URL. The worker also writes one for each frame it cuts from a scan video. The server re-checks everything; hints from the phone are never trusted.",
   "type": "object",
   "additionalProperties": false,
   "required": ["upload_id", "report_type", "context", "capture_mode", "sha256", "gps", "device_token", "captured_at"],
@@ -17,7 +17,17 @@
       "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"],
       "description": "Allowed values depend on report_type; see allOf."
     },
-    "capture_mode": { "enum": ["snap", "scan"], "description": "snap: one photo. scan: a frame from live Scan mode." },
+    "capture_mode": { "enum": ["snap", "scan"], "description": "snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203)." },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scan_id", "t_ms"],
+      "description": "Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
+      "properties": {
+        "scan_id": { "type": "string", "pattern": "^scn_[a-z0-9_]{1,40}$" },
+        "t_ms": { "type": "integer", "minimum": 0, "maximum": 60000, "description": "Frame time from the start of the video." }
+      }
+    },
     "sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
@@ -39,6 +49,11 @@
       "description": "Per-device token: a random UUID v4 the app creates once and keeps in IndexedDB. Keys reputation and rate limits."
     },
     "captured_at": { "type": "string", "format": "date-time", "description": "When the camera took the photo, ISO 8601 UTC." },
+    "user_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]{1,128}$",
+      "description": "Cognito sub of the signed-in reporter, opaque (decision 20261010-0227). The api sets it from the verified token and ignores any value the phone sends; scan frames copy it from the scan session. Absent only on guest reports made before accounts."
+    },
     "note": { "type": "string", "maxLength": 280, "description": "Optional free text. Moderated for toxicity and personal data before it is shown." },
     "me_too_site_id": {
       "type": "string",
@@ -47,7 +62,7 @@
     },
     "hints": {
       "type": "object",
-      "description": "Phone-side model output, present only in edge mode. Hints for live boxes and frame selection only; never used as evidence.",
+      "description": "Phone-side model output, present only in edge mode; for a scan frame, the worker copies the phone detection at that frame. Hints for live boxes and frame selection only; never used as evidence.",
       "additionalProperties": false,
       "required": ["model", "waste_score", "recall_audit"],
       "properties": {

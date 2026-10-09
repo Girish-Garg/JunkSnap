@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/verification_result.schema.json",
   "title": "verification_result",
-  "description": "Returned by the agent's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
+  "description": "Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
   "type": "object",
   "additionalProperties": false,
   "required": ["report_id", "purpose", "probability", "decision", "is_clean", "thresholds", "signals", "features", "judge", "disagreement", "combiner", "embedding_key", "decided_at"],
@@ -47,7 +47,7 @@
       "description": "Non-model inputs to the combiner.",
       "properties": {
         "gps_accuracy_m": { "type": "number", "minimum": 0 },
-        "reputation": { "type": "number", "minimum": 0, "maximum": 1, "description": "Device reputation; 0.5 for a new device." },
+        "reputation": { "type": "number", "minimum": 0, "maximum": 1, "description": "Reporter reputation: the lower of the user's and the device's; 0.5 for a new user or device." },
         "nearby_verified_reports": { "type": "integer", "minimum": 0, "description": "Verified reports of the same type within about 40 m, before merging; 0 for cleanups." }
       }
     },
@@ -86,7 +86,65 @@
       "pattern": "^embeddings/(rpt|cln)_[a-z0-9_]{1,40}\\.json$",
       "description": "Key of the stored image embedding in the private bucket, for SiteMerger to compare. Null when the embedding signal did not run."
     },
-    "decided_at": { "type": "string", "format": "date-time" }
+    "decided_at": { "type": "string", "format": "date-time" },
+    "insights": {
+      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it: an object for purpose report, null for purpose cleanup.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["composition", "size_class", "hazards"],
+          "properties": {
+            "composition": {
+              "type": "array",
+              "maxItems": 9,
+              "description": "Share of the visible waste per material, largest first, one entry per material. Shares may sum to less than 100; the rest is unknown. Empty when no model estimated it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["material", "share_pct", "source"],
+                "properties": {
+                  "material": { "$ref": "#/$defs/material" },
+                  "share_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+                  "source": { "$ref": "#/$defs/insight_source" }
+                }
+              }
+            },
+            "size_class": {
+              "description": "Coarse size of the pile; never tonnage. Null when no model estimated it.",
+              "anyOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["value", "source"],
+                  "properties": {
+                    "value": { "$ref": "#/$defs/size_class" },
+                    "source": { "$ref": "#/$defs/insight_source" }
+                  }
+                }
+              ]
+            },
+            "hazards": {
+              "type": "array",
+              "maxItems": 5,
+              "description": "Hazards a model saw, one entry per hazard; empty when none.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["hazard", "confidence", "source"],
+                "properties": {
+                  "hazard": { "$ref": "#/$defs/hazard" },
+                  "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "source": { "$ref": "#/$defs/insight_source" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
   },
   "allOf": [
     {
@@ -96,11 +154,28 @@
     {
       "if": { "properties": { "purpose": { "const": "cleanup" } } },
       "then": {
-        "properties": { "is_clean": { "type": "boolean" }, "decision": { "enum": ["auto_verified", "rejected"] }, "report_id": { "pattern": "^cln_" } },
+        "properties": { "is_clean": { "type": "boolean" }, "decision": { "enum": ["auto_verified", "rejected"] }, "report_id": { "pattern": "^cln_" }, "insights": { "type": "null" } },
         "if": { "properties": { "decision": { "const": "auto_verified" } } },
         "then": { "properties": { "is_clean": { "const": true } } },
         "else": { "properties": { "is_clean": { "const": false } } }
       }
     }
-  ]
+  ],
+  "$defs": {
+    "material": { "enum": ["plastic", "organic", "construction_debris", "paper", "glass", "metal", "textile", "e_waste", "medical"] },
+    "size_class": { "enum": ["small", "medium", "large"], "description": "small: fits in a bin bag; medium: up to a handcart; large: needs a truck." },
+    "hazard": { "enum": ["burning", "medical_waste", "e_waste", "dead_animal", "chemicals"], "description": "burning covers flame or smoke." },
+    "insight_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "provider", "model", "version"],
+      "description": "The model that produced this estimate.",
+      "properties": {
+        "signal": { "enum": ["rekognition_labels", "yolo", "embedding_classifier", "vision_judge"] },
+        "provider": { "enum": ["bedrock", "openai", "openrouter", "rekognition", "comprehend", "junksnap"] },
+        "model": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    }
+  }
 }

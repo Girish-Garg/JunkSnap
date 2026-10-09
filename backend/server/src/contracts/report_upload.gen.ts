@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * Body of POST /reports, sent after the photo was PUT to the presigned URL. The server re-checks everything; hints from the phone are never trusted.
+ * Body of POST /reports, sent after the photo was PUT to the presigned URL. The worker also writes one for each frame it cuts from a scan video. The server re-checks everything; hints from the phone are never trusted.
  */
 export type ReportUpload = {
   /**
@@ -27,9 +27,19 @@ export type ReportUpload = {
     | "uncovered_debris"
     | "dusty_site";
   /**
-   * snap: one photo. scan: a frame from live Scan mode.
+   * snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203).
    */
   capture_mode: "snap" | "scan";
+  /**
+   * Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.
+   */
+  scan?: {
+    scan_id: string;
+    /**
+     * Frame time from the start of the video.
+     */
+    t_ms: number;
+  };
   /**
    * SHA-256 of the original image bytes, computed on the phone, lowercase hex.
    */
@@ -51,6 +61,10 @@ export type ReportUpload = {
    */
   captured_at: string;
   /**
+   * Cognito sub of the signed-in reporter, opaque (decision 20261010-0227). The api sets it from the verified token and ignores any value the phone sends; scan frames copy it from the scan session. Absent only on guest reports made before accounts.
+   */
+  user_id?: string;
+  /**
    * Optional free text. Moderated for toxicity and personal data before it is shown.
    */
   note?: string;
@@ -59,7 +73,7 @@ export type ReportUpload = {
    */
   me_too_site_id?: string;
   /**
-   * Phone-side model output, present only in edge mode. Hints for live boxes and frame selection only; never used as evidence.
+   * Phone-side model output, present only in edge mode; for a scan frame, the worker copies the phone detection at that frame. Hints for live boxes and frame selection only; never used as evidence.
    */
   hints?: {
     /**
@@ -78,7 +92,7 @@ export const reportUploadSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/report_upload.schema.json",
   "title": "report_upload",
-  "description": "Body of POST /reports, sent after the photo was PUT to the presigned URL. The server re-checks everything; hints from the phone are never trusted.",
+  "description": "Body of POST /reports, sent after the photo was PUT to the presigned URL. The worker also writes one for each frame it cuts from a scan video. The server re-checks everything; hints from the phone are never trusted.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -127,7 +141,28 @@ export const reportUploadSchema = {
         "snap",
         "scan"
       ],
-      "description": "snap: one photo. scan: a frame from live Scan mode."
+      "description": "snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203)."
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scan_id",
+        "t_ms"
+      ],
+      "description": "Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
+      "properties": {
+        "scan_id": {
+          "type": "string",
+          "pattern": "^scn_[a-z0-9_]{1,40}$"
+        },
+        "t_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000,
+          "description": "Frame time from the start of the video."
+        }
+      }
     },
     "sha256": {
       "type": "string",
@@ -170,6 +205,11 @@ export const reportUploadSchema = {
       "format": "date-time",
       "description": "When the camera took the photo, ISO 8601 UTC."
     },
+    "user_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]{1,128}$",
+      "description": "Cognito sub of the signed-in reporter, opaque (decision 20261010-0227). The api sets it from the verified token and ignores any value the phone sends; scan frames copy it from the scan session. Absent only on guest reports made before accounts."
+    },
     "note": {
       "type": "string",
       "maxLength": 280,
@@ -182,7 +222,7 @@ export const reportUploadSchema = {
     },
     "hints": {
       "type": "object",
-      "description": "Phone-side model output, present only in edge mode. Hints for live boxes and frame selection only; never used as evidence.",
+      "description": "Phone-side model output, present only in edge mode; for a scan frame, the worker copies the phone detection at that frame. Hints for live boxes and frame selection only; never used as evidence.",
       "additionalProperties": false,
       "required": [
         "model",

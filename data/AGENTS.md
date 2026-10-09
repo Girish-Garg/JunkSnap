@@ -6,7 +6,9 @@ Small reference data that the backend and the map use. Small files only: anythin
 
 - `boundaries/`: assembly (MLA) and Lok Sabha (MP) seat boundaries across India from the 2008 delimitation, and ward boundaries only where open ward maps exist. Simplified GeoJSON, small enough for git.
 - `representatives/`: all MPs and, first, Rajasthan MLAs. Each row stores the seat, the office, `as_of` and `source` only: no names (decision 20261010-0137, offices and seats only) and no party field.
-- `labels/`: the Label Studio setup and CSV exports for `report_type`, `context`, `burning` and `brands`, plus the fixed train and held-out test split (about 30% test).
+- `labels/`: the Label Studio setup and CSV exports for `report_type`, `context`, `burning`, materials, hazards and `brands`, plus the fixed train and held-out test split (about 30% of field photos held out, never trained on; decision 20261010-0200).
+- `wards/`: `<city>.json`, written by `ward_crawler/`: `records` (each a `ward_record`, contract in `contracts/schemas/`) from official pages, and `map_layers` from OpenStreetMap (disposal, school, hospital, water, drain), reviewed before use. The worker finds nearby places in the layers.
+- `datasets/`: manifests and licences of the openly licensed public waste datasets only; the images live in S3 under `datasets/`.
 
 ## Conventions
 

@@ -17,6 +17,947 @@ export type Score1 =
       value?: null;
       reason?: "too_few_reports" | "no_data";
     };
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason = {
+  /**
+   * Mean share per material over the reports, largest first; a missing material counts as 0.
+   *
+   * @maxItems 9
+   */
+  value:
+    | []
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | [
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        },
+        {
+          material:
+            | "plastic"
+            | "organic"
+            | "construction_debris"
+            | "paper"
+            | "glass"
+            | "metal"
+            | "textile"
+            | "e_waste"
+            | "medical";
+          share_pct: number;
+        }
+      ]
+    | null;
+  /**
+   * Verified reports with a composition estimate.
+   */
+  reports: number;
+  /**
+   * Each distinct model behind the merged estimates; empty when value is null.
+   */
+  sources: {
+    signal: "rekognition_labels" | "yolo" | "embedding_classifier" | "vision_judge";
+    provider: "bedrock" | "openai" | "openrouter" | "rekognition" | "comprehend" | "junksnap";
+    model: string;
+    version: string;
+  }[];
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * null when the value is set; too_few_reports below min_verified_reports; no_data when an input is missing.
+ */
+export type Reason = null | "too_few_reports" | "no_data";
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason1 = {
+  /**
+   * Share of sites with at least one hazard in site.insights.hazards.
+   */
+  value: number | null;
+  hazardous_sites: number;
+  /**
+   * Sites with at least one verified report in the window.
+   */
+  sites: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason2 = {
+  /**
+   * Most labels first. Only labels readable at confidence 0.8 or more.
+   *
+   * @maxItems 5
+   */
+  value:
+    | []
+    | [
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        }
+      ]
+    | [
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        }
+      ]
+    | [
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        }
+      ]
+    | [
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        }
+      ]
+    | [
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        },
+        {
+          brand: string;
+          parent_company: string;
+          sites: number;
+          labels: number;
+        }
+      ]
+    | null;
+  /**
+   * All readable labels in the area.
+   */
+  labels: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason3 = {
+  /**
+   * Site ids of repeat spots (reopened after a cleanup, or reported on 2 or more days), most reports first.
+   *
+   * @maxItems 10
+   */
+  value:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | null;
+  /**
+   * All repeat spots in the area.
+   */
+  count: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason4 = {
+  /**
+   * Verified reports per hour of captured_at in IST, hour 0 first.
+   *
+   * @minItems 24
+   * @maxItems 24
+   */
+  value:
+    | [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+        number
+      ]
+    | null;
+  reports: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason5 = {
+  /**
+   * Verified reports per IST weekday, Monday first. no_data while data_window is shorter than 7 days.
+   *
+   * @minItems 7
+   * @maxItems 7
+   */
+  value: [number, number, number, number, number, number, number] | null;
+  reports: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
+/**
+ * Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).
+ */
+export type ValueReason6 = {
+  /**
+   * Sites with a school or water place in site.insights.near. no_data when the city has no crawled map layers.
+   */
+  value: number | null;
+  /**
+   * Sites with at least one verified report in the window.
+   */
+  sites: number;
+  reason: Reason;
+} & (
+  | {
+      value?: {
+        [k: string]: unknown | undefined;
+      };
+      reason?: null;
+    }
+  | {
+      value?: null;
+      reason?: "too_few_reports" | "no_data";
+    }
+);
 
 /**
  * Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. An area with sites but no score yet returns 200 with zero counts, every score withheld (too_few_reports), null metrics and an empty diagnosis; the worker seeds that row when a site first lands in the area. An area with no sites returns 404 area_not_found. Never invented history.
@@ -82,6 +1023,18 @@ export interface WardScores {
     to: string;
   };
   computed_at: string;
+  /**
+   * Area insights (decision 20261010-0202) over verified reports in data_window and the sites that hold them. Not in required so v1 producers stay valid; scores always writes it. Each value is null with a reason, and reason is null exactly when value is set. Shares and patterns (composition, hazardous_share_pct, hour_of_day, day_of_week) are withheld below min_verified_reports; counts (top_brands, repeat_spots, near_school_or_water_count) always show unless the input is missing (no_data).
+   */
+  insights?: {
+    composition: ValueReason;
+    hazardous_share_pct: ValueReason1;
+    top_brands: ValueReason2;
+    repeat_spots: ValueReason3;
+    hour_of_day: ValueReason4;
+    day_of_week: ValueReason5;
+    near_school_or_water_count: ValueReason6;
+  };
 }
 
 export const wardScoresSchema = {
@@ -307,9 +1260,372 @@ export const wardScoresSchema = {
     "computed_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "insights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "composition",
+        "hazardous_share_pct",
+        "top_brands",
+        "repeat_spots",
+        "hour_of_day",
+        "day_of_week",
+        "near_school_or_water_count"
+      ],
+      "description": "Area insights (decision 20261010-0202) over verified reports in data_window and the sites that hold them. Not in required so v1 producers stay valid; scores always writes it. Each value is null with a reason, and reason is null exactly when value is set. Shares and patterns (composition, hazardous_share_pct, hour_of_day, day_of_week) are withheld below min_verified_reports; counts (top_brands, repeat_spots, near_school_or_water_count) always show unless the input is missing (no_data).",
+      "properties": {
+        "composition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "reports",
+            "sources",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "maxItems": 9,
+              "description": "Mean share per material over the reports, largest first; a missing material counts as 0.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "material",
+                  "share_pct"
+                ],
+                "properties": {
+                  "material": {
+                    "enum": [
+                      "plastic",
+                      "organic",
+                      "construction_debris",
+                      "paper",
+                      "glass",
+                      "metal",
+                      "textile",
+                      "e_waste",
+                      "medical"
+                    ]
+                  },
+                  "share_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              }
+            },
+            "reports": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Verified reports with a composition estimate."
+            },
+            "sources": {
+              "type": "array",
+              "description": "Each distinct model behind the merged estimates; empty when value is null.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "signal",
+                  "provider",
+                  "model",
+                  "version"
+                ],
+                "properties": {
+                  "signal": {
+                    "enum": [
+                      "rekognition_labels",
+                      "yolo",
+                      "embedding_classifier",
+                      "vision_judge"
+                    ]
+                  },
+                  "provider": {
+                    "enum": [
+                      "bedrock",
+                      "openai",
+                      "openrouter",
+                      "rekognition",
+                      "comprehend",
+                      "junksnap"
+                    ]
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "hazardous_share_pct": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "hazardous_sites",
+            "sites",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Share of sites with at least one hazard in site.insights.hazards."
+            },
+            "hazardous_sites": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sites": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sites with at least one verified report in the window."
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "top_brands": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "labels",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "maxItems": 5,
+              "description": "Most labels first. Only labels readable at confidence 0.8 or more.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "brand",
+                  "parent_company",
+                  "sites",
+                  "labels"
+                ],
+                "properties": {
+                  "brand": {
+                    "type": "string"
+                  },
+                  "parent_company": {
+                    "type": "string"
+                  },
+                  "sites": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "labels": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "labels": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "All readable labels in the area."
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "repeat_spots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "count",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "maxItems": 10,
+              "description": "Site ids of repeat spots (reopened after a cleanup, or reported on 2 or more days), most reports first.",
+              "items": {
+                "type": "string",
+                "pattern": "^site_[a-z0-9_]{1,40}$"
+              }
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "All repeat spots in the area."
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "hour_of_day": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "reports",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "minItems": 24,
+              "maxItems": 24,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Verified reports per hour of captured_at in IST, hour 0 first."
+            },
+            "reports": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "day_of_week": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "reports",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "minItems": 7,
+              "maxItems": 7,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "description": "Verified reports per IST weekday, Monday first. no_data while data_window is shorter than 7 days."
+            },
+            "reports": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        },
+        "near_school_or_water_count": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "sites",
+            "reason"
+          ],
+          "$ref": "#/$defs/value_reason",
+          "properties": {
+            "value": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Sites with a school or water place in site.insights.near. no_data when the city has no crawled map layers."
+            },
+            "sites": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sites with at least one verified report in the window."
+            },
+            "reason": {
+              "$ref": "#/$defs/reason"
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
+    "reason": {
+      "enum": [
+        null,
+        "too_few_reports",
+        "no_data"
+      ],
+      "description": "null when the value is set; too_few_reports below min_verified_reports; no_data when an input is missing."
+    },
+    "value_reason": {
+      "description": "Couples an insight's value and reason: reason is null exactly when value is set (an empty list counts as set).",
+      "oneOf": [
+        {
+          "properties": {
+            "value": {
+              "not": {
+                "type": "null"
+              }
+            },
+            "reason": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "type": "null"
+            },
+            "reason": {
+              "enum": [
+                "too_few_reports",
+                "no_data"
+              ]
+            }
+          }
+        }
+      ]
+    },
     "score": {
       "type": "object",
       "additionalProperties": false,

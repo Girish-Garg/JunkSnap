@@ -19,10 +19,10 @@
       "state": "Rajasthan",
       "district": { "id": "rajasthan-jaipur", "name": "Jaipur" },
       "town": "Jaipur",
-      "local_body": { "id": "jaipur-greater-mc", "name": "Jaipur Municipal Corporation Greater", "head_office": "Commissioner" },
+      "local_body": { "id": "jaipur-mc", "name": "Jaipur Municipal Corporation", "head_office": "Commissioner" },
       "ward": null,
       "assembly_seat": { "id": "s20-ac-54", "name": "Malviya Nagar" },
-      "loksabha_seat": { "id": "s20-pc-7", "name": "Jaipur" },
+      "loksabha_seat": { "id": "s20-pc-7", "name": "Jaipur", "status": "current" },
       "representatives": [
         { "office": "mla", "seat_id": "s20-ac-54", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
         { "office": "mp", "seat_id": "s20-pc-7", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
@@ -32,6 +32,16 @@
     "first_reported_at": "2026-10-10T04:02:10Z",
     "last_reported_at": "2026-10-10T04:02:10Z",
     "cleaned_at": null,
-    "pilot": false
+    "pilot": false,
+    "insights": {
+      "reports": 1,
+      "composition": [
+        { "material": "construction_debris", "share_pct": 80, "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] },
+        { "material": "plastic", "share_pct": 6, "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] }
+      ],
+      "size_class": { "value": "large", "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] },
+      "hazards": [],
+      "near": []
+    }
   }
 }

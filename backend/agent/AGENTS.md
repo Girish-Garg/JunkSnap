@@ -1,11 +1,13 @@
-# backend/agent: LLM layer, stacked verification, brands, rulebook, letters
+# backend/agent → backend/ml: the Python ML service
 
-Python package `agent`, laid out per docs/working.md: `src/agent/{domain,ports,adapters,services,handlers}/`, tests in `tests/unit` and `tests/contract`. It runs as the `agent` workload on EKS: a FastAPI app with one public route, `POST /sites/{id}/letters`, and cluster-internal routes that the `worker` calls over HTTP for verification and brand labels.
+This package is moving to `backend/ml` (another PR renames it); these notes move with it. Only the ML side is Python (decision 20261010-0159). Layout per docs/working.md: `src/<pkg>/{domain,ports,adapters,services,handlers}/`, tests in `tests/unit` and `tests/contract`, training and dataset tooling in `training/`.
+
+It runs as the `ml` workload on EKS (image `junksnap-ml`): a FastAPI app with one cluster-internal route, `POST /internal/verify`, plus `/healthz`. The `worker` calls it at `ML_URL`. Letters, brands and the rulebook moved to `backend/server`; `/internal/brands` is gone.
 
 ## Commands
 
 ```
-cd backend/agent
+cd backend/agent   # backend/ml after the rename
 uv sync
 uv run ruff check .
 uv run mypy --strict src
@@ -16,24 +18,20 @@ uv run pytest -q
 
 ## What lives here
 
-- LLM layer: `LlmProvider` implementations for Bedrock, the OpenAI API and OpenRouter. Bedrock is the default (Claude Sonnet 4.6, then Claude Haiku 4.5 India profile, then Nova Pro); fallbacks are OpenAI, then OpenRouter (decision 20261010-0133). `ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` per task (judge, brands, letters, text moderation). Same prompts and JSON schema for every model; validate each answer and retry on the next provider.
-- Stacked verification: `RekognitionSignal`, `YoloSignal` and `EmbeddingSignal` decide first. The LLM judge (`VisionJudge`) runs only when other signals are unsure or disagree, and never sets counts or boxes. `MetaLearner` inside `StackedVerifier` gives a calibrated probability. 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected; strong disagreement always goes to community check.
-- Brands: `BrandLabeller` uses Rekognition DetectText plus the brand-to-parent-company map. A company name appears only when the label is readable and above the confidence threshold.
-- Rulebook and letters: `RuleRepository` serves hashed official texts and a hand-checked rules JSON. Code picks the rules and the addressees (`LetterRouter`); the model writes only the prose; `QuoteVerifier` checks every quote word for word; `TemplateLetter` is the fallback.
+- Stacked verification: `RekognitionSignal`, `YoloSignal` and `EmbeddingSignal` (Titan image embeddings plus the type classifier) decide first. The LLM judge (`VisionJudge`) runs only when they are unsure or disagree, and never sets counts or boxes. `MetaLearner` inside `StackedVerifier` gives a calibrated probability: 0.85 or more is auto-verified, 0.5 to 0.85 community check, below 0.5 rejected; strong disagreement always goes to community check.
+- Insights (decision 20261010-0202): `InsightExtractor` fills `verification_result.insights`: composition shares by material, size class (never tonnage), hazards, each with its model as the source. YOLO and the classifier first; the judge only fills gaps and is then named. Null for cleanups.
+- LLM layer for the judge: `ProviderRouter` with `TaskConfig {provider, model, fallback[]}`; Bedrock Claude Sonnet 4.6, then Claude Haiku 4.5 (India profile), then Nova Pro, then OpenAI, then OpenRouter (decision 20261010-0133). Validate each answer and retry on the next provider.
+- Training (`training/`): dataset manifests, YOLO, the embedding classifier and the meta-learner. Data: openly licensed public datasets plus Jodhpur field photos; about 30% of field photos are held out and never trained on (decision 20261010-0200).
 
 ## Rules
 
-- Every model decision records provider, model and version in the evidence.
-- Only blurred images go to any model (decision 20261010-0133). Personal text goes to Bedrock only. OpenRouter requests exclude providers that store or train on data.
-- Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording. Never name an individual. Nothing is filed automatically.
-- Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026. Quote no rupee amounts under the 2026 Rules.
-- Keep the letters route under about 30 seconds (CloudFront's default origin timeout); fall back to the template letter when a model is slow.
-- API keys come from Secrets Manager at startup and AWS access from EKS Pod Identity. Never read keys from files in the repo.
-- Output shapes come from `contracts/`. Never import `pipeline`; the two packages exchange contract shapes over HTTP.
-- Unit tests stub every model and AWS call. Adapter integration tests run only with `RUN_AWS_TESTS=1`; live model runs are manual checks.
+- Every model decision records provider, model and version.
+- Read only the blurred copy (`media/` in the public bucket); write only `embeddings/` in the private bucket. Never read originals or scan videos.
+- Output shapes come from `contracts/`. Never import `backend/server`; the two exchange contract shapes over HTTP.
+- Datasets and model files over 5 MB live in S3, never in git. Check each dataset's licence before use.
+- Unit tests stub every model and AWS call. Adapter integration tests run only with `RUN_AWS_TESTS=1`.
 
 ## Never
 
 - Send an unblurred image to any model, or log images, keys or personal data.
-- Let the model choose a rule, an addressee or a quote. A misquote must fail the verifier test.
-- Report a model score that was not measured on the held-out set.
+- Train on a held-out photo, or report a number not measured on the held-out set.
