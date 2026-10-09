@@ -18,25 +18,19 @@ export class PolygonIndex<T> {
     this.#entries = shapes.map(({ geometry, value }) => ({ box: BoundingBox.around(geometry), geometry, value }));
   }
 
-  containing(point: GeoPoint): T | null {
-    const position = point.toPosition();
-    const hit = this.#entries.find(
-      (entry) => entry.box.contains(point) && booleanPointInPolygon(position, entry.geometry),
-    );
-    return hit?.value ?? null;
-  }
-
-  // For points no shape contains: it measures to edges, so it cannot tell inside from outside.
-  nearest(point: GeoPoint, maxMeters: number): T | null {
+  // Containing shapes count as 0 m; the sort is stable, so ties keep file order.
+  near(point: GeoPoint, maxMeters: number): T[] {
     const plane = new LocalPlane(point);
     const margin = plane.span(maxMeters);
-    let [best, bestMeters]: [T | null, number] = [null, maxMeters];
-    for (const entry of this.#entries) {
-      const meters = entry.box.contains(point, margin) ? plane.distanceToEdges(entry.geometry) : Infinity;
-      if (meters < bestMeters) {
-        [best, bestMeters] = [entry.value, meters];
-      }
-    }
-    return best;
+    const position = point.toPosition();
+    return this.#entries
+      .filter((entry) => entry.box.contains(point, margin))
+      .map((entry) => ({
+        value: entry.value,
+        meters: booleanPointInPolygon(position, entry.geometry) ? 0 : plane.distanceToEdges(entry.geometry),
+      }))
+      .filter(({ meters }) => meters <= maxMeters)
+      .sort((left, right) => left.meters - right.meters)
+      .map(({ value }) => value);
   }
 }

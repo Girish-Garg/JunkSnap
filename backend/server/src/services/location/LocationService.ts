@@ -25,18 +25,18 @@ export class LocationService {
     this.#now = deps.now ?? (() => new Date());
   }
 
-  // Seats first, so a point outside India never costs a geocoder call.
+  // Seats first, so a point outside India never costs a geocoder call; the geocoder's state then picks among them.
   async locate(lat: number, lon: number): Promise<LocationLookup> {
     const point = GeoPoint.of(lat, lon);
-    const seats = this.#deps.seats.resolve(point);
-    if (seats === null) {
+    const nearby = this.#deps.seats.nearby(point);
+    if (nearby === null) {
       throw new OutsideIndiaError("no Lok Sabha seat contains this point or lies within 1 km of it");
     }
     const place = await this.#deps.geocoder.reverse(point);
     if (!place.isInIndia()) {
       throw new OutsideIndiaError(`the geocoder places this point in ${place.countryCode}, not India`);
     }
-    return this.#lookup(point, place, seats);
+    return this.#lookup(point, place, nearby.forPlace(place));
   }
 
   #lookup(point: GeoPoint, place: Place, seats: SeatMatch): LocationLookup {

@@ -31,33 +31,33 @@ class FakeAssetReader implements AssetReader {
 describe("LocationAssetLoader", () => {
   const loader = new LocationAssetLoader(new FileAssetReader(FIXTURES));
 
-  it("indexes Polygon and MultiPolygon seats, keeping id, name, pc_id and status", async () => {
+  it("indexes Polygon and MultiPolygon seats, keeping id, name, pc_id, state and status", async () => {
     const seats = await loader.loadSeats();
+    const ids = (lat: number, lon: number) => seats.assemblySeatsNear(GeoPoint.of(lat, lon), 0).map((seat) => seat.id);
     expect(seats.boundariesVersion).toBe("eci-2008-delimitation/v1");
-    expect(seats.assemblyContaining(GeoPoint.of(26.2618, 73.0035))).toEqual({
-      id: "s20-ac-128",
-      name: "Jodhpur",
-      lokSabhaId: "s20-pc-16",
-    });
-    expect(seats.assemblyContaining(GeoPoint.of(26.3049, 73.0352))?.id).toBe("s20-ac-127");
-    expect(seats.assemblyContaining(GeoPoint.of(26.2701, 73.0458))?.id).toBe("s20-ac-127");
-    expect(seats.lokSabhaContaining(GeoPoint.of(34.1526, 77.5771))).toEqual({
-      id: "u09-pc-1",
-      name: "Ladakh",
-      status: "outdated",
-    });
-    expect(seats.lokSabhaSeat("s20-pc-7")).toEqual({ id: "s20-pc-7", name: "Jaipur", status: "current" });
+    expect(seats.assemblySeatsNear(GeoPoint.of(26.2618, 73.0035), 0)).toEqual([
+      { id: "s20-ac-128", name: "Jodhpur", lokSabhaId: "s20-pc-16" },
+    ]);
+    expect(ids(26.3049, 73.0352)).toEqual(["s20-ac-127"]);
+    expect(ids(26.2701, 73.0458)).toEqual(["s20-ac-127"]);
+    expect(seats.lokSabhaSeatsNear(GeoPoint.of(34.1526, 77.5771), 0)).toEqual([
+      { id: "u09-pc-1", name: "Ladakh", state: "Ladakh", status: "outdated" },
+    ]);
+    expect(seats.lokSabhaSeat("s20-pc-7")).toEqual({ id: "s20-pc-7", name: "Jaipur", state: "Rajasthan", status: "current" });
     expect(seats.lokSabhaSeat("s99-pc-1")).toBeNull();
   });
 
-  it("measures to the nearest edge only within the given distance", async () => {
+  it("lists every containing seat in file order, then seats whose edge is within the distance", async () => {
     const seats = await loader.loadSeats();
+    const lokSabha = (lat: number, lon: number) =>
+      seats.lokSabhaSeatsNear(GeoPoint.of(lat, lon), 1_000).map((seat) => seat.id);
     const inNotch = GeoPoint.of(26.27, 73.012);
-    expect(seats.assemblyContaining(inNotch)).toBeNull();
-    expect(seats.nearestAssembly(inNotch, 1_000)?.id).toBe("s20-ac-128");
-    expect(seats.nearestAssembly(inNotch, 500)).toBeNull();
-    expect(seats.nearestLokSabha(GeoPoint.of(27.005, 75.85), 1_000)?.id).toBe("s20-pc-7");
-    expect(seats.nearestLokSabha(GeoPoint.of(27.02, 75.85), 1_000)).toBeNull();
+    expect(seats.assemblySeatsNear(inNotch, 0)).toEqual([]);
+    expect(seats.assemblySeatsNear(inNotch, 1_000).map((seat) => seat.id)).toEqual(["s20-ac-128"]);
+    expect(seats.assemblySeatsNear(inNotch, 500)).toEqual([]);
+    expect(lokSabha(29.95, 74.39)).toEqual(["s19-pc-10", "s20-pc-1"]);
+    expect(lokSabha(27.005, 75.85)).toEqual(["s20-pc-7"]);
+    expect(lokSabha(27.02, 75.85)).toEqual([]);
   });
 
   it("reads both representative files", async () => {

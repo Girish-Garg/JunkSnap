@@ -23,20 +23,12 @@ export class TurfSeatLocator implements SeatLocator {
     this.#lokSabhaById = new Map(boundaries.lokSabha.map(({ value }) => [value.id, value]));
   }
 
-  assemblyContaining(point: GeoPoint): AssemblySeat | null {
-    return this.#assembly.containing(point);
+  assemblySeatsNear(point: GeoPoint, withinMeters: number): AssemblySeat[] {
+    return this.#assembly.near(point, withinMeters);
   }
 
-  lokSabhaContaining(point: GeoPoint): LokSabhaSeat | null {
-    return this.#lokSabha.containing(point);
-  }
-
-  nearestAssembly(point: GeoPoint, withinMeters: number): AssemblySeat | null {
-    return this.#assembly.nearest(point, withinMeters);
-  }
-
-  nearestLokSabha(point: GeoPoint, withinMeters: number): LokSabhaSeat | null {
-    return this.#lokSabha.nearest(point, withinMeters);
+  lokSabhaSeatsNear(point: GeoPoint, withinMeters: number): LokSabhaSeat[] {
+    return this.#lokSabha.near(point, withinMeters);
   }
 
   lokSabhaSeat(id: string): LokSabhaSeat | null {

@@ -8,10 +8,11 @@ export interface AssemblySeat extends AreaRef {
   readonly lokSabhaId: string;
 }
 
-// An outdated shape predates its state's re-delimitation (Assam, Jammu and Kashmir, Ladakh).
-export type LokSabhaStatus = "current" | "outdated";
+// outdated: the shape predates a re-delimitation (Assam, Jammu and Kashmir, Ladakh); null: the MP is unknown.
+export type LokSabhaStatus = "current" | "outdated" | null;
 
 export interface LokSabhaSeat extends AreaRef {
+  readonly state: string;
   readonly status: LokSabhaStatus;
 }
 

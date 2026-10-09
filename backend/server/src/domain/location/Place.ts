@@ -27,10 +27,14 @@ export class Place {
     return this.countryCode === INDIA;
   }
 
+  // Amazon writes "Jammu & Kashmir" where the seat files write "Jammu and Kashmir".
+  isInState(state: string): boolean {
+    return Place.#key(this.state) === Place.#key(state);
+  }
+
   isIn(state: string, towns: readonly string[]): boolean {
     const town = this.town?.toLowerCase();
-    const sameState = this.state.toLowerCase() === state.toLowerCase();
-    return sameState && towns.some((name) => name.toLowerCase() === town);
+    return this.isInState(state) && towns.some((name) => name.toLowerCase() === town);
   }
 
   // Area ids allow [a-z0-9-] only, so Rajasthan and Jodhpur become rajasthan-jodhpur.
@@ -43,5 +47,9 @@ export class Place {
       .slice(0, MAX_AREA_ID)
       .replace(/^-+|-+$/g, "");
     return { id, name: this.district };
+  }
+
+  static #key(state: string): string {
+    return state.toLowerCase().replaceAll("&", " and ").replace(/[^a-z0-9]/g, "");
   }
 }

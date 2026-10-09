@@ -124,6 +124,25 @@ describe("LocationService.locate with fixture polygons", () => {
     expect(lookup.representatives.map((row) => row.seat_id)).toEqual(["s20-ac-7", "s20-pc-1"]);
   });
 
+  it("follows the geocoder's state at the Sangaria border, where Amazon answers Punjab", async () => {
+    const { service } = await serviceWith(PLACES.abohar);
+    const lookup = await service.locate(29.95, 74.39);
+    expect(lookup.state).toBe("Punjab");
+    expect(lookup.assembly_seat).toBeNull();
+    expect(lookup.loksabha_seat).toEqual({ id: "s19-pc-10", name: "Firozepur", status: "current" });
+    expect(lookup.representatives.map((row) => row.seat_id)).toEqual(["s19-pc-10"]);
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
+  });
+
+  it("keeps the nearest Lok Sabha seat with status null and no MP when no seat of the state is near", async () => {
+    const { service } = await serviceWith({ ...PLACES.abohar, state: "Haryana" });
+    const lookup = await service.locate(29.85, 74.4);
+    expect(lookup.assembly_seat).toBeNull();
+    expect(lookup.loksabha_seat).toEqual({ id: "s20-pc-1", name: "Ganganagar", status: null });
+    expect(lookup.representatives).toEqual([]);
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
+  });
+
   it("never pulls a nearby assembly seat across a state border", async () => {
     const { service } = await serviceWith(PLACES.abohar);
     const lookup = await service.locate(30.005, 74.4);

@@ -1,13 +1,11 @@
 import type { GeoPoint } from "../../domain/location/GeoPoint.js";
 import type { AssemblySeat, LokSabhaSeat } from "../../domain/location/Seats.js";
 
+// The *Near methods list seats nearest first: those containing the point (0 m, in file order), then by edge distance.
 export interface SeatLocator {
   // Provenance for location_lookup.boundaries_version.
   readonly boundariesVersion: string;
-  assemblyContaining(point: GeoPoint): AssemblySeat | null;
-  // Lok Sabha shapes from different sources overlap at state borders; this is the first hit.
-  lokSabhaContaining(point: GeoPoint): LokSabhaSeat | null;
-  nearestAssembly(point: GeoPoint, withinMeters: number): AssemblySeat | null;
-  nearestLokSabha(point: GeoPoint, withinMeters: number): LokSabhaSeat | null;
+  assemblySeatsNear(point: GeoPoint, withinMeters: number): AssemblySeat[];
+  lokSabhaSeatsNear(point: GeoPoint, withinMeters: number): LokSabhaSeat[];
   lokSabhaSeat(id: string): LokSabhaSeat | null;
 }

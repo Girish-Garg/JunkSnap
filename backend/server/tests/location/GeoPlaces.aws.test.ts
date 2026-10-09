@@ -39,11 +39,11 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("LocationService with Amazon L
   it.each([
     { name: "Jaipur sliver", ...JAIPUR_SLIVER, assembly: "s20-ac-50", loksabha: "s20-pc-7" },
     { name: "Churu sliver", ...CHURU_SLIVER, assembly: "s20-ac-24", loksabha: "s20-pc-3" },
-    { name: "Sangaria overlap", ...SANGARIA_OVERLAP, assembly: "s20-ac-7", loksabha: "s20-pc-1" },
+    { name: "Sangaria border, Punjab per Amazon", ...SANGARIA_OVERLAP, assembly: null, loksabha: "s19-pc-10" },
   ])("locates the $name", async ({ name, lat, lon, assembly, loksabha }) => {
     const lookup = await service.locate(lat, lon);
     console.log(name, JSON.stringify(lookup));
-    expect(lookup.assembly_seat?.id).toBe(assembly);
+    expect(lookup.assembly_seat?.id ?? null).toBe(assembly);
     expect(lookup.loksabha_seat.id).toBe(loksabha);
     expect(() => validateLocationLookup(lookup)).not.toThrow();
   });
