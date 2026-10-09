@@ -1,0 +1,85 @@
+<View>
+  <Image name="image" value="$image" zoom="true" rotateControl="true"/>
+  <Header value="Report type"/>
+  <Choices name="report_type" toName="image" choice="single" required="true" showInline="true">
+    <Choice value="waste_dump"/>
+    <Choice value="open_construction"/>
+    <Choice value="contaminated_water"/>
+    <Choice value="no_bin"/>
+    <Choice value="not_waste"/>
+  </Choices>
+  <View visibleWhen="choice-selected" whenTagName="report_type" whenChoiceValue="waste_dump">
+  <Header value="Context"/>
+  <Choices name="context_waste_dump" toName="image" choice="single" showInline="true">
+    <Choice value="vacant_plot"/>
+    <Choice value="roadside"/>
+    <Choice value="drain"/>
+    <Choice value="other"/>
+  </Choices>
+  </View>
+  <View visibleWhen="choice-selected" whenTagName="report_type" whenChoiceValue="no_bin">
+  <Header value="Context"/>
+  <Choices name="context_no_bin" toName="image" choice="single" showInline="true">
+    <Choice value="no_bin"/>
+    <Choice value="no_pickup"/>
+  </Choices>
+  </View>
+  <View visibleWhen="choice-selected" whenTagName="report_type" whenChoiceValue="contaminated_water">
+  <Header value="Context"/>
+  <Choices name="context_contaminated_water" toName="image" choice="single" showInline="true">
+    <Choice value="stagnant"/>
+    <Choice value="sewage"/>
+    <Choice value="foam"/>
+    <Choice value="choked_drain"/>
+  </Choices>
+  </View>
+  <View visibleWhen="choice-selected" whenTagName="report_type" whenChoiceValue="open_construction">
+  <Header value="Context"/>
+  <Choices name="context_open_construction" toName="image" choice="single" showInline="true">
+    <Choice value="uncovered_debris"/>
+    <Choice value="dusty_site"/>
+  </Choices>
+  </View>
+  <Header value="Burning or smoke"/>
+  <Choices name="burning" toName="image" choice="single" required="true" showInline="true">
+    <Choice value="no"/>
+    <Choice value="yes"/>
+  </Choices>
+  <Header value="Materials seen"/>
+  <Choices name="materials" toName="image" choice="multiple" showInline="true">
+    <Choice value="plastic"/>
+    <Choice value="organic"/>
+    <Choice value="construction_debris"/>
+    <Choice value="paper"/>
+    <Choice value="glass"/>
+    <Choice value="metal"/>
+    <Choice value="textile"/>
+    <Choice value="e_waste"/>
+    <Choice value="medical"/>
+  </Choices>
+  <Header value="Hazards"/>
+  <Choices name="hazards" toName="image" choice="multiple" showInline="true">
+    <Choice value="burning"/>
+    <Choice value="medical_waste"/>
+    <Choice value="e_waste"/>
+    <Choice value="dead_animal"/>
+    <Choice value="chemicals"/>
+  </Choices>
+  <Header value="Size"/>
+  <Choices name="size_class" toName="image" choice="single" showInline="true">
+    <Choice value="few_items"/>
+    <Choice value="bag"/>
+    <Choice value="cart"/>
+    <Choice value="truck"/>
+    <Choice value="many_trucks"/>
+  </Choices>
+  <Header value="Readable brands, one per line (packaging only, never people)"/>
+  <TextArea name="brands" toName="image" rows="2" editable="true"/>
+  <Header value="Boxes: draw one per waste pile, bag, bin or fire"/>
+  <RectangleLabels name="boxes" toName="image">
+    <Label value="waste_pile" background="#d62728"/>
+    <Label value="bag" background="#1f77b4"/>
+    <Label value="bin" background="#2ca02c"/>
+    <Label value="burning" background="#ff7f0e"/>
+  </RectangleLabels>
+</View>
