@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from training.domain import ManifestRow
+from training.domain import ConfigError, ManifestRow
 from training.learn.domain import LinearModel
 from training.learn.embeddings import EmbeddingCache, EmbeddingTable
 from training.learn.heads import HeadCatalogue, HeadTrainer
@@ -80,7 +80,5 @@ def test_embedding_cache_resumes_from_the_saved_table(tmp_path: Path) -> None:
 
 
 def test_linear_model_rejects_misaligned_rows() -> None:
-    from training.domain import ConfigError
-
     with pytest.raises(ConfigError):
         LinearModel(("a", "b"), ((1.0,),), (0.0, 0.0))

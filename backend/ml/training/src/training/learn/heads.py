@@ -16,6 +16,7 @@ from training.learn.ports import LinearFitter
 MIN_POSITIVES = 40
 LABELLED_TYPES = ("waste_dump", "not_waste")
 MATERIAL_SOURCES = ("garbage_od", "taco")
+DECIDE_AT = 0.5
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,7 @@ class HeadCatalogue:
             lambda r: r.report_type in LABELLED_TYPES, lambda r: r.report_type == "waste_dump",
         )
         material_specs = tuple(HeadCatalogue._material(m) for m in materials)
-        burning = HeadSpec("hazards", "burning", lambda r: True, lambda r: "burning" in r.hazards)
+        burning = HeadSpec("hazards", "burning", lambda _: True, lambda r: "burning" in r.hazards)
         return (report, *material_specs, burning)
 
     @staticmethod
@@ -86,7 +87,7 @@ class HeadTrainer:
                 continue
             matrix, labels = self._data(spec, rows, vectors, split)
             column = model.classes.index(spec.name)
-            predicted = heads.probabilities(spec.group, matrix)[:, column] >= 0.5
+            predicted = heads.probabilities(spec.group, matrix)[:, column] >= DECIDE_AT
             name = f"{spec.group}:{spec.name}"
             results.append(BinaryScores.of(name, labels.tolist(), predicted.tolist()))
         return results

@@ -33,7 +33,7 @@ class HeadResult:
         }
 
     def table(self) -> str:
-        lines = ["| head | split | positives | precision | recall | F1 |", "|---|---|---|---|---|---|"]
+        lines = ["| head | split | positives | precision | recall | F1 |", "|---" * 6 + "|"]
         for split, scores in (("val", self.val), ("test", self.test)):
             lines += [
                 f"| {s.name} | {split} | {s.support} | {s.precision:.3f} | {s.recall:.3f} "

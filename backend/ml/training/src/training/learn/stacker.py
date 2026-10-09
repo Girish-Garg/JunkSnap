@@ -109,7 +109,8 @@ class StackerTrainer:
         )
 
     def _fit(self, photos: list[ScoredPhoto], signals: tuple[str, ...], name: str) -> LogitModel:
-        matrix = np.array([[LogitModel.logit(p.scores.get(s, 0.5)) for s in signals] for p in photos])
+        rows = [[LogitModel.logit(p.scores.get(s, 0.5)) for s in signals] for p in photos]
+        matrix = np.array(rows)
         labels = np.array([p.waste for p in photos], dtype=bool)
         model = self._fitter.fit(matrix, labels, name)
         return LogitModel(signals, model.weights[0], model.biases[0])

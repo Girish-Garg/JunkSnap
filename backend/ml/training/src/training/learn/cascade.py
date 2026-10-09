@@ -30,7 +30,8 @@ class CascadeReport:
     def header() -> str:
         return (
             "| combiner | photos | accuracy | Brier | ECE | judge called | auto-verified (right) "
-            "| rejected (right) | community check | judge cost |\n|---|---|---|---|---|---|---|---|---|---|"
+            "| rejected (right) | community check | judge cost |\n"
+            "|---|---|---|---|---|---|---|---|---|---|"
         )
 
     def row(self) -> str:

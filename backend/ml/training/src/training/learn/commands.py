@@ -14,11 +14,11 @@ from training.learn.cases import CaseWriter
 from training.learn.detector import DetectorRun, ExportSpec
 from training.learn.embeddings import EmbeddingCache, EmbeddingTable
 from training.learn.heads import HeadCatalogue
+from training.learn.ports import DetectorTrainer, ImageEmbedder
 from training.learn.report import StackReport
 from training.learn.sample import BenchmarkSample
-from training.learn.stacker import ScoredPhoto, StackerTrainer
 from training.learn.selection import HeadSelector
-from training.learn.ports import DetectorTrainer, ImageEmbedder
+from training.learn.stacker import ScoredPhoto, StackerTrainer
 from training.learn.teacher import TeacherBoxFile, TeacherLabeller
 from training.manifest import ManifestFile
 from training.ports import ObjectStore
@@ -44,7 +44,8 @@ class LearnCommands:
         records = labeller.label(r for r in rows if r.split != "holdout")
         TeacherBoxFile(self._cache, args.source).write(records, self._store)
         boxes = [b.label for r in records for b in r.boxes]
-        print(json.dumps({"photos": len(records), "boxes": {k: boxes.count(k) for k in set(boxes)}}))
+        counts = {k: boxes.count(k) for k in set(boxes)}
+        print(json.dumps({"photos": len(records), "boxes": counts}))
 
     def detector_data(self, args: argparse.Namespace) -> None:
         out = self._settings.outside_repo(Path(args.out))
@@ -114,11 +115,7 @@ class LearnCommands:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(meta.to_json(fitted_on), indent=1), encoding="utf-8")
         report = StackReport(meta)
-        print(f"{out}
-
-{report.signals_alone(test)}
-
-{report.table(test)}")
+        print(out, report.signals_alone(test), report.table(test), sep="\n\n")
 
     @staticmethod
     def _scored(path: Path) -> list[ScoredPhoto]:

@@ -44,7 +44,7 @@ class DetectorReport:
     overall: ClassScores
 
     def table(self) -> str:
-        head = "| class | boxes | precision | recall | mAP50 | mAP50-95 |\n|---|---|---|---|---|---|"
+        head = "| class | boxes | precision | recall | mAP50 | mAP50-95 |\n" + "|---" * 6 + "|"
         rows = [c.row() for c in (*self.classes, self.overall)]
         return "\n".join([head, *rows])
 
