@@ -1,6 +1,5 @@
-const MIN_LENGTH = 20;
-const PLACEHOLDER = /^(placeholder|replace|changeme|change-me|todo|tbd|dummy|xxx|<)/i;
-const WHITESPACE = /\s/;
+// OpenAI keys (sk-, sk-proj-, sk-svcacct-) start with sk-; anything else is a placeholder.
+const KEY_SHAPE = /^sk-\S{17,}$/;
 
 // Never prints its value: logs and errors show "[redacted]".
 export class ApiKey {
@@ -10,11 +9,10 @@ export class ApiKey {
     this.#value = value;
   }
 
-  // null for a missing, short or placeholder key; a JSON secret may hold the key as its only value.
+  // null for a missing or placeholder key; a JSON secret may hold the key as its only value.
   static fromSecret(secret: string | null): ApiKey | null {
     const value = ApiKey.#unwrap((secret ?? "").trim()).trim();
-    const usable = value.length >= MIN_LENGTH && !WHITESPACE.test(value) && !PLACEHOLDER.test(value);
-    return usable ? new ApiKey(value) : null;
+    return KEY_SHAPE.test(value) ? new ApiKey(value) : null;
   }
 
   static #unwrap(secret: string): string {

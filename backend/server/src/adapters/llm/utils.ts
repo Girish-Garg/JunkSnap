@@ -8,6 +8,14 @@ export function failureReason(error: unknown): string {
   return text.slice(0, MAX_REASON);
 }
 
+// The served snapshot `gpt-4.1-mini-2025-04-14` of model `gpt-4.1-mini` is version `2025-04-14`.
+export function openAiVersion(model: string, served: string): string {
+  if (served.startsWith(`${model}-`)) {
+    return served.slice(model.length + 1);
+  }
+  return served === model ? "unversioned" : served;
+}
+
 // `...-20251001-v1:0` and `...-v1:0` keep their suffix; `...claude-sonnet-4-6` becomes 4.6.
 export function bedrockVersion(model: string): string {
   const dated = DATED_VERSION.exec(model)?.[1];

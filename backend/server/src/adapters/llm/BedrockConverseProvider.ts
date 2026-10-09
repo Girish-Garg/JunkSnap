@@ -25,10 +25,10 @@ export class BedrockConverseProvider implements LlmProvider {
     this.#target = target;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
+  async complete(request: LlmRequest, budget: AbortSignal): Promise<LlmResponse> {
     const { model, prices } = this.#target;
     const started = performance.now();
-    const output = await this.#send(request);
+    const output = await this.#send(request, budget);
     const inputTokens = output.usage?.inputTokens ?? 0;
     const outputTokens = output.usage?.outputTokens ?? 0;
     return LlmResponse.of({
@@ -43,7 +43,7 @@ export class BedrockConverseProvider implements LlmProvider {
     });
   }
 
-  async #send(request: LlmRequest): Promise<ConverseCommandOutput> {
+  async #send(request: LlmRequest, budget: AbortSignal): Promise<ConverseCommandOutput> {
     const { client, model, timeoutMs } = this.#target;
     const command = new ConverseCommand({
       modelId: model,
@@ -52,7 +52,7 @@ export class BedrockConverseProvider implements LlmProvider {
       inferenceConfig: { maxTokens: request.maxTokens, temperature: request.temperature },
     });
     try {
-      return await client.send(command, { abortSignal: AbortSignal.timeout(timeoutMs) });
+      return await client.send(command, { abortSignal: AbortSignal.any([budget, AbortSignal.timeout(timeoutMs)]) });
     } catch (error) {
       throw new ExternalServiceError(`bedrock ${model}: ${failureReason(error)}`, { cause: error });
     }

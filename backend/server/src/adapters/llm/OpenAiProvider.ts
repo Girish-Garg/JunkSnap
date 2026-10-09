@@ -5,9 +5,10 @@ import type { BlurredImage, LlmRequest } from "../../domain/llm/LlmRequest.js";
 import { LlmResponse } from "../../domain/llm/LlmResponse.js";
 import type { PriceTable } from "../../domain/llm/PriceTable.js";
 import type { LlmProvider } from "../../ports/LlmProvider.js";
-import { failureReason } from "./utils.js";
+import { failureReason, openAiVersion } from "./utils.js";
 
 const CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const UNAUTHORIZED = 401;
 // Only the error code leaves an error body: OpenAI's messages can echo part of the key.
 const ERROR_CODE = /"code":\s*"([a-z0-9_]+)"/;
 const ERROR_TYPE = /"type":\s*"([a-z0-9_]+)"/;
@@ -26,6 +27,8 @@ export interface OpenAiTarget {
   readonly model: string;
   readonly prices: PriceTable;
   readonly timeoutMs: number;
+  // Called on HTTP 401 so the next build reads the secret again.
+  readonly rejectKey: () => void;
 }
 
 export class OpenAiProvider implements LlmProvider {
@@ -35,17 +38,17 @@ export class OpenAiProvider implements LlmProvider {
     this.#target = target;
   }
 
-  async complete(request: LlmRequest): Promise<LlmResponse> {
+  async complete(request: LlmRequest, budget: AbortSignal): Promise<LlmResponse> {
     const { model, prices } = this.#target;
     const started = performance.now();
-    const reply = await this.#post(request);
+    const reply = await this.#post(request, budget);
     const inputTokens = reply.usage?.prompt_tokens ?? 0;
     const outputTokens = reply.usage?.completion_tokens ?? 0;
     return LlmResponse.of({
       text: reply.choices[0]?.message.content ?? "",
       provider: "openai",
       model,
-      version: reply.model,
+      version: openAiVersion(model, reply.model),
       latencyMs: Math.round(performance.now() - started),
       inputTokens,
       outputTokens,
@@ -53,30 +56,36 @@ export class OpenAiProvider implements LlmProvider {
     });
   }
 
-  async #post(request: LlmRequest): Promise<Reply> {
+  async #post(request: LlmRequest, budget: AbortSignal): Promise<Reply> {
     const { fetch, key, model, timeoutMs } = this.#target;
-    const name = `openai ${model}`;
     try {
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: { authorization: key.bearer(), "content-type": "application/json" },
         body: JSON.stringify(OpenAiProvider.#body(request, model)),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.any([budget, AbortSignal.timeout(timeoutMs)]),
       });
       if (!response.ok) {
-        const code = OpenAiProvider.#errorCode(await response.text());
-        throw new ExternalServiceError(`${name}: HTTP ${String(response.status)} ${code}`);
+        throw await this.#failure(response);
       }
       const reply = ChatReply.safeParse(await response.json());
       if (!reply.success) {
-        throw new ExternalServiceError(`${name}: unexpected reply shape`);
+        throw new ExternalServiceError(`openai ${model}: unexpected reply shape`);
       }
       return reply.data;
     } catch (error) {
       throw error instanceof ExternalServiceError
         ? error
-        : new ExternalServiceError(`${name}: ${failureReason(error)}`, { cause: error });
+        : new ExternalServiceError(`openai ${model}: ${failureReason(error)}`, { cause: error });
     }
+  }
+
+  async #failure(response: Response): Promise<ExternalServiceError> {
+    if (response.status === UNAUTHORIZED) {
+      this.#target.rejectKey();
+    }
+    const code = OpenAiProvider.#errorCode(await response.text());
+    return new ExternalServiceError(`openai ${this.#target.model}: HTTP ${String(response.status)} ${code}`);
   }
 
   static #body(request: LlmRequest, model: string): object {

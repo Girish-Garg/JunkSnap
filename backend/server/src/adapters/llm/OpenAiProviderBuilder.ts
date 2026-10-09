@@ -14,7 +14,7 @@ export interface OpenAiSource {
   readonly timeoutMs: number;
 }
 
-// Keeps only a usable key, so a key stored after startup works without a restart.
+// Keeps only a usable key and drops it on a 401, so a key stored or corrected later works without a restart.
 export class OpenAiProviderBuilder implements ProviderBuilder {
   readonly provider: ProviderName = "openai";
   readonly #source: OpenAiSource;
@@ -31,6 +31,12 @@ export class OpenAiProviderBuilder implements ProviderBuilder {
     }
     this.#key = key;
     const { fetch, prices, timeoutMs } = this.#source;
-    return new OpenAiProvider({ fetch, key, model, prices, timeoutMs });
+    return new OpenAiProvider({ fetch, key, model, prices, timeoutMs, rejectKey: () => this.#forget(key) });
+  }
+
+  #forget(key: ApiKey): void {
+    if (this.#key === key) {
+      this.#key = null;
+    }
   }
 }

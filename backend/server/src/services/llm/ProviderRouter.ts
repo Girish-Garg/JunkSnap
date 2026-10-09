@@ -13,16 +13,31 @@ import { LlmCallLog } from "./LlmCallLog.js";
 import type { ProviderFactory } from "./ProviderFactory.js";
 import { TextAnswer } from "./TextAnswer.js";
 
-// A failed call moves on at once; an answer that fails its check gets `retries` reminders first.
+// Leaves letters time for the template fallback inside CloudFront's 60 s.
+export const DEFAULT_BUDGET_MS = 45_000;
+
+export interface RouterOptions {
+  readonly budgetMs?: number;
+}
+
+interface Route<J> {
+  readonly request: LlmRequest;
+  readonly check: AnswerCheck<J>;
+  readonly budget: AbortSignal;
+}
+
+// A failed call moves on at once; a rejected answer gets `retries` reminders; nothing new starts once the budget is spent.
 export class ProviderRouter {
   readonly #tasks: ReadonlyMap<LlmTask, TaskConfig>;
   readonly #factory: ProviderFactory;
   readonly #log: LlmCallLog;
+  readonly #budgetMs: number;
 
-  constructor(tasks: ReadonlyMap<LlmTask, TaskConfig>, factory: ProviderFactory, logger: Logger) {
+  constructor(tasks: ReadonlyMap<LlmTask, TaskConfig>, factory: ProviderFactory, logger: Logger, options: RouterOptions = {}) {
     this.#tasks = tasks;
     this.#factory = factory;
     this.#log = new LlmCallLog(logger);
+    this.#budgetMs = options.budgetMs ?? DEFAULT_BUDGET_MS;
   }
 
   complete(request: LlmRequest): Promise<LlmResponse> {
@@ -37,13 +52,16 @@ export class ProviderRouter {
   }
 
   async #route<J>(request: LlmRequest, check: AnswerCheck<J>): Promise<LlmResponse<J>> {
+    const route = { request, check, budget: AbortSignal.timeout(this.#budgetMs) };
     for (const choice of this.#config(request.task).choices()) {
+      this.#guard(route);
       const provider = await this.#provider(request, choice);
-      const answer = provider === null ? null : await this.#ask(request, choice, provider, check);
+      const answer = provider === null ? null : await this.#ask(route, choice, provider);
       if (answer !== null) {
         return answer;
       }
     }
+    this.#guard(route);
     throw new ExternalServiceError(`no LLM provider gave a usable answer for task ${request.task}`);
   }
 
@@ -53,6 +71,12 @@ export class ProviderRouter {
       throw new ConfigError(`no TaskConfig for LLM task ${task}`);
     }
     return config;
+  }
+
+  #guard<J>(route: Route<J>): void {
+    if (route.budget.aborted) {
+      throw new ExternalServiceError(`LLM time budget of ${String(this.#budgetMs)} ms spent for task ${route.request.task}`);
+    }
   }
 
   async #provider(request: LlmRequest, choice: ModelChoice): Promise<LlmProvider | null> {
@@ -67,32 +91,28 @@ export class ProviderRouter {
     }
   }
 
-  async #ask<J>(
-    request: LlmRequest,
-    choice: ModelChoice,
-    provider: LlmProvider,
-    check: AnswerCheck<J>,
-  ): Promise<LlmResponse<J> | null> {
-    let attempt = request;
-    for (let tries = 0; tries <= check.retries; tries += 1) {
-      const response = await this.#call(attempt, choice, provider);
+  async #ask<J>(route: Route<J>, choice: ModelChoice, provider: LlmProvider): Promise<LlmResponse<J> | null> {
+    let attempt = route.request;
+    for (let tries = 0; tries <= route.check.retries; tries += 1) {
+      this.#guard(route);
+      const response = await this.#call(attempt, choice, provider, route.budget);
       if (response === null) {
         return null;
       }
-      const accepted = check.accept(response);
-      this.#log.answered(attempt, response, accepted === null ? check.rejection : null);
+      const accepted = route.check.accept(response);
+      this.#log.answered(attempt, response, accepted === null ? route.check.rejection : null);
       if (accepted !== null) {
         return accepted;
       }
-      attempt = check.remind(request);
+      attempt = route.check.remind(route.request);
     }
     return null;
   }
 
-  async #call(request: LlmRequest, choice: ModelChoice, provider: LlmProvider): Promise<LlmResponse | null> {
+  async #call(request: LlmRequest, choice: ModelChoice, provider: LlmProvider, budget: AbortSignal): Promise<LlmResponse | null> {
     const started = performance.now();
     try {
-      return await provider.complete(request);
+      return await provider.complete(request, budget);
     } catch (error) {
       return this.#missed(request, choice, error, Math.round(performance.now() - started));
     }
