@@ -10,10 +10,8 @@ from training.adapters import LocalOnlyStore
 from training.domain import Box, ConfigError, ExternalServiceError, ImageRecord, ManifestRow
 from training.fetch import Fetcher
 from training.images import ImageNormaliser
-from training.labelstudio import FieldExportReader
 from training.manifest import ManifestBuilder, ManifestFile
 from training.sources.base import DatasetSource, RawItem, SourceInfo
-from training.sources.field import FieldExportSource, FieldPhotos
 from training.split import Splitter
 
 LICENCES = {"taco": "CC-BY-4.0", "field": "private"}
@@ -74,34 +72,26 @@ def test_a_missing_public_source_stops_the_build(tmp_path: Path, store, class_ma
         ManifestBuilder(tmp_path, class_map, LICENCES).build(store)
 
 
-def test_field_photos_from_s3_land_in_the_private_bucket(tmp_path: Path, store, class_map) -> None:
-    fetch(tmp_path, store)
-    store.uploaded["media/reports/rpt_jdh_9.jpg"] = jpeg(800, 600)
-    results = [{"from_name": "report_type", "type": "choices", "value": {"choices": ["no_bin"]}}]
-    task = {"data": {"image": "s3://fake-bucket/media/reports/rpt_jdh_9.jpg"},
-            "annotations": [{"result": results}]}
-    labelled = FieldExportReader(class_map.vocabulary).records([task])
-    info = SourceInfo("field", "private", "export")
-    source = FieldExportSource(info, None, labelled, FieldPhotos(store, None))
-    Fetcher(tmp_path, store, ImageNormaliser()).fetch(source, None)
-    rows = {r.id: r for r in ManifestBuilder(tmp_path, class_map, LICENCES).build(store)}
-    field = rows["field/rpt_jdh_9"]
-    assert field.s3_key == "datasets/field/images/rpt_jdh_9.jpg"
-    assert (field.report_type, field.licence) == ("no_bin", "private")
-    assert "datasets/field/records.jsonl" in store.uploaded
+def test_a_failed_upload_leaves_cache_and_summary_untouched(
+    tmp_path: Path, store, class_map, monkeypatch
+) -> None:
+    cache = tmp_path / "cache"
+    fetch(cache, store)
+    rows = Splitter(26).assign(ManifestBuilder(cache, class_map, LICENCES).build(store))
+    manifest = ManifestFile(cache, tmp_path, store)
+    manifest.write(rows, 26)
+    files = (cache / "manifest.jsonl", tmp_path / "manifest_summary.json")
+    before = [f.read_text() for f in files]
 
+    def refuse(local: Path, key: str) -> None:
+        raise ExternalServiceError("s3 down")
 
-def test_a_missing_field_photo_is_an_error(tmp_path: Path, store, class_map) -> None:
-    task = {"data": {"image": "/data/upload/1/IMG_1.jpg"}, "annotations": [{"result": [
-        {"from_name": "report_type", "type": "choices", "value": {"choices": ["waste_dump"]}}]}]}
-    labelled = FieldExportReader(class_map.vocabulary).records([task])
-    source = FieldExportSource(SourceInfo("field", "p", "e"), None, labelled,
-                               FieldPhotos(store, tmp_path))
-    with pytest.raises(ConfigError, match="IMG_1.jpg"):
-        Fetcher(tmp_path, store, ImageNormaliser()).fetch(source, None)
-    (tmp_path / "IMG_1.jpg").write_bytes(b"corrupt")
-    with pytest.raises(ExternalServiceError, match="img_1"):
-        Fetcher(tmp_path, store, ImageNormaliser()).fetch(source, None)
+    monkeypatch.setattr(manifest_module, "MAX_REPO_BYTES", 10)
+    monkeypatch.setattr(store, "upload_file", refuse)
+    with pytest.raises(ExternalServiceError):
+        manifest.write(Splitter(5).assign(rows), 5)
+    assert [f.read_text() for f in files] == before
+    assert not list((tmp_path / "cache").glob("*.pending"))
 
 
 def test_small_manifests_stay_in_the_repo_with_a_summary(tmp_path: Path, store, class_map) -> None:

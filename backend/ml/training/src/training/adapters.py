@@ -31,7 +31,10 @@ class HttpDownloader(Downloader):
         partial.replace(dest)
 
     def get_json(self, url: str) -> Any:
-        return json.loads(self._retry(lambda: self._read(url)))
+        return json.loads(self.fetch(url))
+
+    def fetch(self, url: str) -> bytes:
+        return self._retry(lambda: self._read(url))
 
     @staticmethod
     def _open(url: str) -> Any:

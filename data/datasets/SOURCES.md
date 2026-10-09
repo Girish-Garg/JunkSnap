@@ -8,9 +8,9 @@ Images never go in git. `uv run training fetch` (in `backend/ml/training/`) down
 |---|---|---|---|---|---|
 | `qr4change` | Urban Civic Issues Image Dataset: Potholes and Garbage (QR4Change), Vishwakarma Institute of Information Technology, Pune. Mendeley Data, https://doi.org/10.17632/zndzygc3p3.2 | CC BY 4.0 | the garbage part only: 708 dump and 1,259 non-garbage photos (5 videos and the pothole part skipped) | `garbage`, `non_garbage` | India street scenes for the report-type classifier: `waste_dump` against `not_waste` |
 | `taco` | TACO: Trash Annotations in Context. https://zenodo.org/records/3587843, annotations from https://github.com/pedropro/TACO | CC BY 4.0 | 1,034 of 1,500, as the 640 px copies the TACO download script uses | 60 litter classes in 28 groups, with boxes | materials, hazards (battery: e-waste; aerosol: chemicals), `bag` boxes for the detector |
-| `garbage_od` | GARBAGE CLASSIFICATION 3, Roboflow Universe (https://universe.roboflow.com/material-identification/garbage-classification-3/dataset/2), mirrored at https://huggingface.co/datasets/keremberke/garbage-object-detection | CC BY 4.0 | 10,464 at 416 px; the train part holds Roboflow augmentation copies (the split keeps copies together) | `biodegradable`, `cardboard`, `glass`, `metal`, `paper`, `plastic`, with boxes | material boxes and crops for the material classifier. Mostly product-style photos on plain backgrounds, so no report type |
-| `dfire` | D-Fire fire and smoke dataset, https://github.com/gaiasd/DFireDataset, files read from the public mirror https://huggingface.co/datasets/badsaarow/d-fire | CC0 1.0 | a fixed, evenly spaced 1,500 of the mirror's 7,221 labelled train images | `smoke`, `fire` (YOLO boxes); unlabelled images are `none` | the `burning` hazard and the detector's `burning` class |
-| `field` | JunkSnap field audit, Jodhpur and other cities | private, never redistributed | added by `import-field` from a Label Studio export | see `data/labels/label_studio.xml` | the only source of real JunkSnap photos; about 30% held out for evaluation |
+| `garbage_od` | GARBAGE CLASSIFICATION 3, Roboflow Universe (https://universe.roboflow.com/material-identification/garbage-classification-3/dataset/2), mirrored at https://huggingface.co/datasets/keremberke/garbage-object-detection | CC BY 4.0 | 10,464 at 416 px | `biodegradable`, `cardboard`, `glass`, `metal`, `paper`, `plastic`, with boxes | material boxes and crops for the material classifier. Mostly product-style photos on plain backgrounds, so no report type |
+| `dfire` | D-Fire fire and smoke dataset, https://github.com/gaiasd/DFireDataset, files read from the public mirror https://huggingface.co/datasets/badsaarow/d-fire | CC0 1.0 | a fixed, evenly spaced 1,500 of the mirror's 3,013 train image/label pairs (the other train files have no matching partner) | `smoke`, `fire` (YOLO boxes); unlabelled images are `none` | the `burning` hazard and the detector's `burning` class |
+| `field` | JunkSnap field audit, Jodhpur and other cities | private, never redistributed | added by `import-field` from a Label Studio export; only the pipeline's blurred copies (`media/reports/…`), never originals | see `data/labels/label_studio.xml` | the only source of real JunkSnap photos; about 30% held out for evaluation |
 
 Excluded inside TACO: 466 images from OpenLitterMap batches carry "ODbL (c) OpenLitterMap & Contributors" per image (share-alike database licence, no 640 px copy), so `fetch` skips them.
 
@@ -50,7 +50,7 @@ Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in
 | public sources | first 10% | next 10% | rest | never |
 | `field` | never | next 10% | rest | first 30% |
 
-Roboflow augmentation copies of one photo hash on the photo's name, so they always share a split. The field `holdout` split is the evaluation set for A2: `yolo-export` never writes it, and training code reads rows through `ManifestFile.trainable()`, which returns only `train` and `val`.
+As a safeguard, Roboflow-style copies of one photo (`<name>_jpg.rf.<hash>`) hash on the photo's name, so augmentation copies would always share a split; the current `garbage_od` export has none. The field `holdout` split is the evaluation set for A2: `yolo-export` never writes it, and training code reads rows through `ManifestFile.trainable()`, which returns only `train` and `val`.
 
 ## Commands
 
@@ -62,8 +62,23 @@ uv run training fetch dfire --limit 1500
 uv run training build-manifest                # builds rows and assigns splits with the recorded seed
 uv run training split                         # re-assigns splits; --seed N --force to change the seed
 uv run training labelstudio-config            # writes data/labels/label_studio.xml
-uv run training import-field export.json --photos <folder>
+uv run training import-field export.json      # --keep-missing or --replace for a partial export
 uv run training yolo-export --out /path/outside/repo/yolo
 ```
 
-`import-field` reads a Label Studio JSON export. Photos of `s3://` tasks are read from S3; photos of local-file or upload tasks are read by file name from `--photos`. Each photo is re-encoded and uploaded to `datasets/field/images/` in the private bucket with its labels in `datasets/field/records.jsonl`, then the manifest is rebuilt. A missing or unreadable photo stops the import. One machine (the lead's) writes the shared manifest: a local cache copy is trusted over S3, so a stale cache elsewhere could overwrite newer field rows. Label Studio tasks should point at the blurred copies (`media/reports/<report_id>.jpg`) or at photos in the private bucket, never at a public link to an original. Labels describe waste only and never name a person.
+Field photos are labelled and stored only as the blurred copies the app pipeline produces, never originals. Point the Label Studio tasks at either:
+- `s3://junksnap-<stage>-public-<account_id>/media/reports/<report_id>.jpg`, by connecting Label Studio's S3 source storage to the public bucket with prefix `media/reports/`; or
+- the CloudFront URL `<PUBLIC_BASE_URL>/media/reports/<report_id>.jpg`.
+
+`import-field` refuses every other reference: originals (`reports/…` in the private bucket), local files and uploads.
+
+For each blurred copy, `import-field`:
+1. re-encodes it, which also drops any EXIF;
+2. uploads it to `datasets/field/images/` in the private bucket, with its labels in `datasets/field/records.jsonl`;
+3. rebuilds the manifest.
+
+A missing or unreadable copy stops the import. The export is merged with the recorded field photos by image id. An export that lacks photos already recorded is refused: `--keep-missing` keeps them, and `--replace` drops them.
+
+One machine (the lead's) writes the shared manifest. A local cache copy is trusted over S3, so a stale cache elsewhere could overwrite newer field rows.
+
+Labels describe waste only and never name a person.

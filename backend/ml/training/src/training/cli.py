@@ -15,14 +15,14 @@ from training.adapters import HttpDownloader, LocalOnlyStore, S3ObjectStore, Sta
 from training.catalogue import FIELD_LICENCE, SourceCatalogue
 from training.class_map import ClassMap
 from training.domain import ConfigError, JunkSnapError
-from training.fetch import UPLOAD_WORKERS, Fetcher
+from training.fetch import UPLOAD_WORKERS, Fetcher, RecordFile
 from training.images import ImageNormaliser
 from training.labelstudio import FIELD_SOURCE, FieldExportReader, LabelStudioConfig
 from training.manifest import ManifestBuilder, ManifestFile
 from training.ports import ObjectStore
 from training.settings import Settings
 from training.sources.base import SourceInfo
-from training.sources.field import FieldExportSource, FieldPhotos
+from training.sources.field import FieldExportSource, FieldPhotos, FieldRecordMerge
 from training.split import DEFAULT_SEED, Splitter
 from training.yolo import YoloExporter
 
@@ -82,15 +82,22 @@ class Commands:
         cache, store = self._settings.require_cache(), self._stores.create(args.no_upload)
         manifest = self._manifest(store)
         splitter = Splitter(self._seed(args, manifest))
-        tasks = json.loads(Path(args.export).read_text(encoding="utf-8"))
-        labelled = FieldExportReader(self._class_map().vocabulary).records(tasks)
-        photos = FieldPhotos(store, Path(args.photos) if args.photos else None)
-        info = SourceInfo(FIELD_SOURCE, FIELD_LICENCE, "Label Studio export")
-        source = FieldExportSource(info, HttpDownloader(), labelled, photos)
+        source = self._field_source(args, cache, store)
         records = Fetcher(cache, store, ImageNormaliser()).fetch(source, None)
         print(f"field: {len(records)} labelled photos")
         rows = splitter.assign(self._builder().build(store))
         self._print(manifest.write(rows, splitter.seed))
+
+    def _field_source(
+        self, args: argparse.Namespace, cache: Path, store: ObjectStore
+    ) -> FieldExportSource:
+        tasks = json.loads(Path(args.export).read_text(encoding="utf-8"))
+        labelled = FieldExportReader(self._class_map().vocabulary).records(tasks)
+        recorded = RecordFile(cache, FIELD_SOURCE)
+        recorded.pull(store)
+        kept = FieldRecordMerge(args.merge).kept(recorded.read(), labelled)
+        info = SourceInfo(FIELD_SOURCE, FIELD_LICENCE, "Label Studio export")
+        return FieldExportSource(info, labelled, kept, FieldPhotos(store, HttpDownloader()))
 
     def yolo_export(self, args: argparse.Namespace) -> None:
         cache, store = self._settings.require_cache(), self._stores.create(args.no_upload)
@@ -123,29 +130,51 @@ class Commands:
         print(json.dumps(summary, indent=2))
 
 
-def parser() -> argparse.ArgumentParser:
-    common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--no-upload", action="store_true", help="keep files local, skip S3")
-    root = argparse.ArgumentParser(prog="training", description="JunkSnap dataset steps")
-    sub = root.add_subparsers(dest="command", required=True)
-    fetch = sub.add_parser("fetch", parents=[common], help="download, normalise, upload")
-    fetch.add_argument("sources", nargs="*")
-    fetch.add_argument("--limit", type=int, default=None, help="images per source")
-    for name in ("build-manifest", "split", "import-field"):
-        command = sub.add_parser(name, parents=[common])
-        command.add_argument("--seed", type=int, default=None)
-        command.add_argument("--force", action="store_true", help="allow a new split seed")
-    sub.choices["import-field"].add_argument("export", help="Label Studio JSON export")
-    sub.choices["import-field"].add_argument("--photos", help="folder with non-S3 photos")
-    sub.add_parser("labelstudio-config").add_argument("--out", default=None)
-    sub.add_parser("yolo-export", parents=[common]).add_argument("--out", required=True)
-    return root
+class CliParser:
+    """Builds the argparse tree, one small method per group of subcommands."""
+
+    def __init__(self) -> None:
+        self._common = argparse.ArgumentParser(add_help=False)
+        self._common.add_argument("--no-upload", action="store_true", help="keep files local")
+        self._root = argparse.ArgumentParser(prog="training", description="JunkSnap dataset steps")
+        self._sub = self._root.add_subparsers(dest="command", required=True)
+
+    def build(self) -> argparse.ArgumentParser:
+        self._fetch()
+        self._manifest_steps()
+        self._import_field()
+        self._sub.add_parser("labelstudio-config").add_argument("--out", default=None)
+        self._sub.add_parser("yolo-export", parents=[self._common]).add_argument(
+            "--out", required=True
+        )
+        return self._root
+
+    def _fetch(self) -> None:
+        fetch = self._sub.add_parser("fetch", parents=[self._common])
+        fetch.add_argument("sources", nargs="*")
+        fetch.add_argument("--limit", type=int, default=None, help="images per source")
+
+    def _manifest_steps(self) -> None:
+        for name in ("build-manifest", "split", "import-field"):
+            command = self._sub.add_parser(name, parents=[self._common])
+            command.add_argument("--seed", type=int, default=None)
+            command.add_argument("--force", action="store_true", help="allow a new split seed")
+
+    def _import_field(self) -> None:
+        command = self._sub.choices["import-field"]
+        command.add_argument("export", help="Label Studio JSON export of blurred copies")
+        mode = command.add_mutually_exclusive_group()
+        mode.add_argument("--keep-missing", dest="merge", action="store_const",
+                          const="keep-missing", help="keep recorded photos the export lacks")
+        mode.add_argument("--replace", dest="merge", action="store_const", const="replace",
+                          help="drop recorded photos the export lacks")
+        command.set_defaults(merge="strict")
 
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     logging.getLogger("urllib3").setLevel(logging.ERROR)
-    args = parser().parse_args(argv)
+    args = CliParser().build().parse_args(argv)
     try:
         settings = Settings.from_env(Path.cwd())
         commands = Commands(settings, StoreFactory(settings))

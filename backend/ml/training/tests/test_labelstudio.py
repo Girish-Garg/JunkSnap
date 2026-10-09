@@ -30,7 +30,7 @@ FAKE_EXPORT = [
          "value": {"x": 10, "y": 20, "width": 50, "height": 40,
                    "rectanglelabels": ["waste_pile"]}},
     ]),
-    task("/data/local-files/?d=field%2FIMG_0042.jpg", [
+    task("https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_10.jpg", [
         choice("report_type", "no_bin"), choice("context_no_bin", "no_pickup"),
         choice("burning", "no"),
     ]),
@@ -64,8 +64,8 @@ def test_import_reads_a_tiny_export(class_map: ClassMap) -> None:
     [box] = first.boxes
     assert box.label == "waste_pile"
     assert (box.x, box.y, box.w, box.h) == pytest.approx((0.1, 0.2, 0.5, 0.4))
-    assert second.image_id == "field/img_0042"
-    assert second.path == "IMG_0042.jpg"
+    assert second.image_id == "field/rpt_jdh_10"
+    assert second.path == "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_10.jpg"
     assert second.attributes is not None and second.attributes.hazards == ()
 
 

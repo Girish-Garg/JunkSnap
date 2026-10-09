@@ -14,6 +14,9 @@ class Downloader(ABC):
     @abstractmethod
     def get_json(self, url: str) -> Any: ...
 
+    @abstractmethod
+    def fetch(self, url: str) -> bytes: ...
+
 
 class ObjectStore(ABC):
     """Where dataset files go; keys are relative to the private bucket."""

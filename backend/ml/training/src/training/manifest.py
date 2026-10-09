@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
 from training.class_map import ClassMap
-from training.domain import TRAINABLE_SPLITS, ConfigError, ImageRecord, ManifestRow
+from training.domain import TRAINABLE_SPLITS, ConfigError, ImageRecord, JunkSnapError, ManifestRow
 from training.fetch import RecordFile
 from training.ports import ObjectStore
 from training.utils import count_values, s3_key
@@ -88,24 +89,31 @@ class ManifestFile:
         return data.decode("utf-8")
 
     def write(self, rows: list[ManifestRow], seed: int | None = None) -> dict[str, Any]:
+        """Publishes first, so a failed upload leaves the cache copy and summary untouched."""
         ordered = sorted(rows, key=lambda r: r.id)
         text = "".join(json.dumps(r.to_json(), sort_keys=True) + "\n" for r in ordered)
-        self._work.parent.mkdir(parents=True, exist_ok=True)
-        self._work.write_text(text, encoding="utf-8", newline="\n")
-        location = self._publish(text)
+        pending = self._work.with_name(f"{self._work.name}.pending")
+        pending.parent.mkdir(parents=True, exist_ok=True)
+        pending.write_text(text, encoding="utf-8", newline="\n")
+        try:
+            location = self._publish(pending, len(text.encode("utf-8")))
+        except (JunkSnapError, OSError):
+            pending.unlink(missing_ok=True)
+            raise
+        pending.replace(self._work)
         summary = ManifestSummary(ordered).as_json(location, seed)
         dumped = json.dumps(summary, indent=2) + "\n"
         self._summary.write_text(dumped, encoding="utf-8", newline="\n")
         return summary
 
-    def _publish(self, text: str) -> str:
-        if len(text.encode("utf-8")) <= MAX_REPO_BYTES:
-            self._repo.write_text(text, encoding="utf-8", newline="\n")
+    def _publish(self, pending: Path, size: int) -> str:
+        if size <= MAX_REPO_BYTES:
+            shutil.copyfile(pending, self._repo)
             return "data/datasets/manifest.jsonl"
         if not self._store.is_remote:
             raise ConfigError("manifest is over 5 MB and --no-upload keeps it off S3")
         key = s3_key("manifest.jsonl")
-        self._store.upload_file(self._work, key)
+        self._store.upload_file(pending, key)
         self._repo.unlink(missing_ok=True)
         return f"{PRIVATE_BUCKET}/{key}"
 
