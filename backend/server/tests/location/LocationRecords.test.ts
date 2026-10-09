@@ -56,7 +56,7 @@ describe("RepresentativeDirectory", () => {
     row("mp", "u09-pc-1"),
   ]);
   const jodhpur: SeatMatch = {
-    assembly: { id: "s20-ac-127", name: "Sardarpura" },
+    assembly: { id: "s20-ac-127", name: "Sardarpura", lokSabhaId: "s20-pc-16" },
     lokSabha: { id: "s20-pc-16", name: "Jodhpur", status: "current" },
   };
 
@@ -75,7 +75,7 @@ describe("RepresentativeDirectory", () => {
 
   it("skips a seat that has no row", () => {
     const unknown: SeatMatch = {
-      assembly: { id: "s20-ac-1", name: "Sadulshahar" },
+      assembly: { id: "s20-ac-1", name: "Sadulshahar", lokSabhaId: "s20-pc-1" },
       lokSabha: { id: "s20-pc-1", name: "Ganganagar", status: "current" },
     };
     expect(directory.forSeats(unknown)).toEqual([]);

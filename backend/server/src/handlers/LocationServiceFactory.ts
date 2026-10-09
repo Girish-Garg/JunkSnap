@@ -6,6 +6,7 @@ import type { ReverseGeocoder } from "../ports/location/ReverseGeocoder.js";
 import { LocalBodyResolver } from "../services/location/LocalBodyResolver.js";
 import { LocationService } from "../services/location/LocationService.js";
 import { RepresentativeDirectory } from "../services/location/RepresentativeDirectory.js";
+import { SeatResolver } from "../services/location/SeatResolver.js";
 import { AssetSettings } from "../settings/AssetSettings.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import type { Env } from "../settings/utils.js";
@@ -33,7 +34,7 @@ export class LocationServiceFactory {
     ]);
     return new LocationService({
       geocoder,
-      seats,
+      seats: new SeatResolver(seats),
       localBodies: new LocalBodyResolver(bodies),
       representatives: new RepresentativeDirectory(rows),
     });

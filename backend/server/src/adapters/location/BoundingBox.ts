@@ -1,5 +1,8 @@
 import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { Span } from "./LocalPlane.js";
 import type { Position, SeatGeometry } from "./SeatGeometry.js";
+
+const NO_MARGIN: Span = { lat: 0, lon: 0 };
 
 export class BoundingBox {
   readonly #west: number;
@@ -27,8 +30,9 @@ export class BoundingBox {
     return new BoundingBox(west, south, east, north);
   }
 
-  contains(point: GeoPoint): boolean {
+  contains(point: GeoPoint, margin: Span = NO_MARGIN): boolean {
     const { lat, lon } = point;
-    return lon >= this.#west && lon <= this.#east && lat >= this.#south && lat <= this.#north;
+    const withinLon = lon >= this.#west - margin.lon && lon <= this.#east + margin.lon;
+    return withinLon && lat >= this.#south - margin.lat && lat <= this.#north + margin.lat;
   }
 }

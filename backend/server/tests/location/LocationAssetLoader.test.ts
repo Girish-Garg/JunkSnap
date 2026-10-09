@@ -31,23 +31,39 @@ class FakeAssetReader implements AssetReader {
 describe("LocationAssetLoader", () => {
   const loader = new LocationAssetLoader(new FileAssetReader(FIXTURES));
 
-  it("indexes Polygon and MultiPolygon seats, keeping only id, name and status", async () => {
+  it("indexes Polygon and MultiPolygon seats, keeping id, name, pc_id and status", async () => {
     const seats = await loader.loadSeats();
     expect(seats.boundariesVersion).toBe("eci-2008-delimitation/v1");
-    expect(seats.assemblySeatAt(GeoPoint.of(26.2618, 73.0035))).toEqual({ id: "s20-ac-128", name: "Jodhpur" });
-    expect(seats.assemblySeatAt(GeoPoint.of(26.3049, 73.0352))?.id).toBe("s20-ac-127");
-    expect(seats.assemblySeatAt(GeoPoint.of(26.2701, 73.0458))?.id).toBe("s20-ac-127");
-    expect(seats.lokSabhaSeatAt(GeoPoint.of(34.1526, 77.5771))).toEqual({
+    expect(seats.assemblyContaining(GeoPoint.of(26.2618, 73.0035))).toEqual({
+      id: "s20-ac-128",
+      name: "Jodhpur",
+      lokSabhaId: "s20-pc-16",
+    });
+    expect(seats.assemblyContaining(GeoPoint.of(26.3049, 73.0352))?.id).toBe("s20-ac-127");
+    expect(seats.assemblyContaining(GeoPoint.of(26.2701, 73.0458))?.id).toBe("s20-ac-127");
+    expect(seats.lokSabhaContaining(GeoPoint.of(34.1526, 77.5771))).toEqual({
       id: "u09-pc-1",
       name: "Ladakh",
       status: "outdated",
     });
+    expect(seats.lokSabhaSeat("s20-pc-7")).toEqual({ id: "s20-pc-7", name: "Jaipur", status: "current" });
+    expect(seats.lokSabhaSeat("s99-pc-1")).toBeNull();
+  });
+
+  it("measures to the nearest edge only within the given distance", async () => {
+    const seats = await loader.loadSeats();
+    const inNotch = GeoPoint.of(26.27, 73.012);
+    expect(seats.assemblyContaining(inNotch)).toBeNull();
+    expect(seats.nearestAssembly(inNotch, 1_000)?.id).toBe("s20-ac-128");
+    expect(seats.nearestAssembly(inNotch, 500)).toBeNull();
+    expect(seats.nearestLokSabha(GeoPoint.of(27.005, 75.85), 1_000)?.id).toBe("s20-pc-7");
+    expect(seats.nearestLokSabha(GeoPoint.of(27.02, 75.85), 1_000)).toBeNull();
   });
 
   it("reads both representative files", async () => {
     const rows = await loader.loadRepresentatives();
-    expect(rows.filter((row) => row.office === "mla")).toHaveLength(3);
-    expect(rows.filter((row) => row.office === "mp")).toHaveLength(4);
+    expect(rows.filter((row) => row.office === "mla")).toHaveLength(4);
+    expect(rows.filter((row) => row.office === "mp")).toHaveLength(6);
   });
 
   it.each([

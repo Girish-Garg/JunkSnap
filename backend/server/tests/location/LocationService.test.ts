@@ -33,7 +33,7 @@ describe("LocationService.locate with fixture polygons", () => {
       local_body: { id: "jodhpur-mc", name: "Jodhpur Municipal Corporation", head_office: "Commissioner" },
       ward: null,
       assembly_seat: { id: "s20-ac-128", name: "Jodhpur" },
-      loksabha_seat: { id: "s20-pc-16", name: "Jodhpur" },
+      loksabha_seat: { id: "s20-pc-16", name: "Jodhpur", status: "current" },
       representatives: [
         { office: "mla", seat_id: "s20-ac-128", as_of: "2026-10-10", source: MLA_SOURCE },
         { office: "mp", seat_id: "s20-pc-16", as_of: "2026-10-10", source: MP_SOURCE },
@@ -57,7 +57,7 @@ describe("LocationService.locate with fixture polygons", () => {
     const { service } = await serviceWith(PLACES.jaipur);
     const lookup = await service.locate(26.853, 75.8156);
     expect(lookup.assembly_seat).toEqual({ id: "s20-ac-54", name: "Malviya Nagar" });
-    expect(lookup.loksabha_seat).toEqual({ id: "s20-pc-7", name: "Jaipur" });
+    expect(lookup.loksabha_seat).toEqual({ id: "s20-pc-7", name: "Jaipur", status: "current" });
     expect(lookup.local_body?.id).toBe("jaipur-mc");
     expect(lookup.district).toEqual({ id: "rajasthan-jaipur", name: "Jaipur" });
   });
@@ -66,19 +66,21 @@ describe("LocationService.locate with fixture polygons", () => {
     const { service } = await serviceWith(PLACES.delhi);
     const lookup = await service.locate(DELHI.lat, DELHI.lon);
     expect(lookup.assembly_seat).toBeNull();
-    expect(lookup.loksabha_seat).toEqual({ id: "u05-pc-4", name: "New Delhi" });
+    expect(lookup.loksabha_seat).toEqual({ id: "u05-pc-4", name: "New Delhi", status: "current" });
     expect(lookup.representatives).toEqual([
       { office: "mp", seat_id: "u05-pc-4", as_of: "2026-10-10", source: MP_SOURCE },
     ]);
     expect(lookup.local_body).toBeNull();
     expect(lookup.district).toEqual({ id: "delhi-new-delhi", name: "New Delhi" });
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
   });
 
   it("never gives an outdated Lok Sabha seat an MP row, though the row exists", async () => {
     const { service } = await serviceWith(PLACES.leh);
     const lookup = await service.locate(LEH.lat, LEH.lon);
-    expect(lookup.loksabha_seat).toEqual({ id: "u09-pc-1", name: "Ladakh" });
+    expect(lookup.loksabha_seat).toEqual({ id: "u09-pc-1", name: "Ladakh", status: "outdated" });
     expect(lookup.representatives).toEqual([]);
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
   });
 
   it("rejects a point outside India before calling the geocoder", async () => {
@@ -93,10 +95,40 @@ describe("LocationService.locate with fixture polygons", () => {
     expect(geocoder.calls).toHaveLength(1);
   });
 
-  it("leaves the assembly seat empty in a gap inside its bounding box", async () => {
-    const { service } = await serviceWith(PLACES.jodhpur);
-    const lookup = await service.locate(26.275, 73.015);
+  it("takes the nearest assembly seat across a sliver inside its own Lok Sabha seat", async () => {
+    const { service } = await serviceWith(PLACES.jaipur);
+    const lookup = await service.locate(26.855, 75.835);
+    expect(lookup.assembly_seat?.id).toBe("s20-ac-54");
+    expect(lookup.loksabha_seat.id).toBe("s20-pc-7");
+  });
+
+  it("takes the nearest Lok Sabha seat within 1 km when no polygon contains the point", async () => {
+    const { service } = await serviceWith(PLACES.jaipur);
+    const lookup = await service.locate(27.005, 75.85);
     expect(lookup.assembly_seat).toBeNull();
+    expect(lookup.loksabha_seat.id).toBe("s20-pc-7");
+    expect(lookup.representatives.map((row) => row.seat_id)).toEqual(["s20-pc-7"]);
+  });
+
+  it("rejects a point more than 1 km from every seat, before calling the geocoder", async () => {
+    const { service, geocoder } = await serviceWith(PLACES.jaipur);
+    await expect(service.locate(27.02, 75.85)).rejects.toThrow(OutsideIndiaError);
+    expect(geocoder.calls).toEqual([]);
+  });
+
+  it("takes the Lok Sabha seat of the assembly seat where two states' shapes overlap", async () => {
+    const { service } = await serviceWith(PLACES.sangaria);
+    const lookup = await service.locate(29.95, 74.39);
+    expect(lookup.assembly_seat).toEqual({ id: "s20-ac-7", name: "Sangaria" });
+    expect(lookup.loksabha_seat).toEqual({ id: "s20-pc-1", name: "Ganganagar", status: "current" });
+    expect(lookup.representatives.map((row) => row.seat_id)).toEqual(["s20-ac-7", "s20-pc-1"]);
+  });
+
+  it("never pulls a nearby assembly seat across a state border", async () => {
+    const { service } = await serviceWith(PLACES.abohar);
+    const lookup = await service.locate(30.005, 74.4);
+    expect(lookup.assembly_seat).toBeNull();
+    expect(lookup.loksabha_seat.id).toBe("s19-pc-10");
     expect(lookup.representatives.map((row) => row.office)).toEqual(["mp"]);
   });
 

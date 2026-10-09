@@ -6,6 +6,8 @@ export const PLACES = {
   delhi: { countryCode: "IN", state: "Delhi", district: "New Delhi", town: "New Delhi" },
   leh: { countryCode: "IN", state: "Ladakh", district: "Leh", town: "Leh" },
   kathmandu: { countryCode: "NP", state: "Bagmati", district: "Kathmandu", town: "Kathmandu" },
+  sangaria: { countryCode: "IN", state: "Rajasthan", district: "Hanumangarh", town: "Sangaria" },
+  abohar: { countryCode: "IN", state: "Punjab", district: "Fazilka", town: "Abohar" },
 } as const satisfies Record<string, PlaceFields>;
 
 // The contract fixtures' sample points, with the seats data/boundaries puts them in.
@@ -19,3 +21,8 @@ export const SAMPLES = [
 export const DELHI = { lat: 28.6315, lon: 77.2167 } as const;
 export const LEH = { lat: 34.1526, lon: 77.5771 } as const;
 export const KATHMANDU = { lat: 27.7172, lon: 85.324 } as const;
+
+// Real-file trouble spots: slivers between seats near Jaipur and Churu, and Punjab's Firozepur overlapping Sangaria.
+export const JAIPUR_SLIVER = { lat: 26.95, lon: 75.7314 } as const;
+export const CHURU_SLIVER = { lat: 27.5, lon: 74.2 } as const;
+export const SANGARIA_OVERLAP = { lat: 29.95, lon: 74.39 } as const;

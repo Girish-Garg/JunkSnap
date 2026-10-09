@@ -3,7 +3,7 @@ import { validateLocationLookup } from "../../src/contracts/index.gen.js";
 import { LocationServiceFactory } from "../../src/handlers/LocationServiceFactory.js";
 import type { LocationService } from "../../src/services/location/LocationService.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
-import { DELHI, LEH, SAMPLES } from "./samples.js";
+import { CHURU_SLIVER, DELHI, JAIPUR_SLIVER, LEH, SAMPLES, SANGARIA_OVERLAP } from "./samples.js";
 
 // Calls Amazon Location for real: RUN_AWS_TESTS=1 with credentials for ap-south-1.
 describe.runIf(process.env.RUN_AWS_TESTS === "1")("LocationService with Amazon Location", () => {
@@ -33,5 +33,18 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("LocationService with Amazon L
     expect(lookup.assembly_seat).toBeNull();
     expect(lookup.loksabha_seat.id).toBe(loksabha);
     expect(lookup.representatives).toHaveLength(mpRows);
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
+  });
+
+  it.each([
+    { name: "Jaipur sliver", ...JAIPUR_SLIVER, assembly: "s20-ac-50", loksabha: "s20-pc-7" },
+    { name: "Churu sliver", ...CHURU_SLIVER, assembly: "s20-ac-24", loksabha: "s20-pc-3" },
+    { name: "Sangaria overlap", ...SANGARIA_OVERLAP, assembly: "s20-ac-7", loksabha: "s20-pc-1" },
+  ])("locates the $name", async ({ name, lat, lon, assembly, loksabha }) => {
+    const lookup = await service.locate(lat, lon);
+    console.log(name, JSON.stringify(lookup));
+    expect(lookup.assembly_seat?.id).toBe(assembly);
+    expect(lookup.loksabha_seat.id).toBe(loksabha);
+    expect(() => validateLocationLookup(lookup)).not.toThrow();
   });
 });

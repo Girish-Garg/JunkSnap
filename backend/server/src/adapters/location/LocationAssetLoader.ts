@@ -36,7 +36,10 @@ export class LocationAssetLoader {
     ]);
     return new TurfSeatLocator({
       version: BOUNDARIES_VERSION,
-      assembly: assembly.features.map(({ geometry, properties }) => ({ geometry, value: properties })),
+      assembly: assembly.features.map(({ geometry, properties: { id, name, pc_id } }) => ({
+        geometry,
+        value: { id, name, lokSabhaId: pc_id },
+      })),
       lokSabha: lokSabha.features.map(({ geometry, properties }) => ({ geometry, value: properties })),
     });
   }

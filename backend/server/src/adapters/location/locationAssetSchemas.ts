@@ -10,9 +10,9 @@ const Geometry = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MultiPolygon"), coordinates: z.array(z.array(Ring)) }),
 ]);
 
-// Unknown properties (ac_no, category, pc_id, state) are stripped on parse.
-const AssemblySeat = z.object({ id: AreaId, name: Name });
-const LokSabhaSeat = AssemblySeat.extend({ status: z.enum(["current", "outdated"]) });
+// Unknown properties (ac_no, category, state) are stripped on parse.
+const AssemblySeat = z.object({ id: AreaId, name: Name, pc_id: AreaId });
+const LokSabhaSeat = z.object({ id: AreaId, name: Name, status: z.enum(["current", "outdated"]) });
 
 export const AssemblyCollection = z.object({
   type: z.literal("FeatureCollection"),
