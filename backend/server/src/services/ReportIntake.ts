@@ -8,6 +8,9 @@ import type { ReportQueue } from "../ports/ReportQueue.js";
 import type { ReportRepository } from "../ports/ReportRepository.js";
 import type { SnapLimit } from "./SnapLimit.js";
 
+// The queue's visibility timeout: before it passes, the first message may still be in flight or being handled.
+const REQUEUE_AFTER_MS = 300_000;
+
 export interface IntakePorts {
   readonly reports: ReportRepository;
   readonly snapLimit: SnapLimit;
@@ -48,12 +51,13 @@ export class ReportIntake {
     return { report_id: report.id, status: "queued" };
   }
 
-  // A retry never counts against the limit; it re-sends while queued because the first send may have failed.
+  // A retry is never counted; it re-sends only a report still queued after the visibility timeout, whose message was lost.
   async #resubmit(report: Report, upload: ReportUpload, userId?: string): Promise<AcceptedReport> {
     if (!report.isOwnedBy({ deviceToken: upload.device_token, userId })) {
       throw new ValidationError("upload_id was already used for another report");
     }
-    if (report.status === "queued") {
+    const cutoff = isoSeconds(new Date(this.#ports.clock.now().getTime() - REQUEUE_AFTER_MS));
+    if (report.isQueuedSince(cutoff)) {
       await this.#ports.queue.sendReport(report.id);
     }
     return { report_id: report.id, status: "queued" };

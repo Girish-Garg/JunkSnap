@@ -60,6 +60,21 @@ export class Report {
     return this.#record;
   }
 
+  // 0 for an item written before versions existed.
+  get version(): number {
+    return this.#record.version ?? 0;
+  }
+
+  // The repository calls this once its conditional write of version + 1 succeeded.
+  advanceVersion(): void {
+    this.#set({ version: this.version + 1 });
+  }
+
+  // Still queued at or before the cutoff, so its first message is no longer in flight.
+  isQueuedSince(cutoff: string): boolean {
+    return this.#record.status === "queued" && this.#record.received_at <= cutoff;
+  }
+
   // A user's report belongs to that user; a guest report made before accounts belongs to its device.
   isOwnedBy(viewer: Viewer): boolean {
     const owner = this.#record.user_id;

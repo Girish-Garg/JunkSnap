@@ -10,6 +10,7 @@ import { DynamoReputationReader } from "../src/adapters/DynamoReputationReader.j
 import { DynamoSnapCounter } from "../src/adapters/DynamoSnapCounter.js";
 import { S3UploadSigner } from "../src/adapters/S3UploadSigner.js";
 import { UlidIdGenerator } from "../src/adapters/UlidIdGenerator.js";
+import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { Report } from "../src/domain/Report.js";
 import { isoSeconds } from "../src/domain/timeUtils.js";
 import { IntakeSettings } from "../src/settings/IntakeSettings.js";
@@ -44,6 +45,18 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("report adapters against AWS",
     expect(await repository.create(report)).toBe(true);
     expect(await repository.create(report)).toBe(false);
     expect((await repository.get(report.id))?.toRecord()).toEqual(report.toRecord());
+  });
+
+  it("DynamoDB refuses a save from a copy read before another writer's save", async () => {
+    const repository = new DynamoReportRepository(documents(), intake().reportsTable);
+    const report = guestReport();
+    await repository.create(report);
+    const [first, second] = await Promise.all([repository.get(report.id), repository.get(report.id)]);
+    first?.start(isoSeconds(new Date()));
+    second?.start(isoSeconds(new Date()));
+    await repository.save(first ?? report);
+    await expect(repository.save(second ?? report)).rejects.toThrow(ConcurrentUpdateError);
+    expect((await repository.get(report.id))?.version).toBe(2);
   });
 
   it("the by-device index counts a new snap within a few seconds", async () => {

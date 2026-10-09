@@ -22,6 +22,8 @@ export interface ReportRecord extends ReportUpload {
   readonly brand_labels?: readonly BrandLabel[];
   readonly location?: LocationLookup;
   readonly site_id?: string;
+  // Optimistic lock: every save writes version + 1 only if the stored version is still the one read.
+  readonly version?: number;
 }
 
 // Body of GET /reports/{id}.

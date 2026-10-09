@@ -6,6 +6,7 @@ import type {
   ReportUpload,
   VerificationResult,
 } from "../src/contracts/index.gen.js";
+import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { Report } from "../src/domain/Report.js";
 import type { MergeOutcome, ReportModerationRequest, ReportRecord } from "../src/domain/ReportRecord.js";
 import type { VerifyRequest } from "../src/domain/VerifyRequest.js";
@@ -60,13 +61,22 @@ export class FakeReportRepository implements ReportRepository {
     if (this.records.has(report.id)) {
       return false;
     }
-    this.records.set(report.id, report.toRecord());
+    this.#write(report);
     return true;
   }
 
+  // Same optimistic lock as DynamoReportRepository.
   async save(report: Report): Promise<void> {
-    this.records.set(report.id, report.toRecord());
-    this.saved.push(report.toRecord());
+    if ((this.records.get(report.id)?.version ?? 0) !== report.version) {
+      throw new ConcurrentUpdateError(`report ${report.id} changed since it was read`);
+    }
+    this.#write(report);
+    this.saved.push(this.stored(report.id));
+  }
+
+  #write(report: Report): void {
+    this.records.set(report.id, { ...report.toRecord(), version: report.version + 1 });
+    report.advanceVersion();
   }
 
   put(record: ReportRecord): void {

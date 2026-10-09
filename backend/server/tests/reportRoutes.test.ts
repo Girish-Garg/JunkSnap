@@ -1,10 +1,13 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import type { ReportUpload } from "../src/contracts/index.gen.js";
 import { Report } from "../src/domain/Report.js";
-import { ReportEndpoints, type ReportGuard, type SignedInUser } from "../src/handlers/ReportEndpoints.js";
+import { UnauthorizedError } from "../src/domain/errors.js";
+import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
 import { createApp } from "../src/handlers/web.js";
+import type { AuthUser, Authenticator } from "../src/ports/Authenticator.js";
 import type { IdGenerator } from "../src/ports/IdGenerator.js";
 import type { UploadSigner, UploadSignRequest } from "../src/ports/UploadSigner.js";
 import { ReportIntake } from "../src/services/ReportIntake.js";
@@ -57,15 +60,13 @@ class CountingIds implements IdGenerator {
   }
 }
 
-// Reads `Authorization: Bearer <user id>` as a verified user; no header is a guest.
-class FakeGuard implements ReportGuard {
-  async requireUser(request: Pick<FastifyRequest, "headers">): Promise<SignedInUser | undefined> {
-    return this.optionalUser(request);
-  }
-
-  async optionalUser(request: Pick<FastifyRequest, "headers">): Promise<SignedInUser | undefined> {
-    const header = request.headers.authorization;
-    return header === undefined ? undefined : { userId: header.replace(/^Bearer /, "") };
+// Accepts any token as that user's id, except "expired"; the real RouteGuard reads the header.
+class FakeAuthenticator implements Authenticator {
+  async verify(token: string): Promise<AuthUser> {
+    if (token === "expired") {
+      throw new UnauthorizedError("token expired");
+    }
+    return { userId: token };
   }
 }
 
@@ -86,7 +87,7 @@ beforeEach(async () => {
   const presigner = new UploadPresigner({ signer, ids: new CountingIds(), clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue, clock });
   const statuses = new ReportStatusReader(reports, PUBLIC_BASE_URL);
-  const plugin = new ReportEndpoints({ presigner, intake, statuses }, new FakeGuard()).plugin();
+  const plugin = new ReportEndpoints({ presigner, intake, statuses }, new RouteGuard(new FakeAuthenticator())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
 });
@@ -176,6 +177,12 @@ describe("POST /reports", () => {
     });
   });
 
+  it("takes a bad or expired token as a guest, so Snap stays open", async () => {
+    const response = await postReport(phoneBody(), "expired");
+    expect(response.statusCode).toBe(202);
+    expect(reports.stored("rpt_jdh_1").user_id).toBeUndefined();
+  });
+
   it("ignores a user_id in the body", async () => {
     await postReport(phoneBody({ user_id: OTHER_USER }), USER);
     expect(reports.stored("rpt_jdh_1").user_id).toBe(USER);
@@ -183,16 +190,26 @@ describe("POST /reports", () => {
     expect(reports.stored("rpt_guest").user_id).toBeUndefined();
   });
 
-  it("is idempotent: a retry returns the same report, re-queues it while queued and is not counted again", async () => {
+  it("is idempotent: a retry returns the same report without counting or queuing it again", async () => {
     await postReport(phoneBody(), USER);
     const queries = counter.queries;
     clock.advance(5_000);
     const retry = await postReport(phoneBody(), USER);
     expect(retry.statusCode).toBe(202);
     expect(retry.json()).toEqual({ report_id: "rpt_jdh_1", status: "queued" });
-    expect(queue.sent).toEqual(["rpt_jdh_1", "rpt_jdh_1"]);
+    expect(queue.sent).toEqual(["rpt_jdh_1"]);
     expect(counter.queries).toBe(queries);
     expect(reports.stored("rpt_jdh_1").received_at).toBe(NOW);
+  });
+
+  it("re-queues a retried report still queued after the 5 minute visibility timeout", async () => {
+    await postReport(phoneBody(), USER);
+    clock.advance(299_000);
+    await postReport(phoneBody(), USER);
+    expect(queue.sent).toEqual(["rpt_jdh_1"]);
+    clock.advance(1_000);
+    await postReport(phoneBody(), USER);
+    expect(queue.sent).toEqual(["rpt_jdh_1", "rpt_jdh_1"]);
   });
 
   it("answers queued without re-queuing once the worker has picked the report up", async () => {

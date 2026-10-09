@@ -3,6 +3,7 @@ import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { StandInNearbyCounter } from "../src/adapters/StandInNearbyCounter.js";
 import { StandInStep } from "../src/adapters/StandInStep.js";
 import type { VerificationResult } from "../src/contracts/index.gen.js";
+import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { InternalDataError, ValidationError } from "../src/domain/errors.js";
 import { QueueMessage } from "../src/domain/QueueMessage.js";
 import { Report } from "../src/domain/Report.js";
@@ -167,6 +168,33 @@ describe("ReportPipeline", () => {
       report_id: "rpt_jdh_1",
       receive_count: 3,
     });
+  });
+
+  it("lets one of two concurrent deliveries own the report; the other fails without needs_review", async () => {
+    const { pipeline } = wire({ merge: { siteId: "site_jdh_1", verification: "verified" } });
+    const results = await Promise.allSettled([pipeline.handle(delivery(1)), pipeline.handle(delivery(3))]);
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+    expect(results[1]).toMatchObject({ reason: expect.any(ConcurrentUpdateError) });
+    expect(journal.calls).toEqual(ALL_STEPS);
+    expect(reports.stored("rpt_jdh_1")).toMatchObject({ status: "verified", completed_steps: ALL_STEPS });
+    await pipeline.handle(delivery(3));
+    expect(journal.calls).toEqual(ALL_STEPS);
+  });
+
+  it("does not mark needs_review over a report another worker settled meanwhile", async () => {
+    const settledElsewhere: PipelineStep = {
+      name: "brands",
+      run: async () => {
+        const stored = reports.stored("rpt_jdh_1");
+        reports.put({ ...stored, status: "verified", version: (stored.version ?? 0) + 1 });
+        throw new Error("brands failed");
+      },
+    };
+    const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
+    const clock = new FixedClock("2026-10-10T02:15:10Z");
+    const pipeline = new ReportPipeline({ steps: [settledElsewhere], reports, clock, logger });
+    await expect(pipeline.handle(delivery(3))).rejects.toThrow("brands failed");
+    expect(reports.stored("rpt_jdh_1").status).toBe("verified");
   });
 
   it("ignores a repeat delivery of a settled report", async () => {

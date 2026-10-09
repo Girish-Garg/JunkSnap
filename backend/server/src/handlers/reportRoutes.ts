@@ -14,7 +14,7 @@ import { ReportStatusReader } from "../services/ReportStatusReader.js";
 import { SnapLimit } from "../services/SnapLimit.js";
 import { UploadPresigner } from "../services/UploadPresigner.js";
 import { IntakeSettings } from "../settings/IntakeSettings.js";
-import { GuestGuard } from "./GuestGuard.js";
+import { RouteGuard } from "./auth/RouteGuard.js";
 import { ReportEndpoints } from "./ReportEndpoints.js";
 import type { RouteContext } from "./RouteBuilder.js";
 
@@ -33,7 +33,7 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const queue = new SqsReportQueue(new SQSClient({ region }), settings.reportsQueueUrl);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock });
     const statuses = new ReportStatusReader(reports, settings.publicBaseUrl);
-    const guard = new GuestGuard(); // AUTH SEAM (PR #37): RouteGuard.fromEnv(env), then POST routes need a signed-in user.
+    const guard = RouteGuard.fromEnv(env);
     await app.register(new ReportEndpoints({ presigner, intake, statuses }, guard).plugin());
   };
 }

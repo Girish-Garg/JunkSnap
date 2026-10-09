@@ -8,6 +8,7 @@ import { DynamoSnapCounter } from "../src/adapters/DynamoSnapCounter.js";
 import { HttpMlVerifyClient, type FetchFunction } from "../src/adapters/HttpMlVerifyClient.js";
 import { S3UploadSigner } from "../src/adapters/S3UploadSigner.js";
 import { SqsReportQueue } from "../src/adapters/SqsReportQueue.js";
+import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { ConfigError, ExternalServiceError, InternalDataError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
 import type { VerifyRequest } from "../src/domain/VerifyRequest.js";
@@ -115,7 +116,38 @@ describe("DynamoReportRepository", () => {
     expect(await repository.create(report())).toBe(false);
     const put = client.commands[0] as PutCommand;
     expect(put.input).toMatchObject({ TableName: "reports", ConditionExpression: "attribute_not_exists(report_id)" });
-    expect(put.input.Item).toMatchObject({ report_id: "rpt_jdh_1", device_token: upload().device_token });
+    expect(put.input.Item).toMatchObject({ report_id: "rpt_jdh_1", device_token: upload().device_token, version: 1 });
+  });
+
+  it("saves version + 1 only while the stored version is the one read", async () => {
+    const client = new ScriptedClient([{}, {}]);
+    const repository = new DynamoReportRepository(client.documents(), "reports");
+    const stored = Report.fromRecord({ ...report().toRecord(), version: 4 });
+    await repository.save(stored);
+    await repository.save(stored);
+    const [first, second] = client.commands as PutCommand[];
+    expect(first?.input).toMatchObject({
+      ConditionExpression: "#version = :expected",
+      ExpressionAttributeNames: { "#version": "version" },
+      ExpressionAttributeValues: { ":expected": 4 },
+      Item: { version: 5 },
+    });
+    expect(second?.input).toMatchObject({ ExpressionAttributeValues: { ":expected": 5 }, Item: { version: 6 } });
+  });
+
+  it("saves an item written before versions existed only if it still has none", async () => {
+    const client = new ScriptedClient([{}]);
+    await new DynamoReportRepository(client.documents(), "reports").save(report());
+    expect((client.commands[0] as PutCommand).input).toMatchObject({
+      ConditionExpression: "attribute_not_exists(#version)",
+      Item: { version: 1 },
+    });
+  });
+
+  it("throws ConcurrentUpdateError when another writer saved first", async () => {
+    const client = new ScriptedClient([conditionFailed()]);
+    const repository = new DynamoReportRepository(client.documents(), "reports");
+    await expect(repository.save(report())).rejects.toThrow(ConcurrentUpdateError);
   });
 
   it("reads a stored report and rejects a malformed item", async () => {

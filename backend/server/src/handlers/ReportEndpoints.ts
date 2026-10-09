@@ -1,10 +1,11 @@
-import type { FastifyPluginAsync, FastifyRequest } from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { validateReportUpload } from "../contracts/index.gen.js";
 import { ValidationError } from "../domain/errors.js";
 import type { ReportIntake } from "../services/ReportIntake.js";
 import type { ReportStatusReader } from "../services/ReportStatusReader.js";
 import type { PresignRequest, UploadPresigner } from "../services/UploadPresigner.js";
+import type { RouteGuard } from "./auth/RouteGuard.js";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -15,15 +16,8 @@ const PresignBody = z.strictObject({
   device_token: z.string().regex(UUID_V4),
 });
 
-export interface SignedInUser {
-  readonly userId: string;
-}
-
-// The shape of the auth task's RouteGuard, so it plugs in unchanged.
-export interface ReportGuard {
-  requireUser(request: Pick<FastifyRequest, "headers">): Promise<SignedInUser | undefined>;
-  optionalUser(request: Pick<FastifyRequest, "headers">): Promise<SignedInUser | undefined>;
-}
+// Snap stays open to guests, so every route reads the user optionally; a guest's report has no user_id.
+export type ReportGuard = Pick<RouteGuard, "optionalUser">;
 
 export interface ReportServices {
   readonly presigner: UploadPresigner;
@@ -45,11 +39,11 @@ export class ReportEndpoints {
     const guard = this.#guard;
     return async (app) => {
       app.post("/uploads/presign", async (request) => {
-        const user = await guard.requireUser(request);
+        const user = await guard.optionalUser(request);
         return presigner.presign(ReportEndpoints.#presignBody(request.body), user?.userId);
       });
       app.post("/reports", async (request, reply) => {
-        const user = await guard.requireUser(request);
+        const user = await guard.optionalUser(request);
         const accepted = await intake.submit(validateReportUpload(request.body), user?.userId);
         return reply.status(202).send(accepted);
       });

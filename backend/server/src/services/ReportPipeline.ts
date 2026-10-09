@@ -1,3 +1,4 @@
+import { ConcurrentUpdateError } from "../domain/ConcurrentUpdateError.js";
 import { InternalDataError } from "../domain/errors.js";
 import type { QueueMessage } from "../domain/QueueMessage.js";
 import type { Report } from "../domain/Report.js";
@@ -33,7 +34,10 @@ export class ReportPipeline implements MessageHandler {
     try {
       await this.#run(report);
     } catch (error) {
-      await this.#giveUpOnLastAttempt(report, message);
+      // A lost save race means another worker owns the report; SQS retries this message after it settles.
+      if (!(error instanceof ConcurrentUpdateError)) {
+        await this.#giveUpOnLastAttempt(report.id, message);
+      }
       throw error;
     }
   }
@@ -59,13 +63,17 @@ export class ReportPipeline implements MessageHandler {
   }
 
   // The phone never waits forever: the last failed receive leaves the report needs_review before the DLQ.
-  async #giveUpOnLastAttempt(report: Report, message: QueueMessage): Promise<void> {
+  async #giveUpOnLastAttempt(reportId: string, message: QueueMessage): Promise<void> {
     if (!message.isLastAttempt()) {
       return;
     }
-    report.markNeedsReview(this.#now());
-    const fields = { report_id: report.id, receive_count: message.receiveCount };
+    const fields = { report_id: reportId, receive_count: message.receiveCount };
     try {
+      const report = await this.#load(reportId);
+      if (report.isSettled()) {
+        return;
+      }
+      report.markNeedsReview(this.#now());
       await this.#ports.reports.save(report);
       this.#ports.logger.warn(fields, "report needs review");
     } catch (error) {

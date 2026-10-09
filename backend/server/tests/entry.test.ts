@@ -27,7 +27,8 @@ function entry(service: "api" | "worker" | "scores") {
 describe("EntryPoint", () => {
   it("runs scores in demo without CORS_ORIGINS", async () => {
     const { sink, exit, point } = entry("scores");
-    await point.run(DEMO_WITHOUT_CORS, runScores);
+    const job = { run: async () => ({ sites: 0, areas: 0, failed: 0 }) };
+    await point.run(DEMO_WITHOUT_CORS, (context) => runScores(context, async () => job));
     expect(exit.exitCode).toBeUndefined();
     expect(sink.records()).toEqual([expect.objectContaining({ level: "INFO", service: "scores", stage: "demo" })]);
   });

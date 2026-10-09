@@ -1,0 +1,51 @@
+# Cluster-scoped and identical for every stage; each stage's Ingress gets its own ALB.
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: alb
+spec:
+  scheme: internet-facing
+  # Only CloudFront reaches the ALB: com.amazonaws.global.cloudfront.origin-facing in ap-south-1.
+  prefixListsIDs: [pl-9aa247f3]
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: alb
+---
+# Everything public goes to api; ml is never routed, and /internal/* gets a fixed 404 at the ALB.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: junksnap
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/actions.internal-not-found: >-
+      {"type": "fixed-response", "fixedResponseConfig": {"contentType": "application/json",
+      "statusCode": "404", "messageBody": "{\"error\": \"not_found\", \"message\": \"Not found\"}"}}
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /internal
+            pathType: Prefix
+            backend:
+              service:
+                name: internal-not-found
+                port:
+                  name: use-annotation
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  name: http
