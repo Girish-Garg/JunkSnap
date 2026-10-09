@@ -3,7 +3,7 @@ import { z } from "zod";
 import { InternalDataError } from "../../domain/errors.js";
 import { EmbeddingVector } from "../../domain/sites/EmbeddingVector.js";
 import type { EmbeddingStore } from "../../ports/sites/EmbeddingStore.js";
-import { awsCall } from "./utils.js";
+import type { AwsCalls } from "./AwsCalls.js";
 
 // Stored embedding shape in contracts/README.md: {"model", "dim", "vector"}.
 const StoredEmbedding = z
@@ -13,14 +13,16 @@ const StoredEmbedding = z
 export class S3EmbeddingStore implements EmbeddingStore {
   readonly #client: S3Client;
   readonly #bucket: string;
+  readonly #calls: AwsCalls;
 
-  constructor(client: S3Client, bucket: string) {
+  constructor(client: S3Client, bucket: string, calls: AwsCalls) {
     this.#client = client;
     this.#bucket = bucket;
+    this.#calls = calls;
   }
 
   async vectorAt(key: string): Promise<EmbeddingVector> {
-    const text = await awsCall("S3 get embedding", async () => {
+    const text = await this.#calls.run("S3 get embedding", async () => {
       const { Body } = await this.#client.send(new GetObjectCommand({ Bucket: this.#bucket, Key: key }));
       return Body === undefined ? "" : Body.transformToString();
     });

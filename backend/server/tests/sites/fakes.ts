@@ -4,19 +4,41 @@ import type { CleanupFinish, CleanupRecord } from "../../src/domain/sites/Cleanu
 import type { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { StaleSiteError } from "../../src/domain/sites/SiteErrors.js";
-import type { SiteFeature, SiteInternals, SiteState, Verification } from "../../src/domain/sites/SiteTypes.js";
+import type { SiteFeature, SiteInternals, SiteState, Verification, Voter } from "../../src/domain/sites/SiteTypes.js";
 import type { Vote } from "../../src/domain/sites/VoteTally.js";
+import type { Logger } from "../../src/ports/Logger.js";
 import type { AreaScoreSeeder } from "../../src/ports/sites/AreaScoreSeeder.js";
 import type { CleanupQueue } from "../../src/ports/sites/CleanupQueue.js";
 import type { CleanupRepository } from "../../src/ports/sites/CleanupRepository.js";
 import type { Clock } from "../../src/ports/sites/Clock.js";
-import type { DeviceReputation } from "../../src/ports/sites/DeviceReputation.js";
 import type { EmbeddingStore } from "../../src/ports/sites/EmbeddingStore.js";
 import type { ReportStatusWriter } from "../../src/ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../src/ports/sites/SiteRepository.js";
 import type { VoteRepository } from "../../src/ports/sites/VoteRepository.js";
+import type { VoterReputation } from "../../src/ports/sites/VoterReputation.js";
 
 export const NOW = "2026-10-10T06:00:00.000Z";
+
+export class RecordingLogger implements Logger {
+  readonly lines: { readonly level: string; readonly fields: object; readonly message: string }[] = [];
+
+  info(fields: object | string, message?: string): void {
+    this.#record("info", fields, message);
+  }
+
+  warn(fields: object | string, message?: string): void {
+    this.#record("warn", fields, message);
+  }
+
+  error(fields: object | string, message?: string): void {
+    this.#record("error", fields, message);
+  }
+
+  #record(level: string, fields: object | string, message?: string): void {
+    const entry = typeof fields === "string" ? { fields: {}, message: fields } : { fields, message: message ?? "" };
+    this.lines.push({ level, ...entry });
+  }
+}
 
 export class FixedClock implements Clock {
   now(): Date {
@@ -65,7 +87,14 @@ export class FakeSiteRepository implements SiteRepository {
   }
 
   putFeature(feature: SiteFeature, internals: Partial<SiteInternals> = {}): void {
-    const base = { reportIds: [], reporterDevices: [], meTooCount: 0, embeddingKey: null, pendingCleanupId: null };
+    const base = {
+      reports: [],
+      reporterDevices: [],
+      reporterUsers: [],
+      meTooCount: 0,
+      embeddingKey: null,
+      pendingCleanupId: null,
+    };
     this.#states.set(feature.properties.site_id, { feature, internals: { ...base, version: 1, ...internals } });
   }
 
@@ -107,24 +136,36 @@ export class FakeVoteRepository implements VoteRepository {
   }
 }
 
-export class FakeDevices implements DeviceReputation {
+// Keys are device tokens or user ids; anything unknown counts 0.5, and the lower of the two wins.
+export class FakeReputation implements VoterReputation {
   readonly #reputations: ReadonlyMap<string, number>;
 
   constructor(reputations: Record<string, number> = {}) {
     this.#reputations = new Map(Object.entries(reputations));
   }
 
-  async reputationOf(deviceToken: string): Promise<number> {
-    return this.#reputations.get(deviceToken) ?? 0.5;
+  async reputationOf(voter: Voter): Promise<number> {
+    const device = this.#reputations.get(voter.deviceToken) ?? 0.5;
+    const user = voter.userId === null ? 0.5 : (this.#reputations.get(voter.userId) ?? 0.5);
+    return Math.min(device, user);
   }
 }
 
 export class FakeReportStatus implements ReportStatusWriter {
   readonly statuses = new Map<string, Verification>();
   calls = 0;
+  #failures = 0;
+
+  failNext(): void {
+    this.#failures += 1;
+  }
 
   async followSite(reportIds: readonly string[], status: Verification): Promise<void> {
     this.calls += 1;
+    if (this.#failures > 0) {
+      this.#failures -= 1;
+      throw new Error("reports table unreachable");
+    }
     for (const reportId of reportIds) {
       this.statuses.set(reportId, status);
     }

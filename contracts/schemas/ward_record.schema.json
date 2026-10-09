@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ward_record.schema.json",
+  "title": "Ward record",
+  "description": "Facts about one ward of one municipal body, read from official public pages by data/ward_crawler. Every fact is an object with its value, the page URL it came from, when that page was fetched and the page's SHA-256, or null when unknown. Offices and seats only: no personal names and no party field. Records stay unreviewed until a human checks them.",
+  "type": "object",
+  "required": [
+    "id",
+    "city",
+    "state",
+    "municipal_body",
+    "ward_number",
+    "zone",
+    "ward_name",
+    "area_km2",
+    "population",
+    "councillor_seat",
+    "sanitation_office",
+    "disposal_points",
+    "assembly_seat",
+    "lok_sabha_seat",
+    "review_status",
+    "extracted_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "<city>-<body slug>-<ward number, 3 digits>, for example jodhpur-uttar-012.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-[0-9]{3}$"
+    },
+    "city": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "state": { "type": "string", "minLength": 1 },
+    "municipal_body": { "$ref": "#/$defs/sourcedText" },
+    "ward_number": { "$ref": "#/$defs/sourcedWardNumber" },
+    "zone": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedText" }] },
+    "ward_name": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedText" }] },
+    "area_km2": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedArea" }] },
+    "population": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedPopulation" }] },
+    "councillor_seat": {
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedCouncillorSeat" }]
+    },
+    "sanitation_office": {
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedOfficeContact" }]
+    },
+    "disposal_points": {
+      "description": "Collection and legal disposal points inside this ward. Each point carries its own source. Null when none are known for the ward.",
+      "anyOf": [
+        { "type": "null" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/disposalPoint" } }
+      ]
+    },
+    "assembly_seat": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedSeat" }] },
+    "lok_sabha_seat": { "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/sourcedSeat" }] },
+    "review_status": {
+      "enum": ["unreviewed", "reviewed", "rejected"],
+      "default": "unreviewed"
+    },
+    "extracted_by": {
+      "description": "The model that read the newest facts in this record.",
+      "type": "object",
+      "required": ["provider", "model", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["source_url", "fetched_at", "page_sha256"],
+      "properties": {
+        "source_url": { "type": "string", "pattern": "^https?://" },
+        "fetched_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+        },
+        "page_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "sourcedText": {
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": { "value": { "type": "string", "minLength": 1 } },
+      "unevaluatedProperties": false
+    },
+    "sourcedWardNumber": {
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": { "value": { "type": "integer", "minimum": 1 } },
+      "unevaluatedProperties": false
+    },
+    "sourcedArea": {
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": { "value": { "type": "number", "exclusiveMinimum": 0 } },
+      "unevaluatedProperties": false
+    },
+    "sourcedPopulation": {
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "type": "object",
+          "required": ["count", "census_year"],
+          "additionalProperties": false,
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "census_year": {
+              "description": "Null when the page does not print the census year.",
+              "type": ["integer", "null"],
+              "minimum": 1871,
+              "maximum": 2100
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "sourcedCouncillorSeat": {
+      "description": "The councillor's office and the seat's reservation category. Never the person.",
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "type": "object",
+          "required": ["office", "reservation"],
+          "additionalProperties": false,
+          "properties": {
+            "office": { "type": "string", "minLength": 1 },
+            "reservation": { "type": ["string", "null"] }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "sourcedOfficeContact": {
+      "description": "An office's officially published phone or email. Never a person's own number.",
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "type": "object",
+          "required": ["office", "phone", "email"],
+          "additionalProperties": false,
+          "properties": {
+            "office": { "type": "string", "minLength": 1 },
+            "phone": { "type": ["string", "null"] },
+            "email": { "type": ["string", "null"] }
+          },
+          "anyOf": [
+            { "properties": { "phone": { "type": "string" } } },
+            { "properties": { "email": { "type": "string" } } }
+          ]
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "sourcedSeat": {
+      "description": "An assembly (MLA) or Lok Sabha (MP) constituency: name and official number.",
+      "$ref": "#/$defs/provenance",
+      "required": ["value"],
+      "properties": {
+        "value": {
+          "type": "object",
+          "required": ["name", "code"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "code": { "type": ["string", "null"], "pattern": "^[0-9]+$" }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "disposalPoint": {
+      "$ref": "#/$defs/provenance",
+      "required": ["lat", "lon", "kind", "ref"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+        "kind": { "type": "string", "minLength": 1 },
+        "ref": { "description": "Stable id at the source, for example osm:node/123.", "type": "string" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

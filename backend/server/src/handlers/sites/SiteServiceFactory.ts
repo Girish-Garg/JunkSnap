@@ -2,12 +2,13 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { S3Client } from "@aws-sdk/client-s3";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { AwsCalls } from "../../adapters/sites/AwsCalls.js";
 import { DynamoAreaScoreSeeder } from "../../adapters/sites/DynamoAreaScoreSeeder.js";
 import { DynamoCleanupRepository } from "../../adapters/sites/DynamoCleanupRepository.js";
-import { DynamoDeviceReputation } from "../../adapters/sites/DynamoDeviceReputation.js";
 import { DynamoReportStatusWriter } from "../../adapters/sites/DynamoReportStatusWriter.js";
 import { DynamoSiteRepository } from "../../adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../adapters/sites/DynamoVoteRepository.js";
+import { DynamoVoterReputation } from "../../adapters/sites/DynamoVoterReputation.js";
 import { NgeohashCells } from "../../adapters/sites/NgeohashCells.js";
 import { S3EmbeddingStore } from "../../adapters/sites/S3EmbeddingStore.js";
 import { SiteItemMapper } from "../../adapters/sites/SiteItemMapper.js";
@@ -15,8 +16,10 @@ import { SqsCleanupQueue } from "../../adapters/sites/SqsCleanupQueue.js";
 import { SystemClock } from "../../adapters/sites/SystemClock.js";
 import { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../domain/sites/PublicMedia.js";
+import type { Logger } from "../../ports/Logger.js";
 import { CleanupIntake } from "../../services/sites/CleanupIntake.js";
 import { CleanupService } from "../../services/sites/CleanupService.js";
+import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../services/sites/MergeTargetPicker.js";
 import { SiteFinder } from "../../services/sites/SiteFinder.js";
 import { SiteMerger } from "../../services/sites/SiteMerger.js";
@@ -35,20 +38,24 @@ export interface SiteClients {
 export class SiteServiceFactory {
   readonly #settings: SitesSettings;
   readonly #clients: SiteClients;
+  readonly #mapper: SiteItemMapper;
   readonly #clock = new SystemClock();
   readonly #cells = new NgeohashCells();
+  readonly #calls = new AwsCalls();
+  readonly #retry = new ConflictRetry();
 
-  constructor(settings: SitesSettings, clients: SiteClients) {
+  constructor(settings: SitesSettings, clients: SiteClients, logger: Logger) {
     this.#settings = settings;
     this.#clients = clients;
+    this.#mapper = new SiteItemMapper(this.#cells, logger);
   }
 
-  static fromEnv(core: CoreSettings, env: Env): SiteServiceFactory {
+  static fromEnv(core: CoreSettings, env: Env, logger: Logger): SiteServiceFactory {
     const region = core.awsRegion;
     const marshallOptions = { removeUndefinedValues: true };
     const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({ region }), { marshallOptions });
     const clients = { dynamo, s3: new S3Client({ region }), sqs: new SQSClient({ region }) };
-    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients);
+    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger);
   }
 
   finder(): SiteFinder {
@@ -58,44 +65,52 @@ export class SiteServiceFactory {
   voteService(): VoteService {
     const { dynamo } = this.#clients;
     const { tables } = this.#settings;
-    const votes = new DynamoVoteRepository(dynamo, tables.votes);
-    const devices = new DynamoDeviceReputation(dynamo, tables.devices);
-    return new VoteService({ sites: this.#sites(), votes, devices, reports: this.#reports(), clock: this.#clock });
+    return new VoteService({
+      sites: this.#sites(),
+      votes: new DynamoVoteRepository(dynamo, tables.votes, this.#calls),
+      reputation: new DynamoVoterReputation(dynamo, tables, this.#calls),
+      reports: this.#reports(),
+      clock: this.#clock,
+      retry: this.#retry,
+    });
   }
 
   cleanupIntake(): CleanupIntake {
-    const queue = new SqsCleanupQueue(this.#clients.sqs, this.#settings.reportsQueueUrl);
-    return new CleanupIntake({ sites: this.#sites(), cleanups: this.#cleanups(), queue, clock: this.#clock });
+    const queue = new SqsCleanupQueue(this.#clients.sqs, this.#settings.reportsQueueUrl, this.#calls);
+    const deps = { sites: this.#sites(), cleanups: this.#cleanups(), queue, clock: this.#clock, retry: this.#retry };
+    return new CleanupIntake(deps);
   }
 
   merger(): SiteMerger {
     const { dynamo, s3 } = this.#clients;
+    const embeddings = new S3EmbeddingStore(s3, this.#settings.originalsBucket, this.#calls);
     return new SiteMerger({
       sites: this.#sites(),
       cells: this.#cells,
-      picker: new MergeTargetPicker(new S3EmbeddingStore(s3, this.#settings.originalsBucket)),
+      picker: new MergeTargetPicker(embeddings),
       reports: this.#reports(),
-      scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores),
+      scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,
       reportFactory: new MergeableReportFactory(this.#media()),
+      retry: this.#retry,
     });
   }
 
   cleanupService(): CleanupService {
-    return new CleanupService({ sites: this.#sites(), cleanups: this.#cleanups(), media: this.#media() });
+    const deps = { sites: this.#sites(), cleanups: this.#cleanups(), media: this.#media(), retry: this.#retry };
+    return new CleanupService(deps);
   }
 
   #sites(): DynamoSiteRepository {
-    const mapper = new SiteItemMapper(this.#cells);
-    return new DynamoSiteRepository(this.#clients.dynamo, this.#settings.tables.sites, mapper);
+    return new DynamoSiteRepository(this.#clients.dynamo, this.#settings.tables.sites, this.#mapper, this.#calls);
   }
 
   #cleanups(): DynamoCleanupRepository {
-    return new DynamoCleanupRepository(this.#clients.dynamo, this.#settings.tables.cleanups);
+    return new DynamoCleanupRepository(this.#clients.dynamo, this.#settings.tables.cleanups, this.#calls);
   }
 
   #reports(): DynamoReportStatusWriter {
-    return new DynamoReportStatusWriter(this.#clients.dynamo, this.#settings.tables.reports, this.#clock);
+    return new DynamoReportStatusWriter(this.#clients.dynamo, this.#settings.tables.reports, this.#clock, this.#calls);
   }
 
   #media(): PublicMedia {

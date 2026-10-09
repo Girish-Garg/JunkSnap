@@ -3,12 +3,13 @@ import type { CleanupOutcome, CleanupRecord, CleanupStatus } from "../../domain/
 import type { PublicMedia } from "../../domain/sites/PublicMedia.js";
 import type { CleanupRepository } from "../../ports/sites/CleanupRepository.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
-import { ConflictRetry } from "./ConflictRetry.js";
+import type { ConflictRetry } from "./ConflictRetry.js";
 
 export interface CleanupServiceDeps {
   readonly sites: SiteRepository;
   readonly cleanups: CleanupRepository;
   readonly media: PublicMedia;
+  readonly retry: ConflictRetry;
 }
 
 interface Acceptance {
@@ -19,7 +20,6 @@ interface Acceptance {
 // Worker side: applies the moderation and verification of an after-photo to its site.
 export class CleanupService {
   readonly #deps: CleanupServiceDeps;
-  readonly #retry = new ConflictRetry();
 
   constructor(deps: CleanupServiceDeps) {
     this.#deps = deps;
@@ -35,7 +35,7 @@ export class CleanupService {
       return record.status;
     }
     const acceptance = this.#acceptance(cleanupId, outcome);
-    await this.#retry.run(() => this.#settleSite(record, acceptance));
+    await this.#deps.retry.run(() => this.#settleSite(record, acceptance));
     const status = acceptance === null ? "rejected" : "accepted";
     await this.#deps.cleanups.finish(cleanupId, { status, ...outcome });
     return status;

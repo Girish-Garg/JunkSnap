@@ -7,6 +7,7 @@ const ROUNDING = 1e6;
 export interface Vote {
   readonly siteId: string;
   readonly deviceToken: string;
+  readonly userId: string | null;
   readonly choice: VoteChoice;
   readonly weight: number;
   readonly votedAt: string;
@@ -24,15 +25,16 @@ export class VoteTally {
     this.#net = net;
   }
 
-  // Callers pass one vote per device, the latest; the votes table key guarantees it.
+  // Takes one vote per device (the votes table key); keeps only the latest vote per user on top.
   static of(votes: readonly Vote[]): VoteTally {
-    const confirms = votes.filter((vote) => vote.choice === "confirm");
-    const rejects = votes.filter((vote) => vote.choice === "reject");
+    const counted = VoteTally.#latestPerUser(votes);
+    const confirms = counted.filter((vote) => vote.choice === "confirm");
+    const rejects = counted.filter((vote) => vote.choice === "reject");
     const net = VoteTally.#sum(confirms) - VoteTally.#sum(rejects);
     return new VoteTally(confirms.length, rejects.length, Math.round(net * ROUNDING) / ROUNDING);
   }
 
-  // A new device (reputation 0.5) counts 1.0.
+  // reputation is the lower of the user's and the device's; a new one (0.5) counts 1.0.
   static weightFor(reputation: number): number {
     return BASE_WEIGHT + Math.min(1, Math.max(0, reputation));
   }
@@ -42,6 +44,18 @@ export class VoteTally {
       return "verified";
     }
     return this.#net <= -SETTLE_AT ? "rejected" : null;
+  }
+
+  static #latestPerUser(votes: readonly Vote[]): Vote[] {
+    const latest = new Map<string, Vote>();
+    for (const vote of votes) {
+      const voter = vote.userId === null ? `device ${vote.deviceToken}` : `user ${vote.userId}`;
+      const kept = latest.get(voter);
+      if (kept === undefined || Date.parse(vote.votedAt) > Date.parse(kept.votedAt)) {
+        latest.set(voter, vote);
+      }
+    }
+    return [...latest.values()];
   }
 
   static #sum(votes: readonly Vote[]): number {

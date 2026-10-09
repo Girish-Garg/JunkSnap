@@ -12,7 +12,7 @@ import type { Clock } from "../../ports/sites/Clock.js";
 import type { GeoCells } from "../../ports/sites/GeoCells.js";
 import type { ReportStatusWriter } from "../../ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
-import { ConflictRetry } from "./ConflictRetry.js";
+import type { ConflictRetry } from "./ConflictRetry.js";
 import type { MergeTargetPicker } from "./MergeTargetPicker.js";
 
 export interface SiteMergerDeps {
@@ -23,34 +23,46 @@ export interface SiteMergerDeps {
   readonly scores: AreaScoreSeeder;
   readonly clock: Clock;
   readonly reportFactory: MergeableReportFactory;
+  readonly retry: ConflictRetry;
 }
+
+type Outcome = "founded" | "merged" | "unchanged";
 
 export interface MergeResult {
   readonly siteId: string;
-  readonly outcome: "founded" | "merged" | "unchanged";
+  readonly outcome: Outcome;
   // The worker writes this as the merged report's status, with siteId as its site_id.
   readonly reportStatus: Verification;
+}
+
+interface Merged {
+  readonly site: Site;
+  readonly outcome: Outcome;
 }
 
 // Merges a verified or community-check report into a site; idempotent per report id.
 export class SiteMerger {
   readonly #deps: SiteMergerDeps;
-  readonly #retry = new ConflictRetry();
 
   constructor(deps: SiteMergerDeps) {
     this.#deps = deps;
   }
 
+  // A settled site rewrites its reports' status on every pass, so a redelivered message repairs a failed write.
   async merge(evidence: MergeEvidence): Promise<MergeResult> {
     const report = this.#deps.reportFactory.create(evidence);
-    return this.#retry.run(() => this.#attempt(report));
+    const { site, outcome } = await this.#deps.retry.run(() => this.#attempt(report));
+    if (site.verification !== "community_check") {
+      await this.#deps.reports.followSite(site.reportIds, site.verification);
+    }
+    return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 
-  async #attempt(report: MergeableReport): Promise<MergeResult> {
+  async #attempt(report: MergeableReport): Promise<Merged> {
     const nearby = await this.#nearby(report.point);
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
-      return SiteMerger.#result(holder, "unchanged");
+      return { site: holder, outcome: "unchanged" };
     }
     const target = await this.#deps.picker.pick(report, nearby);
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
@@ -63,39 +75,31 @@ export class SiteMerger {
   }
 
   // Re-reads the target by id: the geohash index is eventually consistent.
-  async #mergeInto(siteId: string, report: MergeableReport): Promise<MergeResult> {
+  async #mergeInto(siteId: string, report: MergeableReport): Promise<Merged> {
     const site = await this.#deps.sites.get(siteId);
     if (site?.holds(report.reportId)) {
-      return SiteMerger.#result(site, "unchanged");
+      return { site, outcome: "unchanged" };
     }
     if (!site?.accepts(report)) {
       throw new StaleSiteError(`${siteId} changed while merging ${report.reportId}`);
     }
-    const before = site.verification;
     site.merge(report);
     await this.#deps.sites.save(site);
-    if (site.verification !== before) {
-      await this.#deps.reports.followSite(site.reportIds, site.verification);
-    }
-    return SiteMerger.#result(site, "merged");
+    return { site, outcome: "merged" };
   }
 
   // Seeds before creating, so a retry that finds the site already merged needs no seeding.
-  async #found(report: MergeableReport): Promise<MergeResult> {
+  async #found(report: MergeableReport): Promise<Merged> {
     const site = Site.found(report);
     const rows = new ZeroScoreRows(site.toFeature()).rows(this.#deps.clock.now().toISOString());
     await Promise.all(rows.map((row) => this.#deps.scores.seedIfMissing(row)));
     if (await this.#deps.sites.create(site)) {
-      return SiteMerger.#result(site, "founded");
+      return { site, outcome: "founded" };
     }
     const existing = await this.#deps.sites.get(site.siteId);
     if (existing?.holds(report.reportId)) {
-      return SiteMerger.#result(existing, "unchanged");
+      return { site: existing, outcome: "unchanged" };
     }
     throw new InternalDataError(`${site.siteId} exists without its founding report ${report.reportId}`);
-  }
-
-  static #result(site: Site, outcome: MergeResult["outcome"]): MergeResult {
-    return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 }

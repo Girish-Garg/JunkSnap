@@ -9,7 +9,13 @@ import type {
 import type { MergeableReport, MergeEvidence } from "../../src/domain/sites/MergeableReport.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
-import type { ReportType, ReportContext, SiteFeature } from "../../src/domain/sites/SiteTypes.js";
+import type {
+  NearPlace,
+  ReportContext,
+  ReportInsights,
+  ReportType,
+  SiteFeature,
+} from "../../src/domain/sites/SiteTypes.js";
 
 const FIXTURES = new URL("../../../../contracts/fixtures/", import.meta.url);
 
@@ -47,6 +53,25 @@ export interface EvidenceOptions {
   readonly embeddingKey?: string | null;
   readonly capturedAt?: string;
   readonly burning?: boolean;
+  readonly user?: string | null;
+  readonly insights?: ReportInsights | null;
+  readonly near?: readonly NearPlace[];
+}
+
+// Each device belongs to its own user unless a test says otherwise.
+export function userOf(device: string): string {
+  return `user-${device.slice(0, 8)}`;
+}
+
+const BURNING = {
+  hazard: "burning",
+  confidence: 0.9,
+  source: { signal: "vision_judge", provider: "bedrock", model: "global.anthropic.claude-sonnet-4-6", version: "4.6" },
+} as const;
+
+function insightsOf(o: EvidenceOptions, fromFixture: ReportInsights | null): ReportInsights | null {
+  const insights = o.insights === undefined ? fromFixture : o.insights;
+  return insights !== null && o.burning === true ? { ...insights, hazards: [BURNING] } : insights;
 }
 
 const DEFAULTS = {
@@ -59,7 +84,7 @@ const DEFAULTS = {
   device: DEVICE_A,
   embeddingKey: null,
   capturedAt: "2026-10-10T02:14:05Z",
-  burning: false,
+  near: [],
 } as const;
 
 // A jdh-1 report from the fixtures, with the fields a test changes.
@@ -68,12 +93,15 @@ export function evidence(options: EvidenceOptions = {}): MergeEvidence {
   const upload = fixture<ReportUpload>("report_upload.jdh-1.json");
   const moderation = fixture<ModerationResult>("moderation_result.jdh-1.json");
   const verification = fixture<VerificationResult>("verification_result.jdh-1.json");
-  const judge = verification.judge && { ...verification.judge, burning: o.burning };
   const meToo = o.meToo === undefined ? {} : { me_too_site_id: o.meToo };
+  const user = o.user === undefined ? userOf(o.device) : o.user;
+  const guestUpload: ReportUpload = { ...upload };
+  delete guestUpload.user_id;
   return {
     upload: {
-      ...upload,
+      ...guestUpload,
       ...meToo,
+      ...(user === null ? {} : { user_id: user }),
       upload_id: `upl_${o.id}`,
       report_type: o.reportType,
       context: o.context,
@@ -82,8 +110,15 @@ export function evidence(options: EvidenceOptions = {}): MergeEvidence {
       captured_at: o.capturedAt,
     },
     moderation: { ...moderation, report_id: `rpt_${o.id}`, blurred_key: `media/reports/rpt_${o.id}.jpg` },
-    verification: { ...verification, report_id: `rpt_${o.id}`, decision: o.decision, embedding_key: o.embeddingKey, judge },
+    verification: {
+      ...verification,
+      report_id: `rpt_${o.id}`,
+      decision: o.decision,
+      embedding_key: o.embeddingKey,
+      insights: insightsOf(o, verification.insights ?? null),
+    },
     location: fixture<LocationLookup>("location_lookup.jdh-1.json"),
+    near: o.near,
     brands: [fixture<BrandLabel>("brand_label.jdh-1.json")],
   };
 }

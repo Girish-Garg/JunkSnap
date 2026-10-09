@@ -6,6 +6,7 @@ import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFa
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { VoteTally } from "../../src/domain/sites/VoteTally.js";
+import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_URL, DEVICE_B, evidence, fixture, northOf, report } from "./builders.js";
@@ -30,6 +31,7 @@ function setup(sites = new FakeSiteRepository()) {
     scores,
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
+    retry: new ConflictRetry(),
   });
   return { sites, reports, scores, embeddings, merger };
 }
@@ -41,14 +43,13 @@ describe("SiteMerger founding", () => {
     expect(result).toEqual({ siteId: "site_jdh_1", outcome: "founded", reportStatus: "verified" });
     expect(sites.feature("site_jdh_1").properties.report_count).toBe(1);
     expect([...scores.rows.keys()].sort()).toEqual([
-      "assembly/s20-ac-127",
+      "assembly/s20-ac-128",
       "district/rajasthan-jodhpur",
       "loksabha/s20-pc-16",
-      "ward/jodhpur-south-mc-w37",
     ]);
-    const row = validateWardScores(scores.rows.get("ward/jodhpur-south-mc-w37"));
+    const row = validateWardScores(scores.rows.get("assembly/s20-ac-128"));
     expect(row).toMatchObject({
-      area: { kind: "ward", id: "jodhpur-south-mc-w37", name: "Ward 37" },
+      area: { kind: "assembly", id: "s20-ac-128", name: "Jodhpur" },
       counts: { verified_reports: 0, sites: 0 },
       scores: { city: { value: null, reason: "too_few_reports" } },
       diagnosis: [],
@@ -57,15 +58,15 @@ describe("SiteMerger founding", () => {
     });
   });
 
-  it("never overwrites an existing scores row and skips a null ward", async () => {
+  it("never overwrites an existing scores row and skips a null ward or assembly seat", async () => {
     const { merger, scores } = setup();
     const existing = fixture<WardScores>("ward_scores.jpr-1.json");
-    await scores.seedIfMissing({ ...existing, area: { kind: "assembly", id: "s20-ac-127", name: "Sardarpura" } });
+    await scores.seedIfMissing({ ...existing, area: { kind: "loksabha", id: "s20-pc-16", name: "Jodhpur" } });
     const base = evidence();
-    await merger.merge({ ...base, location: { ...base.location, ward: null } });
-    expect(scores.rows.has("ward/jodhpur-south-mc-w37")).toBe(false);
-    expect(scores.rows.get("assembly/s20-ac-127")?.counts.sites).toBe(1);
-    expect(scores.rows.size).toBe(3);
+    const ward = { id: "jodhpur-mc-w37", name: "Ward 37" };
+    await merger.merge({ ...base, location: { ...base.location, ward, assembly_seat: null } });
+    expect([...scores.rows.keys()].sort()).toEqual(["district/rajasthan-jodhpur", "loksabha/s20-pc-16", "ward/jodhpur-mc-w37"]);
+    expect(scores.rows.get("loksabha/s20-pc-16")?.counts.sites).toBe(1);
   });
 
   it("starts a community check site for a community check report", async () => {
@@ -106,7 +107,7 @@ describe("SiteMerger merging", () => {
   it("skips rejected sites", async () => {
     const { merger, sites } = setup();
     const rejected = Site.found(report({ decision: "community_check" }));
-    const rejectVote = { siteId: "s", deviceToken: "d", choice: "reject" as const, weight: 3, votedAt: NOW };
+    const rejectVote = { siteId: "s", deviceToken: "d", userId: null, choice: "reject" as const, weight: 3, votedAt: NOW };
     rejected.recordVotes(VoteTally.of([rejectVote]));
     sites.put(rejected);
     expect((await merger.merge(evidence({ id: "jdh_2" }))).siteId).toBe("site_jdh_2");
@@ -180,11 +181,31 @@ describe("SiteMerger report status", () => {
     expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
   });
 
-  it("gives a community check report its verified site's status without rewriting the others", async () => {
+  it("gives a community check report its verified site's status, and rewrites it on every pass", async () => {
     const { merger, reports } = setup();
     await merger.merge(evidence());
     const result = await merger.merge(evidence({ id: "jdh_2", decision: "community_check" }));
     expect(result).toMatchObject({ outcome: "merged", reportStatus: "verified" });
+    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
+    await merger.merge(evidence({ id: "jdh_2", decision: "community_check" }));
+    expect(reports.calls).toBe(3);
+  });
+
+  it("writes no status while the site is still in community check", async () => {
+    const { merger, reports } = setup();
+    await merger.merge(evidence({ decision: "community_check" }));
+    await merger.merge(evidence({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
     expect(reports.calls).toBe(0);
+  });
+
+  it("repairs the statuses when a redelivered message follows a failed status write", async () => {
+    const { merger, reports, sites } = setup();
+    await merger.merge(evidence({ decision: "community_check" }));
+    reports.failNext();
+    await expect(merger.merge(evidence({ id: "jdh_2", device: DEVICE_B }))).rejects.toThrow(/unreachable/);
+    expect(sites.feature("site_jdh_1").properties.verification).toBe("verified");
+    expect(reports.statuses.size).toBe(0);
+    expect(await merger.merge(evidence({ id: "jdh_2", device: DEVICE_B }))).toMatchObject({ outcome: "unchanged" });
+    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
   });
 });

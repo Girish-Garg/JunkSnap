@@ -21,5 +21,13 @@
   "disagreement": true,
   "combiner": { "kind": "meta_learner", "version": "meta-v1" },
   "embedding_key": "embeddings/rpt_jpr_1.json",
-  "decided_at": "2026-10-10T04:03:20Z"
+  "decided_at": "2026-10-10T04:03:20Z",
+  "insights": {
+    "composition": [
+      { "material": "construction_debris", "share_pct": 80, "source": { "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" } },
+      { "material": "plastic", "share_pct": 6, "source": { "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" } }
+    ],
+    "size_class": { "value": "large", "source": { "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" } },
+    "hazards": []
+  }
 }

@@ -11,10 +11,11 @@ export interface CleanupRequest {
   readonly captured_at: string;
 }
 
-// One row of the cleanups table, before the worker's results.
+// One row of the cleanups table, before the worker's results; user_id is null only for a guest.
 export interface CleanupRecord extends CleanupRequest {
   readonly cleanup_id: string;
   readonly site_id: string;
+  readonly user_id: string | null;
   readonly received_at: string;
   readonly status: CleanupStatus;
 }

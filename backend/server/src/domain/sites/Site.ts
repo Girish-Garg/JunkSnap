@@ -1,4 +1,5 @@
 import { GeoPoint } from "./GeoPoint.js";
+import { InsightMerge } from "./InsightMerge.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import {
   AlreadyCleanedError,
@@ -7,20 +8,13 @@ import {
   OwnSiteError,
   TooFarError,
 } from "./SiteErrors.js";
-import type {
-  SiteFeature,
-  SiteInternals,
-  SiteProperties,
-  SiteState,
-  Verification,
-  VoteResult,
-} from "./SiteTypes.js";
-import { earlierTime, laterTime, mergeBrands, newestPhotos } from "./utils.js";
+import type { SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, Voter, VoteResult } from "./SiteTypes.js";
+import { SiteTemplate } from "./SiteTemplate.js";
+import { earlierTime, laterTime, mergeBrands, newestPhotos, withItem } from "./utils.js";
 import type { VoteTally } from "./VoteTally.js";
 
 export const MERGE_RADIUS_M = 40;
 const VOTE_RADIUS_M = 1000;
-const REPORT_PREFIX = "rpt_";
 
 // Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (an auto-verified report merges in).
 export class Site {
@@ -39,9 +33,9 @@ export class Site {
     return new Site(state);
   }
 
-  // The site id reuses the founding report's suffix, so a retried merge finds the same id.
   static found(report: MergeableReport): Site {
-    const site = new Site({ feature: Site.#blankFeature(report), internals: Site.#blankInternals() });
+    const template = new SiteTemplate(report);
+    const site = new Site({ feature: template.feature(), internals: template.internals() });
     site.merge(report);
     return site;
   }
@@ -63,7 +57,7 @@ export class Site {
   }
 
   get reportIds(): readonly string[] {
-    return this.#internals.reportIds;
+    return this.#internals.reports.map((report) => report.reportId);
   }
 
   get embeddingKey(): string | null {
@@ -75,7 +69,7 @@ export class Site {
   }
 
   holds(reportId: string): boolean {
-    return this.#internals.reportIds.includes(reportId);
+    return this.#internals.reports.some((report) => report.reportId === reportId);
   }
 
   isListed(): boolean {
@@ -105,13 +99,14 @@ export class Site {
     this.#addEvidence(report);
     if (report.autoVerified) {
       this.#confirmByReport();
+      this.#refreshInsights();
     }
     this.#recount();
   }
 
-  // own_site is checked before distance (contracts/README.md).
-  admitVoter(deviceToken: string, from: GeoPoint): void {
-    if (this.#internals.reporterDevices.includes(deviceToken)) {
+  // own_site (same user or same device) is checked before distance (contracts/README.md).
+  admitVoter(voter: Voter, from: GeoPoint): void {
+    if (this.#reportedBy(voter)) {
       throw new OwnSiteError("You reported this site, so a neighbour has to check it");
     }
     if (this.#point.distanceTo(from) > VOTE_RADIUS_M) {
@@ -125,6 +120,9 @@ export class Site {
     const settled = before.verification === "community_check" ? tally.outcome() : null;
     const votes = { confirm: tally.confirm, reject: tally.reject };
     this.#props = { ...before, votes, verification: settled ?? before.verification };
+    if (settled === "verified") {
+      this.#confirmPendingReports();
+    }
     this.#recount();
   }
 
@@ -174,19 +172,20 @@ export class Site {
   }
 
   #addReporter(report: MergeableReport): void {
-    const { reportIds, reporterDevices, meTooCount, embeddingKey } = this.#internals;
-    const knownDevice = reporterDevices.includes(report.deviceToken);
-    const meToo = report.meTooSiteId === this.siteId && !knownDevice;
+    const { reports, reporterDevices, reporterUsers, meTooCount, embeddingKey } = this.#internals;
+    const meToo = report.meTooSiteId === this.siteId && !this.#reportedBy(report);
+    const merged = { reportId: report.reportId, verified: report.autoVerified, insights: report.insights };
     this.#internals = {
       ...this.#internals,
-      reportIds: [...reportIds, report.reportId],
-      reporterDevices: knownDevice ? reporterDevices : [...reporterDevices, report.deviceToken],
+      reports: [...reports, merged],
+      reporterDevices: withItem(reporterDevices, report.deviceToken),
+      reporterUsers: report.userId === null ? reporterUsers : withItem(reporterUsers, report.userId),
       meTooCount: meTooCount + (meToo ? 1 : 0),
       embeddingKey: embeddingKey ?? report.embeddingKey,
     };
   }
 
-  // verified_count counts reports the models auto-verified (docs/decisions/20261010-0253-hem-verified-count.md).
+  // verified_count: docs/decisions/20261010-0253-hem-verified-count.md.
   #addEvidence(report: MergeableReport): void {
     const props = this.#props;
     const photos = report.photoUrl === null ? props.photo_urls : [report.photoUrl, ...props.photo_urls];
@@ -195,7 +194,6 @@ export class Site {
       report_count: props.report_count + 1,
       verified_count: props.verified_count + (report.autoVerified ? 1 : 0),
       photo_urls: newestPhotos(photos),
-      burning: props.burning || (report.autoVerified && report.burning),
       brands: mergeBrands(props.brands, report.brands),
       first_reported_at: earlierTime(props.first_reported_at, report.reportedAt),
       last_reported_at: laterTime(props.last_reported_at, report.reportedAt),
@@ -212,6 +210,31 @@ export class Site {
     };
   }
 
+  // Neighbours confirmed the site, so every report still waiting on that check counts as verified.
+  #confirmPendingReports(): void {
+    const pending = this.#internals.reports.filter((report) => !report.verified).length;
+    const reports = this.#internals.reports.map((report) => ({ ...report, verified: true }));
+    this.#internals = { ...this.#internals, reports };
+    this.#props = { ...this.#props, verified_count: this.#props.verified_count + pending };
+    this.#refreshInsights();
+  }
+
+  // Insights and burning come from the verified reports only; burning exactly when a hazard says so.
+  #refreshInsights(): void {
+    const verified = this.#internals.reports.flatMap((report) =>
+      report.verified && report.insights !== null ? [report.insights] : [],
+    );
+    const insights = new InsightMerge(verified).merged(this.#props.insights?.near ?? []);
+    const burning = insights.hazards.some((entry) => entry.hazard === "burning");
+    this.#props = { ...this.#props, insights, burning };
+  }
+
+  #reportedBy(voter: Voter): boolean {
+    const { reporterDevices, reporterUsers } = this.#internals;
+    const sameUser = voter.userId !== null && reporterUsers.includes(voter.userId);
+    return sameUser || reporterDevices.includes(voter.deviceToken);
+  }
+
   #recount(): void {
     const corroborations = this.#internals.meTooCount + this.#props.votes.confirm;
     this.#props = { ...this.#props, corroborations };
@@ -221,34 +244,5 @@ export class Site {
     if (!this.awaitsCleanup(cleanupId)) {
       throw new InvalidTransitionError(`${this.siteId} is not waiting for ${cleanupId}`);
     }
-  }
-
-  static #blankFeature(report: MergeableReport): SiteFeature {
-    const properties: SiteProperties = {
-      site_id: `site_${report.reportId.slice(REPORT_PREFIX.length)}`,
-      report_type: report.reportType,
-      context: report.context,
-      status: "open",
-      verification: "community_check",
-      report_count: 0,
-      verified_count: 0,
-      corroborations: 0,
-      votes: { confirm: 0, reject: 0 },
-      photo_urls: [],
-      cleanup_status: "none",
-      cleanup_photo_url: null,
-      burning: false,
-      location: report.location,
-      brands: [],
-      first_reported_at: report.reportedAt,
-      last_reported_at: report.reportedAt,
-      cleaned_at: null,
-      pilot: report.pilot,
-    };
-    return { type: "Feature", geometry: { type: "Point", coordinates: report.point.coordinates() }, properties };
-  }
-
-  static #blankInternals(): SiteInternals {
-    return { reportIds: [], reporterDevices: [], meTooCount: 0, embeddingKey: null, pendingCleanupId: null, version: 0 };
   }
 }

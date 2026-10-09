@@ -3,13 +3,14 @@ import { z } from "zod";
 import { InternalDataError } from "../../domain/errors.js";
 import type { CleanupFinish, CleanupRecord } from "../../domain/sites/Cleanup.js";
 import type { CleanupRepository } from "../../ports/sites/CleanupRepository.js";
-import { awsCall, conditionalWrite } from "./utils.js";
+import type { AwsCalls } from "./AwsCalls.js";
 
 const StoredCleanup = z.object({
   cleanup_id: z.string(),
   site_id: z.string(),
   upload_id: z.string(),
   device_token: z.string(),
+  user_id: z.string().nullable().default(null),
   sha256: z.string(),
   gps: z.object({ lat: z.number(), lon: z.number(), accuracy_m: z.number() }),
   captured_at: z.string(),
@@ -17,19 +18,21 @@ const StoredCleanup = z.object({
   status: z.enum(["checking", "accepted", "rejected"]),
 });
 
-// The worker's moderation_result and verification_result are stored next to the record.
+// The worker's moderation_result and verification_result are stored next to the record; user_id is left out for a guest.
 export class DynamoCleanupRepository implements CleanupRepository {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
+  readonly #calls: AwsCalls;
 
-  constructor(client: DynamoDBDocumentClient, table: string) {
+  constructor(client: DynamoDBDocumentClient, table: string, calls: AwsCalls) {
     this.#client = client;
     this.#table = table;
+    this.#calls = calls;
   }
 
   async get(cleanupId: string): Promise<CleanupRecord | null> {
     const request = new GetCommand({ TableName: this.#table, Key: { cleanup_id: cleanupId }, ConsistentRead: true });
-    const { Item } = await awsCall("DynamoDB get cleanup", () => this.#client.send(request));
+    const { Item } = await this.#calls.run("DynamoDB get cleanup", () => this.#client.send(request));
     if (Item === undefined) {
       return null;
     }
@@ -41,12 +44,13 @@ export class DynamoCleanupRepository implements CleanupRepository {
   }
 
   async create(record: CleanupRecord): Promise<void> {
+    const { user_id, ...fields } = record;
     const request = new PutCommand({
       TableName: this.#table,
-      Item: { ...record },
+      Item: user_id === null ? fields : { ...fields, user_id },
       ConditionExpression: "attribute_not_exists(cleanup_id)",
     });
-    await conditionalWrite("DynamoDB put cleanup", () => this.#client.send(request));
+    await this.#calls.conditional("DynamoDB put cleanup", () => this.#client.send(request));
   }
 
   async finish(cleanupId: string, result: CleanupFinish): Promise<void> {
@@ -63,6 +67,6 @@ export class DynamoCleanupRepository implements CleanupRepository {
         ":checking": "checking",
       },
     });
-    await conditionalWrite("DynamoDB finish cleanup", () => this.#client.send(request));
+    await this.#calls.conditional("DynamoDB finish cleanup", () => this.#client.send(request));
   }
 }

@@ -17,6 +17,10 @@ export function mergeBrands(current: readonly SiteBrand[], added: readonly SiteB
   return [...byBrand.values()];
 }
 
+export function withItem(items: readonly string[], item: string): readonly string[] {
+  return items.includes(item) ? items : [...items, item];
+}
+
 export function earlierTime(a: string, b: string): string {
   return Date.parse(b) < Date.parse(a) ? b : a;
 }

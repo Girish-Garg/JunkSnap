@@ -20,5 +20,14 @@
   "disagreement": false,
   "combiner": { "kind": "fixed_weights", "version": "fw-v0" },
   "embedding_key": null,
-  "decided_at": "2026-10-10T02:15:03Z"
+  "decided_at": "2026-10-10T02:15:03Z",
+  "insights": {
+    "composition": [
+      { "material": "plastic", "share_pct": 55, "source": { "signal": "rekognition_labels", "provider": "rekognition", "model": "DetectLabels", "version": "3.0" } },
+      { "material": "organic", "share_pct": 25, "source": { "signal": "vision_judge", "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6" } },
+      { "material": "paper", "share_pct": 10, "source": { "signal": "rekognition_labels", "provider": "rekognition", "model": "DetectLabels", "version": "3.0" } }
+    ],
+    "size_class": { "value": "medium", "source": { "signal": "vision_judge", "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6" } },
+    "hazards": []
+  }
 }

@@ -81,12 +81,21 @@ describe("EmbeddingVector", () => {
 });
 
 describe("VoteTally", () => {
-  const vote = (choice: "confirm" | "reject", weight: number) => ({
-    siteId: "site_x",
-    deviceToken: `${choice}-${weight}`,
-    choice,
-    weight,
-    votedAt: "2026-10-10T05:00:00Z",
+  let devices = 0;
+  const vote = (choice: "confirm" | "reject", weight: number, userId: string | null = null, votedAt = "2026-10-10T05:00:00Z") => {
+    devices += 1;
+    return { siteId: "site_x", deviceToken: `device-${devices}`, userId, choice, weight, votedAt };
+  };
+
+  it("counts one user on two phones once, with their latest vote", () => {
+    const tally = VoteTally.of([
+      vote("confirm", 1.5, "user-1", "2026-10-10T05:00:00Z"),
+      vote("reject", 1.5, "user-1", "2026-10-10T05:05:00Z"),
+      vote("confirm", 1.5, "user-2"),
+      vote("confirm", 1.5),
+    ]);
+    expect([tally.confirm, tally.reject]).toEqual([2, 1]);
+    expect(tally.outcome()).toBeNull();
   });
 
   it("weighs 0.5 plus reputation, so a new device counts 1.0", () => {

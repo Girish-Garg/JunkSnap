@@ -5,7 +5,7 @@ import type { CleanupQueue } from "../../ports/sites/CleanupQueue.js";
 import type { CleanupRepository } from "../../ports/sites/CleanupRepository.js";
 import type { Clock } from "../../ports/sites/Clock.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
-import { ConflictRetry } from "./ConflictRetry.js";
+import type { ConflictRetry } from "./ConflictRetry.js";
 
 const UPLOAD_PREFIX = "upl_";
 
@@ -14,29 +14,31 @@ export interface CleanupIntakeDeps {
   readonly cleanups: CleanupRepository;
   readonly queue: CleanupQueue;
   readonly clock: Clock;
+  readonly retry: ConflictRetry;
 }
 
 // POST /sites/{id}/cleanup: marks the site checking, stores the record and queues the after-photo.
 export class CleanupIntake {
   readonly #deps: CleanupIntakeDeps;
-  readonly #retry = new ConflictRetry();
 
   constructor(deps: CleanupIntakeDeps) {
     this.#deps = deps;
   }
 
-  async submit(siteId: string, request: CleanupRequest): Promise<CleanupAccepted> {
+  // userId comes from the verified sign-in token; null only for a guest.
+  async submit(siteId: string, request: CleanupRequest, userId: string | null): Promise<CleanupAccepted> {
     const cleanupId = `cln_${request.upload_id.slice(UPLOAD_PREFIX.length)}`;
     const existing = await this.#deps.cleanups.get(cleanupId);
     if (existing !== null) {
       return this.#resume(existing, siteId);
     }
-    await this.#retry.run(() => this.#markChecking(siteId, cleanupId));
+    await this.#deps.retry.run(() => this.#markChecking(siteId, cleanupId));
     const receivedAt = this.#deps.clock.now().toISOString();
     const record: CleanupRecord = {
       ...request,
       cleanup_id: cleanupId,
       site_id: siteId,
+      user_id: userId,
       received_at: receivedAt,
       status: "checking",
     };

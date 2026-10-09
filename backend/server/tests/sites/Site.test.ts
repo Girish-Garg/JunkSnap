@@ -20,9 +20,11 @@ import {
   DEVICE_A,
   DEVICE_B,
   DEVICE_C,
+  DEVICE_D,
   evidence,
   northOf,
   report,
+  userOf,
 } from "./builders.js";
 
 const CLEANED_AT = "2026-10-10T05:00:00Z";
@@ -37,7 +39,14 @@ function cleanedSite(): Site {
 
 function tally(...choices: ("confirm" | "reject")[]): VoteTally {
   return VoteTally.of(
-    choices.map((choice, index) => ({ siteId: "s", deviceToken: `d${index}`, choice, weight: 1, votedAt: CLEANED_AT })),
+    choices.map((choice, index) => ({
+      siteId: "s",
+      deviceToken: `d${index}`,
+      userId: null,
+      choice,
+      weight: 1,
+      votedAt: CLEANED_AT,
+    })),
   );
 }
 
@@ -58,14 +67,26 @@ describe("Site.found", () => {
       first_reported_at: "2026-10-10T02:14:05Z",
       pilot: true,
     });
-    expect(properties.location.ward?.id).toBe("jodhpur-south-mc-w37");
-    expect(JSON.stringify(site.toFeature())).not.toContain(DEVICE_A);
+    expect(properties.location.assembly_seat?.id).toBe("s20-ac-128");
+    expect(properties.insights).toMatchObject({
+      reports: 1,
+      composition: [{ material: "plastic", share_pct: 55, reports: 1 }, { material: "organic" }, { material: "paper" }],
+      size_class: { value: "medium", reports: 1 },
+      hazards: [],
+      near: [],
+    });
+    const text = JSON.stringify(site.toFeature());
+    expect(text).not.toContain(DEVICE_A);
+    expect(text).not.toContain(userOf(DEVICE_A));
   });
 
   it("starts a community check for a report the models could not settle", () => {
     const site = Site.found(report({ decision: "community_check" }));
     expect(site.verification).toBe("community_check");
-    expect(site.toFeature().properties.verified_count).toBe(0);
+    expect(site.toFeature().properties).toMatchObject({
+      verified_count: 0,
+      insights: { reports: 0, composition: [], size_class: null, hazards: [], near: [] },
+    });
   });
 });
 
@@ -103,14 +124,24 @@ describe("Site.merge", () => {
     site.merge(report({ id: "jdh_3", device: DEVICE_B, meToo: "site_jdh_1" }));
     site.merge(report({ id: "jdh_4", device: DEVICE_A, meToo: "site_jdh_1" }));
     site.merge(report({ id: "jdh_5", device: DEVICE_C }));
+    site.merge(report({ id: "jdh_6", device: DEVICE_D, user: userOf(DEVICE_B), meToo: "site_jdh_1" }));
     expect(site.toFeature().properties.corroborations).toBe(1);
   });
 
-  it("marks burning only from an auto-verified report", () => {
+  it("marks burning exactly when a verified report lists it as a hazard", () => {
     const site = Site.found(report({ decision: "community_check", burning: true }));
-    expect(site.toFeature().properties.burning).toBe(false);
+    expect(site.toFeature().properties).toMatchObject({ burning: false, insights: { hazards: [] } });
     site.merge(report({ id: "jdh_2", burning: true }));
-    expect(site.toFeature().properties.burning).toBe(true);
+    expect(site.toFeature().properties).toMatchObject({
+      burning: true,
+      insights: { reports: 1, hazards: [{ hazard: "burning", reports: 1 }] },
+    });
+  });
+
+  it("leaves a community check report on an already verified site out of the verified count", () => {
+    const site = Site.found(report());
+    site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
+    expect(site.toFeature().properties).toMatchObject({ report_count: 2, verified_count: 1, insights: { reports: 1 } });
   });
 
   it("verifies a community-check site when an auto-verified report merges in", () => {
@@ -144,9 +175,24 @@ describe("Site votes", () => {
   it("refuses the reporter before checking distance, then voters beyond 1 km", () => {
     const site = Site.found(report());
     const far = new GeoPoint(BASE_LAT + 0.02, BASE_LON);
-    expect(() => site.admitVoter(DEVICE_A, far)).toThrow(OwnSiteError);
-    expect(() => site.admitVoter(DEVICE_B, far)).toThrow(TooFarError);
-    expect(() => site.admitVoter(DEVICE_B, new GeoPoint(northOf(990), BASE_LON))).not.toThrow();
+    const voter = (deviceToken: string, userId: string | null) => ({ deviceToken, userId });
+    expect(() => site.admitVoter(voter(DEVICE_A, null), far)).toThrow(OwnSiteError);
+    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_A)), far)).toThrow(OwnSiteError);
+    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_B)), far)).toThrow(TooFarError);
+    expect(() => site.admitVoter(voter(DEVICE_B, null), new GeoPoint(northOf(990), BASE_LON))).not.toThrow();
+  });
+
+  it("counts every waiting report as verified once votes confirm the site, and merges their insights", () => {
+    const site = Site.found(report({ decision: "community_check" }));
+    site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B, burning: true }));
+    site.recordVotes(tally("confirm", "confirm", "confirm"));
+    expect(site.toFeature().properties).toMatchObject({
+      verification: "verified",
+      verified_count: 2,
+      burning: true,
+      insights: { reports: 2 },
+    });
+    expect(site.toFeature().properties.insights?.composition[0]).toMatchObject({ material: "plastic", share_pct: 55, reports: 2 });
   });
 
   it("settles only during the community check and always counts corroborations", () => {

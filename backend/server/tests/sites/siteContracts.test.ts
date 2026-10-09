@@ -17,12 +17,12 @@ import { Site } from "../../src/domain/sites/Site.js";
 import type { SiteFeature } from "../../src/domain/sites/SiteTypes.js";
 import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { ZeroScoreRows } from "../../src/domain/sites/ZeroScoreRows.js";
-import { BASE_URL, DEVICE_A, fixture, siteFixture } from "./builders.js";
-import { NOW } from "./fakes.js";
+import { BASE_URL, DEVICE_A, fixture, siteFixture, userOf } from "./builders.js";
+import { NOW, RecordingLogger } from "./fakes.js";
 
 const SAMPLES = ["jdh-1", "jdh-2", "jdh-3", "jpr-1"];
 const cells = new NgeohashCells();
-const mapper = new SiteItemMapper(cells);
+const mapper = new SiteItemMapper(cells, new RecordingLogger());
 
 function itemOf(feature: SiteFeature): SiteItem {
   const [lon, lat] = feature.geometry.coordinates;
@@ -33,7 +33,9 @@ function itemOf(feature: SiteFeature): SiteItem {
     lon,
     geohash4: cells.cellOf(new GeoPoint(lat, lon)),
     report_ids: [`rpt_${feature.properties.site_id.slice(5)}`],
+    merged_reports: [{ report_id: `rpt_${feature.properties.site_id.slice(5)}`, verified: true, insights: null }],
     reporter_devices: [DEVICE_A],
+    reporter_users: [userOf(DEVICE_A)],
     me_too_count: corroborations - votes.confirm,
     embedding_key: null,
     pending_cleanup_id: null,
@@ -53,7 +55,7 @@ describe("site fixtures round-trip", () => {
     const item = mapper.toItem(mapper.toSite(itemOf(feature)));
     const [lon, lat] = feature.geometry.coordinates;
     expect(item).toMatchObject({ version: 4, lat, lon, geohash4: cells.cellOf(new GeoPoint(lat, lon)) });
-    expect(item.reporter_devices).toEqual([DEVICE_A]);
+    expect(item).toMatchObject({ reporter_devices: [DEVICE_A], reporter_users: [userOf(DEVICE_A)] });
     expect(mapper.toSite(item).toFeature()).toEqual(feature);
   });
 
@@ -61,12 +63,25 @@ describe("site fixtures round-trip", () => {
     const item = itemOf(siteFixture("jdh-1"));
     expect(() => mapper.toSite({ ...item, status: "gone" })).toThrow(InternalDataError);
     expect(() => mapper.toSite({ ...item, cleaned_at: "yesterday" })).toThrow(InternalDataError);
-    expect(() => mapper.toSite({ ...item, version: undefined })).toThrow(InternalDataError);
+    expect(() => mapper.toSite({ ...item, lat: undefined })).toThrow(InternalDataError);
+    expect(() => mapper.toSite({ ...item, merged_reports: [{ report_id: "rpt_x" }] })).toThrow(InternalDataError);
   });
 
-  it("keeps device tokens out of the Feature", () => {
-    const site = mapper.toSite(itemOf(siteFixture("jdh-1")));
-    expect(JSON.stringify(site.toFeature())).not.toContain(DEVICE_A);
+  it("keeps device tokens and user ids out of the Feature", () => {
+    const text = JSON.stringify(mapper.toSite(itemOf(siteFixture("jdh-1"))).toFeature());
+    expect(text).not.toContain(DEVICE_A);
+    expect(text).not.toContain(userOf(DEVICE_A));
+  });
+
+  it("loads an older item without insights or the newer internals", () => {
+    const feature = siteFixture("jpr-1");
+    const { insights: _dropped, ...older } = feature.properties;
+    expect(_dropped).toBeDefined();
+    const [lon, lat] = feature.geometry.coordinates;
+    const site = mapper.toSite({ ...older, lat, lon, report_ids: ["rpt_jpr_1"] });
+    expect(site.version).toBe(0);
+    expect(site.reportIds).toEqual(["rpt_jpr_1"]);
+    expect(validateSite(site.toFeature()).properties.insights).toBeUndefined();
   });
 });
 
@@ -79,10 +94,12 @@ describe("merging the jpr-1 report fixtures", () => {
         moderation: fixture<ModerationResult>("moderation_result.jpr-1.json"),
         verification: fixture<VerificationResult>("verification_result.jpr-1.json"),
         location: fixture<LocationLookup>("location_lookup.jpr-1.json"),
+        near: [],
         brands: [],
       }),
     );
-    site.recordVotes(VoteTally.of([{ siteId: "site_jpr_1", deviceToken: "d", choice: "confirm", weight: 1, votedAt: NOW }]));
+    const vote = { siteId: "site_jpr_1", deviceToken: "d", userId: null, choice: "confirm" as const, weight: 1, votedAt: NOW };
+    site.recordVotes(VoteTally.of([vote]));
     const expected = siteFixture("jpr-1");
     const built = validateSite(site.toFeature());
     expect(built.properties).toEqual(expected.properties);
@@ -95,7 +112,8 @@ describe("zero scores rows", () => {
   it.each(SAMPLES)("every area of site.%s gets a valid ward_scores row", (sample) => {
     const feature = siteFixture(sample);
     const rows = new ZeroScoreRows(feature).rows(NOW);
-    expect(rows).toHaveLength(feature.properties.location.ward === null ? 3 : 4);
+    const { ward, assembly_seat } = feature.properties.location;
+    expect(rows).toHaveLength(2 + (ward === null ? 0 : 1) + (assembly_seat === null ? 0 : 1));
     for (const row of rows) {
       expect(validateWardScores(row).counts.sites).toBe(0);
       expect(row.pilot).toBe(feature.properties.pilot);

@@ -7,6 +7,7 @@ const SitesEnv = z.object({
   CLEANUPS_TABLE: z.string().min(1),
   REPORTS_TABLE: z.string().min(1),
   DEVICES_TABLE: z.string().min(1),
+  USERS_TABLE: z.string().min(1),
   SCORES_TABLE: z.string().min(1),
   ORIGINALS_BUCKET: z.string().min(1),
   PUBLIC_BASE_URL: z.url(),
@@ -19,6 +20,7 @@ export interface SiteTables {
   readonly cleanups: string;
   readonly reports: string;
   readonly devices: string;
+  readonly users: string;
   readonly scores: string;
 }
 
@@ -36,6 +38,7 @@ export class SitesSettings {
       cleanups: values.CLEANUPS_TABLE,
       reports: values.REPORTS_TABLE,
       devices: values.DEVICES_TABLE,
+      users: values.USERS_TABLE,
       scores: values.SCORES_TABLE,
     };
     this.originalsBucket = values.ORIGINALS_BUCKET;
