@@ -5,7 +5,8 @@
 """Smoke test the deployed stage: every URL must answer with a 2xx or 3xx within the timeout.
 
 Usage: uv run scripts/smoke.py <url> [<url> ...]
-Extend it with real checks (a draft request built from a fixture) once contracts/ defines the routes.
+Extend it with real checks (a draft request built from a fixture) once contracts/ defines
+the routes.
 """
 
 import sys
@@ -14,13 +15,14 @@ import urllib.error
 import urllib.request
 
 TIMEOUT_S = 30
+FIRST_ERROR_STATUS = 400
 
 
 def check(url: str) -> bool:
     start = time.monotonic()
     try:
         with urllib.request.urlopen(url, timeout=TIMEOUT_S) as resp:
-            ok = resp.status < 400
+            ok = resp.status < FIRST_ERROR_STATUS
             status = resp.status
     except urllib.error.HTTPError as exc:
         ok, status = False, exc.code
