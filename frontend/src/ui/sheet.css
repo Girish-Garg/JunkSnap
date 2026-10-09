@@ -73,6 +73,19 @@
   color: var(--text-secondary);
 }
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-m);
+  background: var(--page);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 /* Desktop: a 400 px left side panel under the search field. */
 @media (min-width: 768px) {
   .sheet {

@@ -28,7 +28,7 @@ export function NavBar() {
           onClick={() => go(item)}
         >
           <span className="nav-bar__indicator">
-            <Icon name={item.icon} size={item.id === 'report' ? 24 : 22} />
+            <Icon name={item.icon} size={24} />
           </span>
           <span className="nav-bar__label">{t(`nav.${item.id}`)}</span>
         </button>

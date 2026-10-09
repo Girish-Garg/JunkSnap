@@ -1,4 +1,4 @@
-/* Phones: Material 3 navigation bar under the map. */
+/* Phones: Material 3 navigation bar, five equal slots, Report in the centre. */
 .nav-bar {
   display: flex;
   flex: none;
@@ -10,12 +10,13 @@
 
 .nav-bar__item {
   display: flex;
-  flex: 1;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-width: var(--target);
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--text-secondary);
@@ -26,17 +27,22 @@
   display: grid;
   place-items: center;
   width: 56px;
-  height: 30px;
+  height: 32px;
   border-radius: var(--radius-pill);
   transition: background 150ms;
 }
 
 .nav-bar__label {
+  max-width: 100%;
+  overflow: hidden;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Only the selected tab shows the pill. */
 .nav-bar__item[aria-current='page'] {
   color: var(--accent);
 }
@@ -45,12 +51,15 @@
   background: var(--accent-tint);
 }
 
-/* Report is the main action: a filled accent circle inside the bar; its label stays for screen readers. */
-.nav-bar__item--report .nav-bar__indicator {
+/* Report: a 48 px circle on the same centre line as the other icons; -8 px margins keep the slot height. */
+.nav-bar__item--report .nav-bar__indicator,
+.nav-bar__item--report[aria-current='page'] .nav-bar__indicator {
   width: 48px;
   height: 48px;
+  margin: -8px 0;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: var(--shadow-float);
   color: var(--on-accent);
 }
 
@@ -58,21 +67,13 @@
   background: var(--accent-hover);
 }
 
-.nav-bar__item--report .nav-bar__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-/* Desktop: a navigation rail on the left edge. */
+/* Desktop: the same five items as a left rail, centred so Report sits in the middle. */
 @media (min-width: 768px) {
   .nav-bar {
     order: -1;
     flex-direction: column;
-    justify-content: flex-start;
-    gap: var(--space-2);
+    justify-content: center;
+    gap: var(--space-3);
     width: 80px;
     height: auto;
     padding: var(--space-2) 0;
@@ -82,6 +83,10 @@
 
   .nav-bar__item {
     flex: none;
-    min-height: 56px;
+    gap: 6px;
+  }
+
+  .nav-bar__item--report .nav-bar__indicator {
+    margin: 0;
   }
 }

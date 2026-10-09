@@ -8,8 +8,9 @@
   "nav": {
     "label": "Main",
     "map": "Map",
-    "report": "Report",
     "areas": "Areas",
+    "report": "Report",
+    "activity": "Activity",
     "account": "Account"
   },
   "search": {
@@ -211,5 +212,11 @@
     "title": "Areas",
     "soon": "Ward and seat scores come in the next build. A score shows only after 10 verified reports.",
     "close": "Close areas"
+  },
+  "activity": {
+    "title": "Activity",
+    "text": "Your reports and the letters you draft.",
+    "empty": "Nothing yet. Reports you send will show here with their status.",
+    "close": "Close activity"
   }
 }

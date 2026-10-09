@@ -7,7 +7,7 @@ Restrained map-app patterns (Google Maps, Apple Maps, Material 3), not their bra
 - The map fills everything above the navigation. The basemap is OpenFreeMap Positron recoloured in `BasemapTheme`: near-white land, pale grey roads, soft blue water, grey labels, no landuse fills, POIs or shields.
 - Top: one 48 px search field (radius 24) with a search icon, "Search Jodhpur", and a compact EN / हि toggle. Results are places from the loaded sites (ward, seat, locality); picking one flies the map there.
 - Under it: a small "Filters" pill that opens a sheet with the map view (Auto, Pins, Heat), one switch per report type with its count, and "Verified only". A slim one-line toast below the pill reports states.
-- Bottom: a 64 px Material 3 navigation bar: Map, Report (a 48 px filled accent circle, the main action), Areas, Account. The selected item gets the accent and a soft pill indicator. Desktop turns it into an 80 px rail on the left.
+- Bottom: a 64 px Material 3 navigation bar with five equal slots: Map, Areas, Report (centre), Activity, Account. Every slot has a 24 px icon and a 12 px label. Report is a 48 px filled accent circle on the same centre line, rising 5 px (8 px at most) above the bar. Only the selected tab shows the soft pill. Desktop turns it into an 80 px left rail with Report in the middle.
 - A 40 px white "my location" circle sits right, just above the bar. The map credit is MapLibre's compact "i" bottom-left.
 - Desktop: sheets become a 400 px side panel next to the rail.
 

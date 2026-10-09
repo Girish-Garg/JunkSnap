@@ -1,7 +1,7 @@
-import { ACCOUNT_PATH, AREAS_PATH, SNAP_PATH } from '../../app/paths';
+import { ACCOUNT_PATH, ACTIVITY_PATH, AREAS_PATH, SNAP_PATH } from '../../app/paths';
 import type { IconName } from '../../ui/Icon';
 
-export type NavId = 'map' | 'report' | 'areas' | 'account';
+export type NavId = 'map' | 'areas' | 'report' | 'activity' | 'account';
 
 export interface NavItem {
   readonly id: NavId;
@@ -11,10 +11,12 @@ export interface NavItem {
   readonly needsAccount: boolean;
 }
 
+// Five equal slots with Report in the centre, like other map apps with a centre action.
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'map', icon: 'map', path: '/', needsAccount: false },
-  { id: 'report', icon: 'camera', path: SNAP_PATH, needsAccount: true },
   { id: 'areas', icon: 'areas', path: AREAS_PATH, needsAccount: false },
+  { id: 'report', icon: 'camera', path: SNAP_PATH, needsAccount: true },
+  { id: 'activity', icon: 'activity', path: ACTIVITY_PATH, needsAccount: true },
   { id: 'account', icon: 'account', path: ACCOUNT_PATH, needsAccount: true },
 ];
 
