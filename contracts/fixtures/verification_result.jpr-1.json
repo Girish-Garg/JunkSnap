@@ -1,0 +1,22 @@
+{
+  "report_id": "rpt_jpr_1",
+  "probability": 0.71,
+  "decision": "community_check",
+  "thresholds": { "auto_verify_min": 0.85, "community_check_min": 0.5 },
+  "signals": [
+    { "name": "rekognition_labels", "score": 0.58, "provider": "rekognition", "model": "DetectLabels", "version": "3.0", "latency_ms": 410 },
+    { "name": "embedding_classifier", "score": 0.81, "provider": "junksnap", "model": "embedding-type-classifier", "version": "titan-embed-image-v1/clf-1", "latency_ms": 650 },
+    { "name": "vision_judge", "score": 0.62, "provider": "openai", "model": "gpt-4.1-mini", "version": "2025-04-14", "latency_ms": 3400 }
+  ],
+  "features": { "gps_accuracy_m": 14, "reputation": 0.5, "nearby_verified_reports": 0 },
+  "judge": {
+    "report_type": "open_construction",
+    "context": "uncovered_debris",
+    "burning": false,
+    "readable_brands": [],
+    "rationale": "Broken bricks and sand at the road edge with no cover; could also be a pile waiting for same-day pickup."
+  },
+  "disagreement": true,
+  "combiner": { "kind": "meta_learner", "version": "meta-v1" },
+  "decided_at": "2026-10-10T04:03:20Z"
+}

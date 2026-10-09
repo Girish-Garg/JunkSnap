@@ -1,0 +1,31 @@
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [75.8156, 26.853] },
+  "properties": {
+    "site_id": "site_jpr_1",
+    "report_type": "open_construction",
+    "context": "uncovered_debris",
+    "status": "open",
+    "verification": "community_check",
+    "report_count": 1,
+    "verified_count": 0,
+    "corroborations": 1,
+    "votes": { "confirm": 1, "reject": 0 },
+    "photo_urls": ["https://d111111abcdef8.cloudfront.net/media/reports/rpt_jpr_1.jpg"],
+    "cleanup_photo_url": null,
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": { "id": "rajasthan-jaipur", "name": "Jaipur" },
+      "town": "Jaipur",
+      "ward": null,
+      "assembly_seat": { "id": "s20-ac-54", "name": "Malviya Nagar" },
+      "loksabha_seat": { "id": "s20-pc-7", "name": "Jaipur" }
+    },
+    "brands": [],
+    "first_reported_at": "2026-10-10T04:02:10Z",
+    "last_reported_at": "2026-10-10T04:02:10Z",
+    "cleaned_at": null,
+    "pilot": false
+  }
+}

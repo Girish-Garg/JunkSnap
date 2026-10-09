@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/site.schema.json",
+  "title": "site",
+  "description": "One waste site (reports merged within about 40 m, same type) as a GeoJSON Feature with Point geometry, coordinates [lon, lat] in WGS84. GET /sites/{id} returns one; GET /sites?bbox returns a FeatureCollection of them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "geometry", "properties"],
+  "properties": {
+    "type": { "const": "Feature" },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "const": "Point" },
+        "coordinates": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            { "type": "number", "minimum": -180, "maximum": 180, "description": "lon" },
+            { "type": "number", "minimum": -90, "maximum": 90, "description": "lat" }
+          ]
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "votes", "photo_urls", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
+      "properties": {
+        "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
+        "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
+        "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"] },
+        "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
+        "verification": { "enum": ["verified", "community_check"], "description": "verified once any report is verified; community_check while neighbours are asked to confirm." },
+        "report_count": { "type": "integer", "minimum": 1 },
+        "verified_count": { "type": "integer", "minimum": 0 },
+        "corroborations": { "type": "integer", "minimum": 0, "description": "Confirm votes plus Me too reports from other devices." },
+        "votes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["confirm", "reject"],
+          "properties": {
+            "confirm": { "type": "integer", "minimum": 0 },
+            "reject": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "photo_urls": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "type": "string", "format": "uri" },
+          "description": "Blurred public copies, newest first. Never an original."
+        },
+        "cleanup_photo_url": { "type": ["string", "null"], "format": "uri", "description": "Blurred after-photo of the last confirmed cleanup." },
+        "burning": { "type": "boolean", "description": "The judge saw burning on a verified report of this site." },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "district", "town", "ward", "assembly_seat", "loksabha_seat"],
+          "description": "Summary of location_lookup. Ids link to GET /areas/{kind}/{id}/scores.",
+          "properties": {
+            "state": { "type": "string" },
+            "district": { "$ref": "#/$defs/area_ref" },
+            "town": { "type": ["string", "null"] },
+            "ward": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null where no open ward map exists." },
+            "assembly_seat": { "$ref": "#/$defs/area_ref" },
+            "loksabha_seat": { "$ref": "#/$defs/area_ref" }
+          }
+        },
+        "brands": {
+          "type": "array",
+          "description": "Only labels that were readable and above the confidence threshold.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["brand", "parent_company"],
+            "properties": {
+              "brand": { "type": "string" },
+              "parent_company": { "type": "string" }
+            }
+          }
+        },
+        "first_reported_at": { "type": "string", "format": "date-time" },
+        "last_reported_at": { "type": "string", "format": "date-time" },
+        "cleaned_at": { "type": ["string", "null"], "format": "date-time", "description": "Last confirmed cleanup; null if never cleaned." },
+        "pilot": { "type": "boolean", "description": "True inside the Jodhpur pilot area." }
+      },
+      "allOf": [
+        { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
+        { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
+        { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
+        { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } }
+      ]
+    }
+  },
+  "$defs": {
+    "area_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/moderation_result.schema.json",
+  "title": "moderation_result",
+  "description": "Written by the worker after the moderation gate, blurring and authenticity checks. Checks run in order and the first failure stops the chain; later checks are skipped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["report_id", "outcome", "reasons", "blurred_key", "faces_blurred", "plates_blurred", "image_moderation", "checks", "phash", "duplicate_of", "note_moderation", "moderated_at"],
+  "properties": {
+    "report_id": { "type": "string", "pattern": "^rpt_[a-z0-9_]{1,40}$" },
+    "outcome": { "enum": ["passed", "rejected"] },
+    "reasons": {
+      "type": "array",
+      "description": "Empty when passed.",
+      "uniqueItems": true,
+      "items": { "enum": ["unsafe_image", "person_dumping", "outside_india", "stale_timestamp", "duplicate", "rate_limited", "blocked_device"] }
+    },
+    "blurred_key": {
+      "type": ["string", "null"],
+      "pattern": "^media/reports/rpt_[a-z0-9_]{1,40}\\.jpg$",
+      "description": "Key of the blurred copy in the public bucket. Null when rejected before blurring."
+    },
+    "faces_blurred": { "type": "integer", "minimum": 0 },
+    "plates_blurred": { "type": "integer", "minimum": 0 },
+    "image_moderation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "labels", "provider", "model", "version"],
+      "properties": {
+        "result": { "enum": ["pass", "fail"] },
+        "labels": { "type": "array", "items": { "type": "string" }, "description": "Moderation labels that were flagged; empty when clean." },
+        "provider": { "$ref": "#/$defs/provider" },
+        "model": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inside_india", "fresh_timestamp", "duplicate", "rate_limit", "device_token"],
+      "properties": {
+        "inside_india": { "$ref": "#/$defs/check" },
+        "fresh_timestamp": { "$ref": "#/$defs/check" },
+        "duplicate": { "$ref": "#/$defs/check" },
+        "rate_limit": { "$ref": "#/$defs/check" },
+        "device_token": { "$ref": "#/$defs/check" }
+      }
+    },
+    "phash": { "type": "string", "pattern": "^[0-9a-f]{16}$", "description": "64-bit perceptual hash of the original, hex." },
+    "duplicate_of": {
+      "type": ["string", "null"],
+      "pattern": "^rpt_[a-z0-9_]{1,40}$",
+      "description": "Earlier report this one duplicates, or null."
+    },
+    "note_moderation": {
+      "description": "Null when the report has no note. A removed note is never shown; the report itself still goes on.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["result", "reasons", "provider", "model", "version"],
+          "properties": {
+            "result": { "enum": ["clean", "removed"] },
+            "reasons": { "type": "array", "uniqueItems": true, "items": { "enum": ["toxic", "personal_data"] } },
+            "provider": { "$ref": "#/$defs/provider" },
+            "model": { "type": "string" },
+            "version": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "moderated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "detail"],
+      "properties": {
+        "result": { "enum": ["pass", "fail", "skipped"] },
+        "detail": { "type": "string", "maxLength": 200, "description": "Short plain reason, never a name or phone number." }
+      }
+    },
+    "provider": { "enum": ["bedrock", "openai", "openrouter", "rekognition", "comprehend", "junksnap"] }
+  }
+}

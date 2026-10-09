@@ -1,0 +1,31 @@
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [73.0352, 26.3049] },
+  "properties": {
+    "site_id": "site_jdh_2",
+    "report_type": "no_bin",
+    "context": "no_pickup",
+    "status": "open",
+    "verification": "verified",
+    "report_count": 3,
+    "verified_count": 3,
+    "corroborations": 2,
+    "votes": { "confirm": 1, "reject": 0 },
+    "photo_urls": ["https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_2.jpg"],
+    "cleanup_photo_url": null,
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
+      "town": "Jodhpur",
+      "ward": { "id": "jodhpur-north-mc-w12", "name": "Ward 12" },
+      "assembly_seat": { "id": "s20-ac-128", "name": "Jodhpur" },
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" }
+    },
+    "brands": [],
+    "first_reported_at": "2026-10-09T04:05:00Z",
+    "last_reported_at": "2026-10-10T03:20:00Z",
+    "cleaned_at": null,
+    "pilot": true
+  }
+}

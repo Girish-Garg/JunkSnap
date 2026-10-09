@@ -1,0 +1,19 @@
+{
+  "lat": 26.2618,
+  "lon": 73.0035,
+  "state": "Rajasthan",
+  "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
+  "town": "Jodhpur",
+  "local_body": { "id": "jodhpur-south-mc", "name": "Jodhpur Municipal Corporation (South)", "head_office": "Commissioner" },
+  "ward": { "id": "jodhpur-south-mc-w37", "name": "Ward 37" },
+  "assembly_seat": { "id": "s20-ac-127", "name": "Sardarpura" },
+  "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" },
+  "representatives": [
+    { "office": "councillor", "seat_id": "jodhpur-south-mc-w37", "as_of": "2026-10-01", "source": "https://lsg.rajasthan.gov.in/" },
+    { "office": "mla", "seat_id": "s20-ac-127", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+    { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+  ],
+  "geocoder": "amazon-location/esri",
+  "boundaries_version": "eci-2008-delimitation/v1",
+  "looked_up_at": "2026-10-10T02:15:05Z"
+}
