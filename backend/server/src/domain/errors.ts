@@ -2,6 +2,9 @@
 const HTTP_STATUS = {
   bad_request: 400,
   bbox_too_large: 400,
+  scan_too_large: 400,
+  unauthorized: 401,
+  forbidden: 403,
   own_site: 403,
   too_far: 403,
   not_found: 404,
@@ -38,6 +41,16 @@ export class NotFoundError extends JunkSnapError {
 
 export class ValidationError extends JunkSnapError {
   override readonly code: ErrorCode = "bad_request";
+}
+
+// No token, or a token that is malformed, expired or not from our user pool.
+export class UnauthorizedError extends JunkSnapError {
+  override readonly code: ErrorCode = "unauthorized";
+}
+
+// Only for a user blocked in the users table; a user who does not own an item gets NotFoundError, as if it were missing.
+export class ForbiddenError extends JunkSnapError {
+  override readonly code: ErrorCode = "forbidden";
 }
 
 // Adapters translate SDK and HTTP failures into this.

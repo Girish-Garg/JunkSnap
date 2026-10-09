@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { validateSite } from "../../src/contracts/index.gen.js";
-import { ValidationError } from "../../src/domain/errors.js";
+import { UnauthorizedError } from "../../src/domain/errors.js";
 import type { SiteFeature } from "../../src/domain/sites/SiteTypes.js";
 import { GuardedSiteUsers, type UserGuard } from "../../src/handlers/sites/GuardedSiteUsers.js";
 import { SiteRoutes } from "../../src/handlers/sites/SiteRoutes.js";
@@ -42,7 +42,7 @@ class FakeGuard implements UserGuard {
   async requireUser(request: { headers: Record<string, unknown> }): Promise<{ userId: string }> {
     const header = request.headers.authorization;
     if (typeof header !== "string" || !header.startsWith("Bearer ")) {
-      throw new ValidationError(SIGN_IN);
+      throw new UnauthorizedError(SIGN_IN);
     }
     return { userId: header.slice("Bearer ".length) };
   }
@@ -155,8 +155,8 @@ describe("POST /sites/{id}/votes", () => {
 
   it("asks for sign-in before looking at the site or the body", async () => {
     const response = await post({ vote: "maybe" }, {}, "site_nope");
-    expect(response.statusCode).toBe(400);
-    expect(response.json()).toMatchObject({ message: SIGN_IN });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized", message: SIGN_IN });
     expect(await votes.forSite("site_nope")).toEqual([]);
   });
 
@@ -189,7 +189,8 @@ describe("POST /sites/{id}/cleanup", () => {
 
   it("asks for sign-in first", async () => {
     const response = await post(await start(), CLEANUP, "site_jdh_2", {});
-    expect(response.json()).toMatchObject({ message: SIGN_IN });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized", message: SIGN_IN });
     expect(cleanups.records.size).toBe(0);
   });
 

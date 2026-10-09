@@ -34,9 +34,15 @@ describe("buildSitesRoutes", () => {
     expect(response.json()).toMatchObject({ error: "bad_request" });
   });
 
-  it("refuses to start without the site tables", async () => {
-    const rest = Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== "SITES_TABLE"));
+  it.each(["votes", "cleanup"])("asks for sign-in on POST /sites/{id}/%s before any AWS call", async (route) => {
+    const response = await (await start(ENV)).inject({ method: "POST", url: `/sites/site_jdh_1/${route}`, payload: {} });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: "unauthorized" });
+  });
+
+  it.each(["SITES_TABLE", "COGNITO_USER_POOL_ID"])("refuses to start without %s", async (name) => {
+    const rest = Object.fromEntries(Object.entries(ENV).filter(([key]) => key !== name));
     await expect(start(rest)).rejects.toThrow(ConfigError);
-    await expect(start(rest)).rejects.toThrow(/SITES_TABLE/);
+    await expect(start(rest)).rejects.toThrow(new RegExp(name));
   });
 });
