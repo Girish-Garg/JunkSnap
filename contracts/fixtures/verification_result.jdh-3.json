@@ -14,5 +14,6 @@
   "disagreement": false,
   "combiner": { "kind": "meta_learner", "version": "meta-v1" },
   "embedding_key": "embeddings/cln_jdh_3c.json",
-  "decided_at": "2026-10-09T06:21:40Z"
+  "decided_at": "2026-10-09T06:21:40Z",
+  "insights": null
 }

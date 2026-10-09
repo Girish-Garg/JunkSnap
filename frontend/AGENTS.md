@@ -2,7 +2,7 @@
 
 Mobile-first web app: Snap and Scan capture, the India map opening on Jodhpur, site pages, community checks, area pages and letter previews. Amplify builds and hosts it from `main` using `amplify.yml`.
 
-Stack: React 19.3, Vite 8.3, TypeScript 7.0 (`strict: true`), MapLibre GL 6.13, i18next, Vitest, ESLint 10.
+Stack: React 19.3, Vite 8.3, TypeScript 6.0.3 (`strict: true`; not 7, because typescript-eslint supports only `typescript <6.1`), MapLibre GL 6.13, i18next, Vitest, ESLint 10.
 
 ## Layout (docs/working.md section 1)
 
@@ -34,7 +34,10 @@ npm run build
 - Mock mode reads `contracts/fixtures/`; live mode calls the API through CloudFront. Keep mock mode working until the end. Environment variable names are listed in `contracts/README.md`.
 - Shapes and routes come from `contracts/`. If the app needs a new field, raise it on the contracts issue first.
 - Capture is the in-app camera only (no gallery upload). Hash the original with SHA-256 on the phone, then upload with the presigned PUT and submit the report.
+- Scan records video (at most 60 s, 720p, 40 MB) and a GPS track from `watchPosition`, at least one fix per second, both timed from the start of recording; then it presigns, PUTs the video and posts a `scan_session` (decision 20261010-0203).
 - Edge mode runs only when the startup probe passes; otherwise use cloud mode. Scores from the phone are hints for live boxes and frame choice; the server always re-verifies.
+- UI style: minimal custom components with map-app patterns, no generated look; details in `frontend/DESIGN.md` (decision 20261010-0201).
+- Accounts (decision 20261010-0227): browsing needs no sign-in; Snap, Scan, votes, cleanups and letters do. Sign in with Cognito (`VITE_COGNITO_*`) and send the ID token as `Authorization: Bearer`. Never show or store another user's id, email or name.
 - Failed uploads wait in the IndexedDB offline queue and retry with backoff.
 - Letters: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. No server-side PDF library (they mangle Devanagari). Nothing is filed automatically; the resident files.
 - Area pages show counts next to every score, the pilot flag, and "not enough reports" below 10 verified reports.

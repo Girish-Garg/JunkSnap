@@ -1,0 +1,30 @@
+{
+  "scan_id": "scn_jpr_1",
+  "device_token": "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63",
+  "user_id": "c8a1f3e6-2b94-4d70-8e5f-1a6b9d3c7e20",
+  "report_type": "open_construction",
+  "context": "uncovered_debris",
+  "started_at": "2026-10-10T04:02:06Z",
+  "ended_at": "2026-10-10T04:02:14Z",
+  "duration_ms": 8000,
+  "video_key": "scans/scn_jpr_1.webm",
+  "video_sha256": "58a6b635872943aba34889e6e3c9fc117067b42f79f064042afe57d7e2046f18",
+  "gps_track": [
+    { "t_ms": 0, "lat": 26.85297, "lon": 75.81542, "accuracy_m": 16, "speed_mps": null, "heading": null },
+    { "t_ms": 1000, "lat": 26.85297, "lon": 75.81547, "accuracy_m": 15, "speed_mps": 4.9, "heading": 90 },
+    { "t_ms": 2000, "lat": 26.85297, "lon": 75.81552, "accuracy_m": 15, "speed_mps": 5.0, "heading": 90 },
+    { "t_ms": 3000, "lat": 26.85297, "lon": 75.81557, "accuracy_m": 14, "speed_mps": 5.0, "heading": 89 },
+    { "t_ms": 4000, "lat": 26.85297, "lon": 75.81562, "accuracy_m": 14, "speed_mps": 5.1, "heading": 90 },
+    { "t_ms": 5000, "lat": 26.85298, "lon": 75.81567, "accuracy_m": 13, "speed_mps": 5.0, "heading": 91 },
+    { "t_ms": 6000, "lat": 26.85298, "lon": 75.81572, "accuracy_m": 13, "speed_mps": 4.8, "heading": 90 },
+    { "t_ms": 7000, "lat": 26.85298, "lon": 75.81577, "accuracy_m": 14, "speed_mps": 4.9, "heading": 90 },
+    { "t_ms": 8000, "lat": 26.85298, "lon": 75.81582, "accuracy_m": 14, "speed_mps": 5.0, "heading": 90 }
+  ],
+  "hints": {
+    "model": "yolo-junk-nano-v0",
+    "detections": [
+      { "t_ms": 3600, "score": 0.64, "box": { "left": 0.52, "top": 0.48, "width": 0.3, "height": 0.28 } },
+      { "t_ms": 4000, "score": 0.77, "box": { "left": 0.44, "top": 0.46, "width": 0.36, "height": 0.31 } }
+    ]
+  }
+}
