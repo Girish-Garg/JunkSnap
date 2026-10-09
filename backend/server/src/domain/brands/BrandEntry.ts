@@ -30,4 +30,10 @@ export class BrandEntry {
   hasDevanagari(): boolean {
     return this.aliases.some((alias) => alias.isDevanagari());
   }
+
+  // For text the OCR could not read: a Latin spelling there could only be echoed, never read.
+  devanagariOnly(): BrandEntry {
+    const aliases = this.aliases.filter((alias) => alias.isDevanagari());
+    return new BrandEntry({ brand: this.brand, parentCompany: this.parentCompany, sourceUrl: this.sourceUrl, aliases });
+  }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BytesImageSource } from "../../src/adapters/brands/BytesImageSource.js";
+import { BytesImageSource } from "./BytesImageSource.js";
 import { JUDGE_ANSWER_SCHEMA } from "../../src/adapters/brands/JudgeAnswerSchema.js";
 import { BlurredImage } from "../../src/domain/brands/BlurredImage.js";
 import { Box } from "../../src/domain/brands/Box.js";
@@ -40,7 +40,7 @@ const CASES: JudgeCase[] = [
 ];
 
 describe("LlmBrandJudge", () => {
-  it("sends the blurred JPEG with each case's region and offered spellings, and records the model that answered", async () => {
+  it("sends the blurred JPEG with each case's region and brand names only, and records the model that answered", async () => {
     const answer = verdictJson(
       { case_id: "near-0", brand: "Pepsi", confidence: 0.93, text_seen: "PEPSI" },
       { case_id: "unread-text", brand: null, confidence: 0.2, text_seen: "" },
@@ -54,8 +54,8 @@ describe("LlmBrandJudge", () => {
     const request = provider.requests[0];
     expect([request?.task, request?.images]).toEqual(["brands", [{ bytes: JPEG, format: "jpeg" }]]);
     expect(request?.userText.split("\n")).toEqual([
-      'case near-0: region left=0.1 top=0.5 width=0.15 height=0.05; OCR read "PEPSl"; offered brands: Pepsi ("Pepsi")',
-      'case unread-text: region left=0 top=0 width=1 height=1; OCR could not read the text here (it may be Devanagari); offered brands: Bikaji ("Bikaji", "बीकाजी")',
+      'case near-0: region left=0.1 top=0.5 width=0.15 height=0.05; OCR read "PEPSl"; offered brands: Pepsi',
+      "case unread-text: region left=0 top=0 width=1 height=1; OCR could not read the text here (it may be Devanagari); offered brands: Bikaji",
     ]);
   });
 

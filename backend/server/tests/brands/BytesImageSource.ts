@@ -1,10 +1,10 @@
 import type { Image } from "@aws-sdk/client-rekognition";
-import type { BlurredImage } from "../../domain/brands/BlurredImage.js";
-import { NotFoundError } from "../../domain/errors.js";
-import type { BlurredImageStore } from "../../ports/brands/BlurredImageStore.js";
-import type { RekognitionImageSource } from "./RekognitionImageSource.js";
+import type { BlurredImage } from "../../src/domain/brands/BlurredImage.js";
+import { NotFoundError } from "../../src/domain/errors.js";
+import type { BlurredImageStore } from "../../src/ports/brands/BlurredImageStore.js";
+import type { RekognitionImageSource } from "../../src/adapters/brands/RekognitionImageSource.js";
 
-// Dev runs and AWS tests only: JPEG bytes by report id; Rekognition takes 5 MB of bytes at most.
+// AWS tests and dev runs: JPEG bytes by report id; Rekognition takes 5 MB of bytes at most.
 export class BytesImageSource implements RekognitionImageSource, BlurredImageStore {
   readonly #images: ReadonlyMap<string, Uint8Array>;
 

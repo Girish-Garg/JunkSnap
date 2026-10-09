@@ -59,16 +59,20 @@ export class FakeBrandMap implements BrandMap {
   }
 }
 
+// Answers yes or no, or throws the given error.
 export class FakeTextPresence implements TextPresence {
   asked = 0;
-  readonly #hasText: boolean;
+  readonly #hasText: boolean | Error;
 
-  constructor(hasText: boolean) {
+  constructor(hasText: boolean | Error) {
     this.#hasText = hasText;
   }
 
   async hasText(): Promise<boolean> {
     this.asked += 1;
+    if (this.#hasText instanceof Error) {
+      throw this.#hasText;
+    }
     return this.#hasText;
   }
 }

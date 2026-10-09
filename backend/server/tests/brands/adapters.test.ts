@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { DetectLabelsCommand, DetectTextCommand, DetectTextCommandOutput } from "@aws-sdk/client-rekognition";
 import type { GetObjectCommand } from "@aws-sdk/client-s3";
 import { afterAll, describe, expect, it } from "vitest";
-import { BytesImageSource } from "../../src/adapters/brands/BytesImageSource.js";
+import { BytesImageSource } from "./BytesImageSource.js";
 import { FileBrandMap } from "../../src/adapters/brands/FileBrandMap.js";
 import { PublicBucketImageSource } from "../../src/adapters/brands/PublicBucketImageSource.js";
 import { RekognitionTextPresence } from "../../src/adapters/brands/RekognitionTextPresence.js";

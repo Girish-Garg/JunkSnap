@@ -13,7 +13,7 @@ const IMAGE = new BlurredImage("rpt_jdh_1");
 interface Run {
   readonly lines: readonly TextLine[];
   readonly rule?: VerdictRule | Error;
-  readonly hasText?: boolean;
+  readonly hasText?: boolean | Error;
 }
 
 function labellerFor({ lines, rule, hasText = false }: Run) {
@@ -128,9 +128,18 @@ describe("BrandLabeller judge step", () => {
     const lines = [line(["KURKURE", 0.95]), line(["PEPSI", 0.7])];
     const { labels, sink } = await labelsFor({ lines, rule: new ExternalServiceError("no LLM provider answered") });
     expect(brandsOf(labels)).toEqual([["Kurkure", 0.95]]);
-    expect(sink.records().map((record) => [record.level, record.message, record.cases])).toEqual([
-      ["WARN", "brand judge unavailable; OCR labels only", 1],
+    expect(sink.records().map((record) => [record.level, record.message, record.check])).toEqual([
+      ["WARN", "brand check unavailable; OCR labels only", "judge"],
     ]);
+  });
+
+  it("treats a text-presence outage as no unread text and still judges near-threshold matches", async () => {
+    const confirmPepsi: VerdictRule = () => ({ brand: "Pepsi", confidence: 0.9, textSeen: "PEPSI" });
+    const hasText = new ExternalServiceError("Rekognition DetectLabels failed");
+    const { labels, judge, sink } = await labelsFor({ lines: [line(["PEPSI", 0.7])], rule: confirmPepsi, hasText });
+    expect(judge.calls.map((cases) => cases.map((judgeCase) => judgeCase.id))).toEqual([["near-0"]]);
+    expect(brandsOf(labels)).toEqual([["Pepsi", 0.9]]);
+    expect(sink.records().map((record) => [record.level, record.check])).toEqual([["WARN", "text_presence"]]);
   });
 
   it("still fails on a judge error that is our bug or config", async () => {
@@ -141,8 +150,12 @@ describe("BrandLabeller judge step", () => {
   it("sends Devanagari brands to the judge only when text is present and the OCR read nothing", async () => {
     const devanagari: VerdictRule = () => ({ brand: "Bikaji", confidence: 0.92, textSeen: "बीकाजी भुजिया" });
     const unread = await labelsFor({ lines: [line(["~", 0.4])], rule: devanagari, hasText: true });
-    expect(unread.judge.calls[0]?.map((judgeCase) => judgeCase.options.map((option) => option.brand))).toEqual([["Bikaji"]]);
+    const offered = unread.judge.calls[0]?.flatMap((judgeCase) => judgeCase.options);
+    expect(offered?.map((option) => [option.brand, option.aliases.map((alias) => alias.text)])).toEqual([["Bikaji", ["बीकाजी"]]]);
     expect(unread.labels).toMatchObject([{ brand: "Bikaji", text_seen: "बीकाजी", confidence: 0.92, box: { left: 0, width: 1 } }]);
+
+    const echoedLatin: VerdictRule = () => ({ brand: "Bikaji", confidence: 0.99, textSeen: "Bikaji" });
+    expect((await labelsFor({ lines: [], rule: echoedLatin, hasText: true })).labels).toEqual([]);
 
     const latin = await labelsFor({ lines: [line(["NET", 0.99], ["WT", 0.99])], rule: devanagari, hasText: true });
     expect([latin.presence.asked, latin.judge.calls.length, latin.labels]).toEqual([0, 0, []]);

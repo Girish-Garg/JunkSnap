@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { BytesImageSource } from "../../src/adapters/brands/BytesImageSource.js";
+import { BytesImageSource } from "./BytesImageSource.js";
 import { FileBrandMap } from "../../src/adapters/brands/FileBrandMap.js";
 import { JUDGE_ANSWER_SCHEMA } from "../../src/adapters/brands/JudgeAnswerSchema.js";
 import { RekognitionTextPresence } from "../../src/adapters/brands/RekognitionTextPresence.js";

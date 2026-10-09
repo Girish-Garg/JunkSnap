@@ -54,10 +54,11 @@ export class LlmBrandJudge implements BrandJudge {
     }));
   }
 
+  // Brand names only, never alias spellings, so the model must read the text rather than copy it.
   static #describe({ id, textSeen, box, options }: JudgeCase): string {
     const { left, top, width, height } = box.toContract();
     const read = textSeen === "" ? "OCR could not read the text here (it may be Devanagari)" : `OCR read ${JSON.stringify(textSeen)}`;
-    const brands = options.map((entry) => `${entry.brand} (${entry.aliases.map((alias) => JSON.stringify(alias.text)).join(", ")})`);
-    return `case ${id}: region left=${left} top=${top} width=${width} height=${height}; ${read}; offered brands: ${brands.join("; ")}`;
+    const brands = options.map((entry) => entry.brand).join("; ");
+    return `case ${id}: region left=${left} top=${top} width=${width} height=${height}; ${read}; offered brands: ${brands}`;
   }
 }

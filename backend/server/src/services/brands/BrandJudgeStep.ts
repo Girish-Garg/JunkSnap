@@ -34,20 +34,20 @@ export class BrandJudgeStep {
     if (cases.length === 0) {
       return [];
     }
-    const verdicts = await this.#ask(input.image, cases);
+    const verdicts = await this.#unlessDown(input.image, "judge", [], async () => this.#judge.judge(input.image, cases));
     return verdicts.flatMap((verdict) => this.#accept(cases, verdict));
   }
 
-  // Brands are off the never-cut path: an LLM or S3 outage keeps the OCR labels instead of failing the report.
-  async #ask(image: BlurredImage, cases: readonly JudgeCase[]): Promise<readonly JudgeVerdict[]> {
+  // Brands are off the never-cut path: a Rekognition, LLM or S3 outage keeps the OCR labels instead of failing the report.
+  async #unlessDown<T>(image: BlurredImage, check: string, fallback: T, work: () => Promise<T>): Promise<T> {
     try {
-      return await this.#judge.judge(image, cases);
+      return await work();
     } catch (error) {
       if (!(error instanceof ExternalServiceError)) {
         throw error;
       }
-      this.#logger.warn({ error, report_id: image.reportId, cases: cases.length }, "brand judge unavailable; OCR labels only");
-      return [];
+      this.#logger.warn({ error, report_id: image.reportId, check }, "brand check unavailable; OCR labels only");
+      return fallback;
     }
   }
 
@@ -63,12 +63,13 @@ export class BrandJudgeStep {
   }
 
   async #unreadCases({ image, reading, entries }: JudgeStepInput): Promise<JudgeCase[]> {
-    const options = entries.filter((entry) => entry.hasDevanagari());
+    const options = entries.filter((entry) => entry.hasDevanagari()).map((entry) => entry.devanagariOnly());
     const readSomething = reading.lines.some((line) => line.confidence >= LABEL_THRESHOLD);
-    if (options.length === 0 || readSomething || !(await this.#presence.hasText(image))) {
+    if (options.length === 0 || readSomething) {
       return [];
     }
-    return [{ id: "unread-text", textSeen: "", box: Box.WHOLE_IMAGE, options }];
+    const hasText = await this.#unlessDown(image, "text_presence", false, async () => this.#presence.hasText(image));
+    return hasText ? [{ id: "unread-text", textSeen: "", box: Box.WHOLE_IMAGE, options }] : [];
   }
 
   // The judge's own reading must still match an alias of a brand it was offered.
