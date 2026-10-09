@@ -5,6 +5,10 @@ target-version = "py312"
 [lint]
 select = ["E", "F", "I", "B", "C90", "PL", "N", "UP", "SIM", "RET", "ARG"]
 
+[lint.per-file-ignores]
+# Tests assert on thresholds (0.85, 10 reports) and fake ports ignore some arguments.
+"**/tests/**" = ["PLR2004", "ARG"]
+
 [lint.mccabe]
 max-complexity = 8
 
