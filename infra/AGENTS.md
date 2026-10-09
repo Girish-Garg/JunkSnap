@@ -28,7 +28,7 @@ aws cloudformation validate-template --template-body file://infra/aws/stage.yaml
 kubectl kustomize infra/k8s/overlays/dev
 ```
 
-`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA, writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS (needed for demo).
+`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA and `stage-<stage>` (never expired by ECR), writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS; demo requires it. The ALB accepts traffic only from CloudFront's origin-facing prefix list.
 
 Render with `kubectl kustomize` and read the output before every apply.
 

@@ -15,8 +15,8 @@ Parameters:
     Description: The stage's ALB hostname; empty until the Ingress exists.
   UploadOrigins:
     Type: CommaDelimitedList
-    Default: http://localhost:5173
-    Description: Origins allowed to PUT originals outside dev (add the Amplify URL).
+    Default: ""
+    Description: Origins allowed to PUT originals outside dev; deploy.py --origins sets it.
 
 Conditions:
   HasAlb: !Not [!Equals [!Ref AlbDnsName, ""]]
@@ -282,7 +282,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: !Sub junksnap-${Stage}-models
-      Description: Bedrock (global and regional profiles) plus the fallback provider keys.
+      Description: Bedrock through global and regional inference profiles; secrets are per role.
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -293,10 +293,6 @@ Resources:
               - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*"
               - "arn:aws:bedrock:*::foundation-model/*"
               - "arn:aws:bedrock:::foundation-model/*"
-          - Sid: FallbackKeys
-            Effect: Allow
-            Action: secretsmanager:GetSecretValue
-            Resource: [!Ref OpenAiSecret, !Ref OpenRouterSecret]
 
   ApiRole:
     Type: AWS::IAM::Role
@@ -329,8 +325,8 @@ Resources:
               - Sid: Tables
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
-                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem,
-                  dynamodb:BatchWriteItem, dynamodb:ConditionCheckItem, dynamodb:DescribeTable]
+                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem,
+                  dynamodb:DescribeTable]
                 Resource:
                   - !GetAtt ReportsTable.Arn
                   - !Sub "${ReportsTable.Arn}/index/*"
@@ -339,7 +335,15 @@ Resources:
                   - !Sub "${SitesTable.Arn}/index/*"
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
-                  - !GetAtt ScoresTable.Arn
+              - Sid: ReadScores
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
+                  dynamodb:DescribeTable]
+                Resource: !GetAtt ScoresTable.Arn
+              - Sid: LetterFallbackKey
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref OpenAiSecret
               - Sid: QueueReports
                 Effect: Allow
                 Action: [sqs:SendMessage, sqs:GetQueueAttributes]
@@ -395,8 +399,8 @@ Resources:
               - Sid: Tables
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
-                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem,
-                  dynamodb:BatchWriteItem, dynamodb:ConditionCheckItem, dynamodb:DescribeTable]
+                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:ConditionCheckItem,
+                  dynamodb:DescribeTable]
                 Resource:
                   - !GetAtt ReportsTable.Arn
                   - !Sub "${ReportsTable.Arn}/index/*"
@@ -406,6 +410,11 @@ Resources:
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt ScoresTable.Arn
+              # The worker also reads originals, so it never gets the OpenRouter key.
+              - Sid: JudgeFallbackKey
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref OpenAiSecret
               - Sid: ConsumeReports
                 Effect: Allow
                 Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility,
@@ -443,6 +452,10 @@ Resources:
                 Effect: Allow
                 Action: [kms:GenerateDataKey, kms:Decrypt]
                 Resource: !GetAtt DataKey.Arn
+              - Sid: FallbackKeys
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: [!Ref OpenAiSecret, !Ref OpenRouterSecret]
               - Sid: Signals
                 Effect: Allow
                 Action: [rekognition:DetectLabels, rekognition:DetectText]
@@ -474,6 +487,7 @@ Resources:
                   - !Sub "${ReportsTable.Arn}/index/*"
                   - !GetAtt SitesTable.Arn
                   - !Sub "${SitesTable.Arn}/index/*"
+              # BatchWriteItem: each run rewrites every area's row.
               - Sid: WriteScores
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem,

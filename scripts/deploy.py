@@ -120,9 +120,13 @@ class StageDeployer:
             Path(config, "config.json").write_text(json.dumps(auths), encoding="utf-8")
             for folders, output in IMAGES.values():
                 image = f"{repos[output]}:{tag}"
+                # stage-<stage> marks the deployed image; the ECR lifecycle never expires it.
+                stage_image = f"{repos[output]}:stage-{self._stage}"
                 folder = next(f for f in folders if (ROOT / f / "Dockerfile").is_file())
                 run(["docker", "build", "--platform", "linux/amd64", "-t", image, folder])
-                run(["docker", "--config", config, "push", image])
+                run(["docker", "tag", image, stage_image])
+                for pushed in (image, stage_image):
+                    run(["docker", "--config", config, "push", pushed])
         return tag
 
     def _write_layer(self, repos: dict[str, str], tag: str, outputs: dict[str, str]) -> None:
@@ -158,12 +162,14 @@ class StageDeployer:
         sys.exit("no ALB hostname yet; see: kubectl describe ingress junksnap")
 
 
-def refuse_unsafe(stage: str, human_approved: bool) -> None:
-    """Only dev deploys freely; any other stage needs the human and a clean main."""
+def refuse_unsafe(stage: str, human_approved: bool, origins: str | None) -> None:
+    """Only dev deploys freely; any other stage needs the human, --origins and a clean main."""
     if stage == "dev":
         return
     if not human_approved:
         sys.exit(f"refusing to deploy {stage}: only the human deploys it (--human-approved)")
+    if not origins:
+        sys.exit(f"refusing to deploy {stage}: pass --origins with the app's exact origins")
     clean_main = run(["git", "branch", "--show-current"]) == "main" and not run(
         ["git", "status", "--porcelain"]
     )
@@ -175,9 +181,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy one JunkSnap stage.")
     parser.add_argument("stage", choices=["dev", "demo"])
     parser.add_argument("--human-approved", action="store_true", help="required for demo")
-    parser.add_argument("--origins", help="comma-separated browser origins (S3 PUT and API CORS)")
+    parser.add_argument("--origins", help="comma-separated browser origins; required for demo")
     args = parser.parse_args()
-    refuse_unsafe(args.stage, args.human_approved)
+    refuse_unsafe(args.stage, args.human_approved, args.origins)
     os.environ.setdefault("AWS_PROFILE", "junksnap")
     url = StageDeployer(args.stage, args.origins).deploy()
     print(f"\nCloudFront URL: {url}\nCheck: curl {url}/healthz")

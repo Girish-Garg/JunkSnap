@@ -1,4 +1,4 @@
-# Human only, from a clean main: uv run scripts/deploy.py demo --human-approved --origins <amplify-url>,http://localhost:5173
+# Human only, from a clean main. deploy.py --origins sets CORS_ORIGINS; the api refuses to start without it.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: junksnap-demo
@@ -13,5 +13,3 @@ configMapGenerator:
     behavior: merge
     literals:
       - JUNKSNAP_STAGE=demo
-      # deploy.py --origins overrides this; demo refuses to start with none.
-      - CORS_ORIGINS=http://localhost:5173

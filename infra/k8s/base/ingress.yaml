@@ -5,6 +5,8 @@ metadata:
   name: alb
 spec:
   scheme: internet-facing
+  # Only CloudFront reaches the ALB: com.amazonaws.global.cloudfront.origin-facing in ap-south-1.
+  prefixListsIDs: [pl-9aa247f3]
 ---
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
