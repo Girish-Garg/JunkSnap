@@ -1,0 +1,77 @@
+{
+  "review_status": "unreviewed",
+  "placeholders": "Values in braces come from site.location: {local_body.head_office}, {local_body.name}, {district.name}, {state}. Offices only, never a person's name.",
+  "cc": {
+    "offices": ["councillor", "mla", "mp"],
+    "marking": "for attention",
+    "rule": "Every channel copies each office listed in site.location.representatives; the councillor only when the site has a ward."
+  },
+  "channels": [
+    {
+      "channel": "local_body",
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "or_burning": false,
+      "states": null,
+      "requires_local_body": true,
+      "to": { "office": "{local_body.head_office}", "body": "{local_body.name}" },
+      "state_bodies": {},
+      "filing_url": null,
+      "basis": "The local body head is legally responsible (74th Amendment); SWM Rules 2026 rule 39(1)."
+    },
+    {
+      "channel": "pollution_board",
+      "report_types": ["contaminated_water", "open_construction"],
+      "or_burning": true,
+      "states": null,
+      "requires_local_body": false,
+      "to": { "office": "Member Secretary", "body": "State Pollution Control Board or Pollution Control Committee, {state}" },
+      "state_bodies": { "Rajasthan": "Rajasthan State Pollution Control Board" },
+      "filing_url": null,
+      "basis": "Burning, water and construction dust (decision 12); SWM Rules 2026 rule 41, Water Act 1974, C&D Rules 2025 rule 16(3)."
+    },
+    {
+      "channel": "district_collector",
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "or_burning": false,
+      "states": null,
+      "requires_local_body": false,
+      "to": { "office": "District Collector", "body": "{district.name} district, {state}" },
+      "state_bodies": {},
+      "filing_url": null,
+      "basis": "SWM Rules 2026 rule 37(ii): quarterly review of local bodies."
+    },
+    {
+      "channel": "cpgrams",
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "or_burning": false,
+      "states": null,
+      "requires_local_body": false,
+      "to": { "office": "Public Grievance Officer", "body": "Ministry of Housing and Urban Affairs, Government of India" },
+      "state_bodies": {},
+      "filing_url": "https://pgportal.gov.in/",
+      "basis": "Nationwide grievance portal (decision 12)."
+    },
+    {
+      "channel": "swachhata",
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "or_burning": false,
+      "states": null,
+      "requires_local_body": true,
+      "to": { "office": "{local_body.head_office}", "body": "{local_body.name}" },
+      "state_bodies": {},
+      "filing_url": "https://play.google.com/store/apps/details?id=com.ichangemycity.swachhbharat",
+      "basis": "Swachhata-MoHUA app, nationwide; complaints go to the local body (decision 12)."
+    },
+    {
+      "channel": "rajasthan_sampark",
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "or_burning": false,
+      "states": ["Rajasthan"],
+      "requires_local_body": false,
+      "to": { "office": "Grievance Officer", "body": "Rajasthan Sampark, Government of Rajasthan" },
+      "state_bodies": {},
+      "filing_url": "https://sampark.rajasthan.gov.in/",
+      "basis": "State grievance portal, Rajasthan only (decision 12)."
+    }
+  ]
+}
