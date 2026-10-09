@@ -1,0 +1,36 @@
+import { ApiKey } from "../../domain/llm/ApiKey.js";
+import type { ProviderName } from "../../domain/llm/LlmTask.js";
+import type { PriceTable } from "../../domain/llm/PriceTable.js";
+import type { LlmProvider } from "../../ports/LlmProvider.js";
+import type { ProviderBuilder } from "../../ports/ProviderBuilder.js";
+import type { SecretReader } from "../../ports/SecretReader.js";
+import { OpenAiProvider } from "./OpenAiProvider.js";
+
+export interface OpenAiSource {
+  readonly fetch: typeof fetch;
+  readonly secrets: SecretReader;
+  readonly secretId: string;
+  readonly prices: PriceTable;
+  readonly timeoutMs: number;
+}
+
+// Keeps only a usable key, so a key stored after startup works without a restart.
+export class OpenAiProviderBuilder implements ProviderBuilder {
+  readonly provider: ProviderName = "openai";
+  readonly #source: OpenAiSource;
+  #key: ApiKey | null = null;
+
+  constructor(source: OpenAiSource) {
+    this.#source = source;
+  }
+
+  async build(model: string): Promise<LlmProvider | null> {
+    const key = this.#key ?? ApiKey.fromSecret(await this.#source.secrets.read(this.#source.secretId));
+    if (key === null) {
+      return null;
+    }
+    this.#key = key;
+    const { fetch, prices, timeoutMs } = this.#source;
+    return new OpenAiProvider({ fetch, key, model, prices, timeoutMs });
+  }
+}
