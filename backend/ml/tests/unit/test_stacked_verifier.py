@@ -15,7 +15,7 @@ from ml.domain.verification import Thresholds
 from ml.ports.signal import Signal
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.provider_factory import ProviderFactory
-from ml.services.provider_router import ProviderRouter
+from ml.services.provider_router import INVALID_JSON_REMINDER, ProviderRouter
 from ml.services.stacked_verifier import StackedVerifier
 from ml.services.vision_judge import VisionJudge
 
@@ -106,6 +106,16 @@ def test_cleanup_of_a_scene_that_does_not_fit_the_site_is_rejected() -> None:
     result = stacked.verify(make_case("cleanup"))
 
     assert (result.outcome.is_clean, result.outcome.decision) == (False, "rejected")
+
+
+def test_cleanup_answer_without_the_scene_check_is_retried() -> None:
+    no_scene = CLEAN_JSON.replace(', "scene_fits_site": true', "")
+    stacked, provider = verifier([FakeSignal("rekognition_labels", 1.0)], [no_scene, CLEAN_JSON])
+
+    result = stacked.verify(make_case("cleanup"))
+
+    assert INVALID_JSON_REMINDER in provider.requests[1].prompt
+    assert result.outcome.is_clean is True
 
 
 def test_cleanup_without_a_judge_answer_is_rejected() -> None:

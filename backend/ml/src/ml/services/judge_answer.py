@@ -1,5 +1,7 @@
 """The JSON answer every model must give the vision judge."""
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -68,3 +70,14 @@ class JudgeAnswer(BaseModel):
             hazards=frozenset(self.hazards) - {"burning"},
             burning=self.burning,  # the burning field decides, so judge and insights agree
         )
+
+
+class CleanupJudgeAnswer(JudgeAnswer):
+    """A cleanup answer without the scene check is invalid, so the router retries or moves on."""
+
+    scene_fits_site: bool
+
+
+ANSWER_SCHEMAS: Mapping[str, type[JudgeAnswer]] = MappingProxyType(
+    {"report": JudgeAnswer, "cleanup": CleanupJudgeAnswer}
+)

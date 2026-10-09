@@ -7,7 +7,7 @@ from ml.domain.case import VerificationCase
 from ml.domain.errors import NoProviderAnsweredError
 from ml.domain.llm import LlmRequest
 from ml.domain.verification import JudgeVerdict, SignalResult
-from ml.services.judge_answer import JudgeAnswer
+from ml.services.judge_answer import ANSWER_SCHEMAS
 from ml.services.provider_router import JsonJob, ProviderRouter
 
 logger = logging.getLogger(__name__)
@@ -36,8 +36,9 @@ class VisionJudge:
         request = LlmRequest(
             self._system_prompt, prompt, images=(case.image,), max_tokens=self.MAX_TOKENS
         )
+        schema = ANSWER_SCHEMAS[case.purpose.name]
         try:
-            answer = self._router.complete_json(JsonJob(self.TASK, request, JudgeAnswer))
+            answer = self._router.complete_json(JsonJob(self.TASK, request, schema))
         except NoProviderAnsweredError as error:
             logger.warning("judge_unavailable", extra={"fields": {"reason": str(error)}})
             return None
