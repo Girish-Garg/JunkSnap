@@ -1,11 +1,47 @@
-# Lane `fe`: frontend and video
+# frontend: the JunkSnap web app
 
-Holder: see `.claude/roster.json`. The holder adds conventions here as the lane learns them. Keep it under about 60 lines.
+Mobile-first web app: Snap and Scan capture, the India map opening on Jodhpur, site pages, community checks, area pages and letter previews. Amplify builds and hosts it from `main` using `amplify.yml`.
 
-- Stack: Vite + React + MapLibre GL. Load Noto Sans Devanagari for Hindi text.
-- Data mode: `VITE_API_MODE=mock` reads `contracts/fixtures/`; `live` calls `VITE_API_URL`. Keep mock mode working all week.
-- One file per map layer under `src/layers/`, discovered with `import.meta.glob`, so adding a layer adds a file instead of editing a shared list.
-- Complaint PDF: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. Don't use a server-side PDF library (they mangle Devanagari).
-- Wording on screen: "thermal anomalies recorded near this location", "candidate sites". Credit "Contains modified Copernicus Sentinel data [year]".
-- Demo mode (`?demo=1`) replays real outputs the system produced, and the writeup says so.
-- Dev ports: Hemang 5173–5176, Girish 5180–5183, Harshit 5190–5193.
+Stack: React 19.3, Vite 8.3, TypeScript 7.0 (`strict: true`), MapLibre GL 6.13, i18next, Vitest, ESLint 10.
+
+## Layout (docs/working.md section 1)
+
+- `src/app/`: `App.tsx`, routes and the `ServiceContainer` (the one place that builds services).
+- `src/domain/`: types that mirror `contracts/schemas/`, plus small domain classes.
+- `src/services/`: classes such as `ApiClient`, `UploadQueue`, `CameraCapture`, `GeoLocator`, `CapabilityProbe`, `ScanController`, `EdgeDetector`.
+- `src/features/<name>/`: `snap`, `scan`, `map`, `site`, `community`, `area`, `letters`, each with `components/` and `hooks/`.
+- `src/layers/`: one MapLibre layer per file.
+- `src/ui/`: shared presentational components.
+- `src/i18n/`: `en.json` and `hi.json`. Load Noto Sans Devanagari for Hindi.
+- `public/models/`: the small on-phone model files. `tests/`: Vitest tests.
+
+## Commands
+
+```
+cd frontend
+npm ci
+npm run dev
+npm run lint
+npm test -- --run
+npm run build
+```
+
+## Conventions
+
+- Direction: components → hooks → services → `ApiClient`. Components hold no business logic; hooks only adapt service state to React.
+- One class or component per file, named after it. Hooks are `useX`. Readonly value types; no `any`.
+- ESLint enforces the limits: `max-lines` 250 (`.tsx` 150), `max-lines-per-function` 30, `complexity` 8, `max-params` 4, `max-depth` 3. `scripts/check_limits.py` checks file sizes too.
+- Mock mode reads `contracts/fixtures/`; live mode calls the API through CloudFront. Keep mock mode working until the end. Environment variable names are listed in `contracts/README.md`.
+- Shapes and routes come from `contracts/`. If the app needs a new field, raise it on the contracts issue first.
+- Capture is the in-app camera only (no gallery upload). Hash the original with SHA-256 on the phone, then upload with the presigned PUT and submit the report.
+- Edge mode runs only when the startup probe passes; otherwise use cloud mode. Scores from the phone are hints for live boxes and frame choice; the server always re-verifies.
+- Failed uploads wait in the IndexedDB offline queue and retry with backoff.
+- Letters: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. No server-side PDF library (they mangle Devanagari). Nothing is filed automatically; the resident files.
+- Area pages show counts next to every score, the pilot flag, and "not enough reports" below 10 verified reports.
+- Neutral design: no party colours, no names of individuals anywhere on screen.
+
+## Never
+
+- Commit `.env.local` or any key. The browser never holds AWS credentials; it only uses presigned URLs.
+- Show an unblurred image or an original. Only the public blurred copy is ever displayed.
+- Invent data, history or scores in the UI. A demo replays real outputs, and the writeup says so.

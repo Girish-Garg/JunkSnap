@@ -20,42 +20,59 @@ JunkSnap turns a phone photo of waste into verified, located, accountable eviden
 ```mermaid
 flowchart TB
   phone["Phone web app on Amplify<br/>Snap, Scan, map, community, area pages"]
-  api["API: Lambda Function URLs<br/>presign, reports, sites, votes, scores, letters"]
+  cf["CloudFront<br/>HTTPS"]
+  alb["Application Load Balancer"]
+  subgraph eks["EKS Auto Mode cluster junksnap, one namespace per stage"]
+    api["api: FastAPI, package pipeline<br/>presign, reports, sites, votes, scores"]
+    agent["agent: FastAPI, package agent<br/>letters; internal verify and brands"]
+    worker["worker: package pipeline<br/>ReportPipeline, long-polls SQS"]
+    scores["scores: CronJob<br/>every 15 minutes"]
+  end
+  ecr["ECR<br/>container images"]
   s3p[("S3 private<br/>originals, KMS")]
   s3b[("S3 public<br/>blurred copies")]
   q["SQS + dead-letter queue"]
-  sfn["Step Functions Express<br/>report pipeline"]
   ddb[("DynamoDB<br/>reports, sites, votes, devices, scores")]
   rek["Rekognition"]
-  brk["Bedrock<br/>default LLM, VLM, embeddings"]
-  orr["OpenRouter<br/>fallback and benchmark, blurred images only"]
+  brk["Bedrock<br/>default: Claude, Nova; Titan embeddings"]
+  oai["OpenAI API<br/>fallback, blurred images only"]
+  orr["OpenRouter<br/>last fallback and benchmark, blurred images only"]
   loc["Amazon Location<br/>reverse geocoding"]
   sm["Secrets Manager"]
   phone -->|presigned PUT| s3p
-  phone --> api
-  api --> q --> sfn
-  sfn --> rek & brk & loc
-  brk -.->|fallback| orr
-  sfn --> s3b & ddb
-  api --> ddb
-  sm -.->|keys| sfn
+  phone --> cf --> alb
+  alb --> api & agent
+  api --> q --> worker
+  worker -->|"internal verify, brands"| agent
+  worker --> rek & loc & s3b & ddb
+  agent --> rek & brk
+  brk -.->|fallback| oai -.->|fallback| orr
+  api & scores --> ddb
+  ecr -.->|images| eks
+  sm -.->|keys| agent
 ```
+
+All services run in one Amazon EKS Auto Mode cluster, `junksnap`, in ap-south-1, with one namespace per stage. CloudFront serves HTTPS in front of the Application Load Balancer. The ALB sends POST /sites/{id}/letters to `agent` and every other public route to `api`. POST /internal/verify and POST /internal/brands on `agent` are reachable only inside the cluster. Images come from ECR. Pods reach AWS through EKS Pod Identity, so no AWS keys live in pods.
 
 ## 3. Report pipeline
 
-One Step Functions execution runs per report or Scan frame.
+The `worker` long-polls the SQS reports queue. For each report or Scan frame it runs one `ReportPipeline`, which calls the steps below in order. Steps from the agent package run in the `agent` service, called over cluster-internal HTTP: POST /internal/verify and POST /internal/brands, defined in `contracts/README.md` (PR #14). The worker sends the agent only the blurred copy's key (`media/reports/{report_id}.jpg`), never the original, and the agent's Pod Identity role has no read access to the private originals bucket.
 
-| Step | Package | Entry class | Output contract |
-|---|---|---|---|
-| 1. Moderate | pipeline | `ModerationService` | `moderation_result` |
-| 2. Authenticate | pipeline | `AuthenticityService` | part of `moderation_result` |
-| 3. Signals, in parallel | agent | `RekognitionSignal`, `YoloSignal`, `EmbeddingSignal` | signal scores |
-| 4. Judge, unresolved cases only | agent | `VisionJudge` via `ProviderRouter` | judge verdict |
-| 5. Decide | agent | `MetaLearner` inside `StackedVerifier` | `verification_result` |
-| 6. Brands | agent | `BrandLabeller` | `brand_label[]` |
-| 7. Locate | pipeline | `LocationService` | `location_lookup` |
-| 8. Merge | pipeline | `SiteMerger` | `site` |
-| 9. Score, scheduled | pipeline | `ScoreCalculator` | `ward_scores` |
+Every step is idempotent per report id: moderation and verification results are written keyed by report id, and site merge records which report ids it has merged and skips repeats, so retries cannot inflate counts. A failed message is retried through SQS. When its `ApproximateReceiveCount` reaches the max receive count, the worker marks the report `needs_review` before the message moves to the dead-letter queue, so the phone never waits forever.
+
+| Step | Package | Runs in | Entry class | Output contract |
+|---|---|---|---|---|
+| 1. Moderate | pipeline | `worker` | `ModerationService` | `moderation_result` |
+| 2. Authenticate | pipeline | `worker` | `AuthenticityService` | part of `moderation_result` |
+| 3. Signals, in parallel threads | agent | `agent`, POST /internal/verify | `RekognitionSignal`, `YoloSignal`, `EmbeddingSignal` | signal scores |
+| 4. Judge, unresolved cases only | agent | `agent`, same call | `VisionJudge` via `ProviderRouter` | judge verdict |
+| 5. Decide | agent | `agent`, same call | `MetaLearner` inside `StackedVerifier` | `verification_result` |
+| 6. Brands | agent | `agent`, POST /internal/brands | `BrandLabeller` | `brand_label[]` |
+| 7. Locate | pipeline | `worker` | `LocationService` | `location_lookup` |
+| 8. Merge | pipeline | `worker` | `SiteMerger` | `site` |
+| 9. Score, every 15 minutes | pipeline | `scores` CronJob | `ScoreCalculator` | `ward_scores` |
+
+The LLM is the last step in detection. Rekognition labels, YOLO and Titan embeddings decide first; the vision judge runs only when they are not confident or disagree, and it never sets counts or boxes.
 
 Thresholds: probability 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected. Strong disagreement between signals always goes to community check. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
 
@@ -63,17 +80,20 @@ Thresholds: probability 0.85 or more is auto-verified, 0.5 to 0.85 goes to commu
 
 ```mermaid
 stateDiagram-v2
-  [*] --> uploaded
-  uploaded --> rejected: moderation or authenticity fails
-  uploaded --> verifying
-  verifying --> auto_verified: p at least 0.85
-  verifying --> community_check: p 0.5 to 0.85, or disagreement
-  verifying --> rejected: p below 0.5
-  community_check --> auto_verified: confirmed by votes
+  [*] --> queued
+  queued --> processing
+  processing --> rejected: moderation or authenticity fails, or p below 0.5
+  processing --> verified: p at least 0.85
+  processing --> community_check: p 0.5 to 0.85, or disagreement
+  processing --> needs_review: retries exhausted
+  community_check --> verified: confirmed by votes
   community_check --> rejected: rejected by votes
-  auto_verified --> merged_into_site
-  merged_into_site --> [*]
+  verified --> [*]: merged into a site
+  rejected --> [*]
+  needs_review --> [*]
 ```
+
+State names are the `status` values of GET /reports/{id} in `contracts/README.md` (PR #14). A verified report is merged into a site, which sets its `site_id`.
 
 A site moves open → cleaned (only with an after-photo the pipeline confirms is clean) → reopened.
 
@@ -85,7 +105,27 @@ A site moves open → cleaned (only with an after-photo the pipeline confirms is
 
 ## 6. Model-agnostic LLM layer
 
-`ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` for each task: judge, brands, letters, text moderation. Providers implement `LlmProvider`: `BedrockProvider` (default, India inference profile) and `OpenRouterProvider` (OpenAI-compatible). Every response is validated against a schema; on failure the next provider is tried. Every call logs provider, model, version, latency and estimated cost, and the evidence pack records them.
+The main LLM use is the ward-data crawler (below); in detection the LLM comes last (section 3).
+
+`ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` for each task: ward crawler, judge, brands, letters, text moderation. Providers implement `LlmProvider`:
+
+- `BedrockProvider`: the default. Models checked from ap-south-1 on 10 Oct at 01:15 IST; the Claude 5 family is not available for this account.
+- `OpenAiProvider`: fallback after Bedrock. The key is in Secrets Manager as `junksnap/<stage>/openai-api-key`.
+- `OpenRouterProvider` (OpenAI-compatible): the last fallback, and the benchmark.
+
+Order for the judge and letters:
+
+| Order | Provider | Model |
+|---|---|---|
+| 1 | Bedrock | Claude Sonnet 4.6, `global.anthropic.claude-sonnet-4-6` |
+| 2 | Bedrock | Claude Haiku 4.5, `in.anthropic.claude-haiku-4-5-20251001-v1:0` (India profile) |
+| 3 | Bedrock | Amazon Nova Pro, `apac.amazon.nova-pro-v1:0` |
+| 4 | OpenAI API | set in `TaskConfig` |
+| 5 | OpenRouter | set in `TaskConfig` |
+
+The embedding signal uses Titan image embeddings, `amazon.titan-embed-image-v1`, on-demand in ap-south-1. Only blurred images go to any model. Every response is validated against a schema; on failure the next provider is tried. Every call logs provider, model, version, latency and estimated cost, and the evidence pack records them.
+
+Ward-data crawler: an offline job, not part of the report pipeline. It reads official public pages (municipal corporation and ward lists, census tables, state election and assembly sites, Lok Sabha, Swachh Survekshan) and extracts one record per ward: ward number and name, municipal body, zone, area km², population, councillor seat, sanitation office contact, legal disposal and collection points, assembly and Lok Sabha seat. Each field carries its source URL, `fetched_at` and the page's SHA-256. Output is validated JSON in `data/wards/`, reviewed by a person before use. It stores offices and seats only, never personal names. Location (D2) and area scores read these records.
 
 ## 7. Accountability
 
@@ -95,29 +135,38 @@ A site moves open → cleaned (only with an after-photo the pipeline confirms is
 
 ## 8. Area scores
 
-City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Formulas are versioned in `docs/decisions/`. Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history.
+City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Ward area, population and legal disposal points come from the crawled ward records in `data/wards/`. Formulas are versioned in `docs/decisions/`. Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history.
 
 ## 9. Security and privacy
 
 - Originals sit in a private bucket under KMS and are never public. Public copies have faces and number plates blurred.
 - No photos of people dumping, and no names of individuals in any text.
-- OpenRouter only ever receives blurred images; Bedrock is the default for anything personal.
+- Only blurred images go to any model on Bedrock, OpenAI or OpenRouter.
 - Per-device tokens, rate limits, perceptual-hash duplicate checks, an India geofence and fresh timestamps.
 - Secrets live in Secrets Manager; nothing secret in the repo.
 
 ## 10. Stages and deployment
 
-Two stages: `dev` for building and `demo` for the recording, deployed only from a clean `main` when the human says so. Stacks are named `junksnap-<stage>` in ap-south-1. Amplify builds the frontend from `main`.
+Two stages: `dev` for building and `demo` for the recording, deployed only from a clean `main` when the human says so.
+
+- Cluster: one EKS Auto Mode cluster `junksnap` in ap-south-1, from eksctl `infra/eks/cluster.yaml`. Each stage is a namespace: `junksnap-dev` and `junksnap-demo`.
+- Per-stage AWS resources (buckets, tables, queues, Pod Identity roles, place index, secrets) come from CloudFormation `infra/aws/stage.yaml`, stacks `junksnap-<stage>`.
+- Manifests use Kustomize: `infra/k8s/base`, `infra/k8s/overlays/dev`, `infra/k8s/overlays/demo`. Images live in ECR.
+- Amplify builds the frontend from `main`.
+- The cluster costs about $7/day from credits while it runs. Tear it down after judging.
 
 ## 11. Failure modes
 
 | Failure | Fallback |
 |---|---|
-| Bedrock throttled or unavailable | Next provider in `TaskConfig.fallback` |
+| Model provider throttled or unavailable | Next provider in `TaskConfig.fallback` |
 | Phone cannot run the model | Cloud mode |
 | No network | Offline queue |
 | Letter verification fails | Template letter with the same citations |
-| Pipeline step error | SQS retry, then dead-letter queue and a "needs review" status |
+| Pipeline step error, or `agent` unreachable from `worker` | SQS retry. On the last allowed receive the worker marks the report `needs_review`, then the message moves to the dead-letter queue |
+| Same message processed twice | Steps are idempotent per report id; site merge skips report ids it has already merged |
+| Pod crashes or node is replaced | Kubernetes restarts the pod; an unfinished SQS message becomes visible again and is retried |
+| `scores` run fails | The next run, 15 minutes later, recomputes from DynamoDB |
 
 ## 12. Roadmap (not built)
 
