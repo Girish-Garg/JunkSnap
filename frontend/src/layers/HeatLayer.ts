@@ -1,12 +1,8 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import type { LayerContext, MapLayer } from './MapLayer';
 
-// Half from verified reports, half from all reports; size_class and hazards join once insights exist.
-const WEIGHT: ExpressionSpecification = [
-  '+',
-  ['*', 0.5, ['min', 1, ['/', ['get', 'verified_count'], 5]]],
-  ['*', 0.5, ['min', 1, ['/', ['get', 'report_count'], 10]]],
-];
+// SiteMap adds heat_weight from domain/HeatWeight (reports, size class, hazards).
+const WEIGHT: ExpressionSpecification = ['coalesce', ['get', 'heat_weight'], 0.5];
 
 // Sequential ramp: transparent, then the teal accent family, then deep red for hotspots.
 const RAMP: ExpressionSpecification = [

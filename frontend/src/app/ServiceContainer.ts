@@ -8,6 +8,7 @@ import { HttpApiClient } from '../services/HttpApiClient';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockAuthService } from '../services/MockAuthService';
 import { Sharer, type ShareApi } from '../services/Sharer';
+import { UnavailableAuthService } from '../services/UnavailableAuthService';
 import { siteFixtureLoaders } from '../services/siteFixtures';
 import type { ApiMode, AppConfig } from './AppConfig';
 
@@ -15,6 +16,12 @@ import type { ApiMode, AppConfig } from './AppConfig';
 const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiClient>> = {
   mock: () => new MockApiClient(siteFixtureLoaders),
   live: (config) => new HttpApiClient(config.requireApiUrl()),
+};
+
+// The mock signs anyone in, so it only runs with sample data; live waits for the Cognito adapter.
+const AUTH_BUILDERS: Readonly<Record<ApiMode, (store: KeyValueStore) => AuthService>> = {
+  mock: (store) => new MockAuthService(store),
+  live: () => new UnavailableAuthService(),
 };
 
 export interface BrowserApis {
@@ -53,12 +60,11 @@ export class ServiceContainer implements Services {
     this.sharer = services.sharer;
   }
 
-  // Auth is the mock in both modes until the Cognito adapter lands.
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config),
-      auth: new MockAuthService(browser.store),
+      auth: AUTH_BUILDERS[config.apiMode](browser.store),
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
       locator: new GeoLocator(browser.geolocation),

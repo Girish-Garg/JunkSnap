@@ -26,6 +26,10 @@ export class MockAuthService implements AuthService {
     this.#user = saved ? { email: saved } : null;
   }
 
+  available(): boolean {
+    return true;
+  }
+
   currentUser(): AuthUser | null {
     return this.#user;
   }

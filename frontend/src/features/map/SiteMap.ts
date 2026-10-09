@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
+import { HeatWeight } from '../../domain/HeatWeight';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
@@ -89,6 +90,13 @@ export class SiteMap {
     this.#map.fitBounds(bounds, { padding: 80, maxZoom: SITE_ZOOM });
   }
 
+  /** MapLibre reads its locale once; this keeps the attribution toggle in the UI language. */
+  setAttributionLabel(label: string): void {
+    const toggle = this.#map.getContainer().querySelector('.maplibregl-ctrl-attrib-button');
+    toggle?.setAttribute('title', label);
+    toggle?.setAttribute('aria-label', label);
+  }
+
   showUser(position: LonLat): void {
     this.#userMarker ??= new Marker({ element: SiteMap.#userDot() });
     this.#userMarker.setLngLat([...position]).addTo(this.#map);
@@ -156,9 +164,13 @@ export class SiteMap {
   }
 
   #collection(): FeatureCollection {
+    // Nested properties do not reach MapLibre expressions, so the heat weight is added flat.
+    const features = this.#sites.map((site) => ({
+      ...site,
+      properties: { ...site.properties, heat_weight: HeatWeight.of(site.properties) },
+    }));
     // MapLibre types want mutable GeoJSON but it only reads it.
-    const features = this.#sites as unknown as Feature[];
-    return { type: 'FeatureCollection', features };
+    return { type: 'FeatureCollection', features: features as unknown as Feature[] };
   }
 
   #view(): MapView {

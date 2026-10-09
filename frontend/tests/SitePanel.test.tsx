@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
 import { factValue, fixtureSite, renderApp } from './helpers';
+import { testSite } from './siteBuilder';
 
 const english = new LocaleFormatter('en');
+const BRAND = { brand: 'Sample Namkeen', parent_company: 'Sample Foods Pvt Ltd', confidence: 0.93, source_url: 'https://example.test/brand' };
 
 describe('SitePanel header and counts', () => {
   it('shows type, status, verification, context and counts', async () => {
-    await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={null} />);
+    await renderApp(<SitePanel site={testSite({ cleanup_status: 'checking' })} userLocation={null} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
     expect(screen.getByText('Open')).toHaveClass('badge--open');
     expect(screen.getByText('Verified')).toBeInTheDocument();
@@ -20,34 +22,40 @@ describe('SitePanel header and counts', () => {
   });
 
   it('shows the distance once the user location is known', async () => {
-    await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={[73.0035, 26.2708]} />);
+    await renderApp(<SitePanel site={testSite()} userLocation={[73.0035, 26.2708]} />);
     expect(screen.getByText(/^1 km away$/)).toBeInTheDocument();
   });
 });
 
 describe('SitePanel photos, location and brands', () => {
-  it('shows the blurred photos, location line and facts', async () => {
-    const site = await fixtureSite('site_jdh_1');
+  it('shows the blurred photo, location line and facts', async () => {
+    const site = testSite({ brands: [BRAND] });
     await renderApp(<SitePanel site={site} userLocation={null} />);
-    const photo = screen.getByRole('img', { name: 'Blurred photo 1 of 2' });
-    expect(photo).toHaveAttribute('src', site.properties.photo_urls[0]);
+    expect(screen.getByRole('img', { name: 'Blurred photo 1 of 1' })).toHaveAttribute('src', site.properties.photo_urls[0]);
     expect(screen.getByText('Ward 37 · MLA seat: Sardarpura · MP seat: Jodhpur')).toBeInTheDocument();
-    expect(factValue('Local body')).toHaveTextContent('Jodhpur Municipal Corporation (South)');
+    expect(factValue('Local body')).toHaveTextContent('Test Municipal Corporation');
     expect(factValue('Assembly seat (MLA)')).toHaveTextContent('Sardarpura');
     expect(factValue('Lok Sabha seat (MP)')).toHaveTextContent('Jodhpur');
-    const parent = screen.getByRole('link', { name: 'Sample Foods Pvt Ltd' });
-    expect(parent).toHaveAttribute('href', site.properties.brands[0]?.source_url);
+    expect(screen.getByRole('link', { name: 'Sample Foods Pvt Ltd' })).toHaveAttribute('href', BRAND.source_url);
+  });
+
+  it('handles a site outside Rajasthan with no assembly map and an outdated MP seat', async () => {
+    const location = { ward: null, assembly_seat: null, loksabha_seat: { id: 's03-pc-4', name: 'Guwahati', status: 'outdated' as const } };
+    await renderApp(<SitePanel site={testSite({ location })} userLocation={null} />);
+    expect(screen.getByText('No open ward map · No assembly map here yet')).toBeInTheDocument();
+    expect(factValue('Assembly seat (MLA)')).toHaveTextContent('No assembly map here yet');
+    expect(factValue('Lok Sabha seat (MP)')).toHaveTextContent('Boundary out of date');
   });
 
   it('says in visible text which actions are not built yet', async () => {
-    await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={null} />);
+    await renderApp(<SitePanel site={testSite()} userLocation={null} />);
     expect(screen.getByText('Coming soon: Confirm, Me too, Cleaned and Letter.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Letter' })).toHaveClass('action-row__button--primary');
   });
 });
 
-describe('SitePanel for other fixtures and Hindi', () => {
-  it('says when there is no ward map and makes Confirm the main action', async () => {
+describe('SitePanel for the fixtures and Hindi', () => {
+  it('makes Confirm the main action while neighbours check', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
     expect(factValue('Ward')).toHaveTextContent('No open ward map');
     expect(screen.getByText('Waiting for a neighbour check')).toBeInTheDocument();
@@ -65,7 +73,7 @@ describe('SitePanel for other fixtures and Hindi', () => {
   });
 
   it('renders labels and dates in Hindi', async () => {
-    const site = await fixtureSite('site_jdh_1');
+    const site = testSite();
     await renderApp(<SitePanel site={site} userLocation={null} />, { language: 'hi' });
     expect(screen.getByRole('heading', { level: 2, name: 'कचरे का ढेर' })).toBeInTheDocument();
     expect(factValue('वार्ड')).toHaveTextContent('Ward 37');

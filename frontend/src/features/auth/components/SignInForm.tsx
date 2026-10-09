@@ -12,9 +12,10 @@ export function SignInForm() {
   const { t } = useTranslation();
   const { flow, ...form } = useSignInForm();
   const passwordError = form.errors.password ? t(form.errors.password) : null;
+  const intro = flow.notice ?? t(form.available ? 'auth.signIn.text' : 'auth.unavailable');
   return (
     <>
-      <AuthHeading id={AUTH_TITLE_ID} title={t('auth.signIn.title')} text={flow.notice ?? t('auth.signIn.text')} />
+      <AuthHeading id={AUTH_TITLE_ID} title={t('auth.signIn.title')} text={intro} />
       <form className="form" noValidate onSubmit={form.onSubmit}>
         <EmailField id="signin-email" value={form.email} onChange={form.setEmail} errorKey={form.errors.email} />
         <PasswordField

@@ -4,6 +4,8 @@ export interface AuthUser {
 
 /** Account port. MockAuthService now; a Cognito adapter replaces it in a later task. */
 export interface AuthService {
+  /** False until a real provider is wired in live mode; the sign-in sheet says so. */
+  available(): boolean;
   currentUser(): AuthUser | null;
   /** Returns an unsubscribe function. */
   subscribe(listener: () => void): () => void;

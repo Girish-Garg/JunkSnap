@@ -1,8 +1,8 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useRef, type CSSProperties, type ReactNode } from 'react';
 import { IconButton } from './IconButton';
 import './sheet.css';
 import { SheetDetents, type Detent } from './SheetDetents';
-import { useEscapeKey } from './useEscapeKey';
+import { ESCAPE_LAYER, useEscapeKey } from './useEscapeKey';
 import { useSheet } from './useSheet';
 import { useSheetFocus } from './useSheetFocus';
 
@@ -20,11 +20,13 @@ interface BottomSheetProps {
 /** A left side panel on desktop instead (sheet.css). */
 export function BottomSheet({ labelledBy, closeLabel, resizeLabel, onClose, children, initial, focusKey }: BottomSheetProps) {
   const sheet = useSheet(initial ?? 'half');
-  useEscapeKey(onClose);
+  const layer = useRef<HTMLElement>(null);
+  useEscapeKey(onClose, layer);
   useSheetFocus(labelledBy, focusKey);
   const height = { '--sheet-height': SheetDetents.css(sheet.detent) } as CSSProperties;
+  const escapeLayer = { [ESCAPE_LAYER]: '' };
   return (
-    <aside className={`sheet sheet--${sheet.detent}`} style={height} aria-labelledby={labelledBy}>
+    <aside ref={layer} className={`sheet sheet--${sheet.detent}`} style={height} aria-labelledby={labelledBy} {...escapeLayer}>
       <div className="sheet__bar" {...sheet.barProps}>
         <button
           type="button"

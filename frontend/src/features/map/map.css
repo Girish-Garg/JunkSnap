@@ -113,7 +113,7 @@
 }
 
 .lang-toggle__option {
-  min-width: 36px;
+  min-width: var(--target);
   height: 32px;
   padding: 0 8px;
   border: 0;
@@ -185,7 +185,8 @@
   .map-page--sheet .preview-card,
   .map-page--sheet .search-area .pill,
   .map-page--sheet .map-status,
-  .map-page--card .maplibregl-ctrl-bottom-left {
+  .map-page--card .maplibregl-ctrl-bottom-left,
+  .app:has(> .sheet) .search-area .pill {
     display: none;
   }
 }

@@ -136,7 +136,9 @@
     "firstReported": "First reported",
     "lastReported": "Last reported",
     "lastCleared": "Last cleared",
-    "brands": "Packaging seen at this site"
+    "brands": "Packaging seen at this site",
+    "noAssembly": "No assembly map here yet",
+    "seatOutdated": "Boundary out of date"
   },
   "snap": {
     "title": "Report a waste site",
@@ -205,8 +207,10 @@
       "exists": "An account with this email already exists. Sign in instead.",
       "bad_code": "That code is wrong or has expired.",
       "not_confirmed": "Verify your email first.",
-      "unknown": "Something went wrong. Try again."
-    }
+      "unknown": "Something went wrong. Try again.",
+      "unavailable": "Sign-in is not available yet."
+    },
+    "unavailable": "Sign-in is not available yet. You can still browse the map."
   },
   "areas": {
     "title": "Areas",

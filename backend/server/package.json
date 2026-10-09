@@ -1,0 +1,51 @@
+{
+  "name": "junksnap-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev:web": "tsx watch src/handlers/web.ts",
+    "dev:worker": "tsx src/handlers/worker.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gen:contracts": "tsx scripts/genContracts.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1148.0",
+    "@aws-sdk/client-comprehend": "^3.1148.0",
+    "@aws-sdk/client-dynamodb": "^3.1148.0",
+    "@aws-sdk/client-geo-places": "^3.1148.0",
+    "@aws-sdk/client-rekognition": "^3.1148.0",
+    "@aws-sdk/client-s3": "^3.1148.0",
+    "@aws-sdk/client-secrets-manager": "^3.1148.0",
+    "@aws-sdk/client-sqs": "^3.1148.0",
+    "@aws-sdk/lib-dynamodb": "^3.1148.0",
+    "@aws-sdk/s3-request-presigner": "^3.1148.0",
+    "@fastify/cors": "^11.3.1",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "fastify": "^5.12.5",
+    "ngeohash": "^0.6.4",
+    "pino": "^10.4.0",
+    "sharp": "^0.35.5",
+    "ulid": "^3.0.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/ngeohash": "^0.6.8",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.12.0",
+    "json-schema-to-typescript": "^16.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

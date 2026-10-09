@@ -14,7 +14,7 @@ Restrained map-app patterns (Google Maps, Apple Maps, Material 3), not their bra
 ## Map
 
 - Zooms are MapLibre's (512 px tiles, one below Google's). The app opens Jodhpur at 12, the city view.
-- Auto mode shows a heatmap up to zoom 11, which fades out between 11 and 12 as pins fade in. The ramp runs from transparent through the teal family to deep red for hotspots.
+- Auto mode shows a heatmap up to zoom 11, which fades out between 11 and 12 as pins fade in. The heat is weighted by verified and total reports, plus size class and hazards from `insights`. The ramp runs from transparent through the teal family to deep red for hotspots.
 - Pins are a 26 px round disc in the type colour with a 2 px white ring, a soft shadow and a white glyph. A selected pin grows to about 39 px with an accent ring.
 - Tapping a pin shows a 104 px preview card (thumbnail, type, status, reports, distance, Details). Tapping the map dismisses it.
 

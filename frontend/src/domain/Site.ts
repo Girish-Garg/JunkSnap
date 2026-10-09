@@ -1,5 +1,6 @@
 // Mirrors contracts/schemas/site.schema.json; change the contract first.
 import type { ReportType } from './ReportType';
+import type { SiteInsights } from './SiteInsights';
 
 export type SiteContext =
   | 'vacant_plot'
@@ -42,14 +43,22 @@ export interface Representative {
   readonly source: string;
 }
 
+/** outdated: the loaded boundary predates a re-delimitation; letters never Cc that MP. */
+export type SeatStatus = 'current' | 'outdated' | null;
+
+export interface LoksabhaRef extends AreaRef {
+  readonly status?: SeatStatus;
+}
+
 export interface SiteLocation {
   readonly state: string;
   readonly district: AreaRef;
   readonly town: string | null;
   readonly local_body: LocalBody | null;
   readonly ward: AreaRef | null;
-  readonly assembly_seat: AreaRef;
-  readonly loksabha_seat: AreaRef;
+  /** Null outside Rajasthan, where no assembly boundaries are loaded yet. */
+  readonly assembly_seat: AreaRef | null;
+  readonly loksabha_seat: LoksabhaRef;
   readonly representatives: readonly Representative[];
 }
 
@@ -85,6 +94,8 @@ export interface SiteProperties {
   readonly last_reported_at: string;
   readonly cleaned_at: string | null;
   readonly pilot: boolean;
+  /** Optional in v1.1 so older producers stay valid; the worker always writes it. */
+  readonly insights?: SiteInsights;
 }
 
 export type LonLat = readonly [lon: number, lat: number];

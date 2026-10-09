@@ -12,7 +12,7 @@ const MAX_RESULTS = 6;
 
 const NAMES: Readonly<Record<PlaceKind, (site: SiteProperties) => string | null | undefined>> = {
   ward: (site) => site.location.ward?.name,
-  assembly: (site) => site.location.assembly_seat.name,
+  assembly: (site) => site.location.assembly_seat?.name,
   loksabha: (site) => site.location.loksabha_seat.name,
   local_body: (site) => site.location.local_body?.name,
   town: (site) => site.location.town,

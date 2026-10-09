@@ -46,8 +46,8 @@ describe('MockApiClient.listSites follows the API rules', () => {
 describe('MockApiClient.getSite', () => {
   it('gets one site by id', async () => {
     const site = await api.getSite('site_jdh_1');
+    expect(site.properties.site_id).toBe('site_jdh_1');
     expect(site.properties.report_type).toBe('waste_dump');
-    expect(site.properties.location.ward?.name).toBe('Ward 37');
   });
 
   it('rejects an unknown id with the contract not_found error', async () => {

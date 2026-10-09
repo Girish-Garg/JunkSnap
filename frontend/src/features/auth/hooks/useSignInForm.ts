@@ -25,5 +25,5 @@ export function useSignInForm() {
       (error) => error.problem === 'not_confirmed' && (flow.go('verify', email), true),
     );
   };
-  return { email, setEmail, password, setPassword, errors, submit, onSubmit, flow };
+  return { email, setEmail, password, setPassword, errors, submit, onSubmit, flow, available: auth.available() };
 }

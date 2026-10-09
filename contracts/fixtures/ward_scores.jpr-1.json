@@ -20,5 +20,14 @@
   "formula_version": "scores-v1",
   "pilot": false,
   "data_window": { "from": "2026-10-08T00:00:00Z", "to": "2026-10-10T04:30:00Z" },
-  "computed_at": "2026-10-10T04:30:00Z"
+  "computed_at": "2026-10-10T04:30:00Z",
+  "insights": {
+    "composition": { "value": null, "reports": 0, "sources": [], "reason": "too_few_reports" },
+    "hazardous_share_pct": { "value": null, "hazardous_sites": 0, "sites": 0, "reason": "too_few_reports" },
+    "top_brands": { "value": [], "labels": 0, "reason": null },
+    "repeat_spots": { "value": [], "count": 0, "reason": null },
+    "hour_of_day": { "value": null, "reports": 0, "reason": "too_few_reports" },
+    "day_of_week": { "value": null, "reports": 0, "reason": "too_few_reports" },
+    "near_school_or_water_count": { "value": null, "sites": 0, "reason": "no_data" }
+  }
 }
