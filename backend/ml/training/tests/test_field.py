@@ -63,7 +63,7 @@ def test_blurred_copies_from_s3_and_cloudfront_reach_the_private_bucket(
     run_import(tmp_path, [task(s3("jdh_9"), "no_bin"), task(f"{CDN}/media/reports/rpt_jdh_10.jpg")],
                web=web)
     rows = {r.id: r for r in ManifestBuilder(tmp_path, class_map, LICENCES).build(store)}
-    assert rows["field/rpt_jdh_9"].s3_key == "datasets/field/images/rpt_jdh_9.jpg"
+    assert rows["field/rpt_jdh_9"].s3_key == "datasets/field/rpt_jdh_9.jpg"
     assert rows["field/rpt_jdh_9"].report_type == "no_bin"
     assert rows["field/rpt_jdh_10"].licence == "private"
     assert "datasets/field/records.jsonl" in store.uploaded

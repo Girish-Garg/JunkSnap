@@ -74,7 +74,7 @@ Field photos are labelled and stored only as the blurred copies the app pipeline
 
 For each blurred copy, `import-field`:
 1. re-encodes it, which also drops any EXIF;
-2. uploads it to `datasets/field/images/` in the private bucket, with its labels in `datasets/field/records.jsonl`;
+2. uploads it to `datasets/field/{report_id}.jpg` in the private bucket (the contract layout), with its labels in `datasets/field/records.jsonl`;
 3. rebuilds the manifest.
 
 A missing or unreadable copy stops the import. The export is merged with the recorded field photos by image id. An export that lacks photos already recorded is refused: `--keep-missing` keeps them, and `--replace` drops them.

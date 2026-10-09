@@ -65,7 +65,7 @@ def test_report_type_priority_prefers_waste_over_not_waste(class_map: ClassMap) 
 
 def test_field_attributes_pass_through_and_are_checked(class_map: ClassMap) -> None:
     good = Attributes(report_type="waste_dump", context="vacant_plot", hazards=("burning",))
-    field = ImageRecord("field/a", "field", "field/images/a.jpg", attributes=good)
+    field = ImageRecord("field/a", "field", "field/a.jpg", attributes=good)
     assert class_map.attributes_for(field) == good
     wrong_pair = Attributes(report_type="no_bin", context="vacant_plot")
     with pytest.raises(ConfigError):

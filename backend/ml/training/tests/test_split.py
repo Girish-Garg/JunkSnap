@@ -13,7 +13,7 @@ PILE = (Box("waste_pile", 0.1, 0.2, 0.3, 0.4),)
 
 
 def row(source: str, name: str, boxes: bool = False) -> ManifestRow:
-    path = f"{source}/images/{name}.jpg"
+    path = f"field/{name}.jpg" if source == "field" else f"{source}/images/{name}.jpg"
     return ManifestRow(
         f"{source}/{name}", source, "CC-BY-4.0", f"datasets/{path}", path, "waste_dump",
         has_boxes=boxes,
@@ -94,9 +94,9 @@ def test_yolo_export_downloads_missing_images_or_fails(tmp_path: Path, class_map
     cache = tmp_path / "cache"
     rows = [replace(r, split="train") for r in (row("field", "a", True), row("field", "b", True))]
     field_cache(cache, rows, write_images=False)
-    store.uploaded["datasets/field/images/a.jpg"] = b"from-s3"
+    store.uploaded["datasets/field/a.jpg"] = b"from-s3"
     with pytest.raises(ConfigError, match="field/b"):
         YoloExporter(cache, class_map, store).export(rows, tmp_path / "yolo")
-    assert (cache / "field/images/a.jpg").read_bytes() == b"from-s3"
+    assert (cache / "field/a.jpg").read_bytes() == b"from-s3"
 
 

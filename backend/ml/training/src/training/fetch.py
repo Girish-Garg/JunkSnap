@@ -78,7 +78,7 @@ class Fetcher:
 
     def _keep(self, source: DatasetSource, item: RawItem) -> ImageRecord | None:
         name = source.info.name
-        relative = f"{name}/images/{item.stem}.jpg"
+        relative = source.image_path(item.stem)
         dest = self._cache / relative
         if not dest.exists():
             try:

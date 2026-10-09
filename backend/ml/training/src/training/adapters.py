@@ -108,7 +108,8 @@ class LocalOnlyStore(ObjectStore):
 
     @override
     def read(self, key_or_uri: str) -> bytes | None:
-        raise ConfigError(f"{key_or_uri} is in S3; run without --no-upload")
+        """Nothing is remote here, so callers fall back to the cache or raise their own error."""
+        return None
 
     @property
     def is_remote(self) -> bool:

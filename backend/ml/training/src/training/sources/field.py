@@ -77,6 +77,11 @@ class FieldExportSource(DatasetSource):
         self._photos = photos
 
     @override
+    def image_path(self, stem: str) -> str:
+        """Contract layout: `datasets/field/{report_id}.jpg`."""
+        return f"{self.info.name}/{stem}.jpg"
+
+    @override
     def download(self, cache: Path, limit: int | None) -> None:
         return None
 

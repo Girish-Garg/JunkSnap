@@ -44,6 +44,10 @@ class DatasetSource(ABC):
     def raw_dir(self, cache: Path) -> Path:
         return cache / self._info.name / "raw"
 
+    def image_path(self, stem: str) -> str:
+        """Path of a normalised image, relative to the cache and to the bucket's `datasets/`."""
+        return f"{self._info.name}/images/{stem}.jpg"
+
     def ensure_file(self, url: str, dest: Path) -> Path:
         """Downloads once; an existing non-empty file is reused."""
         if not dest.exists() or dest.stat().st_size == 0:
