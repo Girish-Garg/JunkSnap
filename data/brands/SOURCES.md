@@ -10,6 +10,7 @@
 `{"as_of": "YYYY-MM-DD", "brands": [{"brand", "aliases": [{"text", "require_exact"}], "parent_company", "category", "source_url"}]}`
 
 - `aliases`: the text to match on a packet. A brand whose name is a common word (Wheel, Tide, Pulse) is matched only through longer phrases printed on its packs ("Active Wheel", "Tide Plus", "Pass Pass Pulse"). No alias belongs to two brands.
+- Phrase aliases (for example "Bingo Mad Angles", "Tide Plus") are product names as printed on packs, not taken from the source pages, which only establish the parent company. They have not been checked against pack photos. "Wheel Active" is unconfirmed against a pack; HUL's page uses "Active Wheel" and "Wheel 2 in 1".
 - `require_exact`: true for every alias under 6 letters or digits once spaces and punctuation are dropped; it must match with zero edits.
 - `category`: `food`, `beverage`, `tobacco`, `pan_masala` or `household`.
 - `source_url`: the company or regulator page that ties the brand to `parent_company`.
@@ -65,7 +66,7 @@ Six brands carry a Hindi spelling. All six are unverified: none has been checked
 
 ## Left out on purpose
 
-- Bare common words, replaced by longer phrases printed on the packs: Bingo, Melody, Good Day, Munch, Five Star, Pulse, Wheel, Tide, and "Clinic" (what "Clinic+" becomes once punctuation is dropped). They would match ordinary packet text such as "Pulses", "Slices" or "Lunch" within one edit.
+- Bare common words, replaced by longer phrases printed on the packs: Bingo, Melody, Good Day, Munch, Five Star, Pulse, Wheel, Tide, "Dairy Milk" (it would match "Mother Dairy Milk Shake"; "Cadbury Dairy Milk" stays), and "Clinic" (what "Clinic+" becomes once punctuation is dropped). They would match ordinary packet text such as "Pulses", "Slices" or "Lunch" within one edit.
 - Hindi words that are also everyday words: सरस (Saras, "juicy") and घड़ी / घडी (Ghadi, "clock"). Saras and Ghadi are matched only in Latin script.
 - Slice: no PepsiCo page or filing that names it could be opened (pepsicoindia.co.in blocked both the script and the browser used here, and the 10-K does not list it).
 - Other generic words that appear on other packets: Classic (ITC; "Classic Salted" chips), Real (Dabur), Tiger and Bourbon (Britannia; bourbon is a biscuit type), Catch (DS Group spices), Baba and Tulsi (DS Group chewing tobacco; common in shop names).
