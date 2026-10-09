@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * Returned by the agent's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.
+ * Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.
  */
 export type VerificationResult = {
   /**
@@ -55,7 +55,7 @@ export type VerificationResult = {
   features: {
     gps_accuracy_m: number;
     /**
-     * Device reputation; 0.5 for a new device.
+     * Reporter reputation: the lower of the user's and the device's; 0.5 for a new user or device.
      */
     reputation: number;
     /**
@@ -102,13 +102,395 @@ export type VerificationResult = {
    */
   embedding_key: string | null;
   decided_at: string;
+  /**
+   * What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it. When present it must be an object for purpose report and null for purpose cleanup.
+   */
+  insights?: null | {
+    /**
+     * Share of the visible waste per material, largest first, one entry per material. Shares may sum to less than 100; the rest is unknown. Empty when no model estimated it.
+     *
+     * @maxItems 9
+     */
+    composition:
+      | []
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          },
+          {
+            material: Material;
+            share_pct: number;
+            source: InsightSource;
+          }
+        ];
+    /**
+     * Coarse size of the pile; never tonnage. Null when no model estimated it.
+     */
+    size_class: null | {
+      value: SizeClass;
+      source: InsightSource;
+    };
+    /**
+     * Hazards a model saw, one entry per hazard; empty when none.
+     *
+     * @maxItems 5
+     */
+    hazards:
+      | []
+      | [
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          }
+        ]
+      | [
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          },
+          {
+            hazard: Hazard;
+            confidence: number;
+            source: InsightSource;
+          }
+        ];
+  };
 };
+export type Material =
+  | "plastic"
+  | "organic"
+  | "construction_debris"
+  | "paper"
+  | "glass"
+  | "metal"
+  | "textile"
+  | "e_waste"
+  | "medical";
+/**
+ * small: fits in a bin bag; medium: up to a handcart; large: needs a truck.
+ */
+export type SizeClass = "small" | "medium" | "large";
+/**
+ * burning covers flame or smoke.
+ */
+export type Hazard = "burning" | "medical_waste" | "e_waste" | "dead_animal" | "chemicals";
+
+/**
+ * The model that produced this estimate.
+ */
+export interface InsightSource {
+  signal: "rekognition_labels" | "yolo" | "embedding_classifier" | "vision_judge";
+  provider: "bedrock" | "openai" | "openrouter" | "rekognition" | "comprehend" | "junksnap";
+  model: string;
+  version: string;
+}
 
 export const verificationResultSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/verification_result.schema.json",
   "title": "verification_result",
-  "description": "Returned by the agent's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
+  "description": "Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -249,7 +631,7 @@ export const verificationResultSchema = {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Device reputation; 0.5 for a new device."
+          "description": "Reporter reputation: the lower of the user's and the device's; 0.5 for a new user or device."
         },
         "nearby_verified_reports": {
           "type": "integer",
@@ -353,6 +735,103 @@ export const verificationResultSchema = {
     "decided_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "insights": {
+      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it. When present it must be an object for purpose report and null for purpose cleanup.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "composition",
+            "size_class",
+            "hazards"
+          ],
+          "properties": {
+            "composition": {
+              "type": "array",
+              "maxItems": 9,
+              "description": "Share of the visible waste per material, largest first, one entry per material. Shares may sum to less than 100; the rest is unknown. Empty when no model estimated it.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "material",
+                  "share_pct",
+                  "source"
+                ],
+                "properties": {
+                  "material": {
+                    "$ref": "#/$defs/material"
+                  },
+                  "share_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "source": {
+                    "$ref": "#/$defs/insight_source"
+                  }
+                }
+              }
+            },
+            "size_class": {
+              "description": "Coarse size of the pile; never tonnage. Null when no model estimated it.",
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value",
+                    "source"
+                  ],
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/size_class"
+                    },
+                    "source": {
+                      "$ref": "#/$defs/insight_source"
+                    }
+                  }
+                }
+              ]
+            },
+            "hazards": {
+              "type": "array",
+              "maxItems": 5,
+              "description": "Hazards a model saw, one entry per hazard; empty when none.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "hazard",
+                  "confidence",
+                  "source"
+                ],
+                "properties": {
+                  "hazard": {
+                    "$ref": "#/$defs/hazard"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "source": {
+                    "$ref": "#/$defs/insight_source"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "allOf": [
@@ -371,6 +850,9 @@ export const verificationResultSchema = {
           },
           "report_id": {
             "pattern": "^rpt_"
+          },
+          "insights": {
+            "type": "object"
           }
         }
       }
@@ -396,6 +878,9 @@ export const verificationResultSchema = {
           },
           "report_id": {
             "pattern": "^cln_"
+          },
+          "insights": {
+            "type": "null"
           }
         },
         "if": {
@@ -421,7 +906,77 @@ export const verificationResultSchema = {
         }
       }
     }
-  ]
+  ],
+  "$defs": {
+    "material": {
+      "enum": [
+        "plastic",
+        "organic",
+        "construction_debris",
+        "paper",
+        "glass",
+        "metal",
+        "textile",
+        "e_waste",
+        "medical"
+      ]
+    },
+    "size_class": {
+      "enum": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "description": "small: fits in a bin bag; medium: up to a handcart; large: needs a truck."
+    },
+    "hazard": {
+      "enum": [
+        "burning",
+        "medical_waste",
+        "e_waste",
+        "dead_animal",
+        "chemicals"
+      ],
+      "description": "burning covers flame or smoke."
+    },
+    "insight_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal",
+        "provider",
+        "model",
+        "version"
+      ],
+      "description": "The model that produced this estimate.",
+      "properties": {
+        "signal": {
+          "enum": [
+            "rekognition_labels",
+            "yolo",
+            "embedding_classifier",
+            "vision_judge"
+          ]
+        },
+        "provider": {
+          "enum": [
+            "bedrock",
+            "openai",
+            "openrouter",
+            "rekognition",
+            "comprehend",
+            "junksnap"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    }
+  }
 };
 
 const validator = new ContractValidator<VerificationResult>("verification_result", verificationResultSchema);

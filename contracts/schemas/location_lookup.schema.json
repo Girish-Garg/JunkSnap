@@ -29,10 +29,14 @@
       ]
     },
     "ward": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null where no open ward map exists." },
-    "assembly_seat": { "$ref": "#/$defs/area_ref", "description": "id is <eci-state-code>-ac-<number>, for example s20-ac-127." },
-    "loksabha_seat": { "$ref": "#/$defs/area_ref", "description": "id is <eci-state-code>-pc-<number>, for example s20-pc-16." },
+    "assembly_seat": {
+      "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }],
+      "description": "id is <eci-state-code>-ac-<number>, for example s20-ac-127. Null outside Rajasthan, where no assembly boundaries are loaded yet."
+    },
+    "loksabha_seat": { "$ref": "#/$defs/loksabha_ref", "description": "id is <eci-state-code>-pc-<number>, for example s20-pc-16." },
     "representatives": {
       "type": "array",
+      "description": "No councillor row without a ward, no mla row without an assembly seat.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -45,7 +49,7 @@
         }
       }
     },
-    "geocoder": { "type": "string", "description": "Reverse geocoder used, for example amazon-location/esri." },
+    "geocoder": { "type": "string", "description": "Reverse geocoder used, for example amazon-location/places-v2." },
     "boundaries_version": { "type": "string", "description": "Version of the boundary files used for point-in-polygon." },
     "looked_up_at": { "type": "string", "format": "date-time" }
   },
@@ -57,6 +61,19 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
         "name": { "type": "string" }
+      }
+    },
+    "loksabha_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" },
+        "status": {
+          "enum": ["current", "outdated", null],
+          "description": "outdated where the loaded boundary predates a re-delimitation (Assam, Jammu and Kashmir, Ladakh); letters never Cc the MP of an outdated seat. Null when unknown."
+        }
       }
     }
   }
