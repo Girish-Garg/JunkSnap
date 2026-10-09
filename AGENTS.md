@@ -22,7 +22,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 
 - Capture is in-app camera only. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
 - Privacy: blur faces and number plates before any public copy exists; originals stay private (KMS); no photos of people dumping; never name an individual in any text.
-- Only blurred images ever leave AWS (OpenAI, OpenRouter). OpenAI is the default model provider while the account is on the Free plan.
+- Only blurred images go to any model (Bedrock, OpenAI, OpenRouter). Bedrock is the default; OpenAI and OpenRouter are fallbacks.
 - Company names appear only when a label is readable and above the confidence threshold.
 - Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording with no party colours. Nothing is filed automatically; the resident files.
 - Every quoted rule comes from a hashed official text and passes the word-for-word verifier. Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026.

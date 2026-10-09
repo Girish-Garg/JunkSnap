@@ -67,7 +67,7 @@ Frontend direction: components → hooks → services → `ApiClient`. Component
 
 | Pattern | Where |
 |---|---|
-| Strategy | `LlmProvider` (OpenAI, Bedrock, OpenRouter); `Signal` (Rekognition, YOLO, embedding) |
+| Strategy | `LlmProvider` (Bedrock, OpenAI, OpenRouter); `Signal` (Rekognition, YOLO, embedding) |
 | Factory | `ProviderFactory` builds providers from `TaskConfig`; `CheckFactory` builds moderation checks |
 | Chain of responsibility | Moderation and authenticity `Check`s run in order; the first failure stops the chain |
 | Composite | `StackedVerifier` combines signals and the meta-learner |

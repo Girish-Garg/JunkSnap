@@ -34,8 +34,8 @@ flowchart TB
   q["SQS + dead-letter queue"]
   ddb[("DynamoDB<br/>reports, sites, votes, devices, scores")]
   rek["Rekognition"]
-  brk["Bedrock<br/>Titan image embeddings; Claude on the Paid plan"]
-  oai["OpenAI API<br/>default judge, brands, letters; blurred images only"]
+  brk["Bedrock<br/>default: Claude, Nova; Titan embeddings"]
+  oai["OpenAI API<br/>fallback, blurred images only"]
   orr["OpenRouter<br/>last fallback and benchmark, blurred images only"]
   loc["Amazon Location<br/>reverse geocoding"]
   sm["Secrets Manager"]
@@ -45,8 +45,8 @@ flowchart TB
   api --> q --> worker
   worker -->|"internal verify, brands"| agent
   worker --> rek & loc & s3b & ddb
-  agent --> rek & brk & oai
-  oai -.->|fallback| orr
+  agent --> rek & brk
+  brk -.->|fallback| oai -.->|fallback| orr
   api & scores --> ddb
   ecr -.->|images| eks
   sm -.->|keys| agent
@@ -100,11 +100,21 @@ A site moves open → cleaned (only with an after-photo the pipeline confirms is
 
 `ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` for each task: judge, brands, letters, text moderation. Providers implement `LlmProvider`:
 
-- `OpenAiProvider`: the default for the judge, brands and letters while the AWS account is on the Free plan, which blocks the Bedrock cross-region inference profiles every current Claude model needs. The key is in Secrets Manager as `junksnap/<stage>/openai-api-key`.
-- `BedrockProvider`: Claude Sonnet 5 through the India profile `in.anthropic.claude-sonnet-5`. It becomes the default if the account moves to the Paid plan.
+- `BedrockProvider`: the default. Models checked from ap-south-1 on 10 Oct at 01:15 IST; the Claude 5 family is not available for this account.
+- `OpenAiProvider`: fallback after Bedrock. The key is in Secrets Manager as `junksnap/<stage>/openai-api-key`.
 - `OpenRouterProvider` (OpenAI-compatible): the last fallback, and the benchmark.
 
-Image embeddings stay on Bedrock: Titan `amazon.titan-embed-image-v1`, on-demand in ap-south-1. Only blurred images ever leave AWS. Every response is validated against a schema; on failure the next provider is tried. Every call logs provider, model, version, latency and estimated cost, and the evidence pack records them.
+Order for the judge and letters:
+
+| Order | Provider | Model |
+|---|---|---|
+| 1 | Bedrock | Claude Sonnet 4.6, `global.anthropic.claude-sonnet-4-6` |
+| 2 | Bedrock | Claude Haiku 4.5, `in.anthropic.claude-haiku-4-5-20251001-v1:0` (India profile) |
+| 3 | Bedrock | Amazon Nova Pro, `apac.amazon.nova-pro-v1:0` |
+| 4 | OpenAI API | set in `TaskConfig` |
+| 5 | OpenRouter | set in `TaskConfig` |
+
+The embedding signal uses Titan image embeddings, `amazon.titan-embed-image-v1`, on-demand in ap-south-1. Only blurred images go to any model. Every response is validated against a schema; on failure the next provider is tried. Every call logs provider, model, version, latency and estimated cost, and the evidence pack records them.
 
 ## 7. Accountability
 
@@ -120,7 +130,7 @@ City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sa
 
 - Originals sit in a private bucket under KMS and are never public. Public copies have faces and number plates blurred.
 - No photos of people dumping, and no names of individuals in any text.
-- Only blurred images ever leave AWS (to OpenAI or OpenRouter). Originals go only to AWS services.
+- Only blurred images go to any model on Bedrock, OpenAI or OpenRouter.
 - Per-device tokens, rate limits, perceptual-hash duplicate checks, an India geofence and fresh timestamps.
 - Secrets live in Secrets Manager; nothing secret in the repo.
 
