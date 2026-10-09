@@ -1,11 +1,30 @@
-# Lane `data`: geo and data scripts
+# data: boundaries, representatives and labels
 
-Holder: see `.claude/roster.json`. The holder adds conventions here as the lane learns them. Keep it under about 60 lines.
+Small reference data that the backend and the map use. Small files only: anything large lives in S3.
 
-- Python with `uv`. Each script validates its output against `contracts/schemas/` before uploading anything.
-- Sentinel-2: Earth Search STAC `https://earth-search.aws.element84.com/v1`, collection `sentinel-2-c1-l2a`; use the legacy `sentinel-2-l2a` collection for 2022. Jodhpur sits in the overlap of tiles 43RBK and 43RCK, so de-duplicate by date. Pre-render chips to S3; no live raster reads in Lambda.
-- FIRMS history: keyless yearly CSVs (`https://firms.modaps.eosdis.nasa.gov/data/country/viirs-snpp/<year>/viirs-snpp_<year>_India.csv`), clipped to the district and written as Parquet partitioned by year and month. Recent data comes from the area API (needs `FIRMS_MAP_KEY`).
-- Earth Index embeddings: pick one model generation (SoftCon 2024 or SSL4EO) and never compare vectors across the two.
-- S3: write under `s3://saboot-data-<account-id>/<stage>/`. Only the data holder's promote script writes `demo/`.
-- Large files (rasters, Parquet, embeddings) never go in git.
-- Every Python lane needs `ruff` and `pytest` as dev dependencies and at least one test, or CI fails.
+## Layout (docs/working.md section 1)
+
+- `boundaries/`: assembly (MLA) and Lok Sabha (MP) seat boundaries across India from the 2008 delimitation, and ward boundaries only where open ward maps exist. Simplified GeoJSON, small enough for git.
+- `representatives/`: all MPs and, first, Rajasthan MLAs. Each row has the seat, the representative's name, an as-of date and a source. No party field.
+- `labels/`: the Label Studio setup and CSV exports for `report_type`, `context`, `burning` and `brands`, plus the fixed train and held-out test split (about 30% test).
+
+## Conventions
+
+- Record the source URL, licence and as-of date for every dataset in a README next to it. Check the licence before committing boundaries.
+- Helper scripts are single-file Python 3.12 scripts with a PEP 723 header, run with `uv run <script>`. They follow the same size limits as all code (`uv run scripts/check_limits.py`).
+- A script that writes data the backend reads validates it against `contracts/schemas/` before writing or uploading.
+- The label split is fixed with a recorded seed. Never move a photo between train and test once evaluation has started.
+- Brand-to-parent-company mappings carry a source for each row.
+- Area scores and evaluation tables only use real, measured data. Never invent rows or history.
+
+## Large files
+
+- Photos, rasters, Parquet, embeddings and models over 5 MB go to S3, never to git. The S3 layout is in `contracts/README.md`.
+- Field-audit photos are personal data: they stay in the private bucket. Labels refer to them by report id or S3 key, never by a person.
+
+## Never
+
+- Commit photos, `.env` files or keys.
+- Store a reporter's name, phone number or exact home location in any file here.
+- Add a party field to any table.
+- Write to `demo` data. The human promotes data to `demo` from a clean `main`.
