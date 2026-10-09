@@ -1,0 +1,28 @@
+[
+ {
+  "id": "jodhpur-mc",
+  "name": "Jodhpur Municipal Corporation",
+  "head_office": "Commissioner",
+  "state": "Rajasthan",
+  "towns": [
+   "Jodhpur"
+  ],
+  "wards": 100,
+  "ward_map": null,
+  "as_of": "2026-10-10",
+  "source": "https://zeenews.india.com/hindi/india/rajasthan/jodhpur/state-government-approved-proposal-for-municipal-corporation-in-jodhpur/1758197513018"
+ },
+ {
+  "id": "jaipur-mc",
+  "name": "Jaipur Municipal Corporation",
+  "head_office": "Commissioner",
+  "state": "Rajasthan",
+  "towns": [
+   "Jaipur"
+  ],
+  "wards": 150,
+  "ward_map": null,
+  "as_of": "2026-10-10",
+  "source": "https://www.theweek.in/wire-updates/national/2025/11/11/des109-rj-municipal-corporation.html"
+ }
+]
