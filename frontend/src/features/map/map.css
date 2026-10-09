@@ -4,9 +4,18 @@
 }
 
 .map-page {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+.map-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f4f4f2;
 }
 
 .map-canvas {
@@ -14,59 +23,71 @@
   inset: 0;
 }
 
-.topbar {
+.search-area {
   position: absolute;
   top: calc(var(--space-1) + env(safe-area-inset-top));
-  right: var(--space-1);
-  left: var(--space-1);
+  right: var(--edge);
+  left: var(--edge);
   z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
 }
 
 .searchbar {
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 56px;
-  padding: 0 var(--space-1) 0 4px;
-  border-radius: var(--radius-bar);
+  width: 100%;
+  height: 48px;
+  padding: 0 4px 0 var(--edge);
+  border-radius: 24px;
   background: var(--surface);
-  box-shadow: var(--elev-2);
+  box-shadow: var(--shadow-float);
+}
+
+.searchbar__icon {
+  flex: none;
+  margin-right: 8px;
+  color: var(--text-secondary);
 }
 
 .searchbar__input {
   flex: 1;
   min-width: 0;
-  height: var(--target);
+  height: 40px;
   border: 0;
   background: transparent;
+  font-size: 16px;
   outline-offset: -2px;
 }
 
 .searchbar__input::placeholder {
-  color: var(--ink-muted);
+  color: var(--text-secondary);
 }
 
 .search-results {
-  margin: var(--space-1) 0 0;
+  width: 100%;
+  margin: 0;
   padding: var(--space-1) 0;
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-m);
   background: var(--surface);
-  box-shadow: var(--elev-3);
+  box-shadow: var(--shadow-float);
   list-style: none;
 }
 
 .search-results--empty {
   padding: 12px var(--space-2);
-  color: var(--ink-muted);
+  color: var(--text-secondary);
 }
 
 .search-results__item {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
   width: 100%;
-  min-height: 56px;
-  padding: var(--space-1) var(--space-2);
+  min-height: var(--target);
+  padding: 6px var(--space-2);
   border: 0;
   background: transparent;
   text-align: left;
@@ -74,161 +95,114 @@
 }
 
 .search-results__item:hover {
-  background: var(--surface-muted);
+  background: var(--tile);
 }
 
-.search-results__text {
+.search-results__meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.lang-toggle {
   display: flex;
-  flex-direction: column;
-  font-size: 14px;
-  color: var(--ink-muted);
+  flex: none;
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--tile);
 }
 
-.search-results__text strong {
-  font-size: 16px;
-  color: var(--ink);
-}
-
-.menu {
-  position: relative;
-}
-
-.menu__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-}
-
-.menu__panel {
-  position: absolute;
-  top: 56px;
-  left: 0;
-  z-index: 2;
-  width: min(300px, calc(100vw - 32px));
-  padding: var(--space-2);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  box-shadow: var(--elev-3);
-}
-
-.menu__heading {
-  margin: 0 0 var(--space-1);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-muted);
-}
-
-.menu__note {
-  display: flex;
-  gap: var(--space-1);
-  margin: var(--space-2) 0 0;
-  font-size: 14px;
-  color: var(--ink-muted);
-}
-
-.chips {
-  position: absolute;
-  top: calc(64px + env(safe-area-inset-top));
-  right: 0;
-  left: 0;
-  z-index: 3;
-  display: flex;
-  gap: var(--space-1);
-  padding: 4px var(--space-1);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.map-status {
-  position: absolute;
-  top: calc(128px + env(safe-area-inset-top));
-  right: var(--space-1);
-  left: var(--space-1);
-  z-index: 3;
-}
-
-.map-actions {
-  position: absolute;
-  right: var(--space-2);
-  bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-}
-
-.fab {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 56px;
-  padding: 0 20px 0 var(--space-2);
+.lang-toggle__option {
+  min-width: 36px;
+  height: 32px;
+  padding: 0 8px;
   border: 0;
-  border-radius: var(--radius-card);
-  background: var(--accent);
-  box-shadow: var(--elev-3);
-  color: var(--on-accent);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.map-credit {
-  position: absolute;
-  bottom: calc(4px + env(safe-area-inset-bottom));
-  left: 4px;
-  z-index: 1;
-  margin: 0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 0.85);
-  font-size: 11px;
-  color: var(--ink-muted);
+.lang-toggle__option[aria-pressed='true'] {
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
 }
 
-.map-credit a {
-  color: inherit;
+/* The status toast: one slim line, never a card. */
+.map-status .notice {
+  max-width: 100%;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.map-status .notice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filters__label {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.map-controls {
+  position: absolute;
+  right: var(--edge);
+  bottom: var(--edge);
+  z-index: 2;
 }
 
 .user-dot {
-  width: 18px;
-  height: 18px;
-  border: 3px solid #ffffff;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 6px rgb(11 93 87 / 0.25);
+  box-shadow: 0 0 0 6px rgb(11 110 99 / 0.2);
+}
+
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.map-page--card .map-controls {
+  bottom: calc(104px + 2 * var(--edge));
+}
+
+/* The sign-in sheet covers everything but the search field. */
+.app > .sheet {
+  z-index: 7;
 }
 
 @media (max-width: 767px) {
-  .map-page--sheet .map-actions {
+  .map-page--sheet .map-controls,
+  .map-page--sheet .preview-card,
+  .map-page--sheet .search-area .pill,
+  .map-page--sheet .map-status,
+  .map-page--card .maplibregl-ctrl-bottom-left {
     display: none;
   }
 }
 
 @media (min-width: 768px) {
-  .topbar {
-    top: var(--space-2);
+  .map-page {
+    flex-direction: row;
+  }
+
+  .search-area {
+    top: var(--edge);
     right: auto;
-    left: var(--space-2);
-    width: 376px;
+    width: 368px;
   }
 
-  .chips {
-    top: 20px;
-    right: var(--space-2);
-    left: 424px;
-    flex-wrap: wrap;
-    overflow: visible;
-  }
-
-  .map-status {
-    top: 80px;
-    right: auto;
-    left: 424px;
-    max-width: 480px;
-  }
-
-  .map-page--sheet .map-credit {
-    left: 412px;
+  /* The auth sheet sits beside the navigation rail. */
+  .app > .sheet {
+    left: 80px;
   }
 }

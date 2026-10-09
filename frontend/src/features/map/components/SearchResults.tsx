@@ -1,27 +1,26 @@
 import { useTranslation } from 'react-i18next';
+import type { Place } from '../../../domain/PlaceSearch';
 import type { SiteFeature } from '../../../domain/Site';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
-import { useSiteSearch } from '../hooks/useSiteSearch';
+import { usePlaceSearch } from '../hooks/usePlaceSearch';
 
 interface SearchResultsProps {
   readonly sites: readonly SiteFeature[];
   readonly query: string;
-  readonly onPick: (siteId: string) => void;
+  readonly onPick: (place: Place) => void;
 }
 
 export function SearchResults({ sites, query, onPick }: SearchResultsProps) {
   const { t } = useTranslation();
-  const results = useSiteSearch(sites, query);
-  if (results.length === 0) return <p className="search-results search-results--empty">{t('search.noResults')}</p>;
+  const places = usePlaceSearch(sites, query);
+  if (places.length === 0) return <p className="search-results search-results--empty">{t('search.noResults')}</p>;
   return (
     <ul className="search-results" aria-label={t('search.results')}>
-      {results.map(({ properties: site }) => (
-        <li key={site.site_id}>
-          <button type="button" className="search-results__item" onClick={() => onPick(site.site_id)}>
-            <MarkerGlyph type={site.report_type} />
-            <span className="search-results__text">
-              <strong>{t(`reportType.${site.report_type}`)}</strong>
-              <span>{[site.location.ward?.name, site.location.town].filter(Boolean).join(', ')}</span>
+      {places.map((place) => (
+        <li key={`${place.kind}:${place.name}`}>
+          <button type="button" className="search-results__item" onClick={() => onPick(place)}>
+            <span>{place.name}</span>
+            <span className="search-results__meta">
+              {t(`place.${place.kind}`)} · {t('search.siteCount', { count: place.sites.length })}
             </span>
           </button>
         </li>

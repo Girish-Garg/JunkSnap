@@ -1,13 +1,12 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { SiteFilter } from '../src/domain/SiteFilter';
-import { FilterChips } from '../src/features/map/components/FilterChips';
-import { TopBar } from '../src/features/map/components/TopBar';
+import { FiltersButton } from '../src/features/map/components/FiltersButton';
+import { SearchBar } from '../src/features/map/components/SearchBar';
 import en from '../src/i18n/en.json';
 import hi from '../src/i18n/hi.json';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
-import { MemoryStore, renderApp } from './helpers';
+import { MemoryStore, renderApp, testServices } from './helpers';
 
 function keysOf(value: object, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, child]: [string, unknown]) =>
@@ -15,28 +14,26 @@ function keysOf(value: object, prefix = ''): string[] {
   );
 }
 
-const screenUnderTest = (
+const topOfMap = (
   <>
-    <TopBar sites={[]} sampleData />
-    <FilterChips filter={new SiteFilter()} onChange={() => undefined} />
+    <SearchBar sites={[]} onPickPlace={() => undefined} />
+    <FiltersButton activeCount={0} onOpen={() => undefined} />
   </>
 );
 
-describe('language switch in the menu', () => {
+describe('language toggle in the search field', () => {
   it('flips labels from English to Hindi and remembers the choice', async () => {
     const store = new MemoryStore();
     const user = userEvent.setup();
-    await renderApp(screenUnderTest, { store });
-    expect(screen.getByRole('button', { name: /Dumps/ })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Search ward, seat or town')).toBeInTheDocument();
+    await renderApp(topOfMap, { services: testServices(store) });
+    expect(screen.getByPlaceholderText('Search Jodhpur')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Filters/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('button', { name: 'हिन्दी' }));
 
-    expect(screen.getByRole('button', { name: /कचरा ढेर/ })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('वार्ड, क्षेत्र या शहर खोजें')).toBeInTheDocument();
-    expect(screen.getByText('नमूना डेटा')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Dumps/ })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('जोधपुर में खोजें')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /फ़िल्टर/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Filters/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'हिन्दी' })).toHaveAttribute('aria-pressed', 'true');
     expect(store.getItem('junksnap.language')).toBe('hi');
   });

@@ -10,7 +10,7 @@ describe('SitePanel header and counts', () => {
   it('shows type, status, verification, context and counts', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={null} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
-    expect(screen.getByText('Open')).toHaveClass('status--open');
+    expect(screen.getByText('Open')).toHaveClass('badge--open');
     expect(screen.getByText('Verified')).toBeInTheDocument();
     expect(screen.getByText('Vacant plot · Jodhpur, Rajasthan')).toBeInTheDocument();
     expect(screen.getByText('Pilot city')).toBeInTheDocument();
@@ -39,25 +39,26 @@ describe('SitePanel photos, location and brands', () => {
     expect(parent).toHaveAttribute('href', site.properties.brands[0]?.source_url);
   });
 
-  it('shows the action row with Share live and the rest not built yet', async () => {
+  it('says in visible text which actions are not built yet', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={null} />);
-    expect(screen.getByRole('button', { name: 'Share' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Letter' })).toBeDisabled();
+    expect(screen.getByText('Coming soon: Confirm, Me too, Cleaned and Letter.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Letter' })).toHaveClass('action-row__button--primary');
   });
 });
 
 describe('SitePanel for other fixtures and Hindi', () => {
-  it('says when there is no ward map and hides an empty brand list', async () => {
+  it('says when there is no ward map and makes Confirm the main action', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
     expect(factValue('Ward')).toHaveTextContent('No open ward map');
     expect(screen.getByText('Waiting for a neighbour check')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveClass('action-row__button--primary');
     expect(screen.queryByText('Packaging seen at this site')).not.toBeInTheDocument();
   });
 
   it('shows the dates, the cleanup photo and the reopened status', async () => {
     const site = await fixtureSite('site_jdh_3');
     await renderApp(<SitePanel site={site} userLocation={null} />);
-    expect(screen.getByText('Reopened')).toHaveClass('status--reopened');
+    expect(screen.getByText('Reopened')).toHaveClass('badge--reopened');
     expect(screen.getByRole('img', { name: 'Blurred photo after the last cleanup' })).toBeInTheDocument();
     expect(factValue('First reported')).toHaveTextContent(english.dateTime(site.properties.first_reported_at));
     expect(factValue('Last cleared')).toHaveTextContent(english.dateTime(site.properties.cleaned_at ?? ''));

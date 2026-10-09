@@ -8,9 +8,9 @@
   display: flex;
   flex-direction: column;
   height: var(--sheet-drag-height, var(--sheet-height));
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
   background: var(--surface);
-  box-shadow: var(--elev-3);
+  box-shadow: var(--shadow-sheet);
   transition: height 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -23,8 +23,8 @@
   display: flex;
   flex: none;
   justify-content: flex-end;
-  height: var(--target);
-  padding: 0 4px;
+  height: 40px;
+  padding: 4px 8px 0;
   touch-action: none;
   cursor: grab;
 }
@@ -47,14 +47,14 @@
   width: 32px;
   height: 4px;
   border-radius: 2px;
-  background: var(--line-strong);
+  background: #dadce0;
 }
 
 .sheet__body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: 0 var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+  padding: 0 var(--edge) calc(var(--space-3) + env(safe-area-inset-bottom));
 }
 
 .sheet--full .sheet__body {
@@ -63,28 +63,26 @@
 }
 
 .sheet-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin: 0;
-  font-size: 20px;
+  font-size: 22px;
+  line-height: 28px;
   font-weight: 600;
 }
 
 .sheet-text {
-  color: var(--ink-muted);
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
 }
 
-/* Desktop: a left side panel under the search bar, like a map app. */
+/* Desktop: a 400 px left side panel under the search field. */
 @media (min-width: 768px) {
   .sheet {
     top: 0;
     right: auto;
-    width: 408px;
+    width: 400px;
     height: auto;
-    padding-top: 80px;
+    padding-top: 120px;
     border-radius: 0;
-    box-shadow: var(--elev-2);
+    box-shadow: 1px 0 3px rgb(60 64 67 / 0.15);
   }
 
   .sheet__handle {

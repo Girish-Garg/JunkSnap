@@ -32,6 +32,11 @@ export class AppConfig {
     return value;
   }
 
+  /** Mock mode shows fixtures, so the UI labels them as sample data. */
+  isSampleData(): boolean {
+    return this.apiMode === 'mock';
+  }
+
   requireApiUrl(): string {
     if (this.apiUrl === null) throw new ConfigError('VITE_API_URL is not set');
     return this.apiUrl;

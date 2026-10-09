@@ -13,9 +13,9 @@ export function SitePhoto({ url, alt }: SitePhotoProps) {
   const [broken, setBroken] = useState(false);
   if (url === null || broken) {
     return (
-      <li className="photo-strip__item photo-strip__item--missing">
-        <Icon name="photo" />
-        {t('site.photoMissing')}
+      <li className="photo-strip__item photo-strip__item--missing" title={t('site.photoMissing')}>
+        <Icon name="photo" size={20} />
+        <span className="visually-hidden">{t('site.photoMissing')}</span>
       </li>
     );
   }

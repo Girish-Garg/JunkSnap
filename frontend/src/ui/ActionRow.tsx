@@ -4,35 +4,40 @@ export interface RowAction {
   readonly id: string;
   readonly icon: IconName;
   readonly label: string;
-  /** Missing means not built yet: shown disabled with `note`. */
-  readonly onClick?: () => void;
-  readonly note?: string;
+  readonly onClick: () => void;
 }
 
 interface ActionRowProps {
   readonly label: string;
   readonly actions: readonly RowAction[];
+  /** The one action filled with the accent. */
+  readonly primaryId: string;
+  /** Visible line under the row, e.g. which actions are not built yet. */
+  readonly note: string;
 }
 
-export function ActionRow({ label, actions }: ActionRowProps) {
+export function ActionRow({ label, actions, primaryId, note }: ActionRowProps) {
   return (
-    <ul className="action-row" aria-label={label}>
-      {actions.map((action) => (
-        <li key={action.id}>
-          <button
-            type="button"
-            className="action-row__button"
-            disabled={!action.onClick}
-            title={action.note}
-            onClick={action.onClick}
-          >
-            <span className="action-row__icon">
-              <Icon name={action.icon} />
-            </span>
-            {action.label}
-          </button>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="action-row" aria-label={label}>
+        {actions.map((action) => (
+          <li key={action.id}>
+            <button
+              type="button"
+              className={action.id === primaryId ? 'action-row__button action-row__button--primary' : 'action-row__button'}
+              onClick={action.onClick}
+            >
+              <span className="action-row__icon">
+                <Icon name={action.icon} size={20} />
+              </span>
+              {action.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="action-row__note" aria-live="polite">
+        {note}
+      </p>
+    </>
   );
 }

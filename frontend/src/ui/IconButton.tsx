@@ -4,7 +4,7 @@ interface IconButtonProps {
   readonly icon: IconName;
   readonly label: string;
   readonly onClick: () => void;
-  readonly variant?: 'surface' | 'plain';
+  readonly variant?: 'float' | 'plain';
   readonly expanded?: boolean;
 }
 
@@ -18,7 +18,7 @@ export function IconButton({ icon, label, onClick, variant = 'plain', expanded }
       title={label}
       onClick={onClick}
     >
-      <Icon name={icon} />
+      <Icon name={icon} size={22} />
     </button>
   );
 }

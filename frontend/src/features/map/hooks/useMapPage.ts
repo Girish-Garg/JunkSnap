@@ -1,22 +1,26 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useMatch, useNavigate } from 'react-router';
-import { SITE_PATH, SNAP_PATH, sitePath } from '../../../app/paths';
+import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router';
+import type { MapMode } from '../../../domain/MapMode';
 import { SiteFilter } from '../../../domain/SiteFilter';
 import { useOnline } from '../../../ui/useOnline';
 import { MapNotice } from '../MapNotice';
 import type { MapView } from '../SiteMap';
 import { useLocate } from './useLocate';
+import { useMapSelection } from './useMapSelection';
 import { useSites } from './useSites';
 
+export type MapPageState = ReturnType<typeof useMapPage>;
+
+/** Everything the map screen shows, gathered from the smaller hooks. */
 export function useMapPage() {
-  const navigate = useNavigate();
-  const selectedId = useMatch(SITE_PATH)?.params.siteId ?? null;
-  const snapOpen = useMatch(SNAP_PATH) !== null;
-  const sheetOpen = selectedId !== null || snapOpen;
+  const { pathname } = useLocation();
   const [view, setView] = useState<MapView | null>(null);
   const [filter, setFilter] = useState(() => new SiteFilter());
+  const [mode, setMode] = useState<MapMode>('auto');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const loaded = useSites(view?.bbox ?? null);
   const sites = useMemo(() => filter.apply(loaded.sites), [filter, loaded.sites]);
+  const selection = useMapSelection(loaded.sites);
   const location = useLocate();
   const notice = MapNotice.pick({
     online: useOnline(),
@@ -27,7 +31,8 @@ export function useMapPage() {
     shownCount: sites.length,
     clamped: view?.clamped ?? false,
   });
-  const select = useCallback((siteId: string) => navigate(sitePath(siteId)), [navigate]);
-  const openSnap = useCallback(() => navigate(SNAP_PATH), [navigate]);
-  return { selectedId, sheetOpen, setView, filter, setFilter, sites, location, notice, select, openSnap };
+  const filters = { filter, setFilter, mode, setMode, open: filtersOpen, setOpen: setFiltersOpen };
+  // Every route but the bare map opens a sheet.
+  const sheetOpen = pathname !== '/' || filtersOpen;
+  return { loaded: loaded.sites, sites, setView, selection, location, notice, sheetOpen, filters };
 }

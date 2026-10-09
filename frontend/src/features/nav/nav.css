@@ -1,0 +1,87 @@
+/* Phones: Material 3 navigation bar under the map. */
+.nav-bar {
+  display: flex;
+  flex: none;
+  height: calc(64px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+}
+
+.nav-bar__item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: var(--target);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.nav-bar__indicator {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  transition: background 150ms;
+}
+
+.nav-bar__label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.nav-bar__item[aria-current='page'] {
+  color: var(--accent);
+}
+
+.nav-bar__item[aria-current='page'] .nav-bar__indicator {
+  background: var(--accent-tint);
+}
+
+/* Report is the main action: a filled accent circle inside the bar; its label stays for screen readers. */
+.nav-bar__item--report .nav-bar__indicator {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.nav-bar__item--report[aria-current='page'] .nav-bar__indicator {
+  background: var(--accent-hover);
+}
+
+.nav-bar__item--report .nav-bar__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* Desktop: a navigation rail on the left edge. */
+@media (min-width: 768px) {
+  .nav-bar {
+    order: -1;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    width: 80px;
+    height: auto;
+    padding: var(--space-2) 0;
+    border-top: 0;
+    border-right: 1px solid var(--divider);
+  }
+
+  .nav-bar__item {
+    flex: none;
+    min-height: 56px;
+  }
+}

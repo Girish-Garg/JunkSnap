@@ -1,23 +1,18 @@
 import { useTranslation } from 'react-i18next';
-import type { SiteProperties } from '../../../domain/Site';
+import type { BadgeView } from '../SitePresenter';
 
 interface SiteBadgesProps {
-  readonly site: SiteProperties;
+  readonly badges: readonly BadgeView[];
 }
 
-export function SiteBadges({ site }: SiteBadgesProps) {
+export function SiteBadges({ badges }: SiteBadgesProps) {
   const { t } = useTranslation();
-  const badges = [
-    site.cleanup_status === 'checking' && t('site.cleanupChecking'),
-    site.pilot && t('site.pilot'),
-  ].filter((badge): badge is string => Boolean(badge));
-  if (badges.length === 0 && !site.burning) return null;
+  if (badges.length === 0) return null;
   return (
     <ul className="badges">
-      {site.burning && <li className="badge badge--alert">{t('site.burning')}</li>}
       {badges.map((badge) => (
-        <li key={badge} className="badge">
-          {badge}
+        <li key={badge.key} className={badge.tone === 'alert' ? 'badge badge--alert' : 'badge'}>
+          {t(badge.key)}
         </li>
       ))}
     </ul>

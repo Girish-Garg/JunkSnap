@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AuthFlowProvider } from '../features/auth/components/AuthFlowProvider';
 import { AppRoutes } from './AppRoutes';
 
 export function AppShell() {
@@ -10,7 +11,9 @@ export function AppShell() {
   }, [i18n.language]);
   return (
     <div className="app">
-      <AppRoutes />
+      <AuthFlowProvider>
+        <AppRoutes />
+      </AuthFlowProvider>
     </div>
   );
 }

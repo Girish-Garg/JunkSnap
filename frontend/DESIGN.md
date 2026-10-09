@@ -1,47 +1,43 @@
 # JunkSnap frontend design
 
-Map-app patterns (Google Maps, Apple Maps, Material 3), not their branding. Minimal, custom components, no UI kit look.
+Restrained map-app patterns (Google Maps, Apple Maps, Material 3), not their branding. A quiet map where reports are the only colour; few elements; small soft controls.
 
 ## Layout
 
-- Full-bleed map. Everything else floats over it.
-- Top: a white search bar (pill, radius 28 px, elevation 2) with a menu button (language, data note) and a search field over the loaded sites (ward, seat, town, type).
-- Under it: one row of filter chips (Dumps, No bin, Water, Construction, Verified only). The row scrolls sideways on phones. Each type chip carries its marker glyph, so the chip row is the legend.
-- Bottom-right, in the thumb zone: "My location" (48 px, white) above the Snap button (56 px, accent, camera icon). Snap is the one primary action. Both hide while a sheet covers them on phones.
-- Bottom-left: the map credit line (OpenFreeMap, OpenMapTiles, OpenStreetMap).
-- Site details open in a bottom sheet with three heights. Peek (156 px) shows type, status and distance. Half (50%) adds the action row, photo strip, location line and counts. Full (100% minus 80 px, so a band of map stays visible) adds the details and history.
-- Desktop (768 px and up): the sheet becomes a 408 px left side panel. The search bar sits inside it at the top, and the chips sit to the right of the panel.
+- The map fills everything above the navigation. The basemap is OpenFreeMap Positron recoloured in `BasemapTheme`: near-white land, pale grey roads, soft blue water, grey labels, no landuse fills, POIs or shields.
+- Top: one 48 px search field (radius 24) with a search icon, "Search Jodhpur", and a compact EN / हि toggle. Results are places from the loaded sites (ward, seat, locality); picking one flies the map there.
+- Under it: a small "Filters" pill that opens a sheet with the map view (Auto, Pins, Heat), one switch per report type with its count, and "Verified only". A slim one-line toast below the pill reports states.
+- Bottom: a 64 px Material 3 navigation bar: Map, Report (a 48 px filled accent circle, the main action), Areas, Account. The selected item gets the accent and a soft pill indicator. Desktop turns it into an 80 px rail on the left.
+- A 40 px white "my location" circle sits right, just above the bar. The map credit is MapLibre's compact "i" bottom-left.
+- Desktop: sheets become a 400 px side panel next to the rail.
+
+## Map
+
+- Zooms are MapLibre's (512 px tiles, one below Google's). The app opens Jodhpur at 12, the city view.
+- Auto mode shows a heatmap up to zoom 11, which fades out between 11 and 12 as pins fade in. The ramp runs from transparent through the teal family to deep red for hotspots.
+- Pins are a 26 px round disc in the type colour with a 2 px white ring, a soft shadow and a white glyph. A selected pin grows to about 39 px with an accent ring.
+- Tapping a pin shows a 104 px preview card (thumbnail, type, status, reports, distance, Details). Tapping the map dismisses it.
 
 ## Components (src/ui, inline SVG only)
 
-- `Icon`: one 24 px icon set (stroke 2, round caps). Icons are always paired with a visible label or an aria-label.
-- `IconButton`: 48 px round. Variants are surface (white with elevation), plain and accent.
-- `Chip`: a filter chip, a toggle with `aria-pressed`. 32 px visual height inside a 48 px target, radius 8. Off is a 1 px outline. On is accent-soft fill, an accent outline and a leading check.
-- `BottomSheet`: the 48 px handle is a button. Tap cycles the heights, ArrowUp and ArrowDown step through them, dragging snaps to the nearest height, a quick flick moves one step, and Escape closes it.
-- `ActionRow`: equal-width labelled icon buttons (Confirm, Me too, Cleaned, Letter, Share). An action that isn't built yet is shown disabled, with "Coming soon".
-- `Notice`: one banner at a time, below the chips, in this priority order: offline, load failed, location problem, empty, zoom hint.
-- `Skeleton`: grey blocks that stand in for loading content. No spinners.
-- `MarkerGlyph`: the report-type shape plus colour, shared by map markers, chips and the sheet.
-
-## Markers
-
-- Shapes are readable without colour: waste dump is a circle, no bin is a square, water is a drop and construction is a triangle. Each has an Okabe-Ito fill with a 2 px white edge.
-- Clusters below zoom 12 are white discs with a near-black count. Tapping one zooms in.
-- The selected site gets a white halo and a 3 px accent ring.
+- Pill, IconButton (40 px with a 48 px hit area), SwitchRow, Segmented, TextField, PasswordField, Checkbox, Button (primary or text), BottomSheet, Notice, Skeleton and ActionRow.
+- BottomSheet has three heights (peek 156 px, half, full minus 80 px). It has a drag handle, and it focuses its title on open and returns focus on close.
+- ActionRow: 40 px circles with 12 px labels; the primary action is filled. Unbuilt actions say "Coming soon" in visible text.
+- Accounts: sign in, sign up (password strength hint, terms), a 6-digit code with a resend timer, and a reset flow. Errors appear under their field. Signed-out users browse freely; Report and the site actions ask to sign in first, then continue.
 
 ## Tokens (src/ui/theme.css)
 
-- Spacing: an 8 px grid (4 px only inside small controls).
-- Radii: 8 (chip), 16 (card), 24 (sheet top), 28 (search bar).
-- Surfaces: white `#ffffff` and muted `#f2f4f5`. Ink: near-black `#1a1f24` and muted `#4b5661`. Lines: `#d8dde1`.
-- Accent: teal `#0b5d57` (7.7:1 on white), with soft accent `#e2efed`. It is the only accent colour; there is no purple and there are no gradients or glass effects.
-- Status scale: open uses `#b42318` on `#fdecea`, reopened uses `#b54708` on `#fef0e6` and cleared uses `#067647` on `#e7f6ec`. All pairs pass WCAG AA.
-- Type: Noto Sans for Latin and Noto Sans Devanagari for Hindi (line-height 1.65). Sizes are 12, 14, 16, 20 and 24.
-- Focus: a 3 px accent outline with 2 px offset on every interactive element. Touch targets are at least 48 px.
+- Neutrals: text `#1f1f1f`, secondary `#5f6368`, divider `#e8eaed`, surface `#ffffff`, page `#f8f9fa`, tile `#f1f3f4`.
+- Accent (actions and selected states only): `#0b6e63`, hover `#095c53`, tint `#e1f0ee`.
+- Report types: dump `#c5221f`, no bin `#e37400`, water `#1967d2`, construction `#5d4037`. Each pairs with a glyph, so colour is never the only cue.
+- Status pills (20 px, 12 px text, tint plus AA text): open `#c5221f` on `#fce8e6`, cleared `#137333` on `#e6f4ea`, reopened `#9c5700` on `#fef7e0`, community check `#5f6368` on `#f1f3f4`.
+- Spacing: an 8 px grid with 16 px edges and 24 px between sections. Radii are 8, 12, 16, 24 and pill.
+- Type: Noto Sans and Noto Sans Devanagari. Title 22/28 semibold, body 14/20, secondary 12/16, inputs 16.
+- Shadow, for floating elements only: `0 1px 2px rgb(60 64 67 / .3), 0 1px 3px 1px rgb(60 64 67 / .15)`. No gradients, glass or purple.
+- Touch targets are 48 px. Focus shows a 2 px accent ring; sheet titles take focus without a ring.
 
 ## States
 
-- Loading: a skeleton in the sheet. Map markers stay up while the next box loads.
-- Empty: say what to do. With no sites here: "Move the map or zoom out". With filters on: "Turn a filter off".
-- Errors: plain words and what still works. Offline: "Showing what was already loaded".
-- Mock mode: a "Sample data" pill in the search bar, so fixtures are never mistaken for live reports.
+- Loading: a skeleton in the sheet. Pins stay up while the next box loads.
+- The toast is one line each for offline, load failed, location blocked, filters hiding everything, "zoom in", and a truly empty view.
+- Mock mode: Filters carries a small "Sample data" note, and code fields show the sample code.

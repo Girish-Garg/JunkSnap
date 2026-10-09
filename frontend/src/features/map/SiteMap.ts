@@ -1,20 +1,25 @@
-import type { Feature, FeatureCollection, Point as GeoPoint } from 'geojson';
-import { Map as MapLibreMap, Marker, type GeoJSONSource, type MapGeoJSONFeature, type Point } from 'maplibre-gl';
+import type { Feature, FeatureCollection } from 'geojson';
+import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
+import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
+import { BasemapTheme } from './BasemapTheme';
 
-// OpenFreeMap needs no key; MapCredit shows the OpenStreetMap credit.
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+// OpenFreeMap needs no key; its style carries the OpenStreetMap credit for the attribution control.
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 const JODHPUR: [number, number] = [73.02, 26.27];
+// MapLibre zooms use 512 px tiles (one below Google Maps); 12 shows about 6 km across a phone.
+const CITY_ZOOM = 12;
+const SITE_ZOOM = 14;
 const INDIA_BOUNDS: [[number, number], [number, number]] = [[60, 4], [100, 38.5]];
 const SOURCE_ID = 'sites';
-const TAP_TOLERANCE_PX = 14;
+const TAP_TOLERANCE_PX = 16;
 // GET /sites allows 1 by 1 degree; stay under it after rounding.
 const MAX_QUERY_SPAN_DEG = 0.99;
-// Must match the desktop .sheet rules in ui/theme.css.
+// Must match the desktop .sheet rules in ui/sheet.css.
 const DESKTOP_QUERY = '(min-width: 768px)';
-const SIDE_PANEL_PX = 408;
+const SIDE_PANEL_PX = 400;
 
 export interface MapView {
   readonly bbox: BBox;
@@ -25,7 +30,10 @@ export interface MapView {
 export interface SiteMapOptions {
   readonly container: HTMLElement;
   readonly layers: LayerRegistry;
-  readonly onSelect: (siteId: string) => void;
+  /** Accessible name of the attribution toggle, in the UI language at creation. */
+  readonly attributionLabel: string;
+  /** A site id, or null when the tap hit empty map. */
+  readonly onPick: (siteId: string | null) => void;
   readonly onViewChange: (view: MapView) => void;
 }
 
@@ -34,55 +42,76 @@ export class SiteMap {
   readonly #layers: LayerRegistry;
   #sites: readonly SiteFeature[] = [];
   #selectedId: string | null = null;
-  #revealedId: string | null = null;
+  #mode: MapMode = 'auto';
+  #ready = false;
   #userMarker: Marker | null = null;
 
   constructor(options: SiteMapOptions) {
     this.#layers = options.layers;
     this.#map = new MapLibreMap({
       container: options.container,
-      style: STYLE_URL,
       center: JODHPUR,
-      zoom: 12,
+      zoom: CITY_ZOOM,
       minZoom: 4,
       maxBounds: INDIA_BOUNDS,
       attributionControl: false,
+      locale: { 'AttributionControl.ToggleAttribution': options.attributionLabel },
     });
+    this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
+    this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => BasemapTheme.apply(next) });
     this.#listen(options);
   }
 
   showSites(sites: readonly SiteFeature[]): void {
     this.#sites = sites;
     this.#source()?.setData(this.#collection());
-    // A deep link selects before the sites arrive.
-    if (this.#selectedId !== this.#revealedId) this.#reveal(this.#selectedId);
   }
 
   select(siteId: string | null): void {
-    this.#setSelected(this.#selectedId, false);
     this.#selectedId = siteId;
-    this.#setSelected(siteId, true);
-    this.#reveal(siteId);
+    this.#renderLayers();
+  }
+
+  setMode(mode: MapMode): void {
+    this.#mode = mode;
+    this.#renderLayers();
+  }
+
+  /** One point: fly there, clear of the sheet or card. Several: fit them all. */
+  moveTo(points: readonly LonLat[]): void {
+    const [first] = points;
+    if (!first) return;
+    if (points.length === 1) {
+      this.#map.flyTo({ center: [...first], zoom: Math.max(this.#map.getZoom(), SITE_ZOOM), offset: this.#clearOffset() });
+      return;
+    }
+    const bounds = points.reduce((box, point) => box.extend([...point]), new LngLatBounds([...first], [...first]));
+    this.#map.fitBounds(bounds, { padding: 80, maxZoom: SITE_ZOOM });
   }
 
   showUser(position: LonLat): void {
     this.#userMarker ??= new Marker({ element: SiteMap.#userDot() });
     this.#userMarker.setLngLat([...position]).addTo(this.#map);
-    this.#map.flyTo({ center: [...position], zoom: Math.max(this.#map.getZoom(), 15) });
+    this.moveTo([position]);
   }
 
   destroy(): void {
     this.#map.remove();
   }
 
-  #listen({ onSelect, onViewChange }: SiteMapOptions): void {
+  #listen({ onPick, onViewChange }: SiteMapOptions): void {
+    // A zero-size container gives an empty box; the resize that follows fires moveend with the real one.
+    const emitView = () => {
+      if (this.#map.getContainer().clientHeight > 0) onViewChange(this.#view());
+    };
     this.#map.on('load', () => {
+      this.#collapseAttribution();
       this.#addSiteLayers()
-        .then(() => onViewChange(this.#view()))
+        .then(emitView)
         .catch((error: unknown) => console.error('Could not add site layers', error));
     });
-    this.#map.on('moveend', () => onViewChange(this.#view()));
-    this.#map.on('click', (event) => this.#pick(event.point, onSelect));
+    this.#map.on('moveend', emitView);
+    this.#map.on('click', (event) => onPick(this.#pick(event.point)));
     for (const id of this.#layers.interactiveIds()) {
       this.#map.on('mouseenter', id, () => this.#setCursor('pointer'));
       this.#map.on('mouseleave', id, () => this.#setCursor(''));
@@ -90,56 +119,36 @@ export class SiteMap {
   }
 
   async #addSiteLayers(): Promise<void> {
-    const layers = this.#layers.all();
-    await Promise.all(layers.map((layer) => layer.prepare?.(this.#map)));
-    this.#map.addSource(SOURCE_ID, {
-      type: 'geojson',
-      data: this.#collection(),
-      promoteId: 'site_id',
-      cluster: true,
-      clusterMaxZoom: 11,
-      clusterRadius: 48,
-    });
-    for (const layer of layers) this.#map.addLayer(layer.spec(SOURCE_ID));
-    this.#setSelected(this.#selectedId, true);
+    await Promise.all(this.#layers.all().map((layer) => layer.prepare?.(this.#map)));
+    this.#map.addSource(SOURCE_ID, { type: 'geojson', data: this.#collection() });
+    this.#ready = true;
+    this.#renderLayers();
   }
 
-  #pick(point: Point, onSelect: (siteId: string) => void): void {
+  // Layers describe themselves from mode and selection; re-adding three layers is cheap.
+  #renderLayers(): void {
+    if (!this.#ready) return;
+    const context = { sourceId: SOURCE_ID, mode: this.#mode, selectedId: this.#selectedId };
+    for (const layer of this.#layers.all()) {
+      if (this.#map.getLayer(layer.id)) this.#map.removeLayer(layer.id);
+    }
+    for (const layer of this.#layers.all()) this.#map.addLayer(layer.spec(context));
+  }
+
+  #pick(point: Point): string | null {
     const box: [[number, number], [number, number]] = [
       [point.x - TAP_TOLERANCE_PX, point.y - TAP_TOLERANCE_PX],
       [point.x + TAP_TOLERANCE_PX, point.y + TAP_TOLERANCE_PX],
     ];
-    const [hit] = this.#map.queryRenderedFeatures(box, { layers: this.#layers.interactiveIds() });
-    if (!hit) return;
-    const siteId: unknown = hit.properties['site_id'];
-    if (typeof siteId === 'string') onSelect(siteId);
-    else void this.#openCluster(hit);
+    const layers = this.#layers.interactiveIds().filter((id) => this.#map.getLayer(id));
+    const [hit] = this.#map.queryRenderedFeatures(box, { layers });
+    const siteId: unknown = hit?.properties['site_id'];
+    return typeof siteId === 'string' ? siteId : null;
   }
 
-  async #openCluster(cluster: MapGeoJSONFeature): Promise<void> {
-    const clusterId: unknown = cluster.properties['cluster_id'];
-    const source = this.#source();
-    if (typeof clusterId !== 'number' || !source) return;
-    const zoom = await source.getClusterExpansionZoom(clusterId);
-    const [lon = 0, lat = 0] = (cluster.geometry as GeoPoint).coordinates;
-    this.#map.easeTo({ center: [lon, lat], zoom });
-  }
-
-  #reveal(siteId: string | null): void {
-    const site = this.#sites.find((candidate) => candidate.properties.site_id === siteId);
-    if (!site) return;
-    this.#revealedId = site.properties.site_id;
-    const { clientHeight } = this.#map.getContainer();
-    // Keep the site clear of the panel: right of it on desktop, above the half sheet on phones.
-    const offset: [number, number] = window.matchMedia(DESKTOP_QUERY).matches
-      ? [SIDE_PANEL_PX / 2, 0]
-      : [0, -Math.round(clientHeight * 0.2)];
-    this.#map.easeTo({ center: [...site.geometry.coordinates], offset, duration: 400 });
-  }
-
-  #setSelected(siteId: string | null, selected: boolean): void {
-    if (siteId === null || !this.#source()) return;
-    this.#map.setFeatureState({ source: SOURCE_ID, id: siteId }, { selected });
+  #clearOffset(): [number, number] {
+    if (window.matchMedia(DESKTOP_QUERY).matches) return [SIDE_PANEL_PX / 2, 0];
+    return [0, -Math.round(this.#map.getContainer().clientHeight * 0.2)];
   }
 
   #source(): GeoJSONSource | undefined {
@@ -156,6 +165,13 @@ export class SiteMap {
     const bounds = this.#map.getBounds();
     const view = new BBox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth());
     return { bbox: view.clampedTo(MAX_QUERY_SPAN_DEG), clamped: view.isWiderThan(MAX_QUERY_SPAN_DEG) };
+  }
+
+  // Compact attribution opens expanded; start as the small "i" and let a tap expand it.
+  #collapseAttribution(): void {
+    const control = this.#map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+    control?.classList.remove('maplibregl-compact-show');
+    control?.removeAttribute('open');
   }
 
   #setCursor(cursor: string): void {

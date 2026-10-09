@@ -2,9 +2,11 @@ import { LanguagePreference, type KeyValueStore } from '../i18n/LanguagePreferen
 import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
+import type { AuthService } from '../services/AuthService';
 import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { MockApiClient } from '../services/MockApiClient';
+import { MockAuthService } from '../services/MockAuthService';
 import { Sharer, type ShareApi } from '../services/Sharer';
 import { siteFixtureLoaders } from '../services/siteFixtures';
 import type { ApiMode, AppConfig } from './AppConfig';
@@ -24,6 +26,7 @@ export interface BrowserApis {
 export interface Services {
   readonly config: AppConfig;
   readonly api: ApiClient;
+  readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
   readonly locator: GeoLocator;
@@ -34,6 +37,7 @@ export interface Services {
 export class ServiceContainer implements Services {
   readonly config: AppConfig;
   readonly api: ApiClient;
+  readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
   readonly locator: GeoLocator;
@@ -42,16 +46,19 @@ export class ServiceContainer implements Services {
   constructor(services: Services) {
     this.config = services.config;
     this.api = services.api;
+    this.auth = services.auth;
     this.localization = services.localization;
     this.layers = services.layers;
     this.locator = services.locator;
     this.sharer = services.sharer;
   }
 
+  // Auth is the mock in both modes until the Cognito adapter lands.
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config),
+      auth: new MockAuthService(browser.store),
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
       locator: new GeoLocator(browser.geolocation),

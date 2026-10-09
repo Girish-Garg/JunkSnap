@@ -13,7 +13,7 @@ export function SnapRoute() {
   const close = useCallback(() => navigate('/'), [navigate]);
   return (
     <BottomSheet labelledBy={TITLE_ID} closeLabel={t('snap.close')} resizeLabel={t('sheet.resize')} onClose={close}>
-      <h2 id={TITLE_ID} className="sheet-title">
+      <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         <Icon name="camera" />
         {t('snap.title')}
       </h2>

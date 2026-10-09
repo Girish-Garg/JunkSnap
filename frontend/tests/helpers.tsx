@@ -6,11 +6,13 @@ import { AppConfig } from '../src/app/AppConfig';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { ServicesContext } from '../src/app/ServicesContext';
 import type { SiteFeature } from '../src/domain/Site';
+import { AuthFlowProvider } from '../src/features/auth/components/AuthFlowProvider';
 import { LanguagePreference, type KeyValueStore, type Language } from '../src/i18n/LanguagePreference';
 import { Localization } from '../src/i18n/Localization';
 import { LayerRegistry } from '../src/layers/LayerRegistry';
 import { GeoLocator } from '../src/services/GeoLocator';
 import { MockApiClient } from '../src/services/MockApiClient';
+import { MockAuthService } from '../src/services/MockAuthService';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 
@@ -28,14 +30,15 @@ export class MemoryStore implements KeyValueStore {
 
 export interface RenderOptions {
   readonly language?: Language;
-  readonly store?: KeyValueStore;
   readonly route?: string;
+  readonly services?: ServiceContainer;
 }
 
 export function testServices(store: KeyValueStore = new MemoryStore()): ServiceContainer {
   return new ServiceContainer({
     config: AppConfig.fromEnv({}),
     api: new MockApiClient(siteFixtureLoaders),
+    auth: new MockAuthService(store, 0),
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),
     locator: new GeoLocator(undefined),
@@ -45,12 +48,14 @@ export function testServices(store: KeyValueStore = new MemoryStore()): ServiceC
 
 /** Renders inside the same providers App uses, with an in-memory router. */
 export async function renderApp(ui: ReactElement, options: RenderOptions = {}): Promise<RenderResult> {
-  const services = testServices(options.store);
+  const services = options.services ?? testServices();
   await services.localization.i18n.changeLanguage(options.language ?? 'en');
   return render(
     <ServicesContext.Provider value={services}>
       <I18nextProvider i18n={services.localization.i18n}>
-        <MemoryRouter initialEntries={[options.route ?? '/']}>{ui}</MemoryRouter>
+        <MemoryRouter initialEntries={[options.route ?? '/']}>
+          <AuthFlowProvider>{ui}</AuthFlowProvider>
+        </MemoryRouter>
       </I18nextProvider>
     </ServicesContext.Provider>,
   );
