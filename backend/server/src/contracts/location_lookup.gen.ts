@@ -25,8 +25,14 @@ export interface LocationLookup {
    * Null where no open ward map exists.
    */
   ward: AreaRef | null;
-  assembly_seat: AreaRef1;
-  loksabha_seat: AreaRef2;
+  /**
+   * id is <eci-state-code>-ac-<number>, for example s20-ac-127. Null outside Rajasthan, where no assembly boundaries are loaded yet.
+   */
+  assembly_seat: AreaRef | null;
+  loksabha_seat: LoksabhaRef;
+  /**
+   * No councillor row without a ward, no mla row without an assembly seat.
+   */
   representatives: {
     office: "councillor" | "mla" | "mp";
     /**
@@ -37,7 +43,7 @@ export interface LocationLookup {
     source: string;
   }[];
   /**
-   * Reverse geocoder used, for example amazon-location/esri.
+   * Reverse geocoder used, for example amazon-location/places-v2.
    */
   geocoder: string;
   /**
@@ -51,18 +57,15 @@ export interface AreaRef {
   name: string;
 }
 /**
- * id is <eci-state-code>-ac-<number>, for example s20-ac-127.
- */
-export interface AreaRef1 {
-  id: string;
-  name: string;
-}
-/**
  * id is <eci-state-code>-pc-<number>, for example s20-pc-16.
  */
-export interface AreaRef2 {
+export interface LoksabhaRef {
   id: string;
   name: string;
+  /**
+   * outdated where the loaded boundary predates a re-delimitation (Assam, Jammu and Kashmir, Ladakh); letters never Cc the MP of an outdated seat. Null when unknown.
+   */
+  status?: "current" | "outdated" | null;
 }
 
 export const locationLookupSchema = {
@@ -152,15 +155,23 @@ export const locationLookupSchema = {
       "description": "Null where no open ward map exists."
     },
     "assembly_seat": {
-      "$ref": "#/$defs/area_ref",
-      "description": "id is <eci-state-code>-ac-<number>, for example s20-ac-127."
+      "anyOf": [
+        {
+          "$ref": "#/$defs/area_ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "id is <eci-state-code>-ac-<number>, for example s20-ac-127. Null outside Rajasthan, where no assembly boundaries are loaded yet."
     },
     "loksabha_seat": {
-      "$ref": "#/$defs/area_ref",
+      "$ref": "#/$defs/loksabha_ref",
       "description": "id is <eci-state-code>-pc-<number>, for example s20-pc-16."
     },
     "representatives": {
       "type": "array",
+      "description": "No councillor row without a ward, no mla row without an assembly seat.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -196,7 +207,7 @@ export const locationLookupSchema = {
     },
     "geocoder": {
       "type": "string",
-      "description": "Reverse geocoder used, for example amazon-location/esri."
+      "description": "Reverse geocoder used, for example amazon-location/places-v2."
     },
     "boundaries_version": {
       "type": "string",
@@ -222,6 +233,31 @@ export const locationLookupSchema = {
         },
         "name": {
           "type": "string"
+        }
+      }
+    },
+    "loksabha_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{1,64}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "current",
+            "outdated",
+            null
+          ],
+          "description": "outdated where the loaded boundary predates a re-delimitation (Assam, Jammu and Kashmir, Ladakh); letters never Cc the MP of an outdated seat. Null when unknown."
         }
       }
     }

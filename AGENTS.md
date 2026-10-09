@@ -1,13 +1,13 @@
 # JunkSnap: rules for every agent and every tool
 
-JunkSnap is community-reported, ML-verified civic waste reporting for all of India, with Jodhpur as the pilot city where data goes deepest. Anyone snaps waste with the in-app camera. The server moderates and blurs the photo, verifies it with a stacked ensemble of models, merges reports into sites, locates them to ward, assembly seat and Lok Sabha seat, scores each area and drafts cited letters to the bodies that must act.
+JunkSnap is community-reported, ML-verified civic waste reporting for all of India, with Jodhpur as the pilot city where data goes deepest. Anyone snaps waste with the in-app camera or records a Scan video. The server moderates and blurs the photo, verifies it with a stacked ensemble of models, measures what the waste is, merges reports into sites, locates them to ward, assembly seat and Lok Sabha seat, scores each area and drafts cited letters to the bodies that must act.
 
 Pitch: dumps are not only the authorities' failure. People dump on empty plots, often because there is nowhere legal to put waste. JunkSnap measures all three causes.
 
 Built for Environmental Hacks (Bharat Builds Tour, WeMakeDevs + AWS), 8 to 11 October 2026, Waste and Energy track. Team: Hemang, Girish, Harshit.
 Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Code rules: `docs/working.md`.
 
-**Never-cut path:** snap → moderation and blur → stacked verification → site on the map with ward, MLA and MP → cited letter with verifier → area report, working on the deployed URL with real Jodhpur field-audit reports. Checklist: `docs/features.json`.
+**Never-cut path:** sign in → snap → moderation and blur → stacked verification → site on the map with ward, MLA and MP → cited letter with verifier → area report, working on the deployed URL with real Jodhpur field-audit reports. Checklist: `docs/features.json`.
 
 ## Event rules that constrain the work
 
@@ -20,9 +20,11 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 
 ## Product rules
 
-- Capture is in-app camera only. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
-- Privacy: blur faces and number plates before any public copy exists; originals stay private (KMS); no photos of people dumping; never name an individual in any text.
-- Only blurred images go to any model (Bedrock, OpenAI, OpenRouter). Bedrock is the default; OpenAI and OpenRouter are fallbacks.
+- Capture is in-app camera only: a Snap photo, or a Scan video with a GPS track recorded in sync (decision 20261010-0203). The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
+- Privacy: blur faces and number plates before any public copy exists; originals and scan videos stay private (KMS); no photos of people dumping; never name an individual in any text.
+- Only blurred images go to any model (Bedrock, OpenAI, OpenRouter). Bedrock is the default; OpenAI and OpenRouter are fallbacks. Note moderation runs on Bedrock (Claude Haiku 4.5, India profile); Comprehend is not enabled on this account.
+- Insights (composition, size class, hazards, nearby schools or water, area patterns) use only measured numbers, and each shows where it came from (model or OpenStreetMap layer) and the count it rests on. Size is a class, never tonnage (decision 20261010-0202).
+- Accounts: Cognito email and password. Browsing is open; creating reports, scans, votes, cleanups and letters needs sign-in. Store and log only the opaque `user_id`, never a user's name or email (decision 20261010-0227).
 - Company names appear only when a label is readable and above the confidence threshold.
 - Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording with no party colours. Nothing is filed automatically; the resident files.
 - Every quoted rule comes from a hashed official text and passes the word-for-word verifier. Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026.
@@ -32,7 +34,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 ## Code rules (full version: docs/working.md)
 
 - Strict OOP: one responsibility per class, ports injected through constructors, no globals, immutable value objects, extend with new classes not branches.
-- Layers: domain ← ports ← services ← adapters/handlers. Services never import SDKs. Packages never import each other; they exchange contract shapes.
+- Layers, in TypeScript and Python alike: domain ← ports ← services ← adapters/handlers. Services never import SDKs. `backend/server` and `backend/ml` never import each other; they exchange contract shapes over HTTP.
 - Limits: file 250 lines (.tsx 150), class 150, function 30, params 4, complexity 8, nesting 3. CI enforces them.
 - Comments and docstrings: one line, only when the code can't say it (a why, a gotcha, a unit). Never restate the code; no long docstrings, no filler.
 - Done = lint + types + tests + limits green, fixtures valid, evidence in the PR.
@@ -41,12 +43,13 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 
 | Folder | Holds |
 |---|---|
-| `frontend/` | React + MapLibre web app |
-| `backend/pipeline/` | Moderation, authenticity, location, sites, scores |
-| `backend/agent/` | LLM layer, stacked verification, brands, rulebook, letters |
+| `frontend/` | React + MapLibre web app; UI style in `frontend/DESIGN.md` (decision 20261010-0201) |
+| `backend/server/` | TypeScript 6.0.3, Node 24, one image, workloads `api` (all public routes, letters, auth), `worker` (SQS pipeline: moderation, authenticity, brands, location, sites, scans), `scores` (CronJob); TS LLM layer |
+| `backend/ml/` | Python service `ml`: `POST /internal/verify` (stacked verification, judge last, insights); training in `training/`. Renamed from `backend/agent/` |
+| `backend/pipeline/` | Retired (decision 20261010-0159); deleted once `backend/server/` lands. Add no code |
 | `infra/` | Infrastructure as code (`junksnap-<stage>` stacks) |
 | `contracts/` | Schemas, fixtures, README: source of truth for shapes and routes |
-| `data/` | Boundaries, representatives, labels (small files only) |
+| `data/` | Boundaries, representatives, labels, ward records and crawler, dataset manifests (small files only) |
 | `docs/` | Handover, architecture, working agreement, decisions, status |
 | `scripts/` | `validate_contracts.py`, `smoke.py`, `check_limits.py` |
 
@@ -82,14 +85,15 @@ Push to `main` · force-push or rewrite history · commit secrets or `.env` file
 ## Commands
 
 - frontend: `cd frontend; npm ci; npm run dev; npm run lint; npm test -- --run; npm run build`
-- Python packages: `cd backend/<pkg>; uv sync; uv run ruff check .; uv run mypy --strict src; uv run pytest -q`
-- contracts: `uv run scripts/validate_contracts.py`
+- server: `cd backend/server; npm ci; npm run lint; npm run typecheck; npm test; npm run build`
+- ml: `cd backend/ml; uv sync; uv run ruff check .; uv run mypy --strict src; uv run pytest -q` (in `backend/agent` until the rename lands)
+- contracts: `uv run scripts/validate_contracts.py`; after any schema change also `cd backend/server; npm ci; npm run gen:contracts` and commit the `src/contracts/*.gen.ts` files
 - size limits: `uv run scripts/check_limits.py`
 - smoke test: `uv run scripts/smoke.py <url> [<url> ...]`
 
 ## AWS
 
 - Region `ap-south-1`, CLI profile `junksnap` (the human signs in with `aws login`), tags `project=junksnap` and `stage` (proposed, 20261010-0130, -0132).
-- Kubernetes: one EKS Auto Mode cluster `junksnap` (eksctl `infra/eks/cluster.yaml`), namespaces `junksnap-dev` and `junksnap-demo`. Workloads `api`, `agent`, `worker` and the `scores` CronJob, manifests in Kustomize `infra/k8s/`, images in ECR, AWS access through EKS Pod Identity, CloudFront over the ALB (proposed, 20261010-0130, -0132).
+- Kubernetes: one EKS Auto Mode cluster `junksnap` (eksctl `infra/eks/cluster.yaml`), namespaces `junksnap-dev` and `junksnap-demo`. Workloads `api`, `worker`, the `scores` CronJob (image `junksnap-server`) and `ml` (image `junksnap-ml`), manifests in Kustomize `infra/k8s/`, images in ECR, AWS access through EKS Pod Identity, CloudFront over the ALB (proposed, 20261010-0130, -0132; workloads accepted, 20261010-0159).
 - Per-stage AWS resources: CloudFormation `infra/aws/stage.yaml`, stacks `junksnap-dev` and `junksnap-demo` (proposed, 20261010-0130).
 - Deploy `demo` only from a clean `main`, and only when the human says so. Never run commands that change billing or account settings; read-only checks by the lead session are fine. Tests stub AWS and model calls.
