@@ -29,7 +29,7 @@ saboot/                       repo (product: JunkSnap)
 │  └─ agent/                  Python package `agent`
 │                             each: pyproject.toml, uv.lock,
 │                             src/<pkg>/{domain,ports,adapters,services,handlers}/, tests/{unit,contract}/
-├─ infra/                     IaC template, stubs/
+├─ infra/                     eks/ (eksctl), aws/ (CloudFormation), k8s/ (Kustomize base, overlays)
 ├─ data/                      boundaries/, representatives/, labels/ (small files only)
 └─ scripts/                   validate_contracts.py, smoke.py, check_limits.py
 ```
@@ -43,8 +43,8 @@ Large files (images, models over 5 MB, rasters, Parquet) live in S3, never in gi
 | `domain/` | Entities, value objects, domain errors | standard library only |
 | `ports/` | Abstract base classes for every outside capability | `domain` |
 | `services/` | Use-case classes; all business logic | `domain`, `ports` |
-| `adapters/` | Port implementations: boto3, Bedrock, OpenRouter, shapely, Pillow | `domain`, `ports`, third-party SDKs |
-| `handlers/` | Lambda entry points that build the object graph and call one service | anything in the same package |
+| `adapters/` | Port implementations: boto3, Bedrock, OpenAI, OpenRouter, shapely, Pillow | `domain`, `ports`, third-party SDKs |
+| `handlers/` | Entry points (FastAPI routers, the SQS queue consumer, the CronJob command) that build the object graph and call one service | anything in the same package |
 
 Imports point down this table only. Services never import boto3 or any SDK. `pipeline` and `agent` never import each other; they exchange contract shapes.
 
@@ -54,20 +54,20 @@ Frontend direction: components → hooks → services → `ApiClient`. Component
 
 1. One responsibility per class. If a class name needs "And", split it.
 2. Depend on abstractions: services receive ports through their constructor and never create their own dependencies.
-3. Constructor injection only. No service locators, no global mutable state, no singletons. One exception: a Lambda handler may cache its composed object graph at module level for warm starts.
+3. Constructor injection only. No service locators, no global mutable state, no singletons. One exception: each process (FastAPI app, queue consumer, CronJob command) builds its object graph once at startup and reuses it.
 4. Value objects are immutable: `@dataclass(frozen=True)` or frozen pydantic models in Python, `readonly` in TypeScript.
 5. Entities protect their own state. Changes go through methods that enforce the rules, for example `site.mark_cleaned(after_photo)` raises `InvalidTransition`; nothing sets `site.status` from outside.
 6. Encapsulation: no public mutable attributes. Private members start with `_` in Python or use `private` / `#` in TypeScript.
 7. Extend by adding classes, not branches. New report types, LLM providers, verification signals and moderation checks are new classes registered in a factory, never another `if type == ...`.
 8. Composition over inheritance. Inherit only from an abstract port or a declared base (`Signal`, `Check`, `LlmProvider`), at most 2 levels deep.
 9. Tell, don't ask: call behaviour on the object that owns the data instead of pulling its data out and deciding elsewhere.
-10. Free functions are allowed only as Lambda handler entry points and as pure helpers of 10 lines or fewer in a `utils` module.
+10. Free functions are allowed only as entry points (FastAPI route functions, the queue consumer and CronJob `main`) and as pure helpers of 10 lines or fewer in a `utils` module.
 11. Errors: one exception hierarchy per package, rooted at `JunkSnapError`. Adapters translate SDK errors into domain errors. No bare `except`, no silent fallbacks.
 12. Types everywhere: Python hints checked with `mypy --strict` on `src/`; TypeScript with `strict: true` and no `any`.
 
 | Pattern | Where |
 |---|---|
-| Strategy | `LlmProvider` (Bedrock, OpenRouter); `Signal` (Rekognition, YOLO, embedding) |
+| Strategy | `LlmProvider` (OpenAI, Bedrock, OpenRouter); `Signal` (Rekognition, YOLO, embedding) |
 | Factory | `ProviderFactory` builds providers from `TaskConfig`; `CheckFactory` builds moderation checks |
 | Chain of responsibility | Moderation and authenticity `Check`s run in order; the first failure stops the chain |
 | Composite | `StackedVerifier` combines signals and the meta-learner |
@@ -113,4 +113,4 @@ File limits skip blank lines and comments; class and function limits measure the
 
 - Lint, type check, tests and `scripts/check_limits.py` pass locally and in CI.
 - Contract fixtures still validate.
-- The PR shows evidence from the verify command, `/handoff` has been run and decisions are recorded.
+- The PR shows evidence from the verify command and decisions are recorded. Task agents do not edit `docs/status/`.
