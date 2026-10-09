@@ -1,0 +1,8 @@
+{
+  "as_of": "2026-10-10",
+  "brands": [
+    {"brand": "Pepsi", "aliases": [{"text": "Pepsi", "require_exact": true}], "parent_company": "Sample Beverages", "category": "beverage", "source_url": "https://example.org/brands/pepsi"},
+    {"brand": "Kurkure", "aliases": [{"text": "Kurkure", "require_exact": false}], "parent_company": "Sample Snacks", "category": "food", "source_url": "https://example.org/brands/kurkure"},
+    {"brand": "Bikaji", "aliases": [{"text": "Bikaji", "require_exact": false}, {"text": "बीकाजी", "require_exact": false}], "parent_company": "Sample Namkeen", "category": "food", "source_url": "https://example.org/brands/bikaji"}
+  ]
+}
