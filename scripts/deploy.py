@@ -25,6 +25,8 @@ IMAGES = {
     "junksnap-server": (("backend/server",), "ServerRepositoryUri"),
     "junksnap-ml": (("backend/ml", "backend/agent"), "MlRepositoryUri"),
 }
+# image -> named build contexts (name=repo folder); the server image copies data/ into /app/data.
+BUILD_CONTEXTS = {"junksnap-server": ("data=data",)}
 # ConfigMap variable (contracts/README.md) -> junksnap-<stage> output
 CONFIG_FROM_OUTPUTS = {
     "REPORTS_TABLE": "ReportsTableName",
@@ -73,6 +75,13 @@ def deploy_stack(stack: str, template: str, extra: list[str]) -> dict[str, str]:
     return {item["OutputKey"]: item["OutputValue"] for item in json.loads(raw)}
 
 
+def build_image(name: str, folders: tuple[str, ...], image: str) -> None:
+    """Build one image for linux/amd64 with its named build contexts."""
+    folder = next(f for f in folders if (ROOT / f / "Dockerfile").is_file())
+    contexts = [f"--build-context={c}" for c in BUILD_CONTEXTS.get(name, ())]
+    run(["docker", "build", "--platform", "linux/amd64", *contexts, "-t", image, folder])
+
+
 class StageDeployer:
     """Deploys one stage end to end."""
 
@@ -112,7 +121,7 @@ class StageDeployer:
     def _push_images(self, repos: dict[str, str]) -> str:
         """Build and push both images for linux/amd64; return the tag."""
         tag = run(["git", "rev-parse", "--short", "HEAD"])
-        if run(["git", "status", "--porcelain", "--", "backend"]):
+        if run(["git", "status", "--porcelain", "--", "backend", "data"]):
             tag += "-dirty"
         registry = repos["ServerRepositoryUri"].split("/")[0]
         token = base64.b64encode(b"AWS:" + aws("ecr", "get-login-password", quiet=True).encode())
@@ -120,12 +129,11 @@ class StageDeployer:
         with tempfile.TemporaryDirectory() as config:
             auths = {"auths": {registry: {"auth": token.decode()}}}
             Path(config, "config.json").write_text(json.dumps(auths), encoding="utf-8")
-            for folders, output in IMAGES.values():
+            for name, (folders, output) in IMAGES.items():
                 image = f"{repos[output]}:{tag}"
                 # stage-<stage> marks the deployed image; the ECR lifecycle never expires it.
                 stage_image = f"{repos[output]}:stage-{self._stage}"
-                folder = next(f for f in folders if (ROOT / f / "Dockerfile").is_file())
-                run(["docker", "build", "--platform", "linux/amd64", "-t", image, folder])
+                build_image(name, folders, image)
                 run(["docker", "tag", image, stage_image])
                 for pushed in (image, stage_image):
                     run(["docker", "--config", config, "push", pushed])

@@ -18,6 +18,16 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/dist ./dist
 
+# Runtime data from the repo's data/, passed as the named build context "data" (scripts/deploy.py):
+#   docker build --build-context data=../../data .
+# Only the folders the server reads; wards* also matches nothing until the ward crawler's files land.
+COPY --from=data boundaries /app/data/boundaries
+COPY --from=data representatives /app/data/representatives
+COPY --from=data rules /app/data/rules
+COPY --from=data brands /app/data/brands
+COPY --from=data wards* /app/data/wards/
+ENV ASSETS_DIR=/app/data
+
 # Numeric user and group, so Kubernetes runAsNonRoot can verify them.
 USER 10001:10001
 EXPOSE 8000
