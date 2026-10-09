@@ -55,7 +55,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 2. One task per branch and worktree. Plan first, unless the change fits in one sentence.
 3. Run the verify command and paste the evidence (test output or a screenshot).
 4. Record cross-task decisions with `/decide`. Never keep team decisions only in auto memory.
-5. Push the branch and open a PR. Task agents never edit `docs/status/*.md`; the lead session updates `docs/status/hem.md` at checkpoints.
+5. Push the branch and open a PR. Task agents skip `/handoff` and never commit `docs/status/*.md`; the lead session runs `/handoff` at checkpoints (proposed, 20261010-0136).
 
 Decision status: `accepted` binds, `proposed` is context only, `superseded` is history. If your task conflicts with an accepted decision, stop and ask.
 
@@ -75,7 +75,7 @@ Push to `main` · force-push or rewrite history · commit secrets or `.env` file
 - One branch and worktree per task; PRs under about 400 changed lines. PR body: `Closes #n`, evidence, decisions, integration debt.
 - Commit trailers: no AI co-author trailer. Every commit ends with exactly one trailer, alternating commit by commit between `Co-authored-by: Hemang <coehemang@gmail.com>` and `Co-authored-by: Girish Garg <garggirish2020@gmail.com>`. The writeup still lists every AI tool used.
 - Before the first push: `git fetch`, then `git rebase origin/main`. After pushing, merge `origin/main` instead of force-pushing.
-- Claude merges a PR once CI is green and the reviewer says SHIP: squash through the GitHub API, with the commit message ending in exactly one co-author line, alternating as above.
+- Claude merges a PR once CI is green and the reviewer says SHIP: squash through the GitHub API, with the commit message ending in exactly one co-author line, alternating as above (proposed, 20261010-0135).
 - Never hand-merge a lockfile; fix the manifest and regenerate it.
 
 ## Commands

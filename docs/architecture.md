@@ -56,7 +56,9 @@ All services run in one Amazon EKS Auto Mode cluster, `junksnap`, in ap-south-1,
 
 ## 3. Report pipeline
 
-The `worker` long-polls the SQS reports queue. For each report or Scan frame it runs one `ReportPipeline`, which calls the steps below in order. Steps from the agent package run in the `agent` service, called over cluster-internal HTTP. A failed message is retried through SQS, then goes to the dead-letter queue with status "needs review".
+The `worker` long-polls the SQS reports queue. For each report or Scan frame it runs one `ReportPipeline`, which calls the steps below in order. Steps from the agent package run in the `agent` service, called over cluster-internal HTTP: POST /internal/verify and POST /internal/brands, defined in `contracts/README.md` (PR #14). The worker sends the agent only the blurred copy's key (`media/reports/{report_id}.jpg`), never the original, and the agent's Pod Identity role has no read access to the private originals bucket.
+
+Every step is idempotent per report id: moderation and verification results are written keyed by report id, and site merge records which report ids it has merged and skips repeats, so retries cannot inflate counts. A failed message is retried through SQS. When its `ApproximateReceiveCount` reaches the max receive count, the worker marks the report `needs_review` before the message moves to the dead-letter queue, so the phone never waits forever.
 
 | Step | Package | Runs in | Entry class | Output contract |
 |---|---|---|---|---|
@@ -158,7 +160,8 @@ Two stages: `dev` for building and `demo` for the recording, deployed only from 
 | Phone cannot run the model | Cloud mode |
 | No network | Offline queue |
 | Letter verification fails | Template letter with the same citations |
-| Pipeline step error, or `agent` unreachable from `worker` | SQS retry, then dead-letter queue and a "needs review" status |
+| Pipeline step error, or `agent` unreachable from `worker` | SQS retry. On the last allowed receive the worker marks the report `needs_review`, then the message moves to the dead-letter queue |
+| Same message processed twice | Steps are idempotent per report id; site merge skips report ids it has already merged |
 | Pod crashes or node is replaced | Kubernetes restarts the pod; an unfinished SQS message becomes visible again and is retried |
 | `scores` run fails | The next run, 15 minutes later, recomputes from DynamoDB |
 

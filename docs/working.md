@@ -113,4 +113,4 @@ File limits skip blank lines and comments; class and function limits measure the
 
 - Lint, type check, tests and `scripts/check_limits.py` pass locally and in CI.
 - Contract fixtures still validate.
-- The PR shows evidence from the verify command and decisions are recorded. Task agents do not edit `docs/status/`.
+- The PR shows evidence from the verify command and decisions are recorded. Task agents skip `/handoff` and never commit `docs/status/` (proposed, 20261010-0136).
