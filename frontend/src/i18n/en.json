@@ -1,0 +1,226 @@
+{
+  "app": {
+    "name": "JunkSnap"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "nav": {
+    "label": "Main",
+    "map": "Map",
+    "areas": "Areas",
+    "report": "Report",
+    "activity": "Activity",
+    "account": "Account"
+  },
+  "search": {
+    "label": "Search wards, seats and places",
+    "placeholder": "Search Jodhpur",
+    "clear": "Clear search",
+    "results": "Places on the map",
+    "noResults": "No match in the sites on screen. Try a ward or locality.",
+    "siteCount_one": "{{count}} site",
+    "siteCount_other": "{{count}} sites"
+  },
+  "place": {
+    "ward": "Ward",
+    "assembly": "Assembly seat",
+    "loksabha": "Lok Sabha seat",
+    "local_body": "Local body",
+    "town": "Town"
+  },
+  "filters": {
+    "button": "Filters",
+    "buttonActive": "Filters · {{count}}",
+    "title": "Filters",
+    "close": "Close filters",
+    "mapView": "Map view",
+    "types": "Report types",
+    "verifiedOnly": "Verified only",
+    "mode": {
+      "auto": "Auto",
+      "pins": "Pins",
+      "heat": "Heat"
+    },
+    "sampleNote": "Sample data: these are test sites, not live reports."
+  },
+  "map": {
+    "label": "Map of reported waste sites",
+    "locate": "Show my location",
+    "snap": "Report a site with the camera",
+    "attribution": "Map credits"
+  },
+  "notice": {
+    "offline": "Offline. Showing what was loaded.",
+    "loadFailed": "Could not load sites.",
+    "locationDenied": "Location is blocked in your browser.",
+    "locationUnavailable": "Could not find your location.",
+    "filteredEmpty": "No sites match. Turn a filter off.",
+    "zoomIn": "Zoom in to see every site here.",
+    "empty": "No reports here yet."
+  },
+  "sheet": {
+    "resize": "Show more or less"
+  },
+  "preview": {
+    "details": "Details",
+    "reports_one": "{{count}} report",
+    "reports_other": "{{count}} reports"
+  },
+  "reportType": {
+    "waste_dump": "Waste dump",
+    "no_bin": "No bin or pickup",
+    "contaminated_water": "Contaminated water",
+    "open_construction": "Open construction"
+  },
+  "context": {
+    "vacant_plot": "Vacant plot",
+    "roadside": "Roadside",
+    "drain": "Drain",
+    "other": "Other place",
+    "no_bin": "No bin nearby",
+    "no_pickup": "Waste not picked up",
+    "stagnant": "Stagnant water",
+    "sewage": "Sewage",
+    "foam": "Foam",
+    "choked_drain": "Choked drain",
+    "uncovered_debris": "Uncovered debris",
+    "dusty_site": "Dusty site"
+  },
+  "status": {
+    "open": "Open",
+    "cleaned": "Cleared",
+    "reopened": "Reopened"
+  },
+  "verification": {
+    "verified": "Verified",
+    "community_check": "Waiting for a neighbour check",
+    "rejected": "Rejected after a neighbour check"
+  },
+  "actions": {
+    "label": "Site actions",
+    "confirm": "Confirm",
+    "metoo": "Me too",
+    "cleaned": "Cleaned",
+    "letter": "Letter",
+    "share": "Share",
+    "copied": "Copied",
+    "soon": "Coming soon: Confirm, Me too, Cleaned and Letter.",
+    "soonOne": "{{action}} is coming soon."
+  },
+  "site": {
+    "close": "Close site details",
+    "loading": "Loading site",
+    "loadFailed": "Could not load this site.",
+    "distanceAway": "{{distance}} away",
+    "pilot": "Pilot city",
+    "burning": "Burning seen",
+    "cleanupChecking": "Cleanup photo being checked",
+    "photos": "Photos",
+    "photoAlt": "Blurred photo {{n}} of {{total}}",
+    "afterCleanup": "Blurred photo after the last cleanup",
+    "photoNote": "Faces and number plates are blurred.",
+    "photoMissing": "Photo not available",
+    "mla": "MLA seat: {{name}}",
+    "mp": "MP seat: {{name}}",
+    "reports": "Reports",
+    "verifiedReports": "Verified reports",
+    "location": "Location",
+    "localBody": "Local body",
+    "notKnown": "Not known",
+    "ward": "Ward",
+    "noWard": "No open ward map",
+    "assemblySeat": "Assembly seat (MLA)",
+    "loksabhaSeat": "Lok Sabha seat (MP)",
+    "history": "History",
+    "firstReported": "First reported",
+    "lastReported": "Last reported",
+    "lastCleared": "Last cleared",
+    "brands": "Packaging seen at this site",
+    "noAssembly": "No assembly map here yet",
+    "seatOutdated": "Boundary out of date"
+  },
+  "snap": {
+    "title": "Report a waste site",
+    "soon": "Camera capture comes in the next build. Until then the map shows sample reports.",
+    "close": "Close"
+  },
+  "account": {
+    "title": "Account",
+    "close": "Close account",
+    "signedInAs": "Signed in as {{email}}",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "close": "Close",
+    "email": "Email",
+    "password": "Password",
+    "newPassword": "New password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "forgotLink": "Forgot password?",
+    "working": "Please wait",
+    "noAccount": "New to JunkSnap?",
+    "createAccount": "Create account",
+    "haveAccount": "Already have an account?",
+    "terms": "I agree to the terms and the privacy note",
+    "code": "6-digit code",
+    "sampleCode": "Sample mode: the code is {{code}}.",
+    "resend": "Resend code",
+    "resendIn": "Resend code in {{seconds}} s",
+    "backToSignIn": "Back to sign in",
+    "signIn": {
+      "title": "Sign in",
+      "text": "Sign in to report, confirm and send letters. The map stays open to everyone.",
+      "submit": "Sign in"
+    },
+    "signUp": {
+      "title": "Create account",
+      "text": "Your email is only used to sign you in.",
+      "submit": "Create account"
+    },
+    "verify": {
+      "title": "Check your email",
+      "text": "Enter the 6-digit code we sent to {{email}}.",
+      "submit": "Verify"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "text": "We will email you a 6-digit code.",
+      "send": "Send code",
+      "save": "Save password",
+      "done": "Password changed. Sign in with your new password."
+    },
+    "strength": {
+      "hint": "Use 8 or more characters.",
+      "weak": "Too short: use 8 or more characters.",
+      "fair": "Fair: add a capital, a number or a symbol.",
+      "strong": "Strong password."
+    },
+    "errors": {
+      "email": "Enter a valid email, like name@example.com.",
+      "passwordMissing": "Enter your password.",
+      "passwordShort": "Use 8 or more characters.",
+      "terms": "Accept the terms to continue.",
+      "code": "Enter the 6 digits from the email.",
+      "wrong_credentials": "Email or password is wrong.",
+      "exists": "An account with this email already exists. Sign in instead.",
+      "bad_code": "That code is wrong or has expired.",
+      "not_confirmed": "Verify your email first.",
+      "unknown": "Something went wrong. Try again.",
+      "unavailable": "Sign-in is not available yet."
+    },
+    "unavailable": "Sign-in is not available yet. You can still browse the map."
+  },
+  "areas": {
+    "title": "Areas",
+    "soon": "Ward and seat scores come in the next build. A score shows only after 10 verified reports.",
+    "close": "Close areas"
+  },
+  "activity": {
+    "title": "Activity",
+    "text": "Your reports and the letters you draft.",
+    "empty": "Nothing yet. Reports you send will show here with their status.",
+    "close": "Close activity"
+  }
+}
