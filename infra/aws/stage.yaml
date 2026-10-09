@@ -125,6 +125,7 @@ Resources:
         - { AttributeName: device_token, AttributeType: S }
         - { AttributeName: captured_at, AttributeType: S }
         - { AttributeName: received_at, AttributeType: S }
+        - { AttributeName: user_id, AttributeType: S }
       KeySchema:
         - { AttributeName: report_id, KeyType: HASH }
       GlobalSecondaryIndexes:
@@ -136,6 +137,11 @@ Resources:
         - IndexName: by-device
           KeySchema:
             - { AttributeName: device_token, KeyType: HASH }
+            - { AttributeName: received_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: by-user
+          KeySchema:
+            - { AttributeName: user_id, KeyType: HASH }
             - { AttributeName: received_at, KeyType: RANGE }
           Projection: { ProjectionType: ALL }
 

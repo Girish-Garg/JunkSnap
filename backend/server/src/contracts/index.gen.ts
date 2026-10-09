@@ -4,8 +4,10 @@ import { validateLetterDraft } from "./letter_draft.gen.js";
 import { validateLocationLookup } from "./location_lookup.gen.js";
 import { validateModerationResult } from "./moderation_result.gen.js";
 import { validateReportUpload } from "./report_upload.gen.js";
+import { validateScanSession } from "./scan_session.gen.js";
 import { validateSite } from "./site.gen.js";
 import { validateVerificationResult } from "./verification_result.gen.js";
+import { validateWardRecord } from "./ward_record.gen.js";
 import { validateWardScores } from "./ward_scores.gen.js";
 
 export { type BrandLabel, brandLabelSchema, validateBrandLabel } from "./brand_label.gen.js";
@@ -13,8 +15,10 @@ export { type LetterDraft, letterDraftSchema, validateLetterDraft } from "./lett
 export { type LocationLookup, locationLookupSchema, validateLocationLookup } from "./location_lookup.gen.js";
 export { type ModerationResult, moderationResultSchema, validateModerationResult } from "./moderation_result.gen.js";
 export { type ReportUpload, reportUploadSchema, validateReportUpload } from "./report_upload.gen.js";
+export { type ScanSession, scanSessionSchema, validateScanSession } from "./scan_session.gen.js";
 export { type Site, siteSchema, validateSite } from "./site.gen.js";
 export { type VerificationResult, verificationResultSchema, validateVerificationResult } from "./verification_result.gen.js";
+export { type WardRecord, wardRecordSchema, validateWardRecord } from "./ward_record.gen.js";
 export { type WardScores, wardScoresSchema, validateWardScores } from "./ward_scores.gen.js";
 
 export const CONTRACT_VALIDATORS = {
@@ -23,8 +27,10 @@ export const CONTRACT_VALIDATORS = {
   location_lookup: validateLocationLookup,
   moderation_result: validateModerationResult,
   report_upload: validateReportUpload,
+  scan_session: validateScanSession,
   site: validateSite,
   verification_result: validateVerificationResult,
+  ward_record: validateWardRecord,
   ward_scores: validateWardScores,
 } as const;
 

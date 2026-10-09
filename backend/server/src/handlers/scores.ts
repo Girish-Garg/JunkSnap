@@ -1,8 +1,20 @@
+import { JunkSnapError } from "../domain/errors.js";
+import type { ScoresJob } from "../services/ScoresJob.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
+import { ScoresJobFactory } from "./ScoresJobFactory.js";
 
-// One CronJob run; scoring arrives with its own task.
-export async function runScores({ logger }: EntryContext): Promise<void> {
-  logger.info("scores started");
+export type ScoresJobSource = (context: EntryContext) => Promise<Pick<ScoresJob, "run">>;
+
+const buildScoresJob: ScoresJobSource = (context) => new ScoresJobFactory().create(context);
+
+// Failed areas are logged one by one; any of them makes the CronJob exit non-zero after the rest are scored.
+export async function runScores(context: EntryContext, source: ScoresJobSource = buildScoresJob): Promise<void> {
+  const job = await source(context);
+  const summary = await job.run(new Date());
+  context.logger.info({ ...summary }, "scores done");
+  if (summary.failed > 0) {
+    throw new JunkSnapError(`${summary.failed} of ${summary.areas} areas failed`);
+  }
 }
 
 if (import.meta.main) {
