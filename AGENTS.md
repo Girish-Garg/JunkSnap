@@ -34,6 +34,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 - Strict OOP: one responsibility per class, ports injected through constructors, no globals, immutable value objects, extend with new classes not branches.
 - Layers: domain ← ports ← services ← adapters/handlers. Services never import SDKs. Packages never import each other; they exchange contract shapes.
 - Limits: file 250 lines (.tsx 150), class 150, function 30, params 4, complexity 8, nesting 3. CI enforces them.
+- Comments and docstrings: one line, only when the code can't say it (a why, a gotcha, a unit). Never restate the code; no long docstrings, no filler.
 - Done = lint + types + tests + limits green, fixtures valid, evidence in the PR.
 
 ## Folders
