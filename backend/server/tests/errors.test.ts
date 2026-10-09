@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ConfigError,
   ExternalServiceError,
+  InternalDataError,
   JunkSnapError,
   NotFoundError,
   ValidationError,
@@ -21,6 +22,7 @@ describe("domain errors", () => {
     [new AreaNotFoundError("x"), 404, "area_not_found"],
     [new ConfigError("x"), 500, "server_error"],
     [new ExternalServiceError("x"), 500, "server_error"],
+    [new InternalDataError("x"), 500, "server_error"],
   ])("%s maps to %i %s", (error, status, code) => {
     expect(error).toBeInstanceOf(JunkSnapError);
     expect(error.status).toBe(status);

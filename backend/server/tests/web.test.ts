@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
-import { NotFoundError, ValidationError } from "../src/domain/errors.js";
-import { createLogger } from "../src/handlers/logger.js";
+import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
+import { ConfigError, NotFoundError, ValidationError } from "../src/domain/errors.js";
 import { createApp } from "../src/handlers/web.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
@@ -26,12 +26,14 @@ let sink: LogSink;
 async function start(env: Record<string, string>): Promise<FastifyInstance> {
   const settings = CoreSettings.fromEnv(env);
   sink = new LogSink();
-  app = await createApp(settings, [failingRoutes], createLogger({ service: "api", stage: settings.stage }, sink));
+  const logger = new JsonLoggerFactory(sink).create({ service: "api", stage: settings.stage });
+  app = await createApp(settings, [failingRoutes], logger);
   return app;
 }
 
 afterEach(async () => {
   await app?.close();
+  app = undefined;
 });
 
 describe("GET /healthz", () => {
@@ -63,7 +65,8 @@ describe("error shape", () => {
     expect(response.json()).toMatchObject({ error: "server_error" });
     expect(response.body).not.toContain("unreachable");
     const failure = sink.records().find((record) => record.message === "request failed");
-    expect(failure).toMatchObject({ level: "error", request_id: "req-test-1", service: "api", stage: "dev" });
+    expect(failure).toMatchObject({ level: "ERROR", request_id: "req-test-1", service: "api", stage: "dev" });
+    expect(failure?.error).toContain("unreachable");
   });
 
   it.each([
@@ -100,5 +103,9 @@ describe("CORS", () => {
     expect(allowed.headers["access-control-allow-origin"]).toBe("https://app.example.org");
     const other = await app?.inject(preflight("https://elsewhere.example.org"));
     expect(other?.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  it("refuses to build the api in demo without CORS_ORIGINS", async () => {
+    await expect(start({ JUNKSNAP_STAGE: "demo" })).rejects.toThrow(ConfigError);
   });
 });

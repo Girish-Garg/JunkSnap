@@ -42,3 +42,6 @@ export class ValidationError extends JunkSnapError {
 
 // Adapters translate SDK and HTTP failures into this.
 export class ExternalServiceError extends JunkSnapError {}
+
+// Stored, internal or outbound data broke a contract: our bug, never the caller's.
+export class InternalDataError extends JunkSnapError {}

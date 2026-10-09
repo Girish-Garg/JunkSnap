@@ -1,10 +1,11 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
 import { IdleQueuePoller } from "../src/adapters/IdleQueuePoller.js";
-import { createLogger } from "../src/handlers/logger.js";
+import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { runWorker } from "../src/handlers/worker.js";
 import type { QueuePoller } from "../src/ports/QueuePoller.js";
 import { WorkerLoop } from "../src/services/WorkerLoop.js";
+import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
 
 class FakeQueuePoller implements QueuePoller {
@@ -27,24 +28,34 @@ class FailingQueuePoller implements QueuePoller {
 }
 
 function workerLogger(sink: LogSink) {
-  return createLogger({ service: "worker", stage: "dev" }, sink);
+  return new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
 }
 
-describe("worker", () => {
-  it("stops on SIGTERM, aborting the poll in flight, and logs JSON lines", async () => {
+describe("runWorker", () => {
+  it("stops on SIGTERM and logs JSON lines", async () => {
     const sink = new LogSink();
-    const poller = new FakeQueuePoller();
     const signals = new EventEmitter();
-    const done = runWorker({ loop: new WorkerLoop(poller, workerLogger(sink)), logger: workerLogger(sink), signals });
+    const context = { settings: CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), logger: workerLogger(sink), env: {} };
+    const done = runWorker(context, signals);
     signals.emit("SIGTERM");
     await done;
-    expect(poller).toMatchObject({ polls: 1, sawAbort: true });
     const messages = sink.records().map((record) => [record.message, record.service, record.level]);
     expect(messages).toEqual([
-      ["worker started", "worker", "info"],
-      ["worker stopping", "worker", "info"],
-      ["worker stopped", "worker", "info"],
+      ["worker started", "worker", "INFO"],
+      ["worker stopping", "worker", "INFO"],
+      ["worker stopped", "worker", "INFO"],
     ]);
+  });
+});
+
+describe("WorkerLoop", () => {
+  it("aborts the poll in flight on stop", async () => {
+    const poller = new FakeQueuePoller();
+    const loop = new WorkerLoop(poller, workerLogger(new LogSink()));
+    const running = loop.run();
+    loop.stop("SIGTERM");
+    await running;
+    expect(poller).toMatchObject({ polls: 1, sawAbort: true });
   });
 
   it("ignores a second stop signal", async () => {
@@ -61,8 +72,10 @@ describe("worker", () => {
     const loop = new WorkerLoop(new FailingQueuePoller(), workerLogger(new LogSink()));
     await expect(loop.run()).rejects.toThrow("queue unreachable");
   });
+});
 
-  it("IdleQueuePoller returns as soon as it is aborted", async () => {
+describe("IdleQueuePoller", () => {
+  it("returns as soon as it is aborted", async () => {
     const stopper = new AbortController();
     const started = Date.now();
     const poll = new IdleQueuePoller(60_000).pollOnce(stopper.signal);

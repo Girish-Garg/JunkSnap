@@ -27,21 +27,18 @@ export class CoreSettings {
 
   static fromEnv(env: Env): CoreSettings {
     const values = parseEnv(CoreEnv, env);
-    const origins = CoreSettings.#allowedOrigins(values.JUNKSNAP_STAGE, splitList(values.CORS_ORIGINS));
-    return new CoreSettings(values.JUNKSNAP_STAGE, values.AWS_REGION, origins);
+    return new CoreSettings(values.JUNKSNAP_STAGE, values.AWS_REGION, splitList(values.CORS_ORIGINS));
   }
 
-  get allowsAnyOrigin(): boolean {
-    return this.corsOrigins.includes(ANY_ORIGIN);
-  }
-
-  static #allowedOrigins(stage: Stage, origins: readonly string[]): readonly string[] {
-    if (stage === "dev") {
-      return origins.length === 0 ? [ANY_ORIGIN] : origins;
+  // Only the api calls this, so worker and scores start without CORS_ORIGINS.
+  allowedOrigins(): typeof ANY_ORIGIN | string[] {
+    const listed = this.corsOrigins.length > 0 && !this.corsOrigins.includes(ANY_ORIGIN);
+    if (listed) {
+      return [...this.corsOrigins];
     }
-    if (origins.length === 0 || origins.includes(ANY_ORIGIN)) {
-      throw new ConfigError(`CORS_ORIGINS must list exact origins in the ${stage} stage; * is dev only`);
+    if (this.stage === "dev") {
+      return ANY_ORIGIN;
     }
-    return origins;
+    throw new ConfigError(`CORS_ORIGINS must list exact origins in the ${this.stage} stage; * is dev only`);
   }
 }

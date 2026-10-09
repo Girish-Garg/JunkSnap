@@ -14,22 +14,30 @@ describe("CoreSettings", () => {
     expect(() => CoreSettings.fromEnv({ JUNKSNAP_STAGE: "prod" })).toThrow(/JUNKSNAP_STAGE/);
   });
 
-  it("allows any origin in dev when CORS_ORIGINS is unset or *", () => {
-    for (const cors of [undefined, "", "*"]) {
-      const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev", CORS_ORIGINS: cors });
-      expect(settings.corsOrigins).toEqual(["*"]);
-      expect(settings.allowsAnyOrigin).toBe(true);
-    }
+  it("loads in demo without CORS_ORIGINS, as worker and scores need", () => {
+    const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "demo" });
+    expect(settings.stage).toBe("demo");
+    expect(settings.corsOrigins).toEqual([]);
   });
 
-  it("splits comma-separated origins and trims them", () => {
+  it("keeps the raw comma-separated origins, trimmed", () => {
     const env = { JUNKSNAP_STAGE: "demo", CORS_ORIGINS: " https://a.example.org , http://localhost:5173 ," };
-    const settings = CoreSettings.fromEnv(env);
-    expect(settings.corsOrigins).toEqual(["https://a.example.org", "http://localhost:5173"]);
-    expect(settings.allowsAnyOrigin).toBe(false);
+    expect(CoreSettings.fromEnv(env).corsOrigins).toEqual(["https://a.example.org", "http://localhost:5173"]);
+  });
+});
+
+describe("CoreSettings.allowedOrigins", () => {
+  it.each([undefined, "", "*", "*,http://localhost:5173"])("allows any origin in dev when CORS_ORIGINS=%s", (cors) => {
+    expect(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev", CORS_ORIGINS: cors }).allowedOrigins()).toBe("*");
+  });
+
+  it.each(["dev", "demo"])("returns the listed origins in %s", (stage) => {
+    const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: stage, CORS_ORIGINS: "https://a.example.org" });
+    expect(settings.allowedOrigins()).toEqual(["https://a.example.org"]);
   });
 
   it.each([undefined, "", "*", "https://a.example.org,*"])("rejects CORS_ORIGINS=%s in demo", (cors) => {
-    expect(() => CoreSettings.fromEnv({ JUNKSNAP_STAGE: "demo", CORS_ORIGINS: cors })).toThrow(ConfigError);
+    const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "demo", CORS_ORIGINS: cors });
+    expect(() => settings.allowedOrigins()).toThrow(ConfigError);
   });
 });

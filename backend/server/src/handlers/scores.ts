@@ -1,14 +1,10 @@
-import { CoreSettings } from "../settings/CoreSettings.js";
-import type { Env } from "../settings/utils.js";
-import { createLogger } from "./logger.js";
+import { EntryPoint, type EntryContext } from "./EntryPoint.js";
 
 // One CronJob run; scoring arrives with its own task.
-function main(env: Env): void {
-  const settings = CoreSettings.fromEnv(env);
-  const logger = createLogger({ service: "scores", stage: settings.stage });
+export async function runScores({ logger }: EntryContext): Promise<void> {
   logger.info("scores started");
 }
 
 if (import.meta.main) {
-  main(process.env);
+  await new EntryPoint({ service: "scores" }).run(process.env, runScores);
 }
