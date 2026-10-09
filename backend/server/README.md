@@ -8,3 +8,6 @@ One TypeScript image, three entry points: `api` (default, `node dist/handlers/we
 4. Contract validators (`validateSite()` and friends in `src/contracts/index.gen.ts`) are for request bodies and inbound messages only, and throw 400 `ValidationError`; call them only from handlers and adapters, never as Fastify route schemas (Fastify's Ajv is draft-07). After a schema change run `npm run gen:contracts` and commit the `.gen.ts` files.
 5. Contract types (`import type { Site } from "../contracts/index.gen.js"`) may be imported in any layer.
 6. Logs: services take the `Logger` port; inside a route plugin pass `app.log`. Entry points run through `EntryPoint`, which logs failures as one JSON line and exits 1. Never log images, tokens or names.
+7. Sign-in: in your builder, `const guard = RouteGuard.fromEnv(context.env)` (from `handlers/auth/RouteGuard.ts`; needs `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`).
+   Routes that create reports, scans, votes, cleanups or letters call `const user = await guard.requireUser(request)` (401 `unauthorized` without a valid Cognito ID token); browsing routes call `await guard.optionalUser(request)` (undefined for a guest).
+   Key data by `user.userId` (the token `sub`), never by email, and throw `ForbiddenError` (403 `forbidden`) when that user may not touch the resource.
