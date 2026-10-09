@@ -4,6 +4,7 @@ import { ScanIntake } from "../services/ScanIntake.js";
 import { ScanSessionRules } from "../services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../services/ScanUploadPresigner.js";
 import { ScanSettings } from "../settings/ScanSettings.js";
+import { RouteGuard } from "./auth/RouteGuard.js";
 import type { RouteContext } from "./RouteBuilder.js";
 import { ScanAdapterFactory } from "./ScanAdapterFactory.js";
 import { ScanRequestParser } from "./ScanRequestParser.js";
@@ -11,20 +12,26 @@ import { ScanRequestParser } from "./ScanRequestParser.js";
 export interface ScanRouteServices {
   readonly presigner: ScanUploadPresigner;
   readonly intake: ScanIntake;
+  readonly guard: RouteGuard;
 }
 
-// The phone PUTs the video straight to S3, so it never passes through the api.
-export function scanRoutes({ presigner, intake }: ScanRouteServices): FastifyPluginAsync {
+// Every scan route needs sign-in. The phone PUTs the video straight to S3, so it never passes through the api.
+export function scanRoutes({ presigner, intake, guard }: ScanRouteServices): FastifyPluginAsync {
   const parse = new ScanRequestParser();
   return async (app) => {
-    app.post("/scans/presign", async (request) => presigner.presign(parse.presign(request.body)));
+    app.post("/scans/presign", async (request) => {
+      await guard.requireUser(request);
+      return presigner.presign(parse.presign(request.body));
+    });
     app.post("/scans", async (request, reply) => {
-      const accepted = await intake.submit(parse.session(request.body));
+      const user = await guard.requireUser(request);
+      const accepted = await intake.submit(parse.session(request.body), user.userId);
       return reply.status(202).send(accepted);
     });
-    app.get<{ Params: { id: string } }>("/scans/:id", async (request) =>
-      intake.status(request.params.id, parse.deviceToken(request.headers)),
-    );
+    app.get<{ Params: { id: string } }>("/scans/:id", async (request) => {
+      const user = await guard.requireUser(request);
+      return intake.status(request.params.id, user.userId);
+    });
   };
 }
 
@@ -32,6 +39,7 @@ export function scanRoutes({ presigner, intake }: ScanRouteServices): FastifyPlu
 export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const settings = ScanSettings.fromEnv(env);
+    const guard = RouteGuard.fromEnv(env);
     const adapters = new ScanAdapterFactory(settings, core.awsRegion);
     const now = (): Date => new Date();
     const newScanId = (): string => `scn_${ulid().toLowerCase()}`;
@@ -41,6 +49,6 @@ export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync
       newScanId,
     });
     const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), now });
-    await app.register(scanRoutes({ presigner, intake }));
+    await app.register(scanRoutes({ presigner, intake, guard }));
   };
 }

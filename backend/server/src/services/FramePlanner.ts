@@ -1,5 +1,4 @@
-import type { ScanDetection } from "../contracts/scanSessionPending.js";
-import type { PlannedFrame } from "../domain/ScanFrame.js";
+import type { PlannedFrame, ScanDetection } from "../domain/ScanFrame.js";
 import { SCAN_FRAME_RULES } from "../domain/scanLimits.js";
 
 // One plain frame per second plus the strongest phone-hinted moments; hints only steer frame choice.

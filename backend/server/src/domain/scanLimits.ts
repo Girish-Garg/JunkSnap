@@ -1,4 +1,4 @@
-// The scan video limit from contracts PR #39: at most 40 MB, 60 s and 1280 by 720.
+// The scan video limit in contracts/README.md: at most 40 MB, 60 s and 1280 by 720.
 export const SCAN_VIDEO_LIMITS = {
   maxBytes: 40 * 1024 * 1024,
   maxDurationMs: 60_000,

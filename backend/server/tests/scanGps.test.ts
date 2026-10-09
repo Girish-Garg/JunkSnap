@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GpsFix } from "../src/contracts/scanSessionPending.js";
+import type { GpsFix } from "../src/domain/ScanFrame.js";
 import { ValidationError } from "../src/domain/errors.js";
 import { GpsInterpolator } from "../src/services/GpsInterpolator.js";
 import { ScanSessionRules } from "../src/services/ScanSessionRules.js";

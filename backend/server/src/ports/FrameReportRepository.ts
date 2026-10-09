@@ -1,8 +1,8 @@
-import type { ScanFrameUpload } from "../contracts/scanSessionPending.js";
+import type { ReportUpload } from "../contracts/index.gen.js";
 
 export interface QueuedFrameReport {
   readonly report_id: string;
-  readonly upload: ScanFrameUpload;
+  readonly upload: ReportUpload;
   readonly received_at: string;
 }
 

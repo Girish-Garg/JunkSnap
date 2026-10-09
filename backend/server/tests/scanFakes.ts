@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { copyFile, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
-import type { ScanSession } from "../src/contracts/scanSessionPending.js";
+import { validateScanSession, type ScanSession } from "../src/contracts/index.gen.js";
+import { ExternalServiceError } from "../src/domain/errors.js";
 import { FrameHash } from "../src/domain/FrameHash.js";
+import type { GpsFix } from "../src/domain/ScanFrame.js";
 import type { ScanRecord, ScanUpdate } from "../src/domain/ScanRecord.js";
 import { InvalidVideoError } from "../src/domain/scanErrors.js";
 import type { FrameHasher } from "../src/ports/FrameHasher.js";
@@ -13,43 +16,24 @@ import type { ScanQueue } from "../src/ports/ScanQueue.js";
 import type { ScanRepository } from "../src/ports/ScanRepository.js";
 import type { ScanUploadSigner, SignedUpload, VideoUpload } from "../src/ports/ScanUploadSigner.js";
 import type { ScratchSpace } from "../src/ports/ScratchSpace.js";
-import type { ExtractedFrame, VideoFrameReader, VideoSize } from "../src/ports/VideoFrameReader.js";
+import type { ExtractedFrame, VideoFrameReader, VideoInfo } from "../src/ports/VideoFrameReader.js";
 import { LogSink } from "./LogSink.js";
 
 export const NOW = new Date("2026-10-10T04:02:20Z");
 export const VIDEO_SHA = "58a6b635872943aba34889e6e3c9fc117067b42f79f064042afe57d7e2046f18";
+export const USER_ID = "c8a1f3e6-2b94-4d70-8e5f-1a6b9d3c7e20";
+const FIXTURE = new URL("../../../contracts/fixtures/scan_session.jpr-1.json", import.meta.url);
 
-// The scan_session fixture drafted for contracts PR #39 (sample jpr-1).
-export function sampleSession(overrides: Partial<ScanSession> = {}): ScanSession {
-  const track = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((second) => ({
-    t_ms: second * 1000,
-    lat: 26.85297,
-    lon: 75.81542 + second * 0.00005,
-    accuracy_m: 14,
-    speed_mps: 5,
-    heading: 90,
-  }));
-  return {
-    scan_id: "scn_jpr_1",
-    device_token: "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63",
-    user_id: "c8a1f3e6-2b94-4d70-8e5f-1a6b9d3c7e20",
-    report_type: "open_construction",
-    context: "uncovered_debris",
-    started_at: "2026-10-10T04:02:06Z",
-    ended_at: "2026-10-10T04:02:14Z",
-    duration_ms: 8000,
-    video_key: "scans/scn_jpr_1.webm",
-    video_sha256: VIDEO_SHA,
-    gps_track: track,
-    hints: {
-      model: "yolo-junk-nano-v0",
-      detections: [
-        { t_ms: 3600, score: 0.64, box: { left: 0.52, top: 0.48, width: 0.3, height: 0.28 } },
-        { t_ms: 4000, score: 0.77, box: { left: 0.44, top: 0.46, width: 0.36, height: 0.31 } },
-      ],
-    },
-    ...overrides,
-  };
+export function scanFixture(): unknown {
+  return JSON.parse(readFileSync(FIXTURE, "utf8"));
+}
+
+// Tests may pass any GPS track, empty or out of order, to see it rejected.
+type SessionOverrides = Omit<Partial<ScanSession>, "gps_track"> & { readonly gps_track?: readonly GpsFix[] };
+
+// The contract's scan_session.jpr-1 fixture: an 8 s ride with a fix every second and two phone hints.
+export function sampleSession(overrides: SessionOverrides = {}): ScanSession {
+  return { ...validateScanSession(scanFixture()), ...overrides } as ScanSession;
 }
 
 export function queuedRecord(session: ScanSession = sampleSession()): ScanRecord {
@@ -138,23 +122,27 @@ export class FakeMediaStore implements ScanMediaStore {
   }
 }
 
+// An 8 s 720p clip at 30 fps by default; failAt makes that one cut fail the way a killed ffmpeg does.
 export class FakeVideoFrameReader implements VideoFrameReader {
   readonly extracted: number[][] = [];
-  readonly #size: VideoSize;
-  readonly #missing: ReadonlySet<number>;
+  readonly #info: VideoInfo;
+  readonly #failAt: number | undefined;
 
-  constructor(size: VideoSize = { width: 1280, height: 720 }, missingTimes: readonly number[] = []) {
-    this.#size = size;
-    this.#missing = new Set(missingTimes);
+  constructor(info: Partial<VideoInfo> = {}, failAt?: number) {
+    this.#info = { width: 1280, height: 720, lastFrameMs: 7966, ...info };
+    this.#failAt = failAt;
   }
 
-  async probe(): Promise<VideoSize> {
-    return this.#size;
+  async probe(): Promise<VideoInfo> {
+    return this.#info;
   }
 
   async extract(_videoPath: string, timesMs: readonly number[], outDir: string): Promise<ExtractedFrame[]> {
     this.extracted.push([...timesMs]);
-    return timesMs.filter((tMs) => !this.#missing.has(tMs)).map((tMs) => ({ tMs, path: join(outDir, `frame-${tMs}.jpg`) }));
+    if (this.#failAt !== undefined && timesMs.includes(this.#failAt)) {
+      throw new ExternalServiceError(`ffmpeg was stopped by SIGKILL at ${this.#failAt} ms`);
+    }
+    return timesMs.map((tMs) => ({ tMs, path: join(outDir, `frame-${tMs}.jpg`) }));
   }
 }
 

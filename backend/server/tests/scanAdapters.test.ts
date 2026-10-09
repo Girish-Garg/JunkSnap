@@ -10,10 +10,11 @@ import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { afterEach, describe, expect, it } from "vitest";
 import { DynamoFrameReportRepository } from "../src/adapters/DynamoFrameReportRepository.js";
 import { DynamoScanRepository } from "../src/adapters/DynamoScanRepository.js";
+import { FramecrcParser } from "../src/adapters/FramecrcParser.js";
 import { S3ScanMediaStore } from "../src/adapters/S3ScanMediaStore.js";
 import { S3ScanUploadSigner } from "../src/adapters/S3ScanUploadSigner.js";
 import { SqsScanQueue } from "../src/adapters/SqsScanQueue.js";
-import type { ScanFrameUpload } from "../src/contracts/scanSessionPending.js";
+import type { ReportUpload } from "../src/contracts/index.gen.js";
 import { ExternalServiceError } from "../src/domain/errors.js";
 import { InvalidVideoError } from "../src/domain/scanErrors.js";
 import { queuedRecord } from "./scanFakes.js";
@@ -134,7 +135,7 @@ describe("DynamoFrameReportRepository", () => {
   it("writes a queued report row once and leaves an existing one alone", async () => {
     const dynamo = new FakeAwsClient().reply(() => ({})).reply(conditionFailed).reply(() => ({ Item: { report_id: "rpt_a" } }));
     const reports = new DynamoFrameReportRepository(dynamo.as<DynamoDBDocumentClient>(), "junksnap-dev-reports");
-    const upload: ScanFrameUpload = {
+    const upload: ReportUpload = {
       upload_id: "upl_a",
       report_type: "waste_dump",
       context: "roadside",
@@ -153,6 +154,24 @@ describe("DynamoFrameReportRepository", () => {
       Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z" },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
+  });
+});
+
+describe("FramecrcParser", () => {
+  const parser = new FramecrcParser();
+  const header = "#software: Lavf62\r\n#tb 0: 1/15360\r\n#media_type 0: video\r\n#dimensions 0: 720x1280\r\n";
+
+  it("reads the size and the latest pts, even when packets come out of display order", () => {
+    const packets = "0, 0, 1024, 512, 900, 0x1\r\n0, 512, 76800, 512, 900, 0x2, F=0x0\r\n0, 1024, 2048, 512, 900, 0x3\r\n";
+    expect(parser.parse(header + packets)).toEqual({ width: 720, height: 1280, lastFrameMs: 5000 });
+  });
+
+  it.each([
+    ["no packets", header],
+    ["no dimensions", "#tb 0: 1/1000\n0, 0, 0, 33, 900, 0x1\n"],
+    ["no time base", "#dimensions 0: 320x240\n0, 0, 0, 33, 900, 0x1\n"],
+  ])("gives nothing for a listing with %s", (_case, listing) => {
+    expect(parser.parse(listing)).toBeUndefined();
   });
 });
 

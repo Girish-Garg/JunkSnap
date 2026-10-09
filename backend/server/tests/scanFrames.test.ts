@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ScanDetection } from "../src/contracts/scanSessionPending.js";
+import type { ScanDetection } from "../src/domain/ScanFrame.js";
 import { FrameHash } from "../src/domain/FrameHash.js";
 import type { CandidateFrame } from "../src/domain/ScanFrame.js";
 import { ScanFrameId } from "../src/domain/ScanFrameId.js";

@@ -1,7 +1,7 @@
-import type { ScanSession } from "../contracts/scanSessionPending.js";
+import type { ScanSession } from "../contracts/index.gen.js";
+import { InternalDataError } from "../domain/errors.js";
 import type { ScanFrameCounts } from "../domain/ScanRecord.js";
 import type { CandidateFrame, LocatedFrame, PlannedFrame } from "../domain/ScanFrame.js";
-import { InvalidVideoError } from "../domain/scanErrors.js";
 import type { FrameHasher } from "../ports/FrameHasher.js";
 import type { ExtractedFrame, VideoFrameReader } from "../ports/VideoFrameReader.js";
 import type { FramePlanner } from "./FramePlanner.js";
@@ -13,6 +13,11 @@ export interface FrameTools {
   readonly hasher: FrameHasher;
   readonly planner: FramePlanner;
   readonly selector: FrameSelector;
+}
+
+export interface VideoFile {
+  readonly path: string;
+  readonly lastFrameMs: number;
 }
 
 export interface SampledFrames {
@@ -27,14 +32,13 @@ export class ScanFrameSampler {
     this.#tools = tools;
   }
 
-  async sample(scan: ScanSession, videoPath: string, workDir: string): Promise<SampledFrames> {
-    const planned = this.#tools.planner.plan(scan.duration_ms, scan.hints?.detections ?? []);
+  // Plans against the real video when it is shorter than the session claims, so every cut lands on a frame.
+  async sample(scan: ScanSession, video: VideoFile, workDir: string): Promise<SampledFrames> {
+    const durationMs = Math.min(scan.duration_ms, video.lastFrameMs + 1);
+    const planned = this.#tools.planner.plan(durationMs, scan.hints?.detections ?? []);
     const located = ScanFrameSampler.#locate(planned, new GpsInterpolator(scan.gps_track));
     const times = located.map((frame) => frame.tMs);
-    const extracted = await this.#tools.reader.extract(videoPath, times, workDir);
-    if (located.length > 0 && extracted.length === 0) {
-      throw new InvalidVideoError("no frame could be cut from the video");
-    }
+    const extracted = await this.#tools.reader.extract(video.path, times, workDir);
     const frames = this.#tools.selector.select(await this.#hash(located, extracted));
     const counts = { sampled: planned.length, kept: frames.length, dropped_no_fix: planned.length - located.length };
     return { frames, counts };
@@ -47,14 +51,17 @@ export class ScanFrameSampler {
     });
   }
 
+  // A frame the reader did not cut fails the whole scan rather than quietly shrinking it.
   async #hash(located: readonly LocatedFrame[], extracted: readonly ExtractedFrame[]): Promise<CandidateFrame[]> {
-    const byTime = new Map(located.map((frame) => [frame.tMs, frame]));
-    const pairs = extracted.flatMap((cut) => {
-      const frame = byTime.get(cut.tMs);
-      return frame === undefined ? [] : [{ frame, path: cut.path }];
-    });
+    const paths = new Map(extracted.map((cut) => [cut.tMs, cut.path]));
     return Promise.all(
-      pairs.map(async ({ frame, path }) => ({ ...frame, path, hash: await this.#tools.hasher.hash(path) })),
+      located.map(async (frame) => {
+        const path = paths.get(frame.tMs);
+        if (path === undefined) {
+          throw new InternalDataError(`No frame was cut at ${frame.tMs} ms`);
+        }
+        return { ...frame, path, hash: await this.#tools.hasher.hash(path) };
+      }),
     );
   }
 }

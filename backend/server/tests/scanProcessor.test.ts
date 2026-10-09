@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ScanSession } from "../src/contracts/scanSessionPending.js";
-import { InternalDataError } from "../src/domain/errors.js";
+import { validateReportUpload, type ScanSession } from "../src/contracts/index.gen.js";
+import { ExternalServiceError, InternalDataError } from "../src/domain/errors.js";
 import { ScanFrameId } from "../src/domain/ScanFrameId.js";
+import { ScanRequestParser } from "../src/handlers/ScanRequestParser.js";
 import type { DownloadedVideo } from "../src/ports/ScanMediaStore.js";
-import type { VideoSize } from "../src/ports/VideoFrameReader.js";
+import type { VideoInfo } from "../src/ports/VideoFrameReader.js";
 import { FramePlanner } from "../src/services/FramePlanner.js";
 import { FrameSelector } from "../src/services/FrameSelector.js";
 import { ScanFramePublisher } from "../src/services/ScanFramePublisher.js";
@@ -23,14 +24,16 @@ import {
   NOW,
   queuedRecord,
   sampleSession,
+  scanFixture,
   testLogger,
+  USER_ID,
 } from "./scanFakes.js";
 
 interface Setup {
   readonly session?: ScanSession;
   readonly video?: DownloadedVideo | null;
-  readonly size?: VideoSize;
-  readonly missingTimes?: readonly number[];
+  readonly info?: Partial<VideoInfo>;
+  readonly failAt?: number;
   readonly bitsFor?: (tMs: number) => bigint;
 }
 
@@ -45,7 +48,7 @@ let sink: LogSink;
 function processor(setup: Setup = {}): VideoScanProcessor {
   scans.rows.set("scn_jpr_1", queuedRecord(setup.session));
   media = new FakeMediaStore(setup.video);
-  reader = new FakeVideoFrameReader(setup.size, setup.missingTimes);
+  reader = new FakeVideoFrameReader(setup.info, setup.failAt);
   const now = (): Date => NOW;
   const tools = { reader, hasher: new FakeFrameHasher(setup.bitsFor), planner: new FramePlanner(), selector: new FrameSelector() };
   const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now);
@@ -103,6 +106,35 @@ describe("VideoScanProcessor", () => {
     expect(media.originals.get(id.originalKey)).toEqual({ jpeg, sha256 });
     const plain = reports.rows.get(ScanFrameId.of("scn_jpr_1", 5000).reportId);
     expect(plain?.upload).not.toHaveProperty("hints");
+    const hinted = reports.rows.get(id.reportId);
+    expect(validateReportUpload(hinted?.upload)).toEqual(hinted?.upload);
+    expect(validateReportUpload(plain?.upload)).toEqual(plain?.upload);
+  });
+
+  it("parses the scan_session.jpr-1 fixture and turns it into rows that pass the report_upload contract", async () => {
+    const parsed = new ScanRequestParser().session(scanFixture());
+    expect(parsed).not.toHaveProperty("user_id");
+    expect({ ...parsed, user_id: USER_ID }).toEqual(scanFixture());
+    await processor({ video: VIDEO, session: { ...parsed, user_id: USER_ID } }).process("scn_jpr_1");
+    const rows = [...reports.rows.values()];
+    expect(rows).toHaveLength(8);
+    for (const row of rows) {
+      expect(() => validateReportUpload(row.upload)).not.toThrow();
+    }
+  });
+
+  it("plans frames only within the real video when it is shorter than the session claims", async () => {
+    await processor({ video: VIDEO, info: { lastFrameMs: 4500 } }).process("scn_jpr_1");
+    expect(reader.extracted).toEqual([[0, 1000, 2000, 3000, 3600, 4000]]);
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "done", frames: { sampled: 6, kept: 5, dropped_no_fix: 0 } });
+  });
+
+  it("rethrows a failed cut for SQS to retry and never marks the scan done with frames missing", async () => {
+    await expect(processor({ video: VIDEO, failAt: 3000 }).process("scn_jpr_1")).rejects.toThrow(ExternalServiceError);
+    expect(scans.rows.get("scn_jpr_1")?.status).toBe("processing");
+    expect(reports.rows.size).toBe(0);
+    expect(queue.messages).toHaveLength(0);
+    expect(scratch.removed).toEqual(["/scratch/scn_jpr_1"]);
   });
 
   it("drops frames without a usable fix before cutting them and counts them", async () => {
@@ -124,8 +156,8 @@ describe("VideoScanProcessor", () => {
     ["the video was never uploaded", { video: null }, "No video was uploaded"],
     ["the bytes do not match the checksum", { video: { ...VIDEO, sha256Hex: "0".repeat(64) } }, "do not match video_sha256"],
     ["the video is over 40 MB", { video: { ...VIDEO, bytes: 40 * 1024 * 1024 + 1 } }, "the limit is"],
-    ["the video is larger than 720p", { video: VIDEO, size: { width: 1920, height: 1080 } }, "1920x1080"],
-    ["no frame could be cut", { video: VIDEO, missingTimes: [0, 1000, 2000, 3000, 3600, 4000, 5000, 6000, 7000] }, "no frame"],
+    ["the video is larger than 720p", { video: VIDEO, info: { width: 1920, height: 1080 } }, "1920x1080"],
+    ["the video really runs past 60 s", { video: VIDEO, info: { lastFrameMs: 60_033 } }, "the limit is 60000 ms"],
   ])("fails the scan for good with invalid_video when %s", async (_case, setup, detail) => {
     await processor(setup).process("scn_jpr_1");
     expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "failed", reason: "invalid_video" });
@@ -137,7 +169,7 @@ describe("VideoScanProcessor", () => {
   });
 
   it("accepts a portrait 720 by 1280 video", async () => {
-    await processor({ video: VIDEO, size: { width: 720, height: 1280 } }).process("scn_jpr_1");
+    await processor({ video: VIDEO, info: { width: 720, height: 1280 } }).process("scn_jpr_1");
     expect(scans.rows.get("scn_jpr_1")?.status).toBe("done");
   });
 

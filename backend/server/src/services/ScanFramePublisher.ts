@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ScanFrameUpload, ScanSession } from "../contracts/scanSessionPending.js";
+import type { ReportUpload, ScanSession } from "../contracts/index.gen.js";
 import type { CandidateFrame } from "../domain/ScanFrame.js";
 import { ScanFrameId } from "../domain/ScanFrameId.js";
 import type { FrameReportRepository } from "../ports/FrameReportRepository.js";
@@ -46,7 +46,7 @@ export class ScanFramePublisher {
     return id.reportId;
   }
 
-  static #upload(scan: ScanSession, frame: CandidateFrame, id: ScanFrameId, sha256: string): ScanFrameUpload {
+  static #upload(scan: ScanSession, frame: CandidateFrame, id: ScanFrameId, sha256: string): ReportUpload {
     return {
       upload_id: id.uploadId,
       report_type: scan.report_type,
@@ -63,7 +63,7 @@ export class ScanFramePublisher {
   }
 
   // The phone's detection at this frame travels as a hint for the pipeline, never as evidence.
-  static #hints(scan: ScanSession, frame: CandidateFrame): Pick<ScanFrameUpload, "hints"> {
+  static #hints(scan: ScanSession, frame: CandidateFrame): Pick<ReportUpload, "hints"> {
     if (frame.hintScore === undefined || scan.hints === undefined) {
       return {};
     }

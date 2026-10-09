@@ -1,4 +1,4 @@
-import type { ScanSession } from "../contracts/scanSessionPending.js";
+import type { ScanSession } from "../contracts/index.gen.js";
 
 export type ScanStatus = "queued" | "processing" | "done" | "failed";
 export type ScanFailureReason = "invalid_video" | "retries_exhausted";

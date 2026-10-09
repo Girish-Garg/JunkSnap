@@ -1,5 +1,4 @@
-import type { GpsFix } from "../contracts/scanSessionPending.js";
-import type { FramePosition } from "../domain/ScanFrame.js";
+import type { FramePosition, GpsFix } from "../domain/ScanFrame.js";
 import { SCAN_GPS_LIMITS } from "../domain/scanLimits.js";
 
 const DEGREE_STEPS = 1e6;

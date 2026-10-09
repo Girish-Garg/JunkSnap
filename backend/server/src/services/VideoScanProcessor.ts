@@ -67,8 +67,8 @@ export class VideoScanProcessor {
 
   async #run(scan: ScanRecord, workDir: string): Promise<ScanOutcome> {
     const videoPath = join(workDir, `video${extname(scan.video_key)}`);
-    await this.#deps.loader.load(scan, videoPath);
-    const sampled = await this.#deps.sampler.sample(scan, videoPath, workDir);
+    const { lastFrameMs } = await this.#deps.loader.load(scan, videoPath);
+    const sampled = await this.#deps.sampler.sample(scan, { path: videoPath, lastFrameMs }, workDir);
     const reportIds = await this.#deps.publisher.publish(scan, sampled.frames);
     return { counts: sampled.counts, reportIds };
   }

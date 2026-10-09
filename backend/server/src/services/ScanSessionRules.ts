@@ -1,4 +1,4 @@
-import type { ScanSession } from "../contracts/scanSessionPending.js";
+import type { ScanSession } from "../contracts/index.gen.js";
 import { ValidationError } from "../domain/errors.js";
 import { SCAN_GPS_LIMITS } from "../domain/scanLimits.js";
 

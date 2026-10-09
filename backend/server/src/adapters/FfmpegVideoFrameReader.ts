@@ -1,76 +1,111 @@
-import { spawn } from "node:child_process";
-import { access } from "node:fs/promises";
+import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { stat } from "node:fs/promises";
 import { join } from "node:path";
+import type { Readable } from "node:stream";
 import { ExternalServiceError } from "../domain/errors.js";
 import { InvalidVideoError } from "../domain/scanErrors.js";
-import type { ExtractedFrame, VideoFrameReader, VideoSize } from "../ports/VideoFrameReader.js";
+import type { ExtractedFrame, VideoFrameReader, VideoInfo } from "../ports/VideoFrameReader.js";
+import { FramecrcParser } from "./FramecrcParser.js";
 
-// Matches "Video: vp9 (Profile 0), yuv420p(tv), 1280x720," in ffmpeg's stream listing.
-const VIDEO_STREAM_SIZE = /Video:.*?\b(\d{2,5})x(\d{2,5})\b/;
 const MS_PER_SECOND = 1_000;
-const MAX_STDERR_CHARS = 20_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
+// A minute of video at 240 fps lists in about 1 MB, so more than this is not a phone recording.
+const MAX_STDOUT_CHARS = 16_000_000;
+const MAX_STDERR_CHARS = 4_000;
 
 interface FfmpegRun {
   readonly exitCode: number;
+  readonly stdout: string;
   readonly stderr: string;
+  readonly truncated: boolean;
+}
+
+export interface FfmpegOptions {
+  readonly binary?: string;
+  readonly timeoutMs?: number;
 }
 
 export class FfmpegVideoFrameReader implements VideoFrameReader {
   readonly #binary: string;
+  readonly #timeoutMs: number;
+  readonly #parser = new FramecrcParser();
 
-  constructor(binary = "ffmpeg") {
+  constructor({ binary = "ffmpeg", timeoutMs = DEFAULT_TIMEOUT_MS }: FfmpegOptions = {}) {
     this.#binary = binary;
+    this.#timeoutMs = timeoutMs;
   }
 
-  // Without an output file ffmpeg exits 1 after listing the streams, which is all this needs.
-  async probe(videoPath: string): Promise<VideoSize> {
-    const { stderr } = await this.#run(["-hide_banner", "-i", videoPath]);
-    const match = VIDEO_STREAM_SIZE.exec(stderr);
-    if (match === null) {
+  // Lists the video packets with -c copy: exact timestamps without decoding a single frame.
+  async probe(videoPath: string): Promise<VideoInfo> {
+    const args = ["-v", "error", "-i", videoPath, "-map", "0:v:0", "-c", "copy", "-f", "framecrc", "-"];
+    const run = await this.#run(args);
+    const info = run.exitCode === 0 && !run.truncated ? this.#parser.parse(run.stdout) : undefined;
+    if (info === undefined) {
       throw new InvalidVideoError("The file holds no readable video stream");
     }
-    return { width: Number(match[1]), height: Number(match[2]) };
+    return info;
   }
 
   async extract(videoPath: string, timesMs: readonly number[], outDir: string): Promise<ExtractedFrame[]> {
     const frames: ExtractedFrame[] = [];
     for (const tMs of timesMs) {
-      const path = join(outDir, `frame-${tMs}.jpg`);
-      if (await this.#cut(videoPath, tMs, path)) {
-        frames.push({ tMs, path });
-      }
+      frames.push(await this.#cut(videoPath, tMs, outDir));
     }
     return frames;
   }
 
-  // Seeking before -i is fast and still frame-accurate; past the end ffmpeg exits non-zero and writes nothing.
-  async #cut(videoPath: string, tMs: number, path: string): Promise<boolean> {
+  // Seeking before -i is fast and frame-accurate: the cut is the first frame at or after tMs.
+  async #cut(videoPath: string, tMs: number, outDir: string): Promise<ExtractedFrame> {
+    const path = join(outDir, `frame-${tMs}.jpg`);
     const seconds = (tMs / MS_PER_SECOND).toFixed(3);
     const args = ["-v", "error", "-ss", seconds, "-i", videoPath, "-frames:v", "1", "-update", "1", "-q:v", "2", "-y", path];
-    const { exitCode } = await this.#run(args);
-    return exitCode === 0 && (await FfmpegVideoFrameReader.#exists(path));
+    const run = await this.#run(args);
+    if (run.exitCode !== 0 || !(await FfmpegVideoFrameReader.#written(path))) {
+      const reason = run.stderr.trim().split("\n").at(-1) ?? "";
+      throw new ExternalServiceError(`ffmpeg could not cut the frame at ${tMs} ms (exit ${run.exitCode}): ${reason}`);
+    }
+    return { tMs, path };
   }
 
+  // A run stopped by the time limit or any signal throws ExternalServiceError, so SQS retries the scan.
   #run(args: readonly string[]): Promise<FfmpegRun> {
     return new Promise((resolve, reject) => {
-      const child = spawn(this.#binary, args, { stdio: ["ignore", "ignore", "pipe"] });
-      let stderr = "";
-      child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
-        stderr = (stderr + chunk).slice(0, MAX_STDERR_CHARS);
-      });
+      const limits = { timeout: this.#timeoutMs, killSignal: "SIGKILL" } as const;
+      const child = spawn(this.#binary, args, { stdio: ["ignore", "pipe", "pipe"], ...limits });
+      const output = FfmpegVideoFrameReader.#collect(child);
       child.on("error", (error) => {
         reject(new ExternalServiceError(`Could not start ${this.#binary}`, { cause: error }));
       });
-      child.on("close", (code) => {
-        resolve({ exitCode: code ?? -1, stderr });
+      child.on("close", (code, signal) => {
+        if (signal !== null) {
+          reject(new ExternalServiceError(`${this.#binary} was stopped by ${signal}; the time limit is ${this.#timeoutMs} ms`));
+          return;
+        }
+        resolve({ exitCode: code ?? -1, ...output() });
       });
     });
   }
 
-  static async #exists(path: string): Promise<boolean> {
+  // Keeps stdout whole up to its cap and only the tail of stderr, where ffmpeg puts the reason it failed.
+  static #collect(child: ChildProcessByStdio<null, Readable, Readable>): () => Omit<FfmpegRun, "exitCode"> {
+    const stdout: string[] = [];
+    let chars = 0;
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      chars += chunk.length;
+      if (chars <= MAX_STDOUT_CHARS) {
+        stdout.push(chunk);
+      }
+    });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+      stderr = (stderr + chunk).slice(-MAX_STDERR_CHARS);
+    });
+    return () => ({ stdout: stdout.join(""), stderr, truncated: chars > MAX_STDOUT_CHARS });
+  }
+
+  static async #written(path: string): Promise<boolean> {
     try {
-      await access(path);
-      return true;
+      return (await stat(path)).size > 0;
     } catch {
       return false;
     }

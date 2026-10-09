@@ -3,7 +3,6 @@ import { parseEnv, type Env } from "./utils.js";
 
 const DEFAULT_PRESIGN_TTL_SECONDS = 300;
 
-// SCANS_TABLE arrives with contracts PR #39; the rest are in contracts/README.md today.
 const ScanEnv = z.object({
   ORIGINALS_BUCKET: z.string().min(1),
   REPORTS_QUEUE_URL: z.url(),

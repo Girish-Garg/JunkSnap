@@ -1,19 +1,35 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
+import { UnauthorizedError } from "../src/domain/errors.js";
+import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
 import { ROUTE_BUILDERS } from "../src/handlers/routes.js";
 import { buildScanRoutes, scanRoutes } from "../src/handlers/scanRoutes.js";
 import { createApp } from "../src/handlers/web.js";
+import type { AuthUser, Authenticator } from "../src/ports/Authenticator.js";
 import { ScanIntake } from "../src/services/ScanIntake.js";
 import { ScanSessionRules } from "../src/services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../src/services/ScanUploadPresigner.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
-import { FakeScanQueue, FakeScanRepository, FakeUploadSigner, NOW, sampleSession } from "./scanFakes.js";
+import { FakeScanQueue, FakeScanRepository, FakeUploadSigner, NOW, sampleSession, USER_ID } from "./scanFakes.js";
 
 const DEVICE = "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63";
-const OTHER_DEVICE = "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14";
+const OTHER_USER = "5b0e2c4d-7a91-4f3e-8c6d-2e1f0a9b8c7d";
 const PRESIGN = { content_type: "video/webm", sha256: "a".repeat(64), size_bytes: 9_400_000, duration_ms: 8000, device_token: DEVICE };
+const OWNER = "token-owner";
+const OTHER = "token-other";
+
+// Signature checks are RouteGuard's own tests; here a token is just a name for a user.
+class FakeAuthenticator implements Authenticator {
+  async verify(token: string): Promise<AuthUser> {
+    const userId = { [OWNER]: USER_ID, [OTHER]: OTHER_USER }[token];
+    if (userId === undefined) {
+      throw new UnauthorizedError("Your sign-in is not valid. Please sign in again.");
+    }
+    return { userId };
+  }
+}
 
 let app: FastifyInstance;
 let scans: FakeScanRepository;
@@ -27,17 +43,26 @@ beforeEach(async () => {
   const now = (): Date => NOW;
   const presigner = new ScanUploadPresigner(signer, { ttlSeconds: 300, now, newScanId: () => "scn_01k7abc" });
   const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), now });
+  const guard = new RouteGuard(new FakeAuthenticator());
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
-  app = await createApp(settings, [scanRoutes({ presigner, intake })], logger);
+  app = await createApp(settings, [scanRoutes({ presigner, intake, guard })], logger);
 });
 
 afterEach(async () => {
   await app.close();
 });
 
-function post(url: string, payload: object) {
-  return app.inject({ method: "POST", url, payload });
+function headers(token: string | null) {
+  return token === null ? {} : { authorization: `Bearer ${token}` };
+}
+
+function post(url: string, payload: object, token: string | null = OWNER) {
+  return app.inject({ method: "POST", url, payload, headers: headers(token) });
+}
+
+function get(id: string, token: string | null = OWNER) {
+  return app.inject({ url: `/scans/${id}`, headers: headers(token) });
 }
 
 describe("POST /scans/presign", () => {
@@ -61,17 +86,33 @@ describe("POST /scans/presign", () => {
   });
 
   it.each([
-    ["over 40 MB", { size_bytes: 40 * 1024 * 1024 + 1 }, "size_bytes is over the scan video limit"],
-    ["over 60 s", { duration_ms: 60_001 }, "duration_ms is over the scan video limit"],
-    ["not a video type", { content_type: "image/jpeg" }, "content_type"],
-    ["a bad checksum", { sha256: "XYZ" }, "sha256"],
-    ["an unknown field", { user_id: "someone" }, "user_id"],
-  ])("rejects a video %s with 400", async (_case, change, message) => {
+    ["over 40 MB", { size_bytes: 40 * 1024 * 1024 + 1 }, "scan_too_large", "size_bytes is over the scan video limit"],
+    ["over 60 s", { duration_ms: 60_001 }, "scan_too_large", "duration_ms is over the scan video limit"],
+    ["not a video type", { content_type: "image/jpeg" }, "bad_request", "content_type"],
+    ["a bad checksum", { sha256: "XYZ" }, "bad_request", "sha256"],
+    ["an unknown field", { user_id: "someone" }, "bad_request", "user_id"],
+  ])("rejects a video %s with 400 %s", async (_case, change, error, message) => {
     const response = await post("/scans/presign", { ...PRESIGN, ...change });
     expect(response.statusCode).toBe(400);
-    expect(response.json()).toMatchObject({ error: "bad_request" });
+    expect(response.json()).toMatchObject({ error });
     expect(response.json<{ message: string }>().message).toContain(message);
     expect(signer.uploads).toHaveLength(0);
+  });
+});
+
+describe("sign-in", () => {
+  it.each([
+    ["POST /scans/presign", () => post("/scans/presign", PRESIGN, null)],
+    ["POST /scans", () => post("/scans", sampleSession(), null)],
+    ["GET /scans/{id}", () => get("scn_jpr_1", null)],
+    ["a token the pool does not know", () => post("/scans", sampleSession(), "token-forged")],
+  ])("%s without a valid token returns 401 and touches nothing", async (_case, send) => {
+    const response = await send();
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: "unauthorized" });
+    expect(signer.uploads).toHaveLength(0);
+    expect(scans.rows.size).toBe(0);
+    expect(queue.messages).toHaveLength(0);
   });
 });
 
@@ -89,9 +130,9 @@ describe("POST /scans", () => {
     expect(queue.messages).toEqual([{ kind: "scan", scan_id: "scn_jpr_1" }]);
   });
 
-  it("never trusts a user_id sent by the phone", async () => {
-    await post("/scans", sampleSession());
-    expect(scans.rows.get("scn_jpr_1")).not.toHaveProperty("user_id");
+  it("takes user_id from the verified token, never from the body", async () => {
+    await post("/scans", sampleSession({ user_id: "chosen-by-the-phone" }));
+    expect(scans.rows.get("scn_jpr_1")?.user_id).toBe(USER_ID);
   });
 
   it("is idempotent per scan id and re-sends the message only while the scan is still queued", async () => {
@@ -106,12 +147,13 @@ describe("POST /scans", () => {
     expect(scans.rows.size).toBe(1);
   });
 
-  it("refuses a scan id another device already used", async () => {
+  it("refuses a scan id another user already used", async () => {
     await post("/scans", sampleSession());
-    const response = await post("/scans", sampleSession({ device_token: OTHER_DEVICE }));
+    const response = await post("/scans", sampleSession(), OTHER);
     expect(response.statusCode).toBe(400);
     expect(response.json<{ message: string }>().message).toContain("scan_id is taken");
-    expect(scans.rows.get("scn_jpr_1")?.device_token).toBe(DEVICE);
+    expect(scans.rows.get("scn_jpr_1")?.user_id).toBe(USER_ID);
+    expect(queue.messages).toHaveLength(1);
   });
 
   it.each([
@@ -133,14 +175,11 @@ describe("POST /scans", () => {
 });
 
 describe("GET /scans/{id}", () => {
-  const get = (id: string, device?: string) =>
-    app.inject({ url: `/scans/${id}`, headers: device === undefined ? {} : { "x-device-token": device } });
-
   it("shows the owner the status, frame counts and report ids", async () => {
     await post("/scans", sampleSession());
     const frames = { sampled: 8, kept: 6, dropped_no_fix: 1 };
     await scans.update("scn_jpr_1", { status: "done", reason: null, frames, report_ids: ["rpt_a"], updated_at: "2026-10-10T04:02:52Z" });
-    const response = await get("scn_jpr_1", DEVICE);
+    const response = await get("scn_jpr_1");
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       scan_id: "scn_jpr_1",
@@ -154,12 +193,11 @@ describe("GET /scans/{id}", () => {
   });
 
   it.each([
-    ["another device", "scn_jpr_1", OTHER_DEVICE],
-    ["no device token", "scn_jpr_1", undefined],
-    ["an unknown scan", "scn_nothing", DEVICE],
-  ])("returns 404 for %s", async (_case, id, device) => {
+    ["another signed-in user", "scn_jpr_1", OTHER],
+    ["an unknown scan", "scn_nothing", OWNER],
+  ])("returns 404 for %s", async (_case, id, token) => {
     await post("/scans", sampleSession());
-    const response = await get(id, device);
+    const response = await get(id, token);
     expect(response.statusCode).toBe(404);
     expect(response.json()).toMatchObject({ error: "not_found" });
   });
@@ -168,27 +206,30 @@ describe("GET /scans/{id}", () => {
 describe("buildScanRoutes", () => {
   const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
-  const env = {
+  const scanEnv = {
     JUNKSNAP_STAGE: "dev",
     ORIGINALS_BUCKET: "junksnap-dev-originals-1",
     REPORTS_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/1/junksnap-dev-reports",
     SCANS_TABLE: "junksnap-dev-scans",
     REPORTS_TABLE: "junksnap-dev-reports",
   };
+  const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1" };
 
   it("is registered with the api", () => {
     expect(ROUTE_BUILDERS).toContain(buildScanRoutes);
   });
 
-  it("stops the api from starting without the bucket, queue and tables", async () => {
-    const routes = [buildScanRoutes({ core, env: { JUNKSNAP_STAGE: "dev" } })];
-    await expect(createApp(core, routes, logger)).rejects.toThrow("SCANS_TABLE");
+  it.each([
+    ["the bucket, queue and tables", { JUNKSNAP_STAGE: "dev" }, "SCANS_TABLE"],
+    ["the Cognito user pool", scanEnv, "COGNITO_USER_POOL_ID"],
+  ])("stops the api from starting without %s", async (_case, partial, missing) => {
+    await expect(createApp(core, [buildScanRoutes({ core, env: partial })], logger)).rejects.toThrow(missing);
   });
 
-  it("serves the scan routes once its environment is set, without calling AWS for a bad body", async () => {
+  it("serves the scan routes behind sign-in once its environment is set, without calling AWS", async () => {
     const built = await createApp(core, [buildScanRoutes({ core, env })], logger);
-    const response = await built.inject({ method: "POST", url: "/scans/presign", payload: {} });
-    expect(response.statusCode).toBe(400);
+    const response = await built.inject({ method: "POST", url: "/scans/presign", payload: PRESIGN });
+    expect(response.statusCode).toBe(401);
     await built.close();
   });
 });
