@@ -14,6 +14,8 @@ from training.ports import ObjectStore
 from training.utils import s3_key
 
 MAX_REPO_BYTES = 5_000_000
+# The account id stays out of committed files.
+PRIVATE_BUCKET = "s3://junksnap-<stage>-originals-<account_id>"
 
 
 class ManifestBuilder:
@@ -91,7 +93,7 @@ class ManifestFile:
         self._repo.unlink(missing_ok=True)
         key = s3_key("manifest.jsonl")
         self._store.upload_file(self._work, key)
-        return self._store.uri(key) or str(self._work)
+        return f"{PRIVATE_BUCKET}/{key}" if self._store.is_remote else str(self._work)
 
 
 class ManifestSummary:

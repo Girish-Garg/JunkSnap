@@ -1,0 +1,54 @@
+{
+  "manifest": "s3://junksnap-<stage>-originals-<account_id>/datasets/manifest.jsonl",
+  "split_seed": 26,
+  "images": 14965,
+  "with_boxes": 12316,
+  "by_source": {
+    "dfire": 1500,
+    "garbage_od": 10464,
+    "qr4change": 1967,
+    "taco": 1034
+  },
+  "by_licence": {
+    "CC-BY-4.0": 13465,
+    "CC0-1.0": 1500
+  },
+  "by_split": {
+    "test": 1524,
+    "train": 11978,
+    "val": 1463
+  },
+  "by_source_split": {
+    "dfire/test": 157,
+    "dfire/train": 1196,
+    "dfire/val": 147,
+    "garbage_od/test": 1060,
+    "garbage_od/train": 8360,
+    "garbage_od/val": 1044,
+    "qr4change/test": 184,
+    "qr4change/train": 1590,
+    "qr4change/val": 193,
+    "taco/test": 123,
+    "taco/train": 832,
+    "taco/val": 79
+  },
+  "by_report_type": {
+    "none": 11964,
+    "not_waste": 1259,
+    "waste_dump": 1742
+  },
+  "by_material": {
+    "e_waste": 1,
+    "glass": 2759,
+    "metal": 2120,
+    "organic": 2294,
+    "paper": 3497,
+    "plastic": 2245,
+    "textile": 25
+  },
+  "by_hazard": {
+    "burning": 818,
+    "chemicals": 10,
+    "e_waste": 1
+  }
+}

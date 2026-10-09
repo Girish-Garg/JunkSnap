@@ -87,6 +87,7 @@ def test_large_manifests_go_to_s3(tmp_path: Path, store, class_map, monkeypatch)
     fetch(tmp_path / "cache", store)
     rows = ManifestBuilder(tmp_path / "cache", class_map, LICENCES).build()
     summary = ManifestFile(tmp_path / "cache", tmp_path, store).write(rows)
-    assert summary["manifest"] == "s3://fake-bucket/datasets/manifest.jsonl"
+    assert summary["manifest"].endswith("/datasets/manifest.jsonl")
+    assert "fake-bucket" not in summary["manifest"]
     assert not (tmp_path / "manifest.jsonl").exists()
     assert "datasets/manifest.jsonl" in store.uploaded
