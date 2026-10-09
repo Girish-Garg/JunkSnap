@@ -9,4 +9,6 @@ from collections.abc import Callable
 
 from fastapi import APIRouter
 
-ROUTER_BUILDERS: tuple[Callable[[], APIRouter], ...] = ()
+from agent.handlers.verify_routes import build_verify_router
+
+ROUTER_BUILDERS: tuple[Callable[[], APIRouter], ...] = (build_verify_router,)

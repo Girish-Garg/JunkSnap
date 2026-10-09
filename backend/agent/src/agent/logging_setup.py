@@ -18,11 +18,14 @@ class JsonFormatter(logging.Formatter):
         self._fixed_fields = dict(fixed_fields)
 
     def format(self, record: logging.LogRecord) -> str:
-        entry: dict[str, str] = {
+        """Fields passed as `extra={"fields": {...}}` are added to the line as JSON keys."""
+        extra = getattr(record, "fields", None)
+        entry: dict[str, object] = {
             "time": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
+            **(extra if isinstance(extra, Mapping) else {}),
             **self._fixed_fields,
         }
         if record.exc_info:
