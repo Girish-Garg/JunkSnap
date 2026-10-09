@@ -4,20 +4,20 @@ JunkSnap runs on one Amazon EKS Auto Mode cluster, `junksnap`, in `ap-south-1`. 
 
 ## Layout
 
-- `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: private originals bucket (KMS), public blurred bucket, DynamoDB tables (on demand), SQS queue plus dead-letter queue, an Amazon Location resource, the Secrets Manager placeholders and the stage's EKS Pod Identity roles.
+- `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: private originals bucket (KMS; photos, scan videos, embeddings), public blurred bucket, DynamoDB tables (on demand, including `scans` and `users`), SQS queue plus dead-letter queue, the Cognito user pool and app client (email sign-in, no client secret), the Secrets Manager placeholders and the stage's EKS Pod Identity roles. Amazon Location Places v2 needs no resource; the worker role gets `geo-places:ReverseGeocode`.
 - `eks/`: the eksctl config for the cluster (Auto Mode, ap-south-1).
 - `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace, image tags and stage config.
 
 ## Workloads
 
-| Workload | Package | Kind | Exposed |
+| Workload | Image (code) | Kind | Exposed |
 |---|---|---|---|
-| `api` | `pipeline` | Deployment, FastAPI | public routes through the ALB |
-| `agent` | `agent` | Deployment, FastAPI | public `POST /sites/{id}/letters`; other routes cluster-internal |
-| `worker` | `pipeline` | Deployment | none; long-polls SQS and calls `agent` over HTTP |
-| `scores` | `pipeline` | CronJob | none |
+| `api` | `junksnap-server` (`backend/server`; default command `node dist/handlers/web.js`) | Deployment, Fastify | every public route through the ALB, letters included |
+| `worker` | `junksnap-server` (command `node dist/handlers/worker.js`) | Deployment | none; long-polls SQS and calls `ml` over HTTP |
+| `scores` | `junksnap-server` (command `node dist/handlers/scores.js`) | CronJob | none |
+| `ml` | `junksnap-ml` (`backend/ml`) | Deployment, FastAPI | none; `POST /internal/verify` inside the cluster only |
 
-CloudFront sits in front of the ALB for HTTPS. Amplify hosts the web app. Images live in ECR. Environment variable names come from `contracts/README.md`; values come from the stack outputs.
+Decision 20261010-0159. CloudFront sits in front of the ALB for HTTPS. Amplify hosts the web app. Images live in ECR repositories `junksnap-server` and `junksnap-ml`. The `ml` role may read only `media/` in the public bucket and write only `embeddings/` in the private one. Environment variable names come from `contracts/README.md`; values come from the stack outputs.
 
 ## Commands (dev only)
 
@@ -36,7 +36,7 @@ Render with `kubectl kustomize` and read the output before every apply.
 - Pods get AWS access only through EKS Pod Identity: one role per workload, least privilege. No access keys in pods, images, manifests or ConfigMaps.
 - Secrets (OpenAI and OpenRouter keys) live in Secrets Manager. The human stores the values; templates only create the placeholder.
 - Originals stay private under KMS. The blurred bucket is the only public image store.
-- Only the `agent` letters route and the `api` public routes are reachable from outside the cluster.
+- Only the `api` public routes are reachable from outside the cluster; `ml` never is.
 - Every queue has a dead-letter queue. Failed reports end in a "needs review" status, never silently dropped.
 - The demo deny rules in `.claude/settings.json` match any command text containing `junksnap-demo` or `overlays/demo` (also `overlays\demo`). So stage overlay files with `git add infra/`, and pass PR or commit text with `--body-file` or `-F`.
 

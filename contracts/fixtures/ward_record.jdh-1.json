@@ -1,0 +1,40 @@
+{
+  "id": "jodhpur-uttar-001",
+  "city": "jodhpur",
+  "state": "Rajasthan",
+  "municipal_body": {
+    "value": "Nagar Nigam Jodhpur Uttar (Municipal Corporation Jodhpur North)",
+    "source_url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20north.pdf",
+    "fetched_at": "2026-10-09T20:15:37+00:00",
+    "page_sha256": "ddb949bc7b3ff91c8e5abc165ff9bbb71aa4b9c60a89b12cb7b0ea0babf74e17"
+  },
+  "ward_number": {
+    "value": 1,
+    "source_url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20north.pdf",
+    "fetched_at": "2026-10-09T20:15:37+00:00",
+    "page_sha256": "ddb949bc7b3ff91c8e5abc165ff9bbb71aa4b9c60a89b12cb7b0ea0babf74e17"
+  },
+  "zone": null,
+  "ward_name": null,
+  "area_km2": null,
+  "population": {
+    "value": {
+      "count": 7702,
+      "census_year": null
+    },
+    "source_url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20north.pdf",
+    "fetched_at": "2026-10-09T20:15:37+00:00",
+    "page_sha256": "ddb949bc7b3ff91c8e5abc165ff9bbb71aa4b9c60a89b12cb7b0ea0babf74e17"
+  },
+  "councillor_seat": null,
+  "sanitation_office": null,
+  "assembly_seat": null,
+  "lok_sabha_seat": null,
+  "disposal_points": null,
+  "review_status": "unreviewed",
+  "extracted_by": {
+    "provider": "amazon-bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
+  }
+}
