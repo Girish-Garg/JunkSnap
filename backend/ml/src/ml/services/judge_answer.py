@@ -2,9 +2,9 @@
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ml.domain.insights import (
     HazardSighting,
@@ -84,14 +84,15 @@ class JudgeAnswer(BaseModel):
             decides_burning=True,
         )
 
+    @model_validator(mode="after")
+    def _burning_is_listed(self) -> Self:
+        # Every hazard confidence is the judge's own, so burning must also be a listed hazard.
+        if self.burning != any(item.hazard == "burning" for item in self.hazards):
+            raise ValueError("burning must match a burning entry in hazards")
+        return self
+
     def _sightings(self, source: InsightSource) -> tuple[HazardSighting, ...]:
-        # The burning field decides burning, so judge.burning and the hazards always agree.
-        found: dict[str, float] = {
-            item.hazard: item.confidence for item in self.hazards if item.hazard != "burning"
-        }
-        if self.burning:
-            listed = [item.confidence for item in self.hazards if item.hazard == "burning"]
-            found["burning"] = listed[0] if listed else self.confidence
+        found = {item.hazard: item.confidence for item in self.hazards}
         return tuple(HazardSighting(hazard, conf, source) for hazard, conf in found.items())
 
 

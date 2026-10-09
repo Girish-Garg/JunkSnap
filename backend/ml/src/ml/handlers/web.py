@@ -3,7 +3,6 @@
 from collections.abc import Sequence
 
 from fastapi import APIRouter, FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from ml.handlers.routers import ROUTER_BUILDERS
 from ml.logging_setup import JsonLogging
@@ -13,15 +12,9 @@ SERVICE_NAME = "ml"
 
 
 def create_app(settings: CoreSettings, routers: Sequence[APIRouter]) -> FastAPI:
-    """Build the app: JSON logs, CORS, GET /healthz and every given router."""
+    """JSON logs, GET /healthz and every given router; no CORS, the app is cluster-internal."""
     JsonLogging({"service": SERVICE_NAME, "stage": settings.stage}).install()
     app = FastAPI(title="JunkSnap ml")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=list(settings.allowed_origins()),
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
 
     @app.get("/healthz")
     def healthz() -> dict[str, bool]:

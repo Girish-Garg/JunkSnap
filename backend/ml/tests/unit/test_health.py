@@ -18,13 +18,12 @@ def test_healthz_returns_ok() -> None:
     assert response.json() == {"ok": True}
 
 
-def test_cors_allows_each_listed_origin() -> None:
-    settings = CoreSettings(CORS_ORIGINS="https://a.example, https://b.example")
-    client = TestClient(create_app(settings, []))
+def test_sends_no_cors_headers() -> None:
+    client = TestClient(create_app(CoreSettings(JUNKSNAP_STAGE="demo"), []))
 
-    response = client.get("/healthz", headers={"Origin": "https://b.example"})
+    response = client.get("/healthz", headers={"Origin": "https://a.example"})
 
-    assert response.headers["access-control-allow-origin"] == "https://b.example"
+    assert "access-control-allow-origin" not in response.headers
 
 
 def test_serves_given_routers() -> None:
@@ -36,7 +35,7 @@ def test_serves_given_routers() -> None:
 
 
 def test_logs_uvicorn_lines_as_json(capsys: pytest.CaptureFixture[str]) -> None:
-    create_app(CoreSettings(JUNKSNAP_STAGE="demo", CORS_ORIGINS="https://a.example"), [])
+    create_app(CoreSettings(JUNKSNAP_STAGE="demo"), [])
 
     logging.getLogger("uvicorn.access").info("GET /healthz 200")
 

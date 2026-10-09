@@ -42,12 +42,14 @@ class MaterialShare:
         )
 
     @staticmethod
-    def capped(shares: tuple["MaterialShare", ...]) -> tuple["MaterialShare", ...]:
-        """Largest first, scaled down only when they add up to more than 1."""
+    def capped(
+        shares: tuple["MaterialShare", ...], room: float = 1.0
+    ) -> tuple["MaterialShare", ...]:
+        """Largest first, scaled down only when they add up to more than `room`."""
         total = sum(share.share for share in shares)
-        scale = 1 / total if total > 1 else 1.0
+        scale = room / total if total > room else 1.0
         scaled = [replace(share, share=share.share * scale) for share in shares]
-        return tuple(sorted(scaled, key=lambda share: -share.share))
+        return tuple(sorted((s for s in scaled if s.share > 0), key=lambda s: -s.share))
 
     def to_contract(self) -> dict[str, object]:
         return {
@@ -92,16 +94,19 @@ class Insights:
         return any(sighting.hazard == "burning" for sighting in self.hazards)
 
     def merged_with(self, later: "Insights") -> "Insights":
-        """Earlier sources win; a later one (the judge) fills gaps and decides burning."""
-        shares = {share.material: share for share in later.composition}
-        shares.update({share.material: share for share in self.composition})
-        overridden = {"burning"} if later.decides_burning else set()
-        hazards = {sighting.hazard: sighting for sighting in later.hazards}
-        hazards.update({s.hazard: s for s in self.hazards if s.hazard not in overridden})
+        """The later source (the judge) wins; earlier ones only fill what it did not measure."""
+        listed = {share.material for share in later.composition}
+        room = max(1.0 - sum(share.share for share in later.composition), 0.0)
+        fills = tuple(share for share in self.composition if share.material not in listed)
+        composition = later.composition + MaterialShare.capped(fills, room)
+        replaced = {s.hazard for s in later.hazards}
+        if later.decides_burning:
+            replaced.add("burning")
+        hazards = [s for s in self.hazards if s.hazard not in replaced] + list(later.hazards)
         return Insights(
-            composition=MaterialShare.capped(tuple(shares.values())),
-            size_class=self.size_class or later.size_class,
-            hazards=tuple(hazards.values()),
+            composition=tuple(sorted(composition, key=lambda share: -share.share)),
+            size_class=later.size_class or self.size_class,
+            hazards=tuple(hazards),
             decides_burning=self.decides_burning or later.decides_burning,
         )
 

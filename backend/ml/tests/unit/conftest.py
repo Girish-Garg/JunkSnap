@@ -3,7 +3,7 @@ from collections.abc import Iterator
 
 import pytest
 
-CORE_VARIABLES = ("JUNKSNAP_STAGE", "AWS_REGION", "CORS_ORIGINS")
+CORE_VARIABLES = ("JUNKSNAP_STAGE", "AWS_REGION")
 
 
 @pytest.fixture(autouse=True)

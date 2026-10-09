@@ -114,7 +114,7 @@ def test_output_matches_schema(purpose: str, labels: dict[str, float]) -> None:
     assert DATE_TIME.match(str(output["decided_at"]))
 
 
-def test_report_insights_name_the_judge_when_it_filled_gaps() -> None:
+def test_judge_measures_and_labels_fill_the_rest() -> None:
     output = produced("report", {"Garbage": 0.7, "Cardboard": 0.6})
 
     insights = output["insights"]
