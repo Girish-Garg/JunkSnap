@@ -4,29 +4,31 @@ JunkSnap runs on one Amazon EKS Auto Mode cluster, `junksnap`, in `ap-south-1`. 
 
 ## Layout
 
-- `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: private originals bucket (KMS), public blurred bucket, DynamoDB tables (on demand), SQS queue plus dead-letter queue, an Amazon Location resource, the Secrets Manager placeholders and the stage's EKS Pod Identity roles.
+- `aws/shared.yaml`: stack `junksnap-shared`, the ECR repositories `junksnap-server` and `junksnap-ml`.
+- `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: KMS key, private originals bucket, public blurred bucket, DynamoDB tables (on demand), SQS queue plus dead-letter queue, the Secrets Manager placeholders, the Cognito user pool, the stage's EKS Pod Identity roles and CloudFront.
 - `eks/`: the eksctl config for the cluster (Auto Mode, ap-south-1).
-- `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace, image tags and stage config.
+- `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace and stage config; `deploy.py` writes `k8s/deploy/<stage>/` (gitignored) on top with the image tags and stack outputs.
 
 ## Workloads
 
-| Workload | Package | Kind | Exposed |
+| Workload | Image | Kind | Exposed |
 |---|---|---|---|
-| `api` | `pipeline` | Deployment, FastAPI | public routes through the ALB |
-| `agent` | `agent` | Deployment, FastAPI | public `POST /sites/{id}/letters`; other routes cluster-internal |
-| `worker` | `pipeline` | Deployment | none; long-polls SQS and calls `agent` over HTTP |
-| `scores` | `pipeline` | CronJob | none |
+| `api` | `junksnap-server` (TypeScript) | Deployment | every public route through the ALB, letters included |
+| `worker` | `junksnap-server` | Deployment | none; long-polls SQS and calls `ml` over HTTP |
+| `scores` | `junksnap-server` | CronJob | none |
+| `ml` | `junksnap-ml` (Python) | Deployment | none; `POST /internal/verify` at `http://ml` |
 
 CloudFront sits in front of the ALB for HTTPS. Amplify hosts the web app. Images live in ECR. Environment variable names come from `contracts/README.md`; values come from the stack outputs.
 
 ## Commands (dev only)
 
 ```
+uv run scripts/deploy.py dev
 aws cloudformation validate-template --template-body file://infra/aws/stage.yaml --profile junksnap --region ap-south-1
-aws cloudformation deploy --template-file infra/aws/stage.yaml --stack-name junksnap-dev --parameter-overrides Stage=dev --capabilities CAPABILITY_NAMED_IAM --profile junksnap --region ap-south-1
 kubectl kustomize infra/k8s/overlays/dev
-kubectl apply -k infra/k8s/overlays/dev
 ```
+
+`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA, writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS (needed for demo).
 
 Render with `kubectl kustomize` and read the output before every apply.
 
@@ -36,7 +38,7 @@ Render with `kubectl kustomize` and read the output before every apply.
 - Pods get AWS access only through EKS Pod Identity: one role per workload, least privilege. No access keys in pods, images, manifests or ConfigMaps.
 - Secrets (OpenAI and OpenRouter keys) live in Secrets Manager. The human stores the values; templates only create the placeholder.
 - Originals stay private under KMS. The blurred bucket is the only public image store.
-- Only the `agent` letters route and the `api` public routes are reachable from outside the cluster.
+- Only `api` is routed publicly (letters included); `ml` and `/internal/*` never are.
 - Every queue has a dead-letter queue. Failed reports end in a "needs review" status, never silently dropped.
 - The demo deny rules in `.claude/settings.json` match any command text containing `junksnap-demo` or `overlays/demo` (also `overlays\demo`). So stage overlay files with `git add infra/`, and pass PR or commit text with `--body-file` or `-F`.
 

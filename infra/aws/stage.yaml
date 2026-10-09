@@ -1,0 +1,625 @@
+AWSTemplateFormatVersion: "2010-09-09"
+# Tags project and stage come from the stack (scripts/deploy.py); names follow contracts/README.md.
+Description: JunkSnap per-stage resources (stack junksnap-<stage>).
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [dev, demo]
+  ClusterName:
+    Type: String
+    Default: junksnap
+  AlbDnsName:
+    Type: String
+    Default: ""
+    Description: The stage's ALB hostname; empty until the Ingress exists.
+  UploadOrigins:
+    Type: CommaDelimitedList
+    Default: http://localhost:5173
+    Description: Origins allowed to PUT originals outside dev (add the Amplify URL).
+
+Conditions:
+  HasAlb: !Not [!Equals [!Ref AlbDnsName, ""]]
+  IsDev: !Equals [!Ref Stage, dev]
+
+Resources:
+  # ---------- Encryption and storage ----------
+  DataKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub JunkSnap ${Stage} originals
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AccountAdministersKeyThroughIam
+            Effect: Allow
+            Principal: { AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root" }
+            Action: kms:*
+            Resource: "*"
+
+  DataKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/junksnap-${Stage}
+      TargetKeyId: !Ref DataKey
+
+  OriginalsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub junksnap-${Stage}-originals-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt DataKey.Arn
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [PUT]
+            AllowedOrigins: !If [IsDev, ["*"], !Ref UploadOrigins]
+            AllowedHeaders: [Content-Type, x-amz-checksum-sha256]
+            ExposedHeaders: [ETag]
+            MaxAge: 3000
+
+  OriginalsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref OriginalsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyPlainHttp
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource: [!GetAtt OriginalsBucket.Arn, !Sub "${OriginalsBucket.Arn}/*"]
+            Condition: { Bool: { aws:SecureTransport: "false" } }
+
+  PublicBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub junksnap-${Stage}-public-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ["*"]
+            MaxAge: 3000
+
+  PublicBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PublicBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: CloudFrontReadsMediaOnly
+            Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: s3:GetObject
+            Resource: !Sub "${PublicBucket.Arn}/media/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+
+  # ---------- DynamoDB (on demand) ----------
+  ReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-reports
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: report_id, AttributeType: S }
+        - { AttributeName: site_id, AttributeType: S }
+        - { AttributeName: device_token, AttributeType: S }
+        - { AttributeName: captured_at, AttributeType: S }
+        - { AttributeName: received_at, AttributeType: S }
+      KeySchema:
+        - { AttributeName: report_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: by-site
+          KeySchema:
+            - { AttributeName: site_id, KeyType: HASH }
+            - { AttributeName: captured_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: by-device
+          KeySchema:
+            - { AttributeName: device_token, KeyType: HASH }
+            - { AttributeName: received_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+
+  CleanupsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-cleanups
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: cleanup_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: cleanup_id, KeyType: HASH }
+
+  SitesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-sites
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: site_id, AttributeType: S }
+        - { AttributeName: geohash4, AttributeType: S }
+        - { AttributeName: last_reported_at, AttributeType: S }
+      KeySchema:
+        - { AttributeName: site_id, KeyType: HASH }
+      GlobalSecondaryIndexes:
+        - IndexName: by-geohash
+          KeySchema:
+            - { AttributeName: geohash4, KeyType: HASH }
+            - { AttributeName: last_reported_at, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+
+  VotesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-votes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: site_id, AttributeType: S }
+        - { AttributeName: device_token, AttributeType: S }
+      KeySchema:
+        - { AttributeName: site_id, KeyType: HASH }
+        - { AttributeName: device_token, KeyType: RANGE }
+
+  DevicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-devices
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: device_token, AttributeType: S }
+      KeySchema:
+        - { AttributeName: device_token, KeyType: HASH }
+
+  ScoresTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-scores
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: area_kind, AttributeType: S }
+        - { AttributeName: area_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: area_kind, KeyType: HASH }
+        - { AttributeName: area_id, KeyType: RANGE }
+
+  # ---------- SQS ----------
+  ReportsDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub junksnap-${Stage}-reports-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  ReportsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub junksnap-${Stage}-reports
+      VisibilityTimeout: 300
+      ReceiveMessageWaitTimeSeconds: 20
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ReportsDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  # ---------- Secrets (placeholders; the human stores the real values) ----------
+  OpenAiSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub junksnap/${Stage}/openai-api-key
+      Description: OpenAI API key (model fallback). The human replaces the placeholder.
+      SecretString: placeholder
+
+  OpenRouterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub junksnap/${Stage}/openrouter-api-key
+      Description: OpenRouter API key (last fallback). The human replaces the placeholder.
+      SecretString: placeholder
+
+  # ---------- Accounts (the api checks JWTs against the public JWKS; no IAM needed) ----------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub junksnap-${Stage}-users
+      UserPoolTier: LITE
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+      Schema:
+        - { Name: email, AttributeDataType: String, Required: true, Mutable: true }
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireUppercase: false
+          RequireSymbols: false
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - { Name: verified_email, Priority: 1 }
+      # Cognito's own sender allows about 50 emails a day; enough for the hackathon.
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      DeletionProtection: !If [IsDev, INACTIVE, ACTIVE]
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub junksnap-${Stage}-web
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows: [ALLOW_USER_PASSWORD_AUTH, ALLOW_USER_SRP_AUTH, ALLOW_REFRESH_TOKEN_AUTH]
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        RefreshToken: days
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+
+  # ---------- EKS Pod Identity roles, one per workload, least privilege ----------
+  ModelsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub junksnap-${Stage}-models
+      Description: Bedrock (global and regional profiles) plus the fallback provider keys.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: InvokeModels
+            Effect: Allow
+            Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+            Resource:
+              - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*"
+              - "arn:aws:bedrock:*::foundation-model/*"
+              - "arn:aws:bedrock:::foundation-model/*"
+          - Sid: FallbackKeys
+            Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: [!Ref OpenAiSecret, !Ref OpenRouterSecret]
+
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub junksnap-${Stage}-api
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: pods.eks.amazonaws.com }
+            Action: [sts:AssumeRole, sts:TagSession]
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      ManagedPolicyArns: [!Ref ModelsPolicy]
+      Policies:
+        - PolicyName: api
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: PresignOriginalUploads
+                Effect: Allow
+                Action: s3:PutObject
+                Resource:
+                  - !Sub "${OriginalsBucket.Arn}/reports/*"
+                  - !Sub "${OriginalsBucket.Arn}/cleanups/*"
+              - Sid: EncryptOriginals
+                Effect: Allow
+                Action: kms:GenerateDataKey
+                Resource: !GetAtt DataKey.Arn
+              - Sid: Tables
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
+                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem,
+                  dynamodb:BatchWriteItem, dynamodb:ConditionCheckItem, dynamodb:DescribeTable]
+                Resource:
+                  - !GetAtt ReportsTable.Arn
+                  - !Sub "${ReportsTable.Arn}/index/*"
+                  - !GetAtt CleanupsTable.Arn
+                  - !GetAtt SitesTable.Arn
+                  - !Sub "${SitesTable.Arn}/index/*"
+                  - !GetAtt VotesTable.Arn
+                  - !GetAtt DevicesTable.Arn
+                  - !GetAtt ScoresTable.Arn
+              - Sid: QueueReports
+                Effect: Allow
+                Action: [sqs:SendMessage, sqs:GetQueueAttributes]
+                Resource: !GetAtt ReportsQueue.Arn
+
+  WorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub junksnap-${Stage}-worker
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: pods.eks.amazonaws.com }
+            Action: [sts:AssumeRole, sts:TagSession]
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      ManagedPolicyArns: [!Ref ModelsPolicy]
+      Policies:
+        - PolicyName: worker
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadOriginalsAndEmbeddings
+                Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - !Sub "${OriginalsBucket.Arn}/reports/*"
+                  - !Sub "${OriginalsBucket.Arn}/cleanups/*"
+                  - !Sub "${OriginalsBucket.Arn}/embeddings/*"
+              - Sid: DecryptOriginals
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: !GetAtt DataKey.Arn
+              - Sid: WriteBlurredCopies
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub "${PublicBucket.Arn}/media/*"
+              - Sid: ModerateAndBlur
+                Effect: Allow
+                Action: [rekognition:DetectModerationLabels, rekognition:DetectFaces,
+                  rekognition:DetectLabels, rekognition:DetectText]
+                Resource: "*"
+              - Sid: ModerateText
+                Effect: Allow
+                Action: [comprehend:DetectToxicContent, comprehend:DetectPiiEntities,
+                  comprehend:ContainsPiiEntities]
+                Resource: "*"
+              - Sid: ReverseGeocode
+                Effect: Allow
+                Action: geo-places:ReverseGeocode
+                Resource: !Sub "arn:aws:geo-places:${AWS::Region}::provider/default"
+              - Sid: Tables
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
+                  dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem,
+                  dynamodb:BatchWriteItem, dynamodb:ConditionCheckItem, dynamodb:DescribeTable]
+                Resource:
+                  - !GetAtt ReportsTable.Arn
+                  - !Sub "${ReportsTable.Arn}/index/*"
+                  - !GetAtt CleanupsTable.Arn
+                  - !GetAtt SitesTable.Arn
+                  - !Sub "${SitesTable.Arn}/index/*"
+                  - !GetAtt VotesTable.Arn
+                  - !GetAtt DevicesTable.Arn
+                  - !GetAtt ScoresTable.Arn
+              - Sid: ConsumeReports
+                Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility,
+                  sqs:GetQueueAttributes]
+                Resource: !GetAtt ReportsQueue.Arn
+
+  MlRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub junksnap-${Stage}-ml
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: pods.eks.amazonaws.com }
+            Action: [sts:AssumeRole, sts:TagSession]
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      ManagedPolicyArns: [!Ref ModelsPolicy]
+      Policies:
+        - PolicyName: ml
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadBlurredCopiesOnly
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${PublicBucket.Arn}/media/*"
+              # Never reads originals: only the embeddings/ prefix of the private bucket.
+              - Sid: Embeddings
+                Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource: !Sub "${OriginalsBucket.Arn}/embeddings/*"
+              - Sid: EmbeddingsKey
+                Effect: Allow
+                Action: [kms:GenerateDataKey, kms:Decrypt]
+                Resource: !GetAtt DataKey.Arn
+              - Sid: Signals
+                Effect: Allow
+                Action: [rekognition:DetectLabels, rekognition:DetectText]
+                Resource: "*"
+
+  ScoresRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub junksnap-${Stage}-scores
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: pods.eks.amazonaws.com }
+            Action: [sts:AssumeRole, sts:TagSession]
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      Policies:
+        - PolicyName: scores
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadReportsAndSites
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query, dynamodb:Scan,
+                  dynamodb:DescribeTable]
+                Resource:
+                  - !GetAtt ReportsTable.Arn
+                  - !Sub "${ReportsTable.Arn}/index/*"
+                  - !GetAtt SitesTable.Arn
+                  - !Sub "${SitesTable.Arn}/index/*"
+              - Sid: WriteScores
+                Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem,
+                  dynamodb:BatchWriteItem, dynamodb:DescribeTable]
+                Resource: !GetAtt ScoresTable.Arn
+
+  ApiPodIdentity:
+    Type: AWS::EKS::PodIdentityAssociation
+    Properties:
+      ClusterName: !Ref ClusterName
+      Namespace: !Sub junksnap-${Stage}
+      ServiceAccount: api
+      RoleArn: !GetAtt ApiRole.Arn
+
+  WorkerPodIdentity:
+    Type: AWS::EKS::PodIdentityAssociation
+    Properties:
+      ClusterName: !Ref ClusterName
+      Namespace: !Sub junksnap-${Stage}
+      ServiceAccount: worker
+      RoleArn: !GetAtt WorkerRole.Arn
+
+  MlPodIdentity:
+    Type: AWS::EKS::PodIdentityAssociation
+    Properties:
+      ClusterName: !Ref ClusterName
+      Namespace: !Sub junksnap-${Stage}
+      ServiceAccount: ml
+      RoleArn: !GetAtt MlRole.Arn
+
+  ScoresPodIdentity:
+    Type: AWS::EKS::PodIdentityAssociation
+    Properties:
+      ClusterName: !Ref ClusterName
+      Namespace: !Sub junksnap-${Stage}
+      ServiceAccount: scores
+      RoleArn: !GetAtt ScoresRole.Arn
+
+  # ---------- CloudFront: /media/* from the public bucket, everything else to the ALB ----------
+  MediaOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub junksnap-${Stage}-media
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub JunkSnap ${Stage}
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_200
+        Origins:
+          - Id: media
+            DomainName: !GetAtt PublicBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt MediaOriginAccessControl.Id
+            S3OriginConfig: { OriginAccessIdentity: "" }
+          - !If
+            - HasAlb
+            - Id: alb
+              DomainName: !Ref AlbDnsName
+              CustomOriginConfig:
+                OriginProtocolPolicy: http-only
+                HTTPPort: 80
+                OriginReadTimeout: 60
+                OriginKeepaliveTimeout: 5
+            - !Ref AWS::NoValue
+        CacheBehaviors:
+          - PathPattern: /media/*
+            TargetOriginId: media
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # Managed-CORS-S3Origin
+        DefaultCacheBehavior: !If
+          - HasAlb
+          - TargetOriginId: alb
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader
+          # Before the ALB exists everything goes to the bucket, which serves only /media/*.
+          - TargetOriginId: media
+            ViewerProtocolPolicy: https-only
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+
+Outputs:
+  Stage:
+    Value: !Ref Stage
+  Namespace:
+    Value: !Sub junksnap-${Stage}
+  KmsKeyArn:
+    Value: !GetAtt DataKey.Arn
+  KmsAlias:
+    Value: !Ref DataKeyAlias
+  OriginalsBucketName:
+    Value: !Ref OriginalsBucket
+  PublicBucketName:
+    Value: !Ref PublicBucket
+  ReportsTableName:
+    Value: !Ref ReportsTable
+  CleanupsTableName:
+    Value: !Ref CleanupsTable
+  SitesTableName:
+    Value: !Ref SitesTable
+  VotesTableName:
+    Value: !Ref VotesTable
+  DevicesTableName:
+    Value: !Ref DevicesTable
+  ScoresTableName:
+    Value: !Ref ScoresTable
+  ReportsQueueUrl:
+    Value: !Ref ReportsQueue
+  ReportsDeadLetterQueueUrl:
+    Value: !Ref ReportsDeadLetterQueue
+  OpenAiSecretName:
+    Value: !Sub junksnap/${Stage}/openai-api-key
+  OpenRouterSecretName:
+    Value: !Sub junksnap/${Stage}/openrouter-api-key
+  ApiRoleArn:
+    Value: !GetAtt ApiRole.Arn
+  WorkerRoleArn:
+    Value: !GetAtt WorkerRole.Arn
+  MlRoleArn:
+    Value: !GetAtt MlRole.Arn
+  ScoresRoleArn:
+    Value: !GetAtt ScoresRole.Arn
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  DistributionId:
+    Value: !Ref Distribution
+  CloudFrontDomain:
+    Value: !GetAtt Distribution.DomainName
+  PublicBaseUrl:
+    Description: The one base URL for the API and /media/* (no trailing slash)
+    Value: !Sub https://${Distribution.DomainName}
+  AlbDnsName:
+    Value: !If [HasAlb, !Ref AlbDnsName, none]
