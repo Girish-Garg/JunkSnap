@@ -1,0 +1,120 @@
+{
+  "texts": [
+    {
+      "text_file": "texts/sample_rules_en.txt",
+      "text_sha256": "4e6e0e84720494b57a54890b858b896011210bb7302d660f1f3bd07df69ac4cf",
+      "document": "Sample Waste Rules (test fixture)",
+      "language": "en",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "pages": [3, 4]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "fx-dumpsites",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "15(1)",
+      "clause_marker": "(1)",
+      "exact_text": "All existing solid waste dumpsites or garbage vulnerable points to be geographically mapped",
+      "page": 3,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["waste_dump", "vacant_plot", "roadside", "drain", "other"],
+      "channels": ["local_body", "district_collector", "cpgrams", "swachhata", "rajasthan_sampark"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-hot-spots",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "39(2)(vii)",
+      "clause_marker": "(vii)",
+      "exact_text": "plan for collection and transportation of waste from garbage vulnerable points and hot spots for littering",
+      "page": 3,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["waste_dump", "vacant_plot", "roadside", "other"],
+      "channels": ["local_body", "cpgrams", "swachhata", "rajasthan_sampark"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-bins",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "39(2)(x)",
+      "clause_marker": "(x)",
+      "exact_text": "schedule for street sweeping and placement of waste bins as per prescribed norms",
+      "page": 3,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["no_bin", "no_pickup"],
+      "channels": ["local_body", "district_collector", "cpgrams", "swachhata", "rajasthan_sampark"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-vacant-plots",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "39(2)(xi)",
+      "clause_marker": "(xi)",
+      "exact_text": "mapping of vacant plots of land under public or private ownership vulnerable for open dumping of solid waste",
+      "page": 4,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["vacant_plot"],
+      "channels": ["local_body", "cpgrams"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-burning",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "41(4)",
+      "clause_marker": "(4)",
+      "exact_text": "The State Pollution Control Board shall impose Environmental Compensation on persons who burn solid waste.",
+      "page": 4,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["waste_dump", "burning"],
+      "channels": ["pollution_board"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-dust",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "9(1)(d)",
+      "clause_marker": "(d)",
+      "exact_text": "take steps to prevent air pollution, littering of waste and avoid public nuisance during collection",
+      "page": 4,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["open_construction", "uncovered_debris", "dusty_site"],
+      "channels": ["local_body", "pollution_board", "district_collector", "cpgrams", "swachhata", "rajasthan_sampark"],
+      "review_status": "unreviewed"
+    },
+    {
+      "rule_id": "fx-water",
+      "document": "Sample Waste Rules (test fixture)",
+      "clause": "Section 24(1)(a)",
+      "clause_marker": "(a)",
+      "exact_text": "no person shall knowingly cause or permit any polluting matter to enter into any stream or well or sewer",
+      "page": 4,
+      "language": "en",
+      "text_file": "texts/sample_rules_en.txt",
+      "source_url": "https://example.org/sample-rules.pdf",
+      "source_sha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+      "situation_tags": ["contaminated_water", "sewage", "foam", "stagnant", "choked_drain"],
+      "channels": ["local_body", "pollution_board", "cpgrams", "swachhata", "rajasthan_sampark"],
+      "review_status": "unreviewed"
+    }
+  ]
+}
