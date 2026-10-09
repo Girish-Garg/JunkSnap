@@ -15,11 +15,14 @@ class RekognitionLabelSignal(Signal):
     PROVIDER = "rekognition"
 
     def __init__(
-        self, detector: LabelDetector, keywords: Mapping[str, KeywordGroup] = WASTE_KEYWORDS
+        self,
+        detector: LabelDetector,
+        insights: LabelInsights,
+        keywords: Mapping[str, KeywordGroup] = WASTE_KEYWORDS,
     ) -> None:
         self._detector = detector
+        self._insights = insights
         self._keywords = dict(keywords)
-        self._insights = LabelInsights()
 
     def measure(self, case: VerificationCase) -> SignalResult:
         labels = self._detector.detect(case.image)

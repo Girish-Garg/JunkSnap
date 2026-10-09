@@ -1,7 +1,4 @@
-"""ML web service. Run with: uvicorn ml.handlers.web:app --host 0.0.0.0 --port 8000
-
-Routes are not added here: see handlers/routers.py.
-"""
+"""ML web app (uvicorn ml.handlers.web:app --port 8000); routes come from handlers/routers.py."""
 
 from collections.abc import Sequence
 

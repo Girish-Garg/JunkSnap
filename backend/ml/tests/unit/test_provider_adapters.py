@@ -9,6 +9,7 @@ from fakes import JPEG, FakeSecrets
 
 from ml.adapters.bedrock_converse import BedrockConverseProvider, BedrockProviderBuilder
 from ml.adapters.openai_compatible import OpenAiProviderBuilder
+from ml.adapters.secrets_manager import SecretsManagerSecretReader
 from ml.domain.errors import ProviderError
 from ml.domain.images import BlurredImage
 from ml.domain.llm import LlmRequest
@@ -110,3 +111,46 @@ def test_bedrock_client_error_is_a_provider_error() -> None:
 )
 def test_bedrock_version_from_model_id(model: str, version: str) -> None:
     assert BedrockConverseProvider.version_of(model) == version
+
+
+def test_openai_answer_that_is_not_json_is_a_provider_error() -> None:
+    builder = openai_builder("sk-test", lambda request: httpx.Response(200, text="<html>"))
+    provider = builder.build("gpt-4.1-mini")
+    assert provider is not None
+
+    with pytest.raises(ProviderError, match="not JSON"):
+        provider.complete(REQUEST)
+
+
+def test_unreadable_image_format_is_a_provider_error() -> None:
+    odd = LlmRequest("judge", "photo", images=(BlurredImage("media/reports/x.jpg", b"BM-bmp"),))
+    bedrock = BedrockProviderBuilder(FakeBedrockClient()).build("m")  # type: ignore[arg-type]
+    openai = openai_builder("sk-test", lambda request: httpx.Response(200, json=OPENAI_ANSWER))
+    openai_provider = openai.build("gpt-4.1-mini")
+    assert openai_provider is not None
+
+    with pytest.raises(ProviderError):
+        bedrock.complete(odd)
+    with pytest.raises(ProviderError):
+        openai_provider.complete(odd)
+
+
+class FakeSecretsClient:
+    def __init__(self, answers: list[Exception | str]) -> None:
+        self._answers = answers
+
+    def get_secret_value(self, SecretId: str) -> dict[str, str]:  # noqa: N803
+        answer = self._answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return {"SecretString": answer}
+
+
+def test_missing_secret_is_not_remembered() -> None:
+    missing = ClientError({"Error": {"Code": "ResourceNotFoundException"}}, "GetSecretValue")
+    client = FakeSecretsClient([missing, "sk-new"])
+    reader = SecretsManagerSecretReader(client)  # type: ignore[arg-type]
+
+    assert reader.read("junksnap/dev/openai-api-key") is None
+    assert reader.read("junksnap/dev/openai-api-key") == "sk-new"
+    assert reader.read("junksnap/dev/openai-api-key") == "sk-new"

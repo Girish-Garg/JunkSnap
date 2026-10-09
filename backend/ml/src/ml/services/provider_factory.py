@@ -8,16 +8,19 @@ from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 
 
 class ProviderFactory:
-    """A new provider is a new registered builder; results are kept so keys are read once."""
+    """A new provider is a new registered builder; built providers are kept."""
 
     def __init__(self, builders: Mapping[str, ProviderBuilder]) -> None:
         self._builders = dict(builders)
-        self._built: dict[ModelChoice, LlmProvider | None] = {}
+        self._built: dict[ModelChoice, LlmProvider] = {}
 
     def build(self, choice: ModelChoice) -> LlmProvider | None:
-        """None when the provider is skipped, for example for want of an API key."""
+        """None when the provider is skipped; a skip is not kept, so a key added later works."""
         if choice not in self._built:
-            self._built[choice] = self._builder(choice.provider).build(choice.model)
+            provider = self._builder(choice.provider).build(choice.model)
+            if provider is None:
+                return None
+            self._built[choice] = provider
         return self._built[choice]
 
     def _builder(self, provider: str) -> ProviderBuilder:

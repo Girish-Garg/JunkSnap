@@ -56,9 +56,12 @@ class LabelInsights:
             material = self._material(label.name.lower())
             if material is not None:
                 weights[material] = max(weights.get(material, 0.0), label.confidence)
+        hazards = self._hazards_in(labels)
         return Insights(
             composition=MaterialShare.normalized(weights, SOURCE),
-            hazards=frozenset(self._hazards_in(labels)),
+            hazards=frozenset(hazards - {"burning"}),
+            # A missing smoke label is no evidence of no fire, so it stays unknown.
+            burning=True if "burning" in hazards else None,
         )
 
     def _material(self, name: str) -> str | None:

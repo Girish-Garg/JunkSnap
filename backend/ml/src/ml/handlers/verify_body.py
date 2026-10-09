@@ -5,6 +5,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from ml.domain.case import VerifyInput
+from ml.domain.errors import InvalidClaimError
+from ml.domain.purposes import Purpose
 from ml.domain.verification import CaseFeatures, Claim
 from ml.services.judge_answer import ContextName
 
@@ -29,7 +31,12 @@ class VerifyBody(BaseModel):
     features: FeaturesBody
 
     def to_input(self) -> VerifyInput:
-        """Raises InvalidClaimError when the type and context are not a contract pair."""
+        """Raises InvalidClaimError when the id, key folder or type and context do not fit."""
+        purpose = Purpose.named(self.purpose)
+        if not self.report_id.startswith(f"{purpose.id_prefix}_"):
+            raise InvalidClaimError(f"{purpose.name} needs a {purpose.id_prefix}_ report_id")
+        if not self.blurred_key.startswith(purpose.media_folder):
+            raise InvalidClaimError(f"{purpose.name} needs a key under {purpose.media_folder}")
         features = self.features
         return VerifyInput(
             report_id=self.report_id,

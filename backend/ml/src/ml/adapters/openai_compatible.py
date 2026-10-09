@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from ml.domain.errors import ProviderError
+from ml.domain.errors import InvalidImageError, ProviderError
 from ml.domain.llm import LlmRequest, LlmResponse
 from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 from ml.ports.secret_reader import SecretReader
@@ -24,7 +24,11 @@ class OpenAiCompatibleProvider(LlmProvider):
 
     def complete(self, request: LlmRequest) -> LlmResponse:
         started = time.monotonic()
-        data = self._post(self._body(request))
+        try:
+            body = self._body(request)
+        except InvalidImageError as error:
+            raise ProviderError(f"{PROVIDER} {self._model}: {error}") from error
+        data = self._post(body)
         try:
             text = data["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as error:
@@ -71,7 +75,10 @@ class OpenAiCompatibleProvider(LlmProvider):
             raise ProviderError(f"{name}: {type(error).__name__}") from error
         if response.status_code >= httpx.codes.BAD_REQUEST:
             raise ProviderError(f"{name}: HTTP {response.status_code}")
-        data: dict[str, Any] = response.json()
+        try:
+            data: dict[str, Any] = response.json()
+        except ValueError as error:
+            raise ProviderError(f"{name}: answer is not JSON") from error
         return data
 
     @staticmethod

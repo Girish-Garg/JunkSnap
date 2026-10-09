@@ -83,12 +83,43 @@ def test_judge_failure_keeps_the_signal_decision() -> None:
     assert result.outcome.decision == "community_check"
 
 
-def test_cleanup_judge_support_comes_from_not_waste() -> None:
-    clean_json = JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
-    stacked, _ = verifier([FakeSignal("rekognition_labels", 0.8)], [clean_json])
+CLEAN_JSON = (
+    JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
+    .replace('"confidence": 0.9}', '"confidence": 0.9, "scene_fits_site": true}')
+)
+
+
+def test_cleanup_always_asks_the_judge_about_the_site() -> None:
+    stacked, provider = verifier([FakeSignal("rekognition_labels", 1.0)], [CLEAN_JSON])
 
     result = stacked.verify(make_case("cleanup"))
 
+    assert "after-cleanup photo of a site reported as waste_dump" in provider.requests[0].prompt
     assert result.judge is not None and result.judge.context is None
-    assert result.outcome.is_clean is True
-    assert result.outcome.decision == "auto_verified"
+    assert (result.outcome.is_clean, result.outcome.decision) == (True, "auto_verified")
+
+
+def test_cleanup_of_a_scene_that_does_not_fit_the_site_is_rejected() -> None:
+    elsewhere = CLEAN_JSON.replace('"scene_fits_site": true', '"scene_fits_site": false')
+    stacked, _ = verifier([FakeSignal("rekognition_labels", 1.0)], [elsewhere])
+
+    result = stacked.verify(make_case("cleanup"))
+
+    assert (result.outcome.is_clean, result.outcome.decision) == (False, "rejected")
+
+
+def test_cleanup_without_a_judge_answer_is_rejected() -> None:
+    stacked, _ = verifier([FakeSignal("rekognition_labels", 1.0)], [provider_error()])
+
+    result = stacked.verify(make_case("cleanup"))
+
+    assert result.judge is None
+    assert (result.outcome.is_clean, result.outcome.decision) == (False, "rejected")
+
+
+def test_report_prompt_says_nothing_about_the_claim() -> None:
+    stacked, provider = verifier([FakeSignal("rekognition_labels", 0.7)], [JUDGE_JSON])
+
+    stacked.verify(make_case())
+
+    assert "waste_dump" not in provider.requests[0].prompt

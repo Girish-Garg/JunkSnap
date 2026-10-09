@@ -43,6 +43,7 @@ class JudgeAnswer(BaseModel):
     composition: tuple[MaterialAnswer, ...] = Field(default=(), max_length=9)
     size_class: Literal["small", "medium", "large"] | None = None
     hazards: tuple[HazardName, ...] = ()
+    scene_fits_site: bool | None = None
 
     def to_verdict(self) -> JudgeVerdict:
         """A context that does not belong to the report type becomes null."""
@@ -54,15 +55,16 @@ class JudgeAnswer(BaseModel):
             readable_brands=tuple(brand.strip() for brand in self.readable_brands if brand.strip()),
             rationale=self.rationale.strip()[:RATIONALE_MAX],
             confidence=self.confidence,
+            scene_fits_site=self.scene_fits_site,
         )
 
     def to_insights(self) -> Insights:
         weights: dict[str, float] = {}
         for item in self.composition:
             weights[item.material] = weights.get(item.material, 0.0) + item.share
-        hazards = set(self.hazards) | ({"burning"} if self.burning else set())
         return Insights(
             composition=MaterialShare.normalized(weights, SOURCE),
             size_class=self.size_class,
-            hazards=frozenset(hazards),
+            hazards=frozenset(self.hazards) - {"burning"},
+            burning=self.burning,  # the burning field decides, so judge and insights agree
         )

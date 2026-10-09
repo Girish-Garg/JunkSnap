@@ -32,8 +32,9 @@ class VisionJudge:
 
     def judge(self, case: VerificationCase) -> JudgeReading | None:
         """None (and a warning log) when no provider gave a valid answer."""
+        prompt = f"{USER_PROMPT} {case.purpose.judge_hint(case.claim)}".strip()
         request = LlmRequest(
-            self._system_prompt, USER_PROMPT, images=(case.image,), max_tokens=self.MAX_TOKENS
+            self._system_prompt, prompt, images=(case.image,), max_tokens=self.MAX_TOKENS
         )
         try:
             answer = self._router.complete_json(JsonJob(self.TASK, request, JudgeAnswer))

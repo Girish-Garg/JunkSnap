@@ -14,15 +14,18 @@ MISSING_CODES = frozenset({"ResourceNotFoundException"})
 
 
 class SecretsManagerSecretReader(SecretReader):
-    """Reads each secret once per process; a missing secret reads as None."""
+    """Keeps found secrets only, so a secret created later is picked up on the next call."""
 
     def __init__(self, client: "SecretsManagerClient") -> None:
         self._client = client
-        self._cache: dict[str, str | None] = {}
+        self._cache: dict[str, str] = {}
 
     def read(self, secret_id: str) -> str | None:
         if secret_id not in self._cache:
-            self._cache[secret_id] = self._fetch(secret_id)
+            value = self._fetch(secret_id)
+            if value is None:
+                return None
+            self._cache[secret_id] = value
         return self._cache[secret_id]
 
     def _fetch(self, secret_id: str) -> str | None:

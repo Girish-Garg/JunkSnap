@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from ml.domain.errors import ProviderError
+from ml.domain.errors import InvalidImageError, ProviderError
 from ml.domain.llm import LlmRequest, LlmResponse
 from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 
@@ -50,10 +50,13 @@ class BedrockConverseProvider(LlmProvider):
         return f"{named.group(1)}.{named.group(2)}" if named else "unversioned"
 
     def _converse(self, request: LlmRequest) -> "ConverseResponseTypeDef":
-        content: list[ContentBlockTypeDef] = [
-            {"image": {"format": image.format, "source": {"bytes": image.data}}}
-            for image in request.images
-        ]
+        try:
+            content: list[ContentBlockTypeDef] = [
+                {"image": {"format": image.format, "source": {"bytes": image.data}}}
+                for image in request.images
+            ]
+        except InvalidImageError as error:
+            raise ProviderError(f"bedrock {self._model}: {error}") from error
         content.append({"text": request.prompt})
         try:
             return self._client.converse(

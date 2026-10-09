@@ -60,7 +60,11 @@ def test_judge_needed_only_when_unsure_or_split(scores: tuple[float, ...], neede
     names = ("rekognition_labels", "yolo")
     signals = [signal(name, score) for name, score in zip(names, scores, strict=False)]
 
-    assert COMBINER.needs_judge(signals) is needed
+    assert COMBINER.needs_judge(signals, REPORT) is needed
+
+
+def test_cleanup_always_needs_the_judge() -> None:
+    assert COMBINER.needs_judge([signal("rekognition_labels", 1.0)], CLEANUP) is True
 
 
 @pytest.mark.parametrize(
@@ -68,9 +72,17 @@ def test_judge_needed_only_when_unsure_or_split(scores: tuple[float, ...], neede
     [(0.9, "auto_verified", True), (0.7, "rejected", False), (0.1, "rejected", False)],
 )
 def test_cleanup_never_goes_to_community_check(score: float, decision: str, clean: bool) -> None:
-    outcome = COMBINER.combine([signal("rekognition_labels", score)], CLEANUP)
+    signals = [signal("rekognition_labels", score), signal("vision_judge", score)]
+
+    outcome = COMBINER.combine(signals, CLEANUP)
 
     assert (outcome.decision, outcome.is_clean) == (decision, clean)
+
+
+def test_cleanup_without_the_judge_is_never_clean() -> None:
+    outcome = COMBINER.combine([signal("rekognition_labels", 1.0)], CLEANUP)
+
+    assert (outcome.decision, outcome.is_clean) == ("rejected", False)
 
 
 def test_cleanup_with_disagreement_is_rejected() -> None:

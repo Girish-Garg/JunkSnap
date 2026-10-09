@@ -71,6 +71,18 @@ def test_skips_provider_without_key() -> None:
     assert answer.response.model == "second"
 
 
+def test_a_key_added_later_takes_effect_without_a_restart() -> None:
+    secrets: dict[str, str] = {}
+    openai = OpenAiProviderBuilder(httpx.Client(), FakeSecrets(secrets), "openai-key")
+    factory = ProviderFactory({"openai": openai})
+    choice = ModelChoice("openai", "gpt-4.1-mini")
+
+    assert factory.build(choice) is None
+    secrets["openai-key"] = "sk-added"
+
+    assert factory.build(choice) is not None
+
+
 def test_raises_when_every_provider_fails() -> None:
     first = FakeProvider("first", [provider_error()])
 

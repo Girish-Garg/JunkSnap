@@ -17,17 +17,25 @@ class Purpose(ABC):
 
     name: str
     id_prefix: str
+    media_folder: str
+    requires_judge: bool
 
     @abstractmethod
     def support(self, waste_score: float) -> float:
         """Claim support from a 0..1 score that waste of the claimed type is visible."""
 
     @abstractmethod
+    def judge_hint(self, claim: Claim) -> str:
+        """Extra text for the judge's user prompt; empty keeps the judge blind to the claim."""
+
+    @abstractmethod
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
         """Claim support from the judge's verdict."""
 
     @abstractmethod
-    def outcome(self, probability: float, disagreement: bool, thresholds: Thresholds) -> Outcome:
+    def outcome(
+        self, probability: float, disagreement: bool, thresholds: Thresholds, judged: bool
+    ) -> Outcome:
         """Decision per the verification_result contract."""
 
     @staticmethod
@@ -41,9 +49,15 @@ class Purpose(ABC):
 class ReportPurpose(Purpose):
     name = "report"
     id_prefix = "rpt"
+    media_folder = "media/reports/"
+    requires_judge = False
 
     def support(self, waste_score: float) -> float:
         return waste_score
+
+    @override
+    def judge_hint(self, claim: Claim) -> str:
+        return ""
 
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
         if verdict.report_type == claim.report_type:
@@ -52,7 +66,10 @@ class ReportPurpose(Purpose):
             return 1.0 - verdict.confidence
         return OTHER_TYPE_SUPPORT
 
-    def outcome(self, probability: float, disagreement: bool, thresholds: Thresholds) -> Outcome:
+    @override
+    def outcome(
+        self, probability: float, disagreement: bool, thresholds: Thresholds, judged: bool
+    ) -> Outcome:
         if disagreement or thresholds.is_unsure(probability):
             decision = "community_check"
         elif probability >= thresholds.auto_verify_min:
@@ -63,22 +80,32 @@ class ReportPurpose(Purpose):
 
 
 class CleanupPurpose(Purpose):
-    """Cleanups never go to community check."""
+    """Cleanups are rare and close a site, so the judge always runs and must confirm."""
 
     name = "cleanup"
     id_prefix = "cln"
+    media_folder = "media/cleanups/"
+    requires_judge = True
 
     def support(self, waste_score: float) -> float:
         return 1.0 - waste_score
 
+    def judge_hint(self, claim: Claim) -> str:
+        return (
+            f"This is an after-cleanup photo of a site reported as {claim.report_type} "
+            f"({claim.context}). Set scene_fits_site accordingly."
+        )
+
     @override
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
-        if verdict.report_type == NOT_WASTE:
-            return verdict.confidence
-        return 1.0 - verdict.confidence
+        if verdict.report_type != NOT_WASTE:
+            return 1.0 - verdict.confidence
+        return verdict.confidence if verdict.scene_fits_site else 0.0
 
-    def outcome(self, probability: float, disagreement: bool, thresholds: Thresholds) -> Outcome:
-        clean = probability >= thresholds.auto_verify_min and not disagreement
+    def outcome(
+        self, probability: float, disagreement: bool, thresholds: Thresholds, judged: bool
+    ) -> Outcome:
+        clean = judged and probability >= thresholds.auto_verify_min and not disagreement
         decision = "auto_verified" if clean else "rejected"
         return Outcome(probability, decision, disagreement, is_clean=clean)
 

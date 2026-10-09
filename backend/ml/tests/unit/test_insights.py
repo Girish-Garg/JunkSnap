@@ -11,7 +11,7 @@ JUDGE_WITH_INSIGHTS = JUDGE_JSON.replace(
     '"confidence": 0.9}',
     '"confidence": 0.9, "composition": [{"material": "plastic", "share": 0.6},'
     ' {"material": "organic", "share": 0.2}], "size_class": "medium",'
-    ' "hazards": ["e_waste"], "count": 40}',
+    ' "hazards": ["e_waste", "burning"], "count": 40}',
 )
 
 
@@ -29,15 +29,20 @@ def test_label_composition_shares_sum_to_one() -> None:
     assert insights.size_class is None
 
 
-def test_confident_hazard_labels_only() -> None:
+def test_confident_smoke_label_means_burning_and_weak_hazards_are_ignored() -> None:
     insights = LabelInsights().read(labels(Smoke=0.8, Syringe=0.4))
 
-    assert insights.hazards == frozenset({"burning"})
     assert insights.burning is True
+    assert insights.hazards == frozenset()
+
+
+def test_no_smoke_label_leaves_burning_unknown() -> None:
+    assert LabelInsights().read(labels(Garbage=0.9)).burning is None
 
 
 def test_signal_carries_label_insights() -> None:
-    signal = RekognitionLabelSignal(FakeDetector({"Garbage": 0.9, "Cardboard": 0.8}))
+    detector = FakeDetector({"Garbage": 0.9, "Cardboard": 0.8})
+    signal = RekognitionLabelSignal(detector, LabelInsights())
 
     insights = signal.measure(make_case()).insights
 
@@ -45,9 +50,7 @@ def test_signal_carries_label_insights() -> None:
 
 
 def test_judge_insights_are_normalised_and_ignore_counts() -> None:
-    answer = JudgeAnswer.model_validate_json(JUDGE_WITH_INSIGHTS)
-
-    insights = answer.to_insights()
+    insights = JudgeAnswer.model_validate_json(JUDGE_WITH_INSIGHTS).to_insights()
 
     assert [(s.material, s.share) for s in insights.composition] == [
         ("plastic", pytest.approx(0.75)), ("organic", pytest.approx(0.25))
@@ -56,31 +59,30 @@ def test_judge_insights_are_normalised_and_ignore_counts() -> None:
     assert insights.hazards == frozenset({"e_waste"})
 
 
-def test_judge_burning_adds_the_burning_hazard() -> None:
-    burning = JUDGE_JSON.replace('"burning": false', '"burning": true')
-
-    answer = JudgeAnswer.model_validate_json(burning)
-
-    assert answer.to_insights().burning is True
+def test_judge_burning_field_decides_burning() -> None:
+    assert JudgeAnswer.model_validate_json(JUDGE_WITH_INSIGHTS).to_insights().burning is False
 
 
-def test_later_source_wins_composition_and_hazards_add_up() -> None:
-    labels_view = Insights((MaterialShare("paper", 1.0, "rekognition_labels"),), None,
-                           frozenset({"burning"}))
-    judge_view = Insights((MaterialShare("plastic", 1.0, "vision_judge"),), "small",
-                          frozenset({"chemicals"}))
+def test_judge_burning_verdict_replaces_the_label_one() -> None:
+    from_labels = Insights((MaterialShare("paper", 1.0, "rekognition_labels"),), burning=True)
+    from_judge = Insights((MaterialShare("plastic", 1.0, "vision_judge"),), "small",
+                          frozenset({"chemicals"}), burning=False)
 
-    merged = labels_view.merged_with(judge_view)
+    merged = from_labels.merged_with(from_judge)
 
     assert merged.to_contract() == {
         "composition": [{"material": "plastic", "share": 1.0, "source": "vision_judge"}],
         "size_class": "small",
-        "hazards": ["burning", "chemicals"],
-        "burning": True,
+        "hazards": ["chemicals"],
+        "burning": False,
     }
 
 
-def test_empty_later_source_keeps_earlier_composition() -> None:
-    labels_view = Insights((MaterialShare("paper", 1.0, "rekognition_labels"),))
+def test_without_a_judge_the_label_burning_stays() -> None:
+    from_labels = Insights((MaterialShare("paper", 1.0, "rekognition_labels"),), burning=True)
 
-    assert labels_view.merged_with(Insights()).composition == labels_view.composition
+    merged = from_labels.merged_with(Insights())
+
+    assert merged.composition == from_labels.composition
+    assert merged.to_contract()["hazards"] == ["burning"]
+    assert merged.burning is True

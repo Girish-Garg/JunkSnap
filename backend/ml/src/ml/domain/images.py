@@ -6,8 +6,6 @@ from typing import Literal
 from ml.domain.errors import InvalidImageError, NotBlurredImageError
 
 BLURRED_PREFIX = "media/"
-# Only the verify CLI uses this, for local photos treated as already blurred.
-LOCAL_TEST_PREFIX = "local-test/"
 
 ImageFormat = Literal["jpeg", "png", "gif", "webp"]
 _MAGIC_FORMATS: tuple[tuple[bytes, ImageFormat], ...] = (
@@ -23,7 +21,7 @@ class BlurredImage:
     data: bytes = field(repr=False)
 
     def __post_init__(self) -> None:
-        if not self.source.startswith((BLURRED_PREFIX, LOCAL_TEST_PREFIX)):
+        if not self.source.startswith(BLURRED_PREFIX):
             raise NotBlurredImageError(f"refusing image outside {BLURRED_PREFIX}: {self.source}")
         if not self.data:
             raise InvalidImageError(f"empty image: {self.source}")

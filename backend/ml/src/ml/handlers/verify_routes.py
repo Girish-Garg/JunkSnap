@@ -28,7 +28,7 @@ BAD_REQUEST_ERRORS = (ValidationError, InvalidClaimError, InvalidImageError, Not
 def build_verify_router() -> APIRouter:
     builder = VerifierBuilder(CoreSettings.load(), LlmSettings.load())
     images = builder.image_store(VerifySettings.load().public_bucket)
-    return verify_router(VerifyService(images, builder.verifier()))
+    return verify_router(builder.service(images))
 
 
 def verify_router(service: VerifyService) -> APIRouter:

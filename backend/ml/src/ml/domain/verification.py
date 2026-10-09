@@ -74,6 +74,7 @@ class JudgeVerdict:
     readable_brands: tuple[str, ...]
     rationale: str
     confidence: float
+    scene_fits_site: bool | None = None  # cleanups only: an outdoor place fit for the site
 
     def to_contract(self) -> dict[str, object]:
         return {

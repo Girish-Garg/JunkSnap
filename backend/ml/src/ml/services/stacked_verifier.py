@@ -32,7 +32,8 @@ class StackedVerifier:
 
     def verify(self, case: VerificationCase) -> VerificationResult:
         results = [signal.measure(case) for signal in self._signals]
-        reading = self._judge.judge(case) if self._combiner.needs_judge(results) else None
+        needed = self._combiner.needs_judge(results, case.purpose)
+        reading = self._judge.judge(case) if needed else None
         if reading is not None:
             results.append(reading.signal)
         result = VerificationResult(

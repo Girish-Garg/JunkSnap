@@ -10,6 +10,8 @@ from jsonschema import Draft202012Validator
 
 from ml.domain.case import CombinerInfo, VerificationCase, VerificationResult
 from ml.domain.images import BlurredImage
+from ml.domain.insights import Insights, MaterialShare
+from ml.domain.label_insights import LabelInsights
 from ml.domain.purposes import Purpose
 from ml.domain.verification import (
     CaseFeatures,
@@ -45,13 +47,25 @@ def fixtures() -> list[Path]:
 
 def produced(purpose: str, labels: dict[str, float], judge: JudgeVerdict | None) -> dict[str, Any]:
     case = make_case(purpose)
-    signals = [RekognitionLabelSignal(FakeDetector(labels)).measure(case)]
+    signals = [RekognitionLabelSignal(FakeDetector(labels), LabelInsights()).measure(case)]
     combiner = FixedWeightCombiner(Thresholds())
     result = VerificationResult(
         case, combiner.combine(signals, case.purpose), combiner.thresholds, tuple(signals),
         judge, combiner.info(), datetime.fromisoformat("2026-10-10T02:15:03+00:00"),
+        insights=signals[0].insights,
     )
     return result.to_contract()
+
+
+def insights_from(data: dict[str, Any] | None) -> Insights:
+    if data is None:
+        return Insights()
+    return Insights(
+        composition=tuple(MaterialShare(**share) for share in data["composition"]),
+        size_class=data["size_class"],
+        hazards=frozenset(data["hazards"]) - {"burning"},
+        burning=data["burning"],
+    )
 
 
 def from_fixture(data: dict[str, Any]) -> VerificationResult:
@@ -72,13 +86,14 @@ def from_fixture(data: dict[str, Any]) -> VerificationResult:
         combiner=CombinerInfo(**data["combiner"]),
         decided_at=datetime.fromisoformat(data["decided_at"]),
         embedding_key=data["embedding_key"],
+        insights=insights_from(data.get("insights")),
     )
 
 
 @pytest.mark.parametrize(
     ("purpose", "labels"),
-    [("report", {"Garbage": 0.95}), ("report", {"Road": 0.9}), ("cleanup", {"Road": 0.9}),
-     ("cleanup", {"Garbage": 0.7})],
+    [("report", {"Garbage": 0.95, "Plastic": 0.8, "Smoke": 0.7}), ("report", {"Road": 0.9}),
+     ("cleanup", {"Road": 0.9}), ("cleanup", {"Garbage": 0.7})],
 )
 def test_output_matches_schema(purpose: str, labels: dict[str, float]) -> None:
     output = produced(purpose, labels, judge=None)

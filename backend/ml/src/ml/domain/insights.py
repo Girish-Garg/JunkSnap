@@ -34,24 +34,23 @@ class MaterialShare:
 class Insights:
     composition: tuple[MaterialShare, ...] = ()
     size_class: str | None = None  # judge only, and never a weight or a count
-    hazards: frozenset[str] = frozenset()
-
-    @property
-    def burning(self) -> bool:
-        return "burning" in self.hazards
+    hazards: frozenset[str] = frozenset()  # every hazard except burning
+    burning: bool | None = None  # None: this source did not judge burning
 
     def merged_with(self, later: "Insights") -> "Insights":
-        """A later source's composition and size win when it gave them; hazards add up."""
+        """A later source's composition, size and burning verdict win when it gave them."""
         return Insights(
             composition=later.composition or self.composition,
             size_class=later.size_class or self.size_class,
             hazards=self.hazards | later.hazards,
+            burning=self.burning if later.burning is None else later.burning,
         )
 
     def to_contract(self) -> dict[str, object]:
+        hazards = self.hazards | ({"burning"} if self.burning else set())
         return {
             "composition": [share.to_contract() for share in self.composition],
             "size_class": self.size_class,
-            "hazards": [hazard for hazard in HAZARDS if hazard in self.hazards],
-            "burning": self.burning,
+            "hazards": [hazard for hazard in HAZARDS if hazard in hazards],
+            "burning": bool(self.burning),
         }

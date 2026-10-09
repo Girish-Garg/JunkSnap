@@ -11,6 +11,7 @@ from ml.domain.llm import LlmRequest, LlmResponse
 from ml.domain.purposes import Purpose
 from ml.domain.verification import CaseFeatures, Claim, SignalResult
 from ml.ports.clock import Clock
+from ml.ports.image_fitter import ImageFitter
 from ml.ports.image_store import BlurredImageStore
 from ml.ports.label_detector import LabelDetector
 from ml.ports.llm_provider import LlmProvider, ProviderBuilder
@@ -77,6 +78,15 @@ class FakeSignal(Signal):
 class FakeImages(BlurredImageStore):
     def read(self, key: str) -> BlurredImage:
         return BlurredImage(key, JPEG)
+
+
+class FakeFitter(ImageFitter):
+    def __init__(self) -> None:
+        self.fitted: list[str] = []
+
+    def fit(self, image: BlurredImage) -> BlurredImage:
+        self.fitted.append(image.source)
+        return image
 
 
 class FixedClock(Clock):

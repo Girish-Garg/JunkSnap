@@ -12,7 +12,8 @@ Decide what the photo shows. Reply with exactly one JSON object and nothing else
   "confidence": how sure you are of report_type, a number from 0 to 1,
   "composition": [{"material": "...", "share": 0.0}, ...] rough shares of the visible waste by material, adding up to about 1, or [] for not_waste,
   "size_class": "small" | "medium" | "large" | null,
-  "hazards": a list of zero or more of "burning", "medical_waste", "e_waste", "dead_animal", "chemicals"
+  "hazards": a list of zero or more of "burning", "medical_waste", "e_waste", "dead_animal", "chemicals",
+  "scene_fits_site": for an after-cleanup photo, true only if it shows an outdoor place where the reported site could be (a street, roadside, open plot or drain of that kind) and no waste; false otherwise; null when the message says nothing about a cleanup
 }
 
 Report types and their contexts:

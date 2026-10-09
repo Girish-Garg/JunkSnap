@@ -14,6 +14,7 @@ FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
 )
 # Two scores this far apart on 0..1 strongly disagree.
 DISAGREEMENT_GAP = 0.5
+JUDGE_SIGNAL = "vision_judge"
 
 
 class FixedWeightCombiner:
@@ -48,12 +49,15 @@ class FixedWeightCombiner:
         scores = [signal.score for signal in signals]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
 
-    def needs_judge(self, signals: Sequence[SignalResult]) -> bool:
-        return self.disagree(signals) or self._thresholds.is_unsure(self.probability(signals))
+    def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:
+        if purpose.requires_judge or self.disagree(signals):
+            return True
+        return self._thresholds.is_unsure(self.probability(signals))
 
     def combine(self, signals: Sequence[SignalResult], purpose: Purpose) -> Outcome:
+        judged = any(signal.name == JUDGE_SIGNAL for signal in signals)
         probability = self.probability(signals)
-        return purpose.outcome(probability, self.disagree(signals), self._thresholds)
+        return purpose.outcome(probability, self.disagree(signals), self._thresholds, judged)
 
     def _weight(self, name: str) -> float:
         if name not in self._weights:
