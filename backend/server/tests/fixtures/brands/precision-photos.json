@@ -1,0 +1,105 @@
+{
+  "about": "Brand-step precision set for issue 21: freely licensed Wikimedia Commons photos with a readable brand from data/brands/brands.json. Images are fetched at test time and never committed; each author is credited on the file page.",
+  "photos": [
+    {
+      "id": "rpt_brandrun_01",
+      "page": "https://commons.wikimedia.org/wiki/File:Weathered_Pepsi_can_1987-2020.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Weathered_Pepsi_can_1987-2020.jpg",
+      "license": "CC0",
+      "sha256": "5b656f1339664a8dd25036f36a1e12bab0d5c4999fa130db0858c151d2fdd61b",
+      "shows": "weathered Pepsi can on a beach (litter), brand printed as PEPSI-COLA",
+      "expected": ["Pepsi"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_02",
+      "page": "https://commons.wikimedia.org/wiki/File:Coke%3F_(34081678025).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Coke%3F_%2834081678025%29.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "5809a6892fbcc8ef1f8f8219b9e008d50898a416133d6fb7d2a4e985a3a7fb65",
+      "shows": "Coke can lying in grass (litter)",
+      "expected": ["Coca-Cola"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_03",
+      "page": "https://commons.wikimedia.org/wiki/File:Pepsi_can_(34041536296).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/79/Pepsi_can_%2834041536296%29.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "8b3d86d69801883365fd9fae36e248e4a865e8b80329b18783e2218afddeafd2",
+      "shows": "crushed Pepsi can in grass (litter), name partly hidden",
+      "expected": ["Pepsi"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_04",
+      "page": "https://commons.wikimedia.org/wiki/File:Several_Pepsi_Cans.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/35/Several_Pepsi_Cans.jpg",
+      "license": "CC0",
+      "sha256": "c3b14c41d2a97eb2b2806ade9647318676fb7c54b3dba54e858ec276eb4a89c1",
+      "shows": "stack of Pepsi Max cans",
+      "expected": ["Pepsi"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_05",
+      "page": "https://commons.wikimedia.org/wiki/File:Thums_Up_-_Planet_India.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/39/Thums_Up_-_Planet_India.jpg",
+      "license": "CC0",
+      "sha256": "f01f972c0e60375bb772ca660facb42ab0b89636401f068061f09285a5c0598e",
+      "shows": "Thums Up can held in a hand, stacked logo",
+      "expected": ["Thums Up"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_06",
+      "page": "https://commons.wikimedia.org/wiki/File:Parle-G_Biscuit.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Parle-G_Biscuit.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "cbfb2eed6f1a0d74cd8d688409315e127d6bd007058451f8d3e6001645ac97f4",
+      "shows": "single Parle-G biscuit, name embossed and out of focus",
+      "expected": ["Parle-G"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_07",
+      "page": "https://commons.wikimedia.org/wiki/File:Limca_soft_drink.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/ad/Limca_soft_drink.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "600855514c93a2ff4921d7f3e439fcfb2dc0e20a4705511ba7552fc5da9eed85",
+      "shows": "Limca bottle",
+      "expected": ["Limca"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_08",
+      "page": "https://commons.wikimedia.org/wiki/File:Maaza_bottles.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Maaza_bottles.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "a808244beebad8074ee497528b41c799c031fc01a6998dacab3ae398fa202853",
+      "shows": "rows of Maaza bottles at a stall, small 'a product of The Coca-Cola Company' print",
+      "expected": ["Maaza"],
+      "also_printed": ["Coca-Cola"]
+    },
+    {
+      "id": "rpt_brandrun_09",
+      "page": "https://commons.wikimedia.org/wiki/File:Monkey_holding_a_soft_drink,_Varanasi,_Uttar_Pradesh,_India_(2019).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Monkey_holding_a_soft_drink%2C_Varanasi%2C_Uttar_Pradesh%2C_India_%282019%29.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "60484b4e05629c07e5b12ec009a724fe0271b32df8eb0883403a79c9bcbed3b7",
+      "shows": "two empty Limca bottles on a sill, label seen mirrored through the glass",
+      "expected": ["Limca"],
+      "also_printed": []
+    },
+    {
+      "id": "rpt_brandrun_10",
+      "page": "https://commons.wikimedia.org/wiki/File:Thum%27s_Up_(15124224444).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/99/Thum%27s_Up_%2815124224444%29.jpg",
+      "license": "CC BY 2.0",
+      "sha256": "9fbb9cc017beef5d19f666a18836419952242cfe679357034ed33874ecf51584",
+      "shows": "Thums Up can, stacked logo",
+      "expected": ["Thums Up"],
+      "also_printed": []
+    }
+  ]
+}
