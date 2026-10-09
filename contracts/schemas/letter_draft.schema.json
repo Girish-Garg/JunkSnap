@@ -60,7 +60,7 @@
           "document": { "type": "string" },
           "clause": { "type": "string" },
           "quote": { "type": "string" },
-          "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the official text the quote was checked against." },
+          "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the official PDF the rule comes from." },
           "verified": { "const": true, "description": "The quote appears word for word in that text. A draft with any unverified quote is never returned; the template letter is used instead." }
         }
       }
