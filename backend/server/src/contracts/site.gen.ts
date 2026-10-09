@@ -84,7 +84,7 @@ export interface Site {
      */
     cleanup_photo_url: string | null;
     /**
-     * The judge saw burning on a verified report of this site.
+     * A verified report of this site showed burning; true exactly when insights.hazards lists burning.
      */
     burning: boolean;
     /**
@@ -144,11 +144,11 @@ export interface Site {
      */
     pilot: boolean;
     /**
-     * Merged insights (decision 20261010-0202) of the site's reports that were not rejected; verification says whether they are confirmed. Not in required so v1 producers stay valid; the worker always writes it.
+     * Merged insights (decision 20261010-0202) of the site's verified reports only, the same reports burning comes from. Recomputed whenever a report on the site becomes verified: by the worker on merge, or by the api when votes settle the site. Not in required so v1 producers stay valid; the worker always writes it.
      */
     insights?: {
       /**
-       * Reports whose verification_result.insights were merged.
+       * Verified reports whose verification_result.insights were merged.
        */
       reports: number;
       /**
@@ -728,7 +728,7 @@ export interface Site {
         sources: [InsightSource, ...InsightSource[]];
       };
       /**
-       * Hazards any merged report showed; burning here also sets the burning flag above.
+       * Hazards any merged (verified) report showed; burning here is listed exactly when the burning flag above is true.
        *
        * @maxItems 5
        */
@@ -1083,7 +1083,7 @@ export const siteSchema = {
         },
         "burning": {
           "type": "boolean",
-          "description": "The judge saw burning on a verified report of this site."
+          "description": "A verified report of this site showed burning; true exactly when insights.hazards lists burning."
         },
         "location": {
           "type": "object",
@@ -1265,12 +1265,12 @@ export const siteSchema = {
             "hazards",
             "near"
           ],
-          "description": "Merged insights (decision 20261010-0202) of the site's reports that were not rejected; verification says whether they are confirmed. Not in required so v1 producers stay valid; the worker always writes it.",
+          "description": "Merged insights (decision 20261010-0202) of the site's verified reports only, the same reports burning comes from. Recomputed whenever a report on the site becomes verified: by the worker on merge, or by the api when votes settle the site. Not in required so v1 producers stay valid; the worker always writes it.",
           "properties": {
             "reports": {
               "type": "integer",
               "minimum": 0,
-              "description": "Reports whose verification_result.insights were merged."
+              "description": "Verified reports whose verification_result.insights were merged."
             },
             "composition": {
               "type": "array",
@@ -1349,7 +1349,7 @@ export const siteSchema = {
             "hazards": {
               "type": "array",
               "maxItems": 5,
-              "description": "Hazards any merged report showed; burning here also sets the burning flag above.",
+              "description": "Hazards any merged (verified) report showed; burning here is listed exactly when the burning flag above is true.",
               "items": {
                 "type": "object",
                 "additionalProperties": false,

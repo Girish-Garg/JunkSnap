@@ -1,6 +1,6 @@
 {
   "area": { "kind": "assembly", "id": "s20-ac-128", "name": "Jodhpur" },
-  "counts": { "verified_reports": 14, "no_bin_reports": 3, "sites": 6, "open_sites": 4, "cleaned_sites": 1, "reopened_sites": 1 },
+  "counts": { "verified_reports": 14, "no_bin_reports": 3, "sites": 6, "open_sites": 5, "cleaned_sites": 1, "reopened_sites": 0 },
   "min_verified_reports": 10,
   "scores": {
     "city": { "value": 41, "reason": null },
@@ -10,13 +10,13 @@
   "metrics": {
     "median_days_to_clear": 1.5,
     "cleared_within_7_days_pct": null,
-    "redumped_pct": 16.7,
+    "redumped_pct": 0,
     "no_bin_response_pct": 0,
     "new_dumps_per_km2_month": 9.4,
     "share_vacant_plot_drain_roadside_pct": 72.7,
     "median_distance_to_disposal_m": 640
   },
-  "diagnosis": ["infrastructure_gap", "repeat_spot"],
+  "diagnosis": ["infrastructure_gap"],
   "formula_version": "scores-v1",
   "pilot": true,
   "data_window": { "from": "2026-10-08T02:30:00Z", "to": "2026-10-10T02:30:00Z" },

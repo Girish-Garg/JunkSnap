@@ -103,7 +103,7 @@ export type VerificationResult = {
   embedding_key: string | null;
   decided_at: string;
   /**
-   * What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it: an object for purpose report, null for purpose cleanup.
+   * What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it. When present it must be an object for purpose report and null for purpose cleanup.
    */
   insights?: null | {
     /**
@@ -737,7 +737,7 @@ export const verificationResultSchema = {
       "format": "date-time"
     },
     "insights": {
-      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it: an object for purpose report, null for purpose cleanup.",
+      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it. When present it must be an object for purpose report and null for purpose cleanup.",
       "anyOf": [
         {
           "type": "null"
@@ -850,6 +850,9 @@ export const verificationResultSchema = {
           },
           "report_id": {
             "pattern": "^rpt_"
+          },
+          "insights": {
+            "type": "object"
           }
         }
       }

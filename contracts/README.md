@@ -46,7 +46,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 ## Auth
 
-- One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a name or an email.
+- One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
 - Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /healthz`.
 - Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
@@ -60,7 +60,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 |---|---|---|
 | Fresh timestamp | `captured_at` at most 72 h before `received_at` (room for the offline queue), at most 5 min after it | worker |
 | Duplicate | pHash Hamming distance 8 or less to an earlier photo within 100 m | worker |
-| Rate limit | Each counted per user and per device: Snap 20 photos per hour; Scan 1 frame per second; letters 5 per hour | api (presign) and worker for photos and frames; api for letters |
+| Rate limit | Each counted per user and per device; the stricter one applies. Snap: 20 photos per hour, counted on `reports` through `by-user` and `by-device` over the last hour of `received_at` (scan frames excluded). Scan: 1 frame per second of video, which the frame sampler enforces; frames never count toward the Snap limit. Letters: 5 per hour, counted with a windowed counter (`letter_window_start`, `letter_count`) on the `users` row and on the `devices` row, reset once an hour has passed since `letter_window_start` and updated with a conditional write | api (presign) and worker for photos; worker for frames; api for letters |
 | Scan video | `video/webm` or `video/mp4`, at most 60 s, 1280 by 720 and 40 MB; else 400 `scan_too_large` at presign, or scan `failed` with `invalid_video` | api (presign), worker |
 | Scan frames | 1 per second; a phone-hinted frame replaces the plain one in its second. Drop a frame when the nearest GPS fix is more than 3 s away or its `accuracy_m` is over 50 | worker |
 | Votes | voter GPS within 1 km of the site, else 403 `too_far` | api |
@@ -212,13 +212,13 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 
 | Table | Partition key | Sort key | GSIs | Holds |
 |---|---|---|---|---|
-| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`) | `report_upload` fields (with `user_id`), `received_at`, `status`, `moderation_result`, `verification_result`, brand labels, `site_id` |
+| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`), `received_at`, `status`, `moderation_result`, `verification_result`, brand labels, `site_id` |
 | `cleanups` | `cleanup_id` | none | none | `site_id`, `upload_id`, `device_token`, `user_id`, `gps`, `sha256`, `captured_at`, `received_at`, `status`, `moderation_result`, `verification_result` |
 | `scans` | `scan_id` | none | none | `scan_session` fields (with `user_id`), `received_at`, `status`, `reason`, `frames`, `report_ids` |
 | `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`), `lat`, `lon`, `geohash4`, merged report ids; the api builds the Feature |
 | `votes` | `site_id` | `device_token` | none | `vote`, `weight`, `user_id`, `voted_at` |
-| `devices` | `device_token` | none | none | `reputation`, report counts, `first_seen`, `blocked` |
-| `users` | `user_id` | none | none | `reputation`, report counts, `first_seen`, `blocked`; never a name or an email |
+| `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
+| `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
 | `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`; the CronJob overwrites it |
 
 For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the report's cell and its neighbours and keep sites within 40 m. The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source.
@@ -231,7 +231,8 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `cleanups/{upload_id}.jpg` | cleanup after-photo originals |
 | same | `scans/{scan_id}.webm` or `.mp4` | scan videos, PUT by presigned URL; never public, never sent to a model |
 | same | `embeddings/{report_id or cleanup_id}.json` | image embeddings; `ml` may write only this prefix and reads nothing else in this bucket |
-| same | `datasets/{dataset}/...` | openly licensed training images (decision 20261010-0200); read only by training jobs, never by a pod |
+| same | `datasets/{dataset}/...` | openly licensed public training images (decision 20261010-0200); `field` is reserved; offline training only, no pod has access |
+| same | `datasets/field/{report_id}.jpg` | blurred copies of field-audit reports, copied from `media/reports/`, never originals; offline training and evaluation only, no pod has access |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
 
@@ -265,6 +266,8 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |
 | `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID` | frontend | the same pool and app client as the api |
+| `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
+| `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |
 
 Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), which needs no place index, so there is no `PLACE_INDEX` variable; the worker's Pod Identity role gets that one action.
 

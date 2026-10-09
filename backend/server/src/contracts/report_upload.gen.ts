@@ -31,7 +31,7 @@ export type ReportUpload = {
    */
   capture_mode: "snap" | "scan";
   /**
-   * Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.
+   * Set by the worker on every scan frame; the phone never sends it. Required when capture_mode is scan, forbidden when it is snap. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.
    */
   scan?: {
     scan_id: string;
@@ -150,7 +150,7 @@ export const reportUploadSchema = {
         "scan_id",
         "t_ms"
       ],
-      "description": "Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
+      "description": "Set by the worker on every scan frame; the phone never sends it. Required when capture_mode is scan, forbidden when it is snap. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
       "properties": {
         "scan_id": {
           "type": "string",
@@ -247,6 +247,27 @@ export const reportUploadSchema = {
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "capture_mode": {
+            "const": "scan"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "scan"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "scan"
+          ]
+        }
+      }
+    },
     {
       "if": {
         "properties": {

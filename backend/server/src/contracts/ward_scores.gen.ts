@@ -822,7 +822,7 @@ export type ValueReason2 = {
  */
 export type ValueReason3 = {
   /**
-   * Site ids of repeat spots (reopened after a cleanup, or reported on 2 or more days), most reports first.
+   * Site ids of repeat spots, most reports first: sites reopened after a cleanup (these are counts.reopened_sites and the re-dumping behind the repeat_spot diagnosis) plus sites reported on 2 or more IST days.
    *
    * @maxItems 10
    */
@@ -840,7 +840,7 @@ export type ValueReason3 = {
     | [string, string, string, string, string, string, string, string, string, string]
     | null;
   /**
-   * All repeat spots in the area.
+   * All repeat spots in the area; at least counts.reopened_sites.
    */
   count: number;
   reason: Reason;
@@ -1476,7 +1476,7 @@ export const wardScoresSchema = {
                 "null"
               ],
               "maxItems": 10,
-              "description": "Site ids of repeat spots (reopened after a cleanup, or reported on 2 or more days), most reports first.",
+              "description": "Site ids of repeat spots, most reports first: sites reopened after a cleanup (these are counts.reopened_sites and the re-dumping behind the repeat_spot diagnosis) plus sites reported on 2 or more IST days.",
               "items": {
                 "type": "string",
                 "pattern": "^site_[a-z0-9_]{1,40}$"
@@ -1485,7 +1485,7 @@ export const wardScoresSchema = {
             "count": {
               "type": "integer",
               "minimum": 0,
-              "description": "All repeat spots in the area."
+              "description": "All repeat spots in the area; at least counts.reopened_sites."
             },
             "reason": {
               "$ref": "#/$defs/reason"

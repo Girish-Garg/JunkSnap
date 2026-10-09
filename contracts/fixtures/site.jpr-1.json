@@ -34,12 +34,9 @@
     "cleaned_at": null,
     "pilot": false,
     "insights": {
-      "reports": 1,
-      "composition": [
-        { "material": "construction_debris", "share_pct": 80, "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] },
-        { "material": "plastic", "share_pct": 6, "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] }
-      ],
-      "size_class": { "value": "large", "reports": 1, "sources": [{ "signal": "embedding_classifier", "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1" }] },
+      "reports": 0,
+      "composition": [],
+      "size_class": null,
       "hazards": [],
       "near": []
     }

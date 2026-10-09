@@ -88,7 +88,7 @@
     },
     "decided_at": { "type": "string", "format": "date-time" },
     "insights": {
-      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it: an object for purpose report, null for purpose cleanup.",
+      "description": "What the waste is, as measured by the models (decision 20261010-0202). Not in required so v1 producers stay valid; ml always sends it. When present it must be an object for purpose report and null for purpose cleanup.",
       "anyOf": [
         { "type": "null" },
         {
@@ -149,7 +149,7 @@
   "allOf": [
     {
       "if": { "properties": { "purpose": { "const": "report" } } },
-      "then": { "properties": { "is_clean": { "type": "null" }, "report_id": { "pattern": "^rpt_" } } }
+      "then": { "properties": { "is_clean": { "type": "null" }, "report_id": { "pattern": "^rpt_" }, "insights": { "type": "object" } } }
     },
     {
       "if": { "properties": { "purpose": { "const": "cleanup" } } },

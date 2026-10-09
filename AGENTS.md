@@ -24,7 +24,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 - Privacy: blur faces and number plates before any public copy exists; originals and scan videos stay private (KMS); no photos of people dumping; never name an individual in any text.
 - Only blurred images go to any model (Bedrock, OpenAI, OpenRouter). Bedrock is the default; OpenAI and OpenRouter are fallbacks. Note moderation runs on Bedrock (Claude Haiku 4.5, India profile); Comprehend is not enabled on this account.
 - Insights (composition, size class, hazards, nearby schools or water, area patterns) use only measured numbers, and each shows where it came from (model or OpenStreetMap layer) and the count it rests on. Size is a class, never tonnage (decision 20261010-0202).
-- Accounts: Cognito email and password. Browsing is open; creating reports, scans, votes, cleanups and letters needs sign-in. Store and log only the opaque `user_id`, never a name or an email (decision 20261010-0227).
+- Accounts: Cognito email and password. Browsing is open; creating reports, scans, votes, cleanups and letters needs sign-in. Store and log only the opaque `user_id`, never a user's name or email (decision 20261010-0227).
 - Company names appear only when a label is readable and above the confidence threshold.
 - Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording with no party colours. Nothing is filed automatically; the resident files.
 - Every quoted rule comes from a hashed official text and passes the word-for-word verifier. Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026.

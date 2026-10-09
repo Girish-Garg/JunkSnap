@@ -51,30 +51,30 @@ Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `d
 18. **UI style** (accepted, 20261010-0201): minimal custom components; map-app patterns (full-bleed map, floating search bar, filter chips, draggable bottom sheet with peek, half and full and an action row, one camera button in the thumb zone); no gradients, glassmorphism, emoji or purple; Noto Sans and Noto Sans Devanagari; 48 px targets; WCAG AA. Details in `frontend/DESIGN.md`.
 19. **ML insights** (accepted, 20261010-0202): per report, composition by material, a size class (never tonnage) and hazards; per site, those merged plus schools, hospitals, water bodies and open drains within 100 m from OpenStreetMap; per area, composition, hazardous share, top brands, repeat spots, hour and day pattern, sites near schools or water. Only measured numbers, each with its source.
 20. **Scan video** (accepted, 20261010-0203): see decision 4. Routes `POST /scans/presign`, `POST /scans`, `GET /scans/{id}`; the video stays private and never goes to a model.
-21. **Accounts** (accepted, 20261010-0227): an Amazon Cognito user pool per stage, email and password with an emailed code, forgot-password by code. Browsing is open; reports, scans, votes, cleanups and letters need a signed-in user (Cognito ID token as `Authorization: Bearer`, checked against the pool's JWKS). `user_id` is the opaque `sub`; `device_token` stays; reputation and rate limits count per user and per device. No names or emails in any shape or log.
+21. **Accounts** (accepted, 20261010-0227): an Amazon Cognito user pool per stage, email and password with an emailed code, forgot-password by code. Browsing is open; reports, scans, votes, cleanups and letters need a signed-in user (Cognito ID token as `Authorization: Bearer`, checked against the pool's JWKS). `user_id` is the opaque `sub`; `device_token` stays; reputation and rate limits count per user and per device. No user's name or email in any shape, table or log.
 
 ## 5. Task list (one GitHub issue, branch and PR per task)
 
 Done: T0 tooling (PR 6), C1 contracts v1 (PR 14), S1 Python skeletons (PR 15; `backend/pipeline` is now retired), the comment rule (PR 17), S2 server skeleton (PR 28: TypeScript 6.0.3, Fastify 5, entry files `web.ts`, `worker.ts`, `scores.ts`, generated contract types), C2 contracts v1.1 for insights, scans, accounts and ward records (issue 25).
 
-Order: P1, AU1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 need the field data (Saturday morning). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
+Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 need the field data (Saturday morning). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
 
 **TypeScript, `backend/server`**
 - P1 intake and worker (issue 11): presign (regional S3 endpoint), `POST /reports`, `GET /reports/{id}`, the SQS consumer and `ReportPipeline` with `needs_review` on the last receive; calls `ml` at `ML_URL`.
-- AU1 accounts (issue to create): Cognito ID token check against the pool's JWKS in the api, `user_id` from `sub`, 401 `unauthorized` and 403 `forbidden`, the `users` table, per-user and per-device rate limits and reputation (decision 20261010-0227).
-- P2 scan intake (issue to create): `POST /scans/presign`, `POST /scans`, `GET /scans/{id}`, frame sampling with GPS interpolation, frame reports with derived ids (decision 20261010-0203).
+- AU1 accounts (issue 34): Cognito ID token check against the pool's JWKS in the api, `user_id` from `sub`, 401 `unauthorized` and 403 `forbidden`, the `users` table, per-user and per-device rate limits and reputation (decision 20261010-0227).
+- SC1 scan intake (issue 35): `POST /scans/presign`, `POST /scans`, `GET /scans/{id}`, frame sampling with GPS interpolation, frame reports with derived ids (decision 20261010-0203).
 - D1 moderation (issue 13): moderation gate, face and plate blur, authenticity checks, note moderation on Bedrock → `moderation_result`; tests with stubbed Rekognition; a real run on 5 photos on `dev`.
 - D2 location (issue 18): Amazon Location Places v2 (no place index), assembly seats (Rajasthan only, else null) and Lok Sabha seats (`status: outdated` for Assam, Jammu and Kashmir, Ladakh), wards only with an open map, local body (`jodhpur-mc`, `jaipur-mc`), representatives, nearby places within 100 m from the crawler's map layers → `location_lookup` and `site.insights.near`; tests with known points.
 - D3 sites and votes (issue 19): merging, lifecycle, votes and the community check, cleanup, site routes, insight merge → `site`.
 - D4 scores (issue 20): city, citizen and bin-access scores with guardrails, diagnosis, area insights, the CronJob and the route → `ward_scores`.
 - A3 brands (issue 21): in the worker, Rekognition DetectText plus the parent-company map with sources → `brand_label`; precision on 10 close-up packet photos.
 - A4 rulebook and letters (issue 22): in the api, hashed official texts, hand-checked rules JSON, routing table (Cc only seats that exist, never the MP of an `outdated` seat), letters service and quote verifier → `letter_draft`; a test that a misquote fails.
-- L1 TS LLM layer (issue to create): `LlmProvider` for Bedrock, OpenAI and OpenRouter, `ProviderRouter`, `TaskConfig` defaults per decision 20261010-0133, validation and fallback; used by A4 and D1.
+- L1 TS LLM layer (issue 29): `LlmProvider` for Bedrock, OpenAI and OpenRouter, `ProviderRouter`, `TaskConfig` defaults per decision 20261010-0133, validation and fallback; used by A4 and D1.
 
 **Python, `backend/ml` and data tooling**
 - M0 rename `backend/agent` to `backend/ml` (in flight in another PR).
 - A1 ml verify (issue 12): `POST /internal/verify`, the Python LLM layer for the judge, Rekognition signal, judge v0, fixed-weight combiner → `verification_result`; tests with stubs; a printed run on 10 real photos.
-- DS1 dataset (issue 26): openly licensed public waste datasets with licences checked, manifests in `data/datasets/`, images in S3; Label Studio config for the field audit (report_type, context, burning, materials, hazards, brands); a fixed split with about 30% of field photos held out.
+- DS1 dataset (issue 26): openly licensed public waste datasets with licences checked, manifests in `data/datasets/`, images in S3 under `datasets/` (field photos only as the blurred copies in `datasets/field/`, never originals); Label Studio config for the field audit (report_type, context, burning, materials, hazards, brands); a fixed split with about 30% of field photos held out.
 - A2 YOLO, embeddings and meta-learner: embeddings and type classifier, YOLO, meta-learner, thresholds; evaluation table on held-out field photos (each model alone vs the stack, precision and recall); OpenRouter benchmark of 4–5 vision models with cost per 100 photos. Only measured numbers.
 - A5 insights (issue to create): composition, size class and hazards in `verification_result.insights`, each with its model; evaluated on held-out field photos.
 - W1 ward-data crawler (issue 9, proposed 20261010-0137): offline Python job over official pages and OpenStreetMap → `data/wards/<city>.json` with `records` (each a `ward_record`, the contract shape taken from this task's branch) and `map_layers` (disposal, school, hospital, water, drain); source URL, `fetched_at` and page SHA-256 on every value; offices and seats only; reviewed before use. Jodhpur first. Feeds D2 and D4.
@@ -112,7 +112,7 @@ For each task: create the issue with `gh`, then give one writing agent its own w
 
 ## 8. Cut order if behind (paused)
 
-Paused (proposed, 20261010-0134): no cuts, every task is planned. If a task slips, ask Hemang. The cut order stays paused after the language split: the new tasks P2, AU1, L1 and A5 are planned too. The old order, for reference only:
+Paused (proposed, 20261010-0134): no cuts, every task is planned. If a task slips, ask Hemang. The cut order stays paused after the language split: the new tasks SC1, AU1, L1 and A5 are planned too. The old order, for reference only:
 YOLO and the on-phone model (cloud mode only) → trained meta-learner (keep fixed weights) → benchmark → water and construction types (labels only) → Scan mode (keep Snap) → brand labels → satellite history.
 Never cut: Snap, moderation and blur, verification, the map with location, verified letters, area report on real data, the deployed URL.
 

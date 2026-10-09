@@ -14,6 +14,7 @@ Decision:
 - Check and record the licence of every dataset before use. Images live in S3 (private bucket, `datasets/` prefix), never in git; `data/datasets/` holds only manifests and licences.
 - About 30% of field photos are held out with a recorded seed. They are never trained on, and no photo moves between train and test once evaluation starts.
 - Every results table (precision, recall, each model alone vs the stack) uses only held-out field photos.
+- Training and evaluation read only blurred copies. The field audit goes through the app, so the pipeline makes blurred copies under `media/reports/`; `datasets/field/` holds those copies, never originals.
 
 Consequences for other lanes: DS1 (issue 26) builds the manifests and the split; A2 trains on the train part and reports on the held-out part; the README shows only these measured numbers.
 

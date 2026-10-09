@@ -22,7 +22,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["scan_id", "t_ms"],
-      "description": "Set by the worker on every scan frame; the phone never sends it. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
+      "description": "Set by the worker on every scan frame; the phone never sends it. Required when capture_mode is scan, forbidden when it is snap. gps is interpolated from the scan's gps_track at t_ms, and captured_at is started_at plus t_ms.",
       "properties": {
         "scan_id": { "type": "string", "pattern": "^scn_[a-z0-9_]{1,40}$" },
         "t_ms": { "type": "integer", "minimum": 0, "maximum": 60000, "description": "Frame time from the start of the video." }
@@ -73,6 +73,7 @@
     }
   },
   "allOf": [
+    { "if": { "properties": { "capture_mode": { "const": "scan" } } }, "then": { "required": ["scan"] }, "else": { "not": { "required": ["scan"] } } },
     { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
     { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
     { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },

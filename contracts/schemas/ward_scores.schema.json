@@ -167,10 +167,10 @@
             "value": {
               "type": ["array", "null"],
               "maxItems": 10,
-              "description": "Site ids of repeat spots (reopened after a cleanup, or reported on 2 or more days), most reports first.",
+              "description": "Site ids of repeat spots, most reports first: sites reopened after a cleanup (these are counts.reopened_sites and the re-dumping behind the repeat_spot diagnosis) plus sites reported on 2 or more IST days.",
               "items": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$" }
             },
-            "count": { "type": "integer", "minimum": 0, "description": "All repeat spots in the area." },
+            "count": { "type": "integer", "minimum": 0, "description": "All repeat spots in the area; at least counts.reopened_sites." },
             "reason": { "$ref": "#/$defs/reason" }
           }
         },

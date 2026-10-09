@@ -29,6 +29,7 @@ uv run pytest -q
 - Read only the blurred copy (`media/` in the public bucket); write only `embeddings/` in the private bucket. Never read originals or scan videos.
 - Output shapes come from `contracts/`. Never import `backend/server`; the two exchange contract shapes over HTTP.
 - Datasets and model files over 5 MB live in S3, never in git. Check each dataset's licence before use.
+- Training and evaluation read only blurred copies: `datasets/field/` holds the blurred field-audit copies from `media/reports/`, never originals. Local tooling uses `JUNKSNAP_DATA_CACHE` and `JUNKSNAP_REPO`.
 - Unit tests stub every model and AWS call. Adapter integration tests run only with `RUN_AWS_TESTS=1`.
 
 ## Never

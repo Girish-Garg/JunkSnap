@@ -22,7 +22,7 @@ Small reference data that the backend and the map use. Small files only: anythin
 ## Large files
 
 - Photos, rasters, Parquet, embeddings and models over 5 MB go to S3, never to git. The S3 layout is in `contracts/README.md`.
-- Field-audit photos are personal data: they stay in the private bucket. Labels refer to them by report id or S3 key, never by a person.
+- Field-audit photos are personal data: they stay in the private bucket. Labels refer to them by report id or S3 key, never by a person. Training and evaluation read only their blurred copies (`datasets/field/`), never originals.
 
 ## Never
 

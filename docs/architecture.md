@@ -66,7 +66,7 @@ All services run in one Amazon EKS Auto Mode cluster, `junksnap`, in ap-south-1,
 
 CloudFront serves HTTPS in front of the Application Load Balancer, which sends every public route to `api`. Nothing public reaches `ml`. Pods reach AWS through EKS Pod Identity, so no AWS keys live in pods.
 
-Accounts (decision 20261010-0227): one Amazon Cognito user pool per stage, email and password with an emailed code. Browsing is open. Creating reports, scans, votes, cleanups and letters needs the Cognito ID token as `Authorization: Bearer`; the `api` checks it against the pool's JWKS and takes `user_id` from its `sub`. The `device_token` stays, so reputation and rate limits count per user and per device. No name or email is stored outside Cognito.
+Accounts (decision 20261010-0227): one Amazon Cognito user pool per stage, email and password with an emailed code. Browsing is open. Creating reports, scans, votes, cleanups and letters needs the Cognito ID token as `Authorization: Bearer`; the `api` checks it against the pool's JWKS and takes `user_id` from its `sub`. The `device_token` stays, so reputation and rate limits count per user and per device. No user's name or email is stored outside Cognito.
 
 ## 3. Report pipeline
 
@@ -130,7 +130,7 @@ The models report what the waste is, not only whether it exists (decision 202610
 | Level | Contract field | What | Where it came from |
 |---|---|---|---|
 | Report | `verification_result.insights` | composition shares by material (plastic, organic, construction debris, paper, glass, metal, textile, e-waste, medical); size class small, medium or large, never tonnage; hazards (burning or smoke, medical waste, e-waste, dead animal, chemicals) | the model behind each estimate: signal, provider, model, version |
-| Site | `site.insights` | the report insights merged over the site's reports that were not rejected; sensitive places within 100 m (school, hospital, water body, open drain) | report counts and models; the OpenStreetMap element and fetch for each place |
+| Site | `site.insights` | the report insights merged over the site's verified reports only (the same reports `site.burning` comes from); sensitive places within 100 m (school, hospital, water body, open drain) | report counts and models; the OpenStreetMap layer and fetch for each place |
 | Area | `ward_scores.insights` | composition shares, share of hazardous sites, top brands by count (readable labels only), repeat spots, reports by hour and weekday, sites near schools or water | the counts behind each value |
 
 - Composition, size and hazards come from YOLO's material classes and the embedding classifier first, Rekognition labels (Fire, Smoke) for burning. The judge only fills a gap the other models leave, and is then named as the source.
@@ -180,7 +180,8 @@ City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sa
 - No photos of people dumping, and no names of individuals in any text.
 - Only blurred images go to any model on Bedrock, OpenAI or OpenRouter. A scan video never goes to a model. Personal text (the note) goes to Bedrock only.
 - `ml` reads only `media/` in the public bucket and writes only `embeddings/` in the private one.
-- Accounts live in Cognito. Tables and logs hold only the opaque `user_id`, never a name or an email; tokens are never logged.
+- Training and evaluation run offline and read only blurred copies: public datasets and `datasets/field/`, which holds the blurred field-audit copies, never originals. No pod can read `datasets/`.
+- Accounts live in Cognito. Tables and logs hold only the opaque `user_id`, never a user's name or email; tokens are never logged.
 - Per-device tokens, rate limits, perceptual-hash duplicate checks, an India geofence and fresh timestamps.
 - Secrets live in Secrets Manager; nothing secret in the repo.
 
