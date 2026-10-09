@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from agent.settings.base import EnvSettings
+from ml.settings.base import EnvSettings
 
 
 class VerifySettings(EnvSettings):

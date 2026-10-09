@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from agent.domain.errors import ConfigError, ExternalServiceError, NotBlurredImageError
-from agent.domain.images import BLURRED_PREFIX, BlurredImage
-from agent.ports.image_store import BlurredImageStore
+from ml.domain.errors import ConfigError, ExternalServiceError, NotBlurredImageError
+from ml.domain.images import BLURRED_PREFIX, BlurredImage
+from ml.ports.image_store import BlurredImageStore
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client

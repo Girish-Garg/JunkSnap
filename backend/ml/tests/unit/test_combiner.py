@@ -1,7 +1,8 @@
 import pytest
-from agent.domain.purposes import Purpose
-from agent.domain.verification import SignalResult, Thresholds
-from agent.services.combiner import FixedWeightCombiner
+
+from ml.domain.purposes import Purpose
+from ml.domain.verification import SignalResult, Thresholds
+from ml.services.combiner import FixedWeightCombiner
 
 COMBINER = FixedWeightCombiner(Thresholds())
 REPORT = Purpose.named("report")
@@ -73,7 +74,9 @@ def test_cleanup_never_goes_to_community_check(score: float, decision: str, clea
 
 
 def test_cleanup_with_disagreement_is_rejected() -> None:
-    signals = [signal("rekognition_labels", 0.95), signal("vision_judge", 0.95), signal("yolo", 0.2)]
+    signals = [
+        signal("rekognition_labels", 0.95), signal("vision_judge", 0.95), signal("yolo", 0.2)
+    ]
 
     outcome = FixedWeightCombiner(Thresholds(0.6, 0.5)).combine(signals, CLEANUP)
 

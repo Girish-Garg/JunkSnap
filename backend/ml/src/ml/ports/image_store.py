@@ -2,12 +2,10 @@
 
 from abc import ABC, abstractmethod
 
-from agent.domain.images import BlurredImage
+from ml.domain.images import BlurredImage
 
 
 class BlurredImageStore(ABC):
-    """Reads blurred copies by key. Keys outside `media/` are refused with NotBlurredImageError."""
-
     @abstractmethod
     def read(self, key: str) -> BlurredImage:
-        """The image at `key`. Raises ExternalServiceError when it cannot be read."""
+        """Refuses keys outside media/ with NotBlurredImageError."""

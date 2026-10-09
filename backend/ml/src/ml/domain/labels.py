@@ -1,9 +1,4 @@
-"""Image labels (from Rekognition DetectLabels) and the keyword groups that score them.
-
-Scoring is plain on purpose: a label in a report type's `strong` group counts its full
-confidence, a label in its `weak` group counts WEAK_WEIGHT of it, and the score for that
-type is the best single label. Labels are matched case-insensitively by exact name.
-"""
+"""Image labels and the keyword groups that turn them into a waste score per report type."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -14,16 +9,12 @@ WEAK_WEIGHT = 0.6
 
 @dataclass(frozen=True)
 class DetectedLabel:
-    """One label and its confidence, 0..1."""
-
     name: str
-    confidence: float
+    confidence: float  # 0..1
 
 
 @dataclass(frozen=True)
 class LabelSet:
-    """Every label a detector returned for one image, plus provenance."""
-
     labels: tuple[DetectedLabel, ...]
     model: str
     version: str
@@ -32,7 +23,7 @@ class LabelSet:
 
 @dataclass(frozen=True)
 class KeywordGroup:
-    """Label names that show one report type: strong evidence and weak evidence."""
+    """Lower-case label names that show one report type; weak ones count WEAK_WEIGHT."""
 
     strong: frozenset[str]
     weak: frozenset[str] = frozenset()
@@ -44,7 +35,7 @@ class KeywordGroup:
         return WEAK_WEIGHT if name in self.weak else 0.0
 
     def score(self, labels: tuple[DetectedLabel, ...]) -> tuple[float, tuple[str, ...]]:
-        """Best weighted confidence and the labels that matched, as 'name 0.97' notes."""
+        """The best single weighted confidence, and the matched labels as notes."""
         matched = [(label, self.weight(label.name)) for label in labels]
         matched = [(label, weight) for label, weight in matched if weight > 0]
         best = max((label.confidence * weight for label, weight in matched), default=0.0)
@@ -82,6 +73,3 @@ WASTE_KEYWORDS: Mapping[str, KeywordGroup] = MappingProxyType(
         ),
     }
 )
-
-# Smoke or flame: a hint for the judge and the logs, never part of the waste score.
-BURNING_KEYWORDS = frozenset({"fire", "smoke", "flame", "bonfire", "ash"})

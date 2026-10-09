@@ -1,11 +1,12 @@
 """One verification case and its result, shaped as contracts/verification_result."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from agent.domain.images import BlurredImage
-from agent.domain.purposes import Purpose
-from agent.domain.verification import (
+from ml.domain.images import BlurredImage
+from ml.domain.insights import Insights
+from ml.domain.purposes import Purpose
+from ml.domain.verification import (
     CaseFeatures,
     Claim,
     JudgeVerdict,
@@ -51,6 +52,7 @@ class VerificationResult:
     combiner: CombinerInfo
     decided_at: datetime
     embedding_key: str | None = None
+    insights: Insights = field(default_factory=Insights)
 
     def to_contract(self) -> dict[str, object]:
         return {
@@ -66,5 +68,6 @@ class VerificationResult:
             "disagreement": self.outcome.disagreement,
             "combiner": {"kind": self.combiner.kind, "version": self.combiner.version},
             "embedding_key": self.embedding_key,
+            "insights": self.insights.to_contract(),
             "decided_at": self.decided_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

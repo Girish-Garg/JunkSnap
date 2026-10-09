@@ -1,28 +1,22 @@
-"""Fixed-weight combiner (v0): a weighted mean of the signal scores, before the meta-learner."""
+"""Fixed-weight combiner (v0): a weighted mean of signal scores, before the meta-learner."""
 
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 
-from agent.domain.case import CombinerInfo
-from agent.domain.errors import ConfigError
-from agent.domain.purposes import Purpose
-from agent.domain.verification import Outcome, SignalResult, Thresholds
+from ml.domain.case import CombinerInfo
+from ml.domain.errors import ConfigError
+from ml.domain.purposes import Purpose
+from ml.domain.verification import Outcome, SignalResult, Thresholds
 
-# Hand-set, not fitted. The judge runs only on unsure or split cases, so it breaks ties.
+# Hand-set, not fitted. The judge only runs on unsure or split cases, so it breaks ties.
 FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
     {"rekognition_labels": 0.4, "yolo": 0.3, "embedding_classifier": 0.3, "vision_judge": 0.6}
 )
-# Two signals this far apart (on 0..1) strongly disagree.
+# Two scores this far apart on 0..1 strongly disagree.
 DISAGREEMENT_GAP = 0.5
 
 
 class FixedWeightCombiner:
-    """Probability = weighted mean of the scores of the signals that ran.
-
-    Strong disagreement is a gap of DISAGREEMENT_GAP or more between any two scores. The
-    purpose turns probability and disagreement into a decision (thresholds 0.85 / 0.5).
-    """
-
     KIND = "fixed_weights"
     VERSION = "fw-v0"
 
@@ -55,7 +49,6 @@ class FixedWeightCombiner:
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
 
     def needs_judge(self, signals: Sequence[SignalResult]) -> bool:
-        """True when the signals are unsure (between the thresholds) or disagree."""
         return self.disagree(signals) or self._thresholds.is_unsure(self.probability(signals))
 
     def combine(self, signals: Sequence[SignalResult], purpose: Purpose) -> Outcome:

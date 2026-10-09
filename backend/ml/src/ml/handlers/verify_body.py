@@ -1,12 +1,12 @@
-"""The verify request body from contracts/README.md (worker to agent)."""
+"""The verify request body from contracts/README.md (worker to ml)."""
 
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.domain.case import VerifyInput
-from agent.domain.verification import CaseFeatures, Claim
-from agent.services.judge_answer import ContextName
+from ml.domain.case import VerifyInput
+from ml.domain.verification import CaseFeatures, Claim
+from ml.services.judge_answer import ContextName
 
 
 class FeaturesBody(BaseModel):

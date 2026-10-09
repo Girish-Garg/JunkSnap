@@ -1,38 +1,34 @@
-"""Purpose of a verification: does the photo show the reported waste, or is the site clean?
-
-Each purpose turns model evidence into support for its own claim and makes its own decision,
-so the verifier has no `if purpose == ...` branches. Add a purpose by adding a class.
-"""
+"""Verification purposes: does the photo show the reported waste, or is the site now clean."""
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import override
 
-from agent.domain.errors import InvalidClaimError
-from agent.domain.verification import NOT_WASTE, Claim, JudgeVerdict, Outcome, Thresholds
+from ml.domain.errors import InvalidClaimError
+from ml.domain.verification import NOT_WASTE, Claim, JudgeVerdict, Outcome, Thresholds
 
 # The judge saw waste of another type than reported: neither support nor denial.
 OTHER_TYPE_SUPPORT = 0.5
 
 
 class Purpose(ABC):
-    """Strategy for one value of the verify request's `purpose`."""
+    """Strategy per verify-request `purpose`; add a purpose by adding a class."""
 
     name: str
     id_prefix: str
 
     @abstractmethod
     def support(self, waste_score: float) -> float:
-        """Turn a 0..1 score for 'waste of the claimed type is visible' into claim support."""
+        """Claim support from a 0..1 score that waste of the claimed type is visible."""
 
     @abstractmethod
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
-        """Turn the judge's verdict into claim support."""
+        """Claim support from the judge's verdict."""
 
     @abstractmethod
     def outcome(self, probability: float, disagreement: bool, thresholds: Thresholds) -> Outcome:
-        """Decision for this purpose, per the verification_result contract."""
+        """Decision per the verification_result contract."""
 
     @staticmethod
     def named(name: str) -> "Purpose":
@@ -43,8 +39,6 @@ class Purpose(ABC):
 
 
 class ReportPurpose(Purpose):
-    """Claim: the photo shows the reported waste. Disagreement always goes to the community."""
-
     name = "report"
     id_prefix = "rpt"
 
@@ -69,7 +63,7 @@ class ReportPurpose(Purpose):
 
 
 class CleanupPurpose(Purpose):
-    """Claim: the site in the after-photo is clean. Cleanups never go to community check."""
+    """Cleanups never go to community check."""
 
     name = "cleanup"
     id_prefix = "cln"

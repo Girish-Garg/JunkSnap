@@ -1,4 +1,4 @@
-"""Registry of the routers the agent web app serves.
+"""Registry of the routers the ml web app serves.
 
 To add routes, a task writes `handlers/<topic>_routes.py` with `build_<topic>_router()`,
 which loads its own settings class, builds its services and adapters, and returns an
@@ -9,6 +9,6 @@ from collections.abc import Callable
 
 from fastapi import APIRouter
 
-from agent.handlers.verify_routes import build_verify_router
+from ml.handlers.verify_routes import build_verify_router
 
 ROUTER_BUILDERS: tuple[Callable[[], APIRouter], ...] = (build_verify_router,)

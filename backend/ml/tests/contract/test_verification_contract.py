@@ -1,15 +1,17 @@
 import json
-import os
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
-from agent.domain.case import CombinerInfo, VerificationCase, VerificationResult
-from agent.domain.images import BlurredImage
-from agent.domain.purposes import Purpose
-from agent.domain.verification import (
+from fakes import JPEG, FakeDetector, make_case
+from jsonschema import Draft202012Validator
+
+from ml.domain.case import CombinerInfo, VerificationCase, VerificationResult
+from ml.domain.images import BlurredImage
+from ml.domain.purposes import Purpose
+from ml.domain.verification import (
     CaseFeatures,
     Claim,
     JudgeVerdict,
@@ -17,21 +19,24 @@ from agent.domain.verification import (
     SignalResult,
     Thresholds,
 )
-from agent.services.combiner import FixedWeightCombiner
-from agent.services.label_signal import RekognitionLabelSignal
-from fakes import JPEG, FakeDetector, make_case
-from jsonschema import Draft202012Validator
+from ml.services.combiner import FixedWeightCombiner
+from ml.services.label_signal import RekognitionLabelSignal
 
-# contracts/ arrives with PR #14; CONTRACTS_DIR points at another checkout until then.
-CONTRACTS = Path(os.environ.get("CONTRACTS_DIR", Path(__file__).resolve().parents[4] / "contracts"))
+CONTRACTS = Path(__file__).resolve().parents[4] / "contracts"
 SCHEMA_PATH = CONTRACTS / "schemas" / "verification_result.schema.json"
 DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
-pytestmark = pytest.mark.skipif(not SCHEMA_PATH.exists(), reason=f"no schema at {SCHEMA_PATH}")
+
+def schema() -> dict[str, Any]:
+    loaded: dict[str, Any] = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return loaded
 
 
-def validator() -> Draft202012Validator:
-    return Draft202012Validator(json.loads(SCHEMA_PATH.read_text(encoding="utf-8")))
+def validate(output: dict[str, Any]) -> None:
+    # Until the insights contract PR lands, the schema has no `insights` key to check.
+    if "insights" not in schema()["properties"]:
+        output = {key: value for key, value in output.items() if key != "insights"}
+    Draft202012Validator(schema()).validate(output)
 
 
 def fixtures() -> list[Path]:
@@ -78,14 +83,14 @@ def from_fixture(data: dict[str, Any]) -> VerificationResult:
 def test_output_matches_schema(purpose: str, labels: dict[str, float]) -> None:
     output = produced(purpose, labels, judge=None)
 
-    validator().validate(output)
+    validate(output)
     assert DATE_TIME.match(str(output["decided_at"]))
 
 
 def test_output_with_judge_matches_schema() -> None:
     verdict = JudgeVerdict("not_waste", None, False, ("SAMPLE",), "A clean street.", 0.8)
 
-    validator().validate(produced("report", {"Garbage": 0.7}, verdict))
+    validate(produced("report", {"Garbage": 0.7}, verdict))
 
 
 def test_fixtures_exist() -> None:
@@ -96,4 +101,8 @@ def test_fixtures_exist() -> None:
 def test_fixture_round_trips(path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
 
-    assert from_fixture(data).to_contract() == data
+    output = from_fixture(data).to_contract()
+
+    if "insights" not in data:
+        output.pop("insights")
+    assert output == data

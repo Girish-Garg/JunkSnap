@@ -1,10 +1,11 @@
-"""Value objects of stacked verification. Field names follow contracts/verification_result."""
+"""Value objects of stacked verification; field names follow contracts/verification_result."""
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 
-from agent.domain.errors import InvalidClaimError
+from ml.domain.errors import InvalidClaimError
+from ml.domain.insights import Insights
 
 REPORT_CONTEXTS: Mapping[str, frozenset[str]] = MappingProxyType(
     {
@@ -19,8 +20,6 @@ NOT_WASTE = "not_waste"
 
 @dataclass(frozen=True)
 class Claim:
-    """What the reporter says the photo shows: a report type and one of its contexts."""
-
     report_type: str
     context: str
 
@@ -31,8 +30,6 @@ class Claim:
 
 @dataclass(frozen=True)
 class CaseFeatures:
-    """Non-model inputs to the combiner, passed through from the verify request."""
-
     gps_accuracy_m: float
     reputation: float
     nearby_verified_reports: int
@@ -47,10 +44,7 @@ class CaseFeatures:
 
 @dataclass(frozen=True)
 class SignalResult:
-    """One model's support for the claim, with the provenance the evidence needs.
-
-    `notes` are short human-readable reasons (matched labels) for logs and the CLI only.
-    """
+    """One model's support for the claim (0..1); notes and insights stay out of the signal entry."""
 
     name: str
     score: float
@@ -59,6 +53,7 @@ class SignalResult:
     version: str
     latency_ms: int
     notes: tuple[str, ...] = ()
+    insights: Insights = field(default_factory=Insights)
 
     def to_contract(self) -> dict[str, object]:
         return {
@@ -73,8 +68,6 @@ class SignalResult:
 
 @dataclass(frozen=True)
 class JudgeVerdict:
-    """What the vision judge saw. Never counts or boxes."""
-
     report_type: str
     context: str | None
     burning: bool
@@ -94,8 +87,6 @@ class JudgeVerdict:
 
 @dataclass(frozen=True)
 class Thresholds:
-    """0.85 and above is auto-verified, 0.5 up to 0.85 goes to community check."""
-
     auto_verify_min: float = 0.85
     community_check_min: float = 0.5
 
@@ -111,8 +102,6 @@ class Thresholds:
 
 @dataclass(frozen=True)
 class Outcome:
-    """The combiner's answer: probability, decision, disagreement and the cleanup judgement."""
-
     probability: float
     decision: str
     disagreement: bool

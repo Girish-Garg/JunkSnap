@@ -1,12 +1,3 @@
-from agent.domain.llm import TaskConfig
-from agent.domain.pricing import PriceTable
-from agent.domain.verification import Thresholds
-from agent.ports.signal import Signal
-from agent.services.combiner import FixedWeightCombiner
-from agent.services.provider_factory import ProviderFactory
-from agent.services.provider_router import ProviderRouter
-from agent.services.stacked_verifier import StackedVerifier
-from agent.services.vision_judge import VisionJudge
 from fakes import (
     FIXED_NOW,
     JUDGE_JSON,
@@ -17,6 +8,16 @@ from fakes import (
     make_case,
     provider_error,
 )
+
+from ml.domain.llm import TaskConfig
+from ml.domain.pricing import PriceTable
+from ml.domain.verification import Thresholds
+from ml.ports.signal import Signal
+from ml.services.combiner import FixedWeightCombiner
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import ProviderRouter
+from ml.services.stacked_verifier import StackedVerifier
+from ml.services.vision_judge import VisionJudge
 
 
 def verifier(signals: list[Signal], judge_script: list[str | Exception]) -> tuple[

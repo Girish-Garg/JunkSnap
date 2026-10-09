@@ -1,25 +1,21 @@
-"""Factory that turns a ModelChoice into a ready LlmProvider, once per choice."""
+"""Factory that turns a ModelChoice into a ready LlmProvider."""
 
 from collections.abc import Mapping
 
-from agent.domain.errors import ConfigError
-from agent.domain.llm import ModelChoice
-from agent.ports.llm_provider import LlmProvider, ProviderBuilder
+from ml.domain.errors import ConfigError
+from ml.domain.llm import ModelChoice
+from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 
 
 class ProviderFactory:
-    """Builds providers through the builder registered for each provider name.
-
-    A new provider is a new ProviderBuilder registered here, never a new branch.
-    Results are kept, so API keys are read once per process.
-    """
+    """A new provider is a new registered builder; results are kept so keys are read once."""
 
     def __init__(self, builders: Mapping[str, ProviderBuilder]) -> None:
         self._builders = dict(builders)
         self._built: dict[ModelChoice, LlmProvider | None] = {}
 
     def build(self, choice: ModelChoice) -> LlmProvider | None:
-        """The provider for this choice, or None when it is skipped (for example no key)."""
+        """None when the provider is skipped, for example for want of an API key."""
         if choice not in self._built:
             self._built[choice] = self._builder(choice.provider).build(choice.model)
         return self._built[choice]

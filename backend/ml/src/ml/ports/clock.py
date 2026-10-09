@@ -5,8 +5,6 @@ from datetime import datetime
 
 
 class Clock(ABC):
-    """Tells the time in UTC."""
-
     @abstractmethod
     def now(self) -> datetime:
-        """The current time, timezone-aware, in UTC."""
+        """Timezone-aware, in UTC."""

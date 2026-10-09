@@ -1,7 +1,7 @@
 import pytest
 
-from agent.domain.errors import ConfigError
-from agent.settings.core import CoreSettings
+from ml.domain.errors import ConfigError
+from ml.settings.core import CoreSettings
 
 
 def test_defaults_are_for_dev() -> None:

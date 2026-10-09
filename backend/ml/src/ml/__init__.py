@@ -1,1 +1,1 @@
-"""JunkSnap agent: LLM layer, stacked verification, brands, rulebook and letters."""
+"""JunkSnap ml: stacked verification of waste photos."""

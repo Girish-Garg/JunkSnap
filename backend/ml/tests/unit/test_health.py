@@ -5,8 +5,8 @@ import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
-from agent.handlers.web import create_app
-from agent.settings.core import CoreSettings
+from ml.handlers.web import create_app
+from ml.settings.core import CoreSettings
 
 
 def test_healthz_returns_ok() -> None:
@@ -42,5 +42,5 @@ def test_logs_uvicorn_lines_as_json(capsys: pytest.CaptureFixture[str]) -> None:
 
     line = json.loads(capsys.readouterr().out.strip())
     assert line["message"] == "GET /healthz 200"
-    assert line["service"] == "agent"
+    assert line["service"] == "ml"
     assert line["stage"] == "demo"

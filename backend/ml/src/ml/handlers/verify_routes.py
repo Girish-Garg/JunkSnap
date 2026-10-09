@@ -7,18 +7,18 @@ from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from agent.domain.errors import (
+from ml.domain.errors import (
     InvalidClaimError,
     InvalidImageError,
     JunkSnapError,
     NotBlurredImageError,
 )
-from agent.handlers.verify_body import VerifyBody
-from agent.handlers.verify_graph import VerifierBuilder
-from agent.services.verify_service import VerifyService
-from agent.settings.core import CoreSettings
-from agent.settings.llm import LlmSettings
-from agent.settings.verify import VerifySettings
+from ml.handlers.verify_body import VerifyBody
+from ml.handlers.verify_graph import VerifierBuilder
+from ml.services.verify_service import VerifyService
+from ml.settings.core import CoreSettings
+from ml.settings.llm import LlmSettings
+from ml.settings.verify import VerifySettings
 
 logger = logging.getLogger(__name__)
 

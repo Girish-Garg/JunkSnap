@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from agent.domain.errors import ProviderError
-from agent.ports.secret_reader import SecretReader
+from ml.domain.errors import ProviderError
+from ml.ports.secret_reader import SecretReader
 
 if TYPE_CHECKING:
     from mypy_boto3_secretsmanager import SecretsManagerClient

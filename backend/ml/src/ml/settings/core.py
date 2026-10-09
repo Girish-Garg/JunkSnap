@@ -4,8 +4,8 @@ from typing import Literal
 
 from pydantic import Field
 
-from agent.domain.errors import ConfigError
-from agent.settings.base import EnvSettings
+from ml.domain.errors import ConfigError
+from ml.settings.base import EnvSettings
 
 
 class CoreSettings(EnvSettings):

@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from agent.domain.errors import ProviderError
-from agent.domain.llm import LlmRequest, LlmResponse
-from agent.ports.llm_provider import LlmProvider, ProviderBuilder
+from ml.domain.errors import ProviderError
+from ml.domain.llm import LlmRequest, LlmResponse
+from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 
 if TYPE_CHECKING:
     from mypy_boto3_bedrock_runtime import BedrockRuntimeClient

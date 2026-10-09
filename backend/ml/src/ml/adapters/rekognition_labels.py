@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from agent.domain.errors import ExternalServiceError
-from agent.domain.images import BlurredImage
-from agent.domain.labels import DetectedLabel, LabelSet
-from agent.ports.label_detector import LabelDetector
+from ml.domain.errors import ExternalServiceError
+from ml.domain.images import BlurredImage
+from ml.domain.labels import DetectedLabel, LabelSet
+from ml.ports.label_detector import LabelDetector
 
 if TYPE_CHECKING:
     from mypy_boto3_rekognition import RekognitionClient

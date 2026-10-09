@@ -415,7 +415,7 @@ wheels = [
 ]
 
 [[package]]
-name = "junksnap-agent"
+name = "junksnap-ml"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

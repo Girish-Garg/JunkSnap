@@ -1,9 +1,9 @@
 """Use case behind POST /internal/verify."""
 
-from agent.domain.case import VerificationCase, VerificationResult, VerifyInput
-from agent.domain.purposes import Purpose
-from agent.ports.image_store import BlurredImageStore
-from agent.services.stacked_verifier import StackedVerifier
+from ml.domain.case import VerificationCase, VerificationResult, VerifyInput
+from ml.domain.purposes import Purpose
+from ml.ports.image_store import BlurredImageStore
+from ml.services.stacked_verifier import StackedVerifier
 
 
 class VerifyService:

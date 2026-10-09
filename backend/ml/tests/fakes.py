@@ -1,21 +1,21 @@
-"""In-memory fakes of the agent's ports, shared by unit and contract tests."""
+"""In-memory fakes of the ml package's ports, shared by unit and contract tests."""
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from agent.domain.case import VerificationCase
-from agent.domain.errors import ProviderError
-from agent.domain.images import BlurredImage
-from agent.domain.labels import DetectedLabel, LabelSet
-from agent.domain.llm import LlmRequest, LlmResponse
-from agent.domain.purposes import Purpose
-from agent.domain.verification import CaseFeatures, Claim, SignalResult
-from agent.ports.clock import Clock
-from agent.ports.image_store import BlurredImageStore
-from agent.ports.label_detector import LabelDetector
-from agent.ports.llm_provider import LlmProvider, ProviderBuilder
-from agent.ports.secret_reader import SecretReader
-from agent.ports.signal import Signal
+from ml.domain.case import VerificationCase
+from ml.domain.errors import ProviderError
+from ml.domain.images import BlurredImage
+from ml.domain.labels import DetectedLabel, LabelSet
+from ml.domain.llm import LlmRequest, LlmResponse
+from ml.domain.purposes import Purpose
+from ml.domain.verification import CaseFeatures, Claim, SignalResult
+from ml.ports.clock import Clock
+from ml.ports.image_store import BlurredImageStore
+from ml.ports.label_detector import LabelDetector
+from ml.ports.llm_provider import LlmProvider, ProviderBuilder
+from ml.ports.secret_reader import SecretReader
+from ml.ports.signal import Signal
 
 JPEG = b"\xff\xd8\xff\xe0fake-jpeg"
 FIXED_NOW = datetime(2026, 10, 10, 2, 15, 3, tzinfo=UTC)

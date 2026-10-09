@@ -2,15 +2,16 @@ import logging
 
 import httpx
 import pytest
-from agent.adapters.openai_compatible import OPENAI, OpenAiCompatibleBuilder
-from agent.domain.errors import ConfigError, NoProviderAnsweredError
-from agent.domain.llm import LlmRequest, ModelChoice, TaskConfig
-from agent.domain.pricing import PriceTable
-from agent.ports.llm_provider import LlmProvider, ProviderBuilder
-from agent.services.judge_answer import JudgeAnswer
-from agent.services.provider_factory import ProviderFactory
-from agent.services.provider_router import INVALID_JSON_REMINDER, JsonJob, ProviderRouter
 from fakes import JUDGE_JSON, FakeBuilder, FakeProvider, FakeSecrets, provider_error
+
+from ml.adapters.openai_compatible import OpenAiProviderBuilder
+from ml.domain.errors import ConfigError, NoProviderAnsweredError
+from ml.domain.llm import LlmRequest, ModelChoice, TaskConfig
+from ml.domain.pricing import PriceTable
+from ml.ports.llm_provider import LlmProvider, ProviderBuilder
+from ml.services.judge_answer import JudgeAnswer
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import INVALID_JSON_REMINDER, JsonJob, ProviderRouter
 
 TASK = TaskConfig("bedrock", "first", (ModelChoice("bedrock", "second"),))
 JOB = JsonJob("judge", LlmRequest(system="judge", prompt="photo"), JudgeAnswer)
@@ -61,7 +62,7 @@ def test_moves_on_after_two_invalid_answers() -> None:
 
 def test_skips_provider_without_key() -> None:
     task = TaskConfig("openai", "gpt-4.1-mini", (ModelChoice("bedrock", "second"),))
-    openai = OpenAiCompatibleBuilder(OPENAI, httpx.Client(), FakeSecrets({}), "openai-key")
+    openai = OpenAiProviderBuilder(httpx.Client(), FakeSecrets({}), "openai-key")
     second = FakeProvider("second", [JUDGE_JSON])
     factory = ProviderFactory({"bedrock": FakeBuilder({"second": second}), "openai": openai})
 

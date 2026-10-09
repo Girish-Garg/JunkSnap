@@ -1,4 +1,4 @@
-"""Agent web service. Run with: uvicorn agent.handlers.web:app --host 0.0.0.0 --port 8000
+"""ML web service. Run with: uvicorn ml.handlers.web:app --host 0.0.0.0 --port 8000
 
 Routes are not added here: see handlers/routers.py.
 """
@@ -8,17 +8,17 @@ from collections.abc import Sequence
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agent.handlers.routers import ROUTER_BUILDERS
-from agent.logging_setup import JsonLogging
-from agent.settings.core import CoreSettings
+from ml.handlers.routers import ROUTER_BUILDERS
+from ml.logging_setup import JsonLogging
+from ml.settings.core import CoreSettings
 
-SERVICE_NAME = "agent"
+SERVICE_NAME = "ml"
 
 
 def create_app(settings: CoreSettings, routers: Sequence[APIRouter]) -> FastAPI:
     """Build the app: JSON logs, CORS, GET /healthz and every given router."""
     JsonLogging({"service": SERVICE_NAME, "stage": settings.stage}).install()
-    app = FastAPI(title="JunkSnap agent")
+    app = FastAPI(title="JunkSnap ml")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.allowed_origins()),

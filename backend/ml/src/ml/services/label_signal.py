@@ -1,21 +1,16 @@
-"""Signal from Rekognition DetectLabels: keyword groups per report type (domain/labels.py)."""
+"""Signal from Rekognition DetectLabels, scored with keyword groups per report type."""
 
 from collections.abc import Mapping
 
-from agent.domain.case import VerificationCase
-from agent.domain.labels import BURNING_KEYWORDS, WASTE_KEYWORDS, KeywordGroup, LabelSet
-from agent.domain.verification import SignalResult
-from agent.ports.label_detector import LabelDetector
-from agent.ports.signal import Signal
+from ml.domain.case import VerificationCase
+from ml.domain.label_insights import LabelInsights
+from ml.domain.labels import WASTE_KEYWORDS, KeywordGroup
+from ml.domain.verification import SignalResult
+from ml.ports.label_detector import LabelDetector
+from ml.ports.signal import Signal
 
 
 class RekognitionLabelSignal(Signal):
-    """Scores the claimed report type's keyword group over the detected labels.
-
-    The waste score is the best matching label's confidence (weak keywords count less); the
-    case's purpose turns it into support for its claim (cleanup: 1 - waste score).
-    """
-
     NAME = "rekognition_labels"
     PROVIDER = "rekognition"
 
@@ -24,6 +19,7 @@ class RekognitionLabelSignal(Signal):
     ) -> None:
         self._detector = detector
         self._keywords = dict(keywords)
+        self._insights = LabelInsights()
 
     def measure(self, case: VerificationCase) -> SignalResult:
         labels = self._detector.detect(case.image)
@@ -35,12 +31,6 @@ class RekognitionLabelSignal(Signal):
             model=labels.model,
             version=labels.version,
             latency_ms=labels.latency_ms,
-            notes=notes + self._burning_notes(labels),
-        )
-
-    def _burning_notes(self, labels: LabelSet) -> tuple[str, ...]:
-        return tuple(
-            f"burning? {label.name} {label.confidence:.2f}"
-            for label in labels.labels
-            if label.name.lower() in BURNING_KEYWORDS
+            notes=notes,
+            insights=self._insights.read(labels.labels),
         )

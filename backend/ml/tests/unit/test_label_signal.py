@@ -1,7 +1,8 @@
 import pytest
-from agent.domain.verification import Claim
-from agent.services.label_signal import RekognitionLabelSignal
 from fakes import FakeDetector, make_case
+
+from ml.domain.verification import Claim
+from ml.services.label_signal import RekognitionLabelSignal
 
 
 def test_strong_waste_label_scores_its_confidence() -> None:
@@ -39,12 +40,3 @@ def test_cleanup_support_is_one_minus_waste() -> None:
     signal = RekognitionLabelSignal(FakeDetector({"Garbage": 0.9}))
 
     assert signal.measure(make_case("cleanup")).score == pytest.approx(0.1)
-
-
-def test_burning_labels_become_notes_not_score() -> None:
-    signal = RekognitionLabelSignal(FakeDetector({"Smoke": 0.8}))
-
-    result = signal.measure(make_case())
-
-    assert result.score == 0.0
-    assert result.notes == ("burning? Smoke 0.80",)

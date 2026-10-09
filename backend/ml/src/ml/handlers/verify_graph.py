@@ -6,23 +6,23 @@ import boto3
 import httpx
 from botocore.config import Config
 
-from agent.adapters.bedrock_converse import BedrockProviderBuilder
-from agent.adapters.openai_compatible import OPENAI, OPENROUTER, OpenAiCompatibleBuilder
-from agent.adapters.rekognition_labels import RekognitionLabelDetector
-from agent.adapters.s3_images import S3BlurredImageStore
-from agent.adapters.secrets_manager import SecretsManagerSecretReader
-from agent.adapters.system_clock import SystemClock
-from agent.domain.pricing import PriceTable
-from agent.domain.verification import Thresholds
-from agent.ports.llm_provider import ProviderBuilder
-from agent.services.combiner import FixedWeightCombiner
-from agent.services.label_signal import RekognitionLabelSignal
-from agent.services.provider_factory import ProviderFactory
-from agent.services.provider_router import ProviderRouter
-from agent.services.stacked_verifier import StackedVerifier
-from agent.services.vision_judge import VisionJudge
-from agent.settings.core import CoreSettings
-from agent.settings.llm import LlmSettings
+from ml.adapters.bedrock_converse import BedrockProviderBuilder
+from ml.adapters.openai_compatible import OpenAiProviderBuilder
+from ml.adapters.rekognition_labels import RekognitionLabelDetector
+from ml.adapters.s3_images import S3BlurredImageStore
+from ml.adapters.secrets_manager import SecretsManagerSecretReader
+from ml.adapters.system_clock import SystemClock
+from ml.domain.pricing import PriceTable
+from ml.domain.verification import Thresholds
+from ml.ports.llm_provider import ProviderBuilder
+from ml.services.combiner import FixedWeightCombiner
+from ml.services.label_signal import RekognitionLabelSignal
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import ProviderRouter
+from ml.services.stacked_verifier import StackedVerifier
+from ml.services.vision_judge import VisionJudge
+from ml.settings.core import CoreSettings
+from ml.settings.llm import LlmSettings
 
 JUDGE_PROMPT = "judge_v0.txt"
 # Few retries: a throttled provider should hand over to the next one quickly.
@@ -31,8 +31,6 @@ HTTP_TIMEOUT_S = 60.0
 
 
 class VerifierBuilder:
-    """Builds the verifier and its parts once per process."""
-
     def __init__(self, core: CoreSettings, llm: LlmSettings) -> None:
         self._core = core
         self._llm = llm
@@ -52,22 +50,19 @@ class VerifierBuilder:
         return ProviderRouter(self._llm.task_configs(), factory, PriceTable())
 
     def _provider_builders(self) -> dict[str, ProviderBuilder]:
-        stage = self._core.stage
         secrets = SecretsManagerSecretReader(
             self._session.client("secretsmanager", config=AWS_CONFIG)
         )
-        http = httpx.Client(timeout=HTTP_TIMEOUT_S)
-        bedrock = self._session.client("bedrock-runtime", config=AWS_CONFIG)
+        openai_secret = self._llm.openai_secret(self._core.stage)
         return {
-            "bedrock": BedrockProviderBuilder(bedrock),
-            "openai": OpenAiCompatibleBuilder(
-                OPENAI, http, secrets, self._llm.openai_secret(stage)
+            "bedrock": BedrockProviderBuilder(
+                self._session.client("bedrock-runtime", config=AWS_CONFIG)
             ),
-            "openrouter": OpenAiCompatibleBuilder(
-                OPENROUTER, http, secrets, self._llm.openrouter_secret(stage)
+            "openai": OpenAiProviderBuilder(
+                httpx.Client(timeout=HTTP_TIMEOUT_S), secrets, openai_secret
             ),
         }
 
     @staticmethod
     def _prompt(name: str) -> str:
-        return resources.files("agent.prompts").joinpath(name).read_text(encoding="utf-8")
+        return resources.files("ml.prompts").joinpath(name).read_text(encoding="utf-8")

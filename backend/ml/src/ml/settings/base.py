@@ -5,7 +5,7 @@ from typing import Self
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsError
 
-from agent.domain.errors import ConfigError
+from ml.domain.errors import ConfigError
 
 
 class EnvSettings(BaseSettings):

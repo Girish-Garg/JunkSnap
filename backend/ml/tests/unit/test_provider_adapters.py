@@ -4,13 +4,14 @@ from typing import Any
 
 import httpx
 import pytest
-from agent.adapters.bedrock_converse import BedrockConverseProvider, BedrockProviderBuilder
-from agent.adapters.openai_compatible import OPENAI, OPENROUTER, OpenAiCompatibleBuilder
-from agent.domain.errors import ProviderError
-from agent.domain.images import BlurredImage
-from agent.domain.llm import LlmRequest
 from botocore.exceptions import ClientError
 from fakes import JPEG, FakeSecrets
+
+from ml.adapters.bedrock_converse import BedrockConverseProvider, BedrockProviderBuilder
+from ml.adapters.openai_compatible import OpenAiProviderBuilder
+from ml.domain.errors import ProviderError
+from ml.domain.images import BlurredImage
+from ml.domain.llm import LlmRequest
 
 IMAGE = BlurredImage("media/reports/rpt_jdh_1.jpg", JPEG)
 REQUEST = LlmRequest(system="judge", prompt="photo", images=(IMAGE,))
@@ -21,10 +22,10 @@ OPENAI_ANSWER = {
 }
 
 
-def openai_builder(key: str | None, handler: Any, endpoint: Any = OPENAI) -> OpenAiCompatibleBuilder:
+def openai_builder(key: str | None, handler: Any) -> OpenAiProviderBuilder:
     secrets = FakeSecrets({"key": key} if key is not None else {})
     http = httpx.Client(transport=httpx.MockTransport(handler))
-    return OpenAiCompatibleBuilder(endpoint, http, secrets, "key")
+    return OpenAiProviderBuilder(http, secrets, "key")
 
 
 @pytest.mark.parametrize("key", [None, "", "  ", "placeholder", "REPLACE_ME", "changeme"])
@@ -45,27 +46,12 @@ def test_openai_sends_blurred_image_as_data_url_and_json_mode() -> None:
     response = provider.complete(REQUEST)
 
     body = sent[0]
-    image_part = body["messages"][1]["content"][0]
-    assert image_part["image_url"]["url"] == "data:image/jpeg;base64," + base64.b64encode(JPEG).decode()
+    data_url = body["messages"][1]["content"][0]["image_url"]["url"]
+    assert data_url == "data:image/jpeg;base64," + base64.b64encode(JPEG).decode()
     assert body["response_format"] == {"type": "json_object"}
     assert body["max_completion_tokens"] == REQUEST.max_tokens
     assert (response.provider, response.version) == ("openai", "gpt-4.1-mini-2025-04-14")
     assert (response.input_tokens, response.output_tokens) == (900, 40)
-
-
-def test_openrouter_excludes_providers_that_keep_data() -> None:
-    sent: list[dict[str, Any]] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        sent.append(json.loads(request.content))
-        return httpx.Response(200, json=OPENAI_ANSWER)
-
-    provider = openai_builder("sk-or-test", handler, OPENROUTER).build("google/gemini-2.5-flash")
-    assert provider is not None
-    provider.complete(REQUEST)
-
-    assert sent[0]["provider"] == {"data_collection": "deny", "zdr": True}
-    assert "max_tokens" in sent[0]
 
 
 def test_openai_http_error_is_a_provider_error() -> None:

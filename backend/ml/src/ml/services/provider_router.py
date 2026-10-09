@@ -6,12 +6,12 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, ValidationError
 
-from agent.domain.errors import ConfigError, NoProviderAnsweredError, ProviderError
-from agent.domain.llm import LlmRequest, LlmResponse, ModelChoice, TaskConfig
-from agent.domain.pricing import PriceTable
-from agent.ports.llm_provider import LlmProvider
-from agent.services.provider_factory import ProviderFactory
-from agent.utils import json_object_text
+from ml.domain.errors import ConfigError, NoProviderAnsweredError, ProviderError
+from ml.domain.llm import LlmRequest, LlmResponse, ModelChoice, TaskConfig
+from ml.domain.pricing import PriceTable
+from ml.ports.llm_provider import LlmProvider
+from ml.services.provider_factory import ProviderFactory
+from ml.utils import json_object_text
 
 logger = logging.getLogger(__name__)
 

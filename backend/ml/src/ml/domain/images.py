@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from agent.domain.errors import InvalidImageError, NotBlurredImageError
+from ml.domain.errors import InvalidImageError, NotBlurredImageError
 
 BLURRED_PREFIX = "media/"
 # Only the verify CLI uses this, for local photos treated as already blurred.

@@ -1,19 +1,20 @@
 from typing import Any
 
-from agent.domain.llm import TaskConfig
-from agent.domain.pricing import PriceTable
-from agent.domain.verification import Thresholds
-from agent.handlers.verify_routes import verify_router
-from agent.handlers.web import create_app
-from agent.services.combiner import FixedWeightCombiner
-from agent.services.provider_factory import ProviderFactory
-from agent.services.provider_router import ProviderRouter
-from agent.services.stacked_verifier import StackedVerifier
-from agent.services.verify_service import VerifyService
-from agent.services.vision_judge import VisionJudge
-from agent.settings.core import CoreSettings
 from fakes import FakeBuilder, FakeImages, FakeSignal, FixedClock
 from fastapi.testclient import TestClient
+
+from ml.domain.llm import TaskConfig
+from ml.domain.pricing import PriceTable
+from ml.domain.verification import Thresholds
+from ml.handlers.verify_routes import verify_router
+from ml.handlers.web import create_app
+from ml.services.combiner import FixedWeightCombiner
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import ProviderRouter
+from ml.services.stacked_verifier import StackedVerifier
+from ml.services.verify_service import VerifyService
+from ml.services.vision_judge import VisionJudge
+from ml.settings.core import CoreSettings
 
 REQUEST: dict[str, Any] = {
     "report_id": "rpt_jdh_1",

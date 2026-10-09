@@ -1,8 +1,8 @@
-"""Exception hierarchy for the agent package. Every error raised here is a JunkSnapError."""
+"""Exception hierarchy for the ml package. Every error raised here is a JunkSnapError."""
 
 
 class JunkSnapError(Exception):
-    """Root of every error the agent raises on purpose."""
+    """Root of every error the ml package raises on purpose."""
 
 
 class ConfigError(JunkSnapError):
