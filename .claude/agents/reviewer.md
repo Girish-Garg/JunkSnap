@@ -14,7 +14,7 @@ Check, in this order:
 1. Correctness bugs that would break the never-cut path.
 2. The issue's acceptance criteria: met, with evidence?
 3. Contracts: does every shape crossing a package boundary match its schema and fixtures?
-4. Scope and structure: files changed outside the issue's scope; breaches of docs/working.md (layers, strict OOP, size limits).
+4. Scope and structure: files changed outside the issue's scope; breaches of docs/working.md (layers, strict OOP, size limits, comments longer than one line or restating the code).
 5. Product rules: quoted rules only from hashed official texts and verified, faces and plates blurred, no person named, company names only when readable, neutral letters, nothing filed automatically.
 6. Accepted decisions: anything contradicting one?
 
