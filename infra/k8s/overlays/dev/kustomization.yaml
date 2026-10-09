@@ -1,0 +1,17 @@
+# scripts/deploy.py layers image tags and stack outputs on top (infra/k8s/deploy/dev, not committed).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: junksnap-dev
+labels:
+  - pairs:
+      junksnap/stage: dev
+resources:
+  - namespace.yaml
+  - ../../base
+configMapGenerator:
+  - name: junksnap-config
+    behavior: merge
+    literals:
+      - JUNKSNAP_STAGE=dev
+      # Empty: dev allows any origin.
+      - CORS_ORIGINS=

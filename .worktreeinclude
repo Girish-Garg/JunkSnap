@@ -1,6 +1,6 @@
 .env
 frontend/.env.local
 data/.env
-backend/agent/.env
+backend/ml/.env
 backend/pipeline/.env
 infra/.env
