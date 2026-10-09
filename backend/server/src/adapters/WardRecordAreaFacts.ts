@@ -4,12 +4,13 @@ import { z } from "zod";
 import { validateWardRecord, type WardRecord } from "../contracts/index.gen.js";
 import type { AreaFactSheet } from "../domain/AreaFactSheet.js";
 import type { AreaKey } from "../domain/AreaKey.js";
-import { InternalDataError } from "../domain/errors.js";
+import { InternalDataError, ValidationError } from "../domain/errors.js";
 import { GeoPoint } from "../domain/GeoPoint.js";
-import type { AreaFacts } from "../ports/AreaFacts.js";
+import type { AreaFacts, SkippedRecord } from "../ports/AreaFacts.js";
 
-// The city file and its map layers have no schema yet (contracts README); each record must pass ward_record.
+// The city file and its map layers have no schema yet (contracts README); each reviewed record must pass ward_record.
 const CityFile = z.object({ records: z.array(z.unknown()), map_layers: z.record(z.string(), z.unknown()).nullish() });
+const Reviewed = z.object({ review_status: z.literal("reviewed") });
 const LocalBodies = z.array(z.object({ id: z.string(), towns: z.array(z.string()) }));
 const WARD_AREA_ID = /^([a-z0-9-]+)-w([0-9]+)$/;
 const PLACE_LAYERS = ["school", "water"];
@@ -17,8 +18,11 @@ const PLACE_LAYERS = ["school", "water"];
 interface CityWards {
   readonly city: string;
   readonly reviewed: readonly WardRecord[];
+  readonly skipped: readonly SkippedRecord[];
   readonly placesMapped: boolean;
 }
+
+type Checked = { readonly record: WardRecord } | { readonly skipped: SkippedRecord };
 
 // <ASSETS_DIR>/wards/<city>.json and representatives/local_bodies.json; v1 has km² and disposal points for wards only.
 export class WardRecordAreaFacts implements AreaFacts {
@@ -50,6 +54,10 @@ export class WardRecordAreaFacts implements AreaFacts {
     };
   }
 
+  skippedRecords(): readonly SkippedRecord[] {
+    return [...this.#cities.values()].flatMap((city) => city.skipped);
+  }
+
   // Joins <local-body-id>-w<n> on the body's cities and ward_number; old bodies can repeat a number, so two matches mean unknown.
   #ward(wardId: string): WardRecord | null {
     const match = WARD_AREA_ID.exec(wardId);
@@ -64,20 +72,27 @@ export class WardRecordAreaFacts implements AreaFacts {
     if (!parsed.success) {
       throw new InternalDataError(`${file}: ${z.prettifyError(parsed.error)}`);
     }
-    const records = parsed.data.records.map((record) => WardRecordAreaFacts.#record(file, record));
+    const reviewed = parsed.data.records.filter((record) => Reviewed.safeParse(record).success);
+    const checked = reviewed.map((record) => WardRecordAreaFacts.#check(file, record));
     const layers = parsed.data.map_layers ?? {};
     return {
       city: basename(file, ".json"),
-      reviewed: records.filter((record) => record.review_status === "reviewed"),
+      reviewed: checked.flatMap((each) => ("record" in each ? [each.record] : [])),
+      skipped: checked.flatMap((each) => ("skipped" in each ? [each.skipped] : [])),
       placesMapped: PLACE_LAYERS.some((layer) => (layers[layer] ?? null) !== null),
     };
   }
 
-  static #record(file: string, record: unknown): WardRecord {
+  // A reviewed record that breaks ward_record is left out, so one bad row never stops the job; anything else still does.
+  static #check(file: string, record: unknown): Checked {
     try {
-      return validateWardRecord(record);
+      return { record: validateWardRecord(record) };
     } catch (error) {
-      throw new InternalDataError(`${file}: a record breaks the ward_record contract`, { cause: error });
+      if (!(error instanceof ValidationError)) {
+        throw error;
+      }
+      const recordId = z.object({ id: z.string() }).safeParse(record).data?.id ?? "unknown";
+      return { skipped: { file, recordId, error } };
     }
   }
 
