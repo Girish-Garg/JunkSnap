@@ -1,19 +1,37 @@
-import { JwtExpiredError } from "aws-jwt-verify/error";
+import { FetchError, JwtExpiredError } from "aws-jwt-verify/error";
 import { describe, expect, it } from "vitest";
 import { CognitoAuthenticator } from "../../src/adapters/CognitoAuthenticator.js";
-import { ConfigError, ForbiddenError, UnauthorizedError } from "../../src/domain/errors.js";
+import { ConfigError, ExternalServiceError, ForbiddenError, UnauthorizedError } from "../../src/domain/errors.js";
 import { HttpErrorMapper } from "../../src/handlers/HttpErrorMapper.js";
 import { AuthSettings } from "../../src/settings/AuthSettings.js";
-import { CLIENT_ID, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
+import { FakeJwksFetcher } from "./FakeJwksFetcher.js";
+import { CLIENT_ID, ISSUER, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
 
 const ENV = { COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID };
+const settings = AuthSettings.fromEnv(ENV);
 const minter = new TokenMinter();
-const authenticator = new CognitoAuthenticator(AuthSettings.fromEnv(ENV), minter.jwks());
+const authenticator = new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache());
 const now = () => Math.floor(Date.now() / 1000);
 
 describe("CognitoAuthenticator", () => {
   it("returns only the user id (sub) for a valid ID token", async () => {
     await expect(authenticator.verify(minter.idToken())).resolves.toEqual({ userId: USER_SUB });
+  });
+
+  it("downloads the pool JWKS once and reuses it", async () => {
+    const fetcher = new FakeJwksFetcher(minter.jwks());
+    const cached = new CognitoAuthenticator(settings, fetcher.cache());
+    await cached.verify(minter.idToken());
+    await cached.verify(minter.idToken());
+    expect(fetcher.uris).toEqual([`${ISSUER}/.well-known/jwks.json`]);
+  });
+
+  it("turns a JWKS download failure into 500 ExternalServiceError and keeps the FetchError", async () => {
+    const offline = new CognitoAuthenticator(settings, new FakeJwksFetcher().cache());
+    const error = await offline.verify(minter.idToken()).catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(ExternalServiceError);
+    expect(error).toMatchObject({ status: 500, code: "server_error" });
+    expect((error as Error).cause).toBeInstanceOf(FetchError);
   });
 
   it("rejects an expired token with 401 and says it expired", async () => {

@@ -29,10 +29,16 @@ export class RouteGuard {
     return this.#authenticator.verify(token);
   }
 
-  // No header means a guest; a header with a bad token is still 401, so the app knows to sign in again.
+  // Browsing never 401s: a missing, malformed or expired token is a guest; a JWKS outage still fails.
   async optionalUser(request: AuthRequest): Promise<AuthUser | undefined> {
-    const token = RouteGuard.#token(request);
-    return token === undefined ? undefined : this.#authenticator.verify(token);
+    try {
+      return await this.requireUser(request);
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   static #token(request: AuthRequest): string | undefined {

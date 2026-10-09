@@ -8,16 +8,20 @@ import { createApp } from "../../src/handlers/web.js";
 import { AuthSettings } from "../../src/settings/AuthSettings.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
+import { FakeJwksFetcher } from "./FakeJwksFetcher.js";
 import { CLIENT_ID, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
 
 const ENV = { JUNKSNAP_STAGE: "dev", COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID };
+const settings = AuthSettings.fromEnv(ENV);
 const minter = new TokenMinter();
-const guard = new RouteGuard(new CognitoAuthenticator(AuthSettings.fromEnv(ENV), minter.jwks()));
+const guard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache()));
+const offlineGuard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher().cache()));
 
 // The way a route module uses the guard: required for writes, optional for browsing.
 const guardedRoutes: FastifyPluginAsync = async (app) => {
   app.post("/reports", async (request) => ({ user_id: (await guard.requireUser(request)).userId }));
   app.get("/sites", async (request) => ({ user_id: (await guard.optionalUser(request))?.userId ?? null }));
+  app.get("/offline", async (request) => ({ user_id: (await offlineGuard.optionalUser(request))?.userId ?? null }));
 };
 
 let app: FastifyInstance;
@@ -76,9 +80,21 @@ describe("RouteGuard.optionalUser", () => {
     expect(response.json()).toEqual({ user_id: USER_SUB });
   });
 
-  it("still returns 401 for a bad token, so the app knows to sign in again", async () => {
-    const response = await app.inject({ url: "/sites", headers: bearer("not-a-jwt") });
-    expect(response.statusCode).toBe(401);
+  it.each([
+    ["a malformed token", bearer("not-a-jwt")],
+    ["an expired token", bearer(minter.idToken({ exp: Math.floor(Date.now() / 1000) - 60 }))],
+    ["a wrong audience", bearer(minter.idToken({ aud: "some-other-client" }))],
+    ["not a Bearer header", { authorization: "Basic dXNlcjpwYXNz" }],
+  ])("treats %s as a guest, so browsing never 401s", async (_case, headers) => {
+    const response = await app.inject({ url: "/sites", headers });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ user_id: null });
+  });
+
+  it("still fails with 500 when the JWKS cannot be fetched", async () => {
+    const response = await app.inject({ url: "/offline", headers: bearer(minter.idToken()) });
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toMatchObject({ error: "server_error" });
   });
 });
 
