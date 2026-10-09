@@ -19,13 +19,12 @@
       "state": "Rajasthan",
       "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
       "town": "Jodhpur",
-      "local_body": { "id": "jodhpur-north-mc", "name": "Jodhpur Municipal Corporation (North)", "head_office": "Commissioner" },
-      "ward": { "id": "jodhpur-north-mc-w12", "name": "Ward 12" },
-      "assembly_seat": { "id": "s20-ac-128", "name": "Jodhpur" },
-      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" },
+      "local_body": { "id": "jodhpur-mc", "name": "Jodhpur Municipal Corporation", "head_office": "Commissioner" },
+      "ward": null,
+      "assembly_seat": { "id": "s20-ac-127", "name": "Sardarpura" },
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur", "status": "current" },
       "representatives": [
-        { "office": "councillor", "seat_id": "jodhpur-north-mc-w12", "as_of": "2026-10-01", "source": "https://lsg.rajasthan.gov.in/" },
-        { "office": "mla", "seat_id": "s20-ac-128", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+        { "office": "mla", "seat_id": "s20-ac-127", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
         { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
       ]
     },
@@ -33,6 +32,22 @@
     "first_reported_at": "2026-10-09T04:05:00Z",
     "last_reported_at": "2026-10-10T03:20:00Z",
     "cleaned_at": null,
-    "pilot": true
+    "pilot": true,
+    "insights": {
+      "reports": 3,
+      "composition": [
+        { "material": "organic", "share_pct": 45, "reports": 3, "sources": [
+          { "signal": "vision_judge", "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6" }
+        ] },
+        { "material": "plastic", "share_pct": 40, "reports": 3, "sources": [
+          { "signal": "rekognition_labels", "provider": "rekognition", "model": "DetectLabels", "version": "3.0" }
+        ] }
+      ],
+      "size_class": { "value": "small", "reports": 3, "sources": [
+        { "signal": "vision_judge", "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6" }
+      ] },
+      "hazards": [],
+      "near": []
+    }
   }
 }
