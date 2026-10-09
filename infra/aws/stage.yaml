@@ -298,10 +298,10 @@ Resources:
       EnableTokenRevocation: true
 
   # ---------- EKS Pod Identity roles, one per workload, least privilege ----------
-  ModelsPolicy:
+  BedrockPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: !Sub junksnap-${Stage}-models
+      ManagedPolicyName: !Sub junksnap-${Stage}-bedrock
       Description: Bedrock through global and regional inference profiles; secrets are per role.
       PolicyDocument:
         Version: "2012-10-17"
@@ -326,7 +326,7 @@ Resources:
             Action: [sts:AssumeRole, sts:TagSession]
             Condition:
               StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
-      ManagedPolicyArns: [!Ref ModelsPolicy]
+      ManagedPolicyArns: [!Ref BedrockPolicy]
       Policies:
         - PolicyName: api
           PolicyDocument:
@@ -385,7 +385,7 @@ Resources:
             Action: [sts:AssumeRole, sts:TagSession]
             Condition:
               StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
-      ManagedPolicyArns: [!Ref ModelsPolicy]
+      ManagedPolicyArns: [!Ref BedrockPolicy]
       Policies:
         - PolicyName: worker
           PolicyDocument:
@@ -460,7 +460,7 @@ Resources:
             Action: [sts:AssumeRole, sts:TagSession]
             Condition:
               StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
-      ManagedPolicyArns: [!Ref ModelsPolicy]
+      ManagedPolicyArns: [!Ref BedrockPolicy]
       Policies:
         - PolicyName: ml
           PolicyDocument:
