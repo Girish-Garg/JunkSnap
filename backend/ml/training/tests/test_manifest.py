@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 from training import manifest as manifest_module
 from training.adapters import LocalOnlyStore
-from training.domain import Box, ConfigError, ImageRecord, ManifestRow
+from training.domain import Box, ConfigError, ExternalServiceError, ImageRecord, ManifestRow
 from training.fetch import Fetcher
 from training.images import ImageNormaliser
 from training.labelstudio import FieldExportReader
@@ -98,6 +98,9 @@ def test_a_missing_field_photo_is_an_error(tmp_path: Path, store, class_map) -> 
     source = FieldExportSource(SourceInfo("field", "p", "e"), None, labelled,
                                FieldPhotos(store, tmp_path))
     with pytest.raises(ConfigError, match="IMG_1.jpg"):
+        Fetcher(tmp_path, store, ImageNormaliser()).fetch(source, None)
+    (tmp_path / "IMG_1.jpg").write_bytes(b"corrupt")
+    with pytest.raises(ExternalServiceError, match="img_1"):
         Fetcher(tmp_path, store, ImageNormaliser()).fetch(source, None)
 
 

@@ -31,6 +31,8 @@ class FieldPhotos:
 
 
 class FieldExportSource(DatasetSource):
+    skips_unreadable = False
+
     def __init__(
         self, info: SourceInfo, downloader: Downloader, labelled: list[ImageRecord],
         photos: FieldPhotos,

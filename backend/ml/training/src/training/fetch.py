@@ -67,7 +67,8 @@ class Fetcher:
     def fetch(self, source: DatasetSource, limit: int | None) -> list[ImageRecord]:
         name = source.info.name
         source.download(self._cache, limit)
-        records = [r for item in source.items(self._cache, limit) if (r := self._keep(name, item))]
+        items = source.items(self._cache, limit)
+        records = [r for item in items if (r := self._keep(source, item))]
         if len({r.image_id for r in records}) != len(records):
             raise ConfigError(f"{name}: two images map to one id")
         RecordFile(self._cache, name).write(records)
@@ -75,13 +76,16 @@ class Fetcher:
         LOG.info("fetched %s: %d images", name, len(records))
         return records
 
-    def _keep(self, name: str, item: RawItem) -> ImageRecord | None:
+    def _keep(self, source: DatasetSource, item: RawItem) -> ImageRecord | None:
+        name = source.info.name
         relative = f"{name}/images/{item.stem}.jpg"
         dest = self._cache / relative
         if not dest.exists():
             try:
                 self._images.write(item.read(), dest)
             except ExternalServiceError as error:
+                if not source.skips_unreadable:
+                    raise
                 LOG.warning("skipped %s: %s", item.stem, error)
                 return None
         return ImageRecord(
