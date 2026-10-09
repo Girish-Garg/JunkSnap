@@ -29,7 +29,7 @@ Claude merges PRs itself once CI is green and the reviewer says SHIP: squash thr
 
 ## 4. Decisions (all accepted; they replace the earlier satellite-only "Saboot" plan)
 
-Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `docs/decisions/20261010-0130` to `-0136` (proposed until Hemang confirms).
+Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `docs/decisions/20261010-0130` to `-0137` (proposed until Hemang confirms). Decision 0137: LLMs are the last step in detection, and their main use is the ward-data crawler (task W1).
 
 1. **Product:** JunkSnap, community-reported, ML-verified civic waste reporting for all of India, Jodhpur as the pilot. Pitch: dumps are not only the authorities' failure; people dump on empty plots, often because there is nowhere legal to put waste. JunkSnap measures all three causes.
 2. **Report types:** (a) waste dump, tagged vacant plot, roadside, drain or other; (b) no bin / no pickup; (c) contaminated water: stagnant, sewage, foam, choked drain; (d) open construction: uncovered debris, dusty site. (a) and (b) must ship; (c) and (d) should ship. Potholes are a roadmap line only.
@@ -60,11 +60,12 @@ Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `d
 - D1 moderation: moderation gate, face and plate blur, authenticity checks → `moderation_result`; tests with stubbed Rekognition; a real run on 5 photos on `dev`.
 
 **Wave 2 (as wave 1 merges)**
-- D2 location: boundaries, Amazon Location, representatives tables → `location_lookup`; tests with known points.
+- W1 ward-data crawler (decision 20261010-0137): offline job that reads official public pages (municipal corporation and ward lists, census tables, state election and assembly sites, Lok Sabha, Swachh Survekshan) and extracts ward records (ward number and name, municipal body, zone, area km², population, councillor seat, sanitation office contact, legal disposal and collection points, assembly and Lok Sabha seat). Every field has source URL, `fetched_at` and page SHA-256. Validated JSON in `data/wards/`, reviewed before use; offices and seats only, no personal names. Jodhpur first. Feeds D2 and the area scores in D3.
+- D2 location: boundaries, Amazon Location, representatives tables, W1 ward records → `location_lookup`; tests with known points.
 - A4 rulebook + letters: hashed official texts, hand-checked rules JSON, routing table, letters agent and verifier → `letter_draft`; a test that a misquote fails.
 - A3 brands → `brand_label`; precision on 10 close-up packet photos.
 - F2 Snap: in-app camera, GPS, client hash, type and context pickers, presign → PUT → submit, status polling, offline queue; mock first, then live on `dev`.
-- D3 sites + scores: merging, lifecycle, aggregation, the three scores with guardrails → `ward_scores`.
+- D3 sites + scores: merging, lifecycle, aggregation, the three scores with guardrails (ward area, population and disposal points from W1) → `ward_scores`.
 - F4 community + area pages: verify, me-too, cleanup after-photo, reputation; area page with scores, diagnosis and counts; letter preview with citation cards and print-to-PDF.
 
 **Saturday 07:30–10:00: field data**

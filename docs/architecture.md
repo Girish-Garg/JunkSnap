@@ -70,6 +70,8 @@ The `worker` long-polls the SQS reports queue. For each report or Scan frame it 
 | 8. Merge | pipeline | `worker` | `SiteMerger` | `site` |
 | 9. Score, every 15 minutes | pipeline | `scores` CronJob | `ScoreCalculator` | `ward_scores` |
 
+The LLM is the last step in detection. Rekognition labels, YOLO and Titan embeddings decide first; the vision judge runs only when they are not confident or disagree, and it never sets counts or boxes.
+
 Thresholds: probability 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected. Strong disagreement between signals always goes to community check. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
 
 ## 4. Lifecycles
@@ -98,7 +100,9 @@ A site moves open → cleaned (only with an after-photo the pipeline confirms is
 
 ## 6. Model-agnostic LLM layer
 
-`ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` for each task: judge, brands, letters, text moderation. Providers implement `LlmProvider`:
+The main LLM use is the ward-data crawler (below); in detection the LLM comes last (section 3).
+
+`ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` for each task: ward crawler, judge, brands, letters, text moderation. Providers implement `LlmProvider`:
 
 - `BedrockProvider`: the default. Models checked from ap-south-1 on 10 Oct at 01:15 IST; the Claude 5 family is not available for this account.
 - `OpenAiProvider`: fallback after Bedrock. The key is in Secrets Manager as `junksnap/<stage>/openai-api-key`.
@@ -116,6 +120,8 @@ Order for the judge and letters:
 
 The embedding signal uses Titan image embeddings, `amazon.titan-embed-image-v1`, on-demand in ap-south-1. Only blurred images go to any model. Every response is validated against a schema; on failure the next provider is tried. Every call logs provider, model, version, latency and estimated cost, and the evidence pack records them.
 
+Ward-data crawler: an offline job, not part of the report pipeline. It reads official public pages (municipal corporation and ward lists, census tables, state election and assembly sites, Lok Sabha, Swachh Survekshan) and extracts one record per ward: ward number and name, municipal body, zone, area km², population, councillor seat, sanitation office contact, legal disposal and collection points, assembly and Lok Sabha seat. Each field carries its source URL, `fetched_at` and the page's SHA-256. Output is validated JSON in `data/wards/`, reviewed by a person before use. It stores offices and seats only, never personal names. Location (D2) and area scores read these records.
+
 ## 7. Accountability
 
 - `LetterRouter` picks addressees from report type and state: the local body head (To); councillor, MLA and MP (Cc "for attention"); the state pollution board for burning, water and construction dust; Swachhata and CPGRAMS nationwide; Rajasthan Sampark in Rajasthan.
@@ -124,7 +130,7 @@ The embedding signal uses Titan image embeddings, `amazon.titan-embed-image-v1`,
 
 ## 8. Area scores
 
-City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Formulas are versioned in `docs/decisions/`. Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history.
+City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Ward area, population and legal disposal points come from the crawled ward records in `data/wards/`. Formulas are versioned in `docs/decisions/`. Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history.
 
 ## 9. Security and privacy
 
