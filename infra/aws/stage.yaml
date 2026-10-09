@@ -447,6 +447,11 @@ Resources:
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
                   - !GetAtt ScoresTable.Arn
+              # cleanups has no site index, so the cleanup duplicate check scans it filtered by site_id.
+              - Sid: ScanCleanups
+                Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt CleanupsTable.Arn
               # No provider keys: the worker reads originals and its model calls are Bedrock only.
               - Sid: ConsumeReports
                 Effect: Allow
