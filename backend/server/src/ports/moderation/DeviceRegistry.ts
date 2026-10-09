@@ -1,4 +1,4 @@
-import type { CaptureMode } from "../../domain/moderation/PhotoSubmission.js";
+import type { Sender } from "../../domain/moderation/PhotoSubmission.js";
 
 export interface DeviceStanding {
   readonly known: boolean;
@@ -7,15 +7,15 @@ export interface DeviceStanding {
 }
 
 export interface PhotoWindow {
-  readonly deviceToken: string;
-  readonly mode: CaptureMode;
+  readonly sender: Sender;
   readonly from: Date;
   readonly to: Date;
 }
 
+// Devices and signed-in accounts: the devices and users tables, and reports by-device and by-user.
 export interface DeviceRegistry {
-  // An unknown device is not an error: it comes back with known false and the starting reputation.
-  standing(deviceToken: string): Promise<DeviceStanding>;
-  // Photos of this mode the device sent with received_at in [from, to], the current photo included.
-  photosReceived(window: PhotoWindow): Promise<number>;
+  // An unknown sender is not an error: it comes back with known false and the starting reputation.
+  standing(sender: Sender): Promise<DeviceStanding>;
+  // Snap photos the sender sent with received_at in [from, to], the current photo included; scan frames never count.
+  snapPhotos(window: PhotoWindow): Promise<number>;
 }

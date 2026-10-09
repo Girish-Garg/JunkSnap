@@ -13,7 +13,7 @@ import { FreshTimestampCheck } from "../../src/services/moderation/checks/FreshT
 import { InsideIndiaCheck } from "../../src/services/moderation/checks/InsideIndiaCheck.js";
 import { NearSiteCheck } from "../../src/services/moderation/checks/NearSiteCheck.js";
 import { RateLimitCheck } from "../../src/services/moderation/checks/RateLimitCheck.js";
-import { FakeDeviceRegistry, FakeHashIndex, JODHPUR, reportUpload, RECEIVED_AT } from "./fakes.js";
+import { DEVICE, FakeDeviceRegistry, FakeHashIndex, JODHPUR, reportUpload, RECEIVED_AT } from "./fakes.js";
 
 const OUTLINE = fileURLToPath(new URL("../../../../data/boundaries/india_outline.geojson", import.meta.url));
 const HASH = PerceptualHash.fromHex("c4e1b3a59d0f2687");
@@ -112,23 +112,36 @@ describe("DuplicateCheck", () => {
   });
 });
 
+const USER = "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7";
+
 describe("RateLimitCheck", () => {
   it.each([
-    ["snap", 20, "pass", "20 photos in the last hour; limit 20"],
-    ["snap", 21, "fail", "21 photos in the last hour; limit 20"],
-    ["scan", 1, "pass", "1 frame in the last second; limit 1"],
-    ["scan", 2, "fail", "2 frames in the last second; limit 1"],
-  ] as const)("%s with %i in the window gives %s", async (mode, count, result, detail) => {
+    [20, 3, "pass", "20 photos in the last hour; limit 20"],
+    [21, 3, "fail", "21 photos in the last hour; limit 20"],
+    [2, 21, "fail", "21 photos in the last hour; limit 20"],
+    [1, 1, "pass", "1 photo in the last hour; limit 20"],
+  ] as const)("snap: device %i and account %i gives %s, the stricter count", async (device, user, result, detail) => {
     const devices = new FakeDeviceRegistry();
-    devices.count = count;
-    const outcome = await new RateLimitCheck(devices).run(subject({ capture_mode: mode }));
+    Object.assign(devices.counts, { device, user });
+    const outcome = await new RateLimitCheck(devices).run(subject({ user_id: USER }));
     expect(outcome.toContract()).toEqual({ result, detail });
   });
 
-  it("asks for the window that ends at received_at", async () => {
+  it("counts a guest report by device only, over the hour that ends at received_at", async () => {
     const devices = new FakeDeviceRegistry();
-    await new RateLimitCheck(devices).run(subject());
-    expect(devices.windows[0]).toMatchObject({ mode: "snap", from: new Date("2026-10-10T01:14:52Z"), to: new Date(RECEIVED_AT) });
+    devices.counts.user = 99;
+    expect((await new RateLimitCheck(devices).run(subject())).failed).toBe(false);
+    expect(devices.windows).toEqual([
+      { sender: { kind: "device", id: DEVICE }, from: new Date("2026-10-10T01:14:52Z"), to: new Date(RECEIVED_AT) },
+    ]);
+  });
+
+  it("passes scan frames without counting them, as the frame sampler limits them", async () => {
+    const devices = new FakeDeviceRegistry();
+    devices.counts.device = 99;
+    const outcome = await new RateLimitCheck(devices).run(subject({ capture_mode: "scan" }));
+    expect(outcome.toContract()).toEqual({ result: "pass", detail: "scan frame; the frame sampler keeps 1 per second" });
+    expect(devices.windows).toEqual([]);
   });
 });
 
@@ -137,12 +150,21 @@ describe("DeviceTokenCheck", () => {
     [{ known: true, reputation: 0.74, blocked: false }, "pass", "known device, reputation 0.74"],
     [{ known: false, reputation: 0.5, blocked: false }, "pass", "new device, reputation 0.5"],
     [{ known: true, reputation: 0.1, blocked: true }, "fail", "device blocked"],
-  ])("%o gives %s", async (standing, result, detail) => {
+  ])("guest with %o gives %s", async (standing, result, detail) => {
     const devices = new FakeDeviceRegistry();
-    devices.standingValue = standing;
+    devices.standings.device = standing;
     const check = new DeviceTokenCheck(devices);
     expect((await check.run(subject())).toContract()).toEqual({ result, detail });
     expect(check.reason).toBe("blocked_device");
+  });
+
+  it("reports the lower reputation of device and account, and fails a blocked account", async () => {
+    const devices = new FakeDeviceRegistry();
+    devices.standings.user = { known: true, reputation: 0.31, blocked: false };
+    const check = new DeviceTokenCheck(devices);
+    expect((await check.run(subject({ user_id: USER }))).detail).toBe("known device, reputation 0.31");
+    devices.standings.user = { known: true, reputation: 0.9, blocked: true };
+    expect((await check.run(subject({ user_id: USER }))).toContract()).toEqual({ result: "fail", detail: "account blocked" });
   });
 });
 
@@ -162,12 +184,15 @@ describe("NearSiteCheck", () => {
     hash: HASH,
   });
 
-  it("passes at 50 m and fails at 61 m", async () => {
-    expect((await new NearSiteCheck().run(cleanupAt(26.27055))).toContract()).toEqual({
+  it("passes at 48.9 m and fails at 50.04 m", async () => {
+    expect((await new NearSiteCheck().run(cleanupAt(26.27054))).toContract()).toEqual({
       result: "pass",
-      detail: "after-photo 50 m from the site; limit 50 m",
+      detail: "after-photo 49 m from the site; limit 50 m",
     });
-    expect((await new NearSiteCheck().run(cleanupAt(26.27065))).failed).toBe(true);
+    expect((await new NearSiteCheck().run(cleanupAt(26.27055))).toContract()).toEqual({
+      result: "fail",
+      detail: "after-photo 51 m from the site; limit 50 m",
+    });
   });
 
   it("refuses a report photo, which has no site", async () => {

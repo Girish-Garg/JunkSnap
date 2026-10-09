@@ -4,7 +4,7 @@ import type { ReportUpload } from "../../src/contracts/index.gen.js";
 import { Box } from "../../src/domain/moderation/Box.js";
 import type { ImageScreening, LabeledBox, ModerationLabel } from "../../src/domain/moderation/GatePolicy.js";
 import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
-import { PhotoSubmission } from "../../src/domain/moderation/PhotoSubmission.js";
+import { PhotoSubmission, type Sender } from "../../src/domain/moderation/PhotoSubmission.js";
 import type { FoundRegions, NoteVerdict } from "../../src/domain/moderation/types.js";
 import type { Clock } from "../../src/ports/moderation/Clock.js";
 import type { DeviceRegistry, DeviceStanding, PhotoWindow } from "../../src/ports/moderation/DeviceRegistry.js";
@@ -125,17 +125,20 @@ export class FakeHashIndex implements HashIndex {
 }
 
 export class FakeDeviceRegistry implements DeviceRegistry {
-  standingValue: DeviceStanding = { known: true, reputation: 0.74, blocked: false };
-  count = 1;
+  readonly standings: Record<Sender["kind"], DeviceStanding> = {
+    device: { known: true, reputation: 0.74, blocked: false },
+    user: { known: true, reputation: 0.8, blocked: false },
+  };
+  readonly counts: Record<Sender["kind"], number> = { device: 1, user: 1 };
   readonly windows: PhotoWindow[] = [];
 
-  async standing(): Promise<DeviceStanding> {
-    return this.standingValue;
+  async standing(sender: Sender): Promise<DeviceStanding> {
+    return this.standings[sender.kind];
   }
 
-  async photosReceived(window: PhotoWindow): Promise<number> {
+  async snapPhotos(window: PhotoWindow): Promise<number> {
     this.windows.push(window);
-    return this.count;
+    return this.counts[window.sender.kind];
   }
 }
 
@@ -147,13 +150,19 @@ export class FakeGeofence implements Geofence {
   }
 }
 
-export class FixedClock implements Clock {
+export class FakeClock implements Clock {
   now(): Date {
     return new Date("2026-10-10T02:15:03.250Z");
   }
 }
 
-export class RemovingNoteModerator implements NoteModerator {
+export class FakeCleanNoteModerator implements NoteModerator {
+  async review(): Promise<NoteVerdict> {
+    return { result: "clean", reasons: [], provider: "bedrock", model: "test-model", version: "1" };
+  }
+}
+
+export class FakeRemovingNoteModerator implements NoteModerator {
   async review(): Promise<NoteVerdict> {
     return { result: "removed", reasons: ["personal_data"], provider: "bedrock", model: "test-model", version: "1" };
   }

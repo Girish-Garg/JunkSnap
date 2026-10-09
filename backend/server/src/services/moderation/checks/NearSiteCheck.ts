@@ -14,7 +14,8 @@ export class NearSiteCheck implements Check {
     if (site === null) {
       throw new InternalDataError("near_site check on a photo without a site");
     }
-    const metres = Math.round(location.distanceTo(site));
+    // Rounding up keeps the shown distance and the comparison in agreement: 50.2 m shows 51 and fails.
+    const metres = Math.ceil(location.distanceTo(site));
     const detail = `after-photo ${metres} m from the site; limit ${MAX_DISTANCE_M} m`;
     return metres > MAX_DISTANCE_M ? CheckOutcome.fail(detail) : CheckOutcome.pass(detail);
   }

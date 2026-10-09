@@ -4,10 +4,16 @@ import { PhotoId } from "./PhotoId.js";
 
 export type CaptureMode = ReportUpload["capture_mode"];
 
+export interface Sender {
+  readonly kind: "device" | "user";
+  readonly id: string;
+}
+
 // The fields of the SQS cleanup message that moderation reads (contracts/README.md).
 export interface CleanupPhoto {
   readonly upload_id: string;
   readonly device_token: string;
+  readonly user_id?: string;
   readonly sha256: string;
   readonly gps: { readonly lat: number; readonly lon: number };
   readonly captured_at: string;
@@ -19,6 +25,8 @@ export interface SubmissionFields {
   readonly sha256: string;
   readonly location: GeoPoint;
   readonly deviceToken: string;
+  // Null only for a guest report made before accounts.
+  readonly userId: string | null;
   readonly captureMode: CaptureMode;
   readonly capturedAt: Date;
   readonly receivedAt: Date;
@@ -40,6 +48,7 @@ export class PhotoSubmission {
       sha256: upload.sha256,
       location: new GeoPoint(upload.gps.lat, upload.gps.lon),
       deviceToken: upload.device_token,
+      userId: upload.user_id ?? null,
       captureMode: upload.capture_mode,
       capturedAt: new Date(upload.captured_at),
       receivedAt: new Date(receivedAt),
@@ -54,6 +63,7 @@ export class PhotoSubmission {
       sha256: cleanup.sha256,
       location: new GeoPoint(cleanup.gps.lat, cleanup.gps.lon),
       deviceToken: cleanup.device_token,
+      userId: cleanup.user_id ?? null,
       captureMode: "snap",
       capturedAt: new Date(cleanup.captured_at),
       receivedAt: new Date(cleanup.received_at),
@@ -64,5 +74,12 @@ export class PhotoSubmission {
 
   get photoId(): PhotoId {
     return this.fields.photoId;
+  }
+
+  // The device, then the account when signed in; limits and blocks apply to each.
+  senders(): Sender[] {
+    const { deviceToken, userId } = this.fields;
+    const device: Sender = { kind: "device", id: deviceToken };
+    return userId === null ? [device] : [device, { kind: "user", id: userId }];
   }
 }
