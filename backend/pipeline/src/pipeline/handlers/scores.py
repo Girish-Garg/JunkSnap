@@ -5,14 +5,14 @@ No-op shell for now: it logs that it started and returns. A later task adds the 
 
 import logging
 
-from pipeline.logging_setup import configure_logging
-from pipeline.settings import Settings
+from pipeline.logging_setup import JsonLogging
+from pipeline.settings.core import CoreSettings
 
 
 def main() -> None:
     """Run one scores pass."""
-    settings = Settings.load()
-    configure_logging({"service": "scores", "stage": settings.stage})
+    settings = CoreSettings.load()
+    JsonLogging({"service": "scores", "stage": settings.stage}).install()
     logging.getLogger(__name__).info("scores started")
 
 

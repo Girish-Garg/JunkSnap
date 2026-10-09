@@ -1,29 +1,37 @@
 import pytest
-
 from pipeline.domain.errors import ConfigError
-from pipeline.settings import Settings
+from pipeline.settings.core import CoreSettings
 
 
-def test_defaults() -> None:
-    settings = Settings()
+def test_defaults_are_for_dev() -> None:
+    settings = CoreSettings.load()
 
     assert settings.stage == "dev"
     assert settings.aws_region == "ap-south-1"
-    assert settings.cors_origins == ("*",)
+    assert settings.allowed_origins() == ("*",)
 
 
-def test_reads_prefixed_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_reads_exact_variable_names(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JUNKSNAP_STAGE", "demo")
-    monkeypatch.setenv("JUNKSNAP_CORS_ORIGINS", '["https://a.example", "https://b.example"]')
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    monkeypatch.setenv("CORS_ORIGINS", "https://a.example,http://localhost:5173")
 
-    settings = Settings.load()
+    settings = CoreSettings.load()
 
     assert settings.stage == "demo"
-    assert settings.cors_origins == ("https://a.example", "https://b.example")
+    assert settings.aws_region == "us-east-1"
+    assert settings.allowed_origins() == ("https://a.example", "http://localhost:5173")
 
 
-def test_bad_value_raises_config_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("JUNKSNAP_CORS_ORIGINS", "not json")
+def test_unknown_stage_raises_config_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JUNKSNAP_STAGE", "prod")
 
     with pytest.raises(ConfigError):
-        Settings.load()
+        CoreSettings.load()
+
+
+def test_no_wildcard_origin_outside_dev(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JUNKSNAP_STAGE", "demo")
+
+    with pytest.raises(ConfigError, match="CORS_ORIGINS"):
+        CoreSettings.load().allowed_origins()

@@ -1,19 +1,8 @@
 import json
-import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 
 import pytest
-
 from pipeline.handlers import scores, worker
-
-
-@pytest.fixture(autouse=True)
-def restore_root_logger() -> Iterator[None]:
-    root = logging.getLogger()
-    saved_handlers, saved_level = root.handlers[:], root.level
-    yield
-    root.handlers[:] = saved_handlers
-    root.setLevel(saved_level)
 
 
 @pytest.mark.parametrize(
@@ -26,12 +15,13 @@ def test_main_logs_start_as_json(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("JUNKSNAP_STAGE", "test")
+    # Demo stage without CORS_ORIGINS: the worker and scores job never need it.
+    monkeypatch.setenv("JUNKSNAP_STAGE", "demo")
 
     main()
 
     line = json.loads(capsys.readouterr().out.strip())
     assert line["message"] == f"{service} started"
     assert line["service"] == service
-    assert line["stage"] == "test"
+    assert line["stage"] == "demo"
     assert line["level"] == "INFO"

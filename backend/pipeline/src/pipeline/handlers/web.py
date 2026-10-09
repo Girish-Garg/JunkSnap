@@ -1,28 +1,38 @@
-"""Public API web service. Run with: uvicorn pipeline.handlers.web:app --port 8080"""
+"""Public API web service. Run with: uvicorn pipeline.handlers.web:app --host 0.0.0.0 --port 8000
 
-from fastapi import FastAPI
+Routes are not added here: see handlers/routers.py.
+"""
+
+from collections.abc import Sequence
+
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from pipeline.settings import Settings
+from pipeline.handlers.routers import ROUTER_BUILDERS
+from pipeline.logging_setup import JsonLogging
+from pipeline.settings.core import CoreSettings
 
 SERVICE_NAME = "api"
 
 
-def create_app(settings: Settings) -> FastAPI:
-    """Build the FastAPI app and its routes from the given settings."""
+def create_app(settings: CoreSettings, routers: Sequence[APIRouter]) -> FastAPI:
+    """Build the app: JSON logs, CORS, GET /healthz and every given router."""
+    JsonLogging({"service": SERVICE_NAME, "stage": settings.stage}).install()
     app = FastAPI(title="JunkSnap API")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=list(settings.cors_origins),
+        allow_origins=list(settings.allowed_origins()),
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     @app.get("/healthz")
-    def healthz() -> dict[str, str]:
-        return {"status": "ok", "service": SERVICE_NAME, "stage": settings.stage}
+    def healthz() -> dict[str, bool]:
+        return {"ok": True}
 
+    for router in routers:
+        app.include_router(router)
     return app
 
 
-app = create_app(Settings.load())
+app = create_app(CoreSettings.load(), [build() for build in ROUTER_BUILDERS])

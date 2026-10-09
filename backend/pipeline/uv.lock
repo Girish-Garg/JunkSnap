@@ -129,6 +129,9 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+comprehend = [
+    { name = "mypy-boto3-comprehend" },
+]
 dynamodb = [
     { name = "mypy-boto3-dynamodb" },
 ]
@@ -350,7 +353,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "boto3-stubs", extra = ["dynamodb", "geo-places", "rekognition", "s3", "secretsmanager", "sqs"] },
+    { name = "boto3-stubs", extra = ["comprehend", "dynamodb", "geo-places", "rekognition", "s3", "secretsmanager", "sqs"] },
     { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
@@ -374,7 +377,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "boto3-stubs", extras = ["dynamodb", "geo-places", "rekognition", "s3", "secretsmanager", "sqs"], specifier = ">=1.43" },
+    { name = "boto3-stubs", extras = ["comprehend", "dynamodb", "geo-places", "rekognition", "s3", "secretsmanager", "sqs"], specifier = ">=1.43" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "mypy", specifier = ">=2.4" },
     { name = "pytest", specifier = ">=9.1" },
@@ -534,6 +537,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/df/c0/1a5dc601c22041a7bbfe1ff71cf097fbbd4fb49930867c6789baf5102106/mypy-2.4.0-cp315-cp315t-win_amd64.whl", hash = "sha256:172e30b8fea631fe310f0c665477f52d9ea40bb4e99e0c81dc30118563b13710", size = 12350955, upload-time = "2026-10-01T20:40:01.52Z" },
     { url = "https://files.pythonhosted.org/packages/1c/bc/697e9e26fc2a86c094ad67ee1e419971b7f01ded66ee66231b09e9f3e12e/mypy-2.4.0-cp315-cp315t-win_arm64.whl", hash = "sha256:5786ef987b3767e51aaa53f20aec104c0252b42ecda7aef8e8b4cbae279b05c5", size = 11842738, upload-time = "2026-10-01T20:40:30.026Z" },
     { url = "https://files.pythonhosted.org/packages/81/12/46ae8670c98a3cd0286ca5645c2f918f8f6be65edfed81b916010619f668/mypy-2.4.0-py3-none-any.whl", hash = "sha256:d01c5d26a352acc6d5cf3128225477e1e8465e8d3029d4c345807fbf7f3cf093", size = 2800734, upload-time = "2026-10-01T20:39:26.837Z" },
+]
+
+[[package]]
+name = "mypy-boto3-comprehend"
+version = "1.43.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d8/fc/8e9f80fc27e6660fba21dc8dbfef47affb4fe47ee8405445b921f8ec957b/mypy_boto3_comprehend-1.43.0.tar.gz", hash = "sha256:182045cbf69477db65bc57be82a249e964d7c9b588d13e9b411c793d377d33a7", size = 43404, upload-time = "2026-04-29T22:59:02.203Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/fa/763a3c6f26c37f8c020cefef2e33c55f693d6798314dfa13e5991631d71a/mypy_boto3_comprehend-1.43.0-py3-none-any.whl", hash = "sha256:837e8e570dc631f0f2e603ea639f3c87fb10d562c1c5a7c54577e2331aa052de", size = 48895, upload-time = "2026-04-29T22:58:59.363Z" },
 ]
 
 [[package]]
