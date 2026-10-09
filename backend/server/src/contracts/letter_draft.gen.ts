@@ -60,7 +60,7 @@ export interface LetterDraft {
       clause: string;
       quote: string;
       /**
-       * SHA-256 of the official text the quote was checked against.
+       * SHA-256 of the official PDF the rule comes from.
        */
       source_sha256: string;
       /**
@@ -77,7 +77,7 @@ export interface LetterDraft {
       clause: string;
       quote: string;
       /**
-       * SHA-256 of the official text the quote was checked against.
+       * SHA-256 of the official PDF the rule comes from.
        */
       source_sha256: string;
       /**
@@ -262,7 +262,7 @@ export const letterDraftSchema = {
           "source_sha256": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$",
-            "description": "SHA-256 of the official text the quote was checked against."
+            "description": "SHA-256 of the official PDF the rule comes from."
           },
           "verified": {
             "const": true,

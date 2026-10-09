@@ -13,6 +13,8 @@ RUN npm run build
 FROM node:24-slim
 ENV NODE_ENV=production
 WORKDIR /app
+# The worker cuts scan videos into frames with ffmpeg: one static binary, pinned by digest, far smaller than Debian's.
+COPY --from=mwader/static-ffmpeg:9.0.2@sha256:7d9bdaaf887f7e6ce6151f67325c344074b5ff1fb75316011c3376503e449a7b /ffmpeg /usr/local/bin/
 # Dependencies first, so code changes reuse this layer; sharp's linux-x64 binary comes from the lockfile.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
