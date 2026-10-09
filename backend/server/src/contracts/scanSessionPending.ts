@@ -1,4 +1,4 @@
-// Mirrors scan_session from the coming contracts PR #25; swap for scan_session.gen.ts once it merges.
+// Mirrors scan_session from the coming contracts PR #39; swap for scan_session.gen.ts once it merges.
 import { ContractValidator } from "./ContractValidator.js";
 import type { ReportUpload } from "./index.gen.js";
 
@@ -32,7 +32,7 @@ export interface ScanSession {
   hints?: { model: string; detections: ScanDetection[] };
 }
 
-// report_upload as PR #25 extends it for frames the worker cuts from a scan.
+// report_upload as PR #39 extends it for frames the worker cuts from a scan.
 export type ScanFrameUpload = ReportUpload & {
   scan: { scan_id: string; t_ms: number };
   user_id?: string;

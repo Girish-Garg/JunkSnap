@@ -19,7 +19,7 @@ import { LogSink } from "./LogSink.js";
 export const NOW = new Date("2026-10-10T04:02:20Z");
 export const VIDEO_SHA = "58a6b635872943aba34889e6e3c9fc117067b42f79f064042afe57d7e2046f18";
 
-// The scan_session fixture drafted for contracts PR #25 (sample jpr-1).
+// The scan_session fixture drafted for contracts PR #39 (sample jpr-1).
 export function sampleSession(overrides: Partial<ScanSession> = {}): ScanSession {
   const track = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((second) => ({
     t_ms: second * 1000,

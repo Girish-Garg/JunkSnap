@@ -28,16 +28,19 @@ export function scanRoutes({ presigner, intake }: ScanRouteServices): FastifyPlu
   };
 }
 
+// Settings load when the api registers the plugin, after its CORS check, so startup still fails fast in order.
 export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync {
-  const settings = ScanSettings.fromEnv(env);
-  const adapters = new ScanAdapterFactory(settings, core.awsRegion);
-  const now = (): Date => new Date();
-  const newScanId = (): string => `scn_${ulid().toLowerCase()}`;
-  const presigner = new ScanUploadPresigner(adapters.uploadSigner(), {
-    ttlSeconds: settings.presignTtlSeconds,
-    now,
-    newScanId,
-  });
-  const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), now });
-  return scanRoutes({ presigner, intake });
+  return async (app) => {
+    const settings = ScanSettings.fromEnv(env);
+    const adapters = new ScanAdapterFactory(settings, core.awsRegion);
+    const now = (): Date => new Date();
+    const newScanId = (): string => `scn_${ulid().toLowerCase()}`;
+    const presigner = new ScanUploadPresigner(adapters.uploadSigner(), {
+      ttlSeconds: settings.presignTtlSeconds,
+      now,
+      newScanId,
+    });
+    const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), now });
+    await app.register(scanRoutes({ presigner, intake }));
+  };
 }

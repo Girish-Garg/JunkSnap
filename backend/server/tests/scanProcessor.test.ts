@@ -123,7 +123,7 @@ describe("VideoScanProcessor", () => {
   it.each([
     ["the video was never uploaded", { video: null }, "No video was uploaded"],
     ["the bytes do not match the checksum", { video: { ...VIDEO, sha256Hex: "0".repeat(64) } }, "do not match video_sha256"],
-    ["the video is over 60 MB", { video: { ...VIDEO, bytes: 60 * 1024 * 1024 + 1 } }, "the limit is"],
+    ["the video is over 40 MB", { video: { ...VIDEO, bytes: 40 * 1024 * 1024 + 1 } }, "the limit is"],
     ["the video is larger than 720p", { video: VIDEO, size: { width: 1920, height: 1080 } }, "1920x1080"],
     ["no frame could be cut", { video: VIDEO, missingTimes: [0, 1000, 2000, 3000, 3600, 4000, 5000, 6000, 7000] }, "no frame"],
   ])("fails the scan for good with invalid_video when %s", async (_case, setup, detail) => {

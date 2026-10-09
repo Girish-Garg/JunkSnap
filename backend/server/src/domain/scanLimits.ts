@@ -1,6 +1,6 @@
-// About 60 s of 720p; the contracts PR #25 draft says 40 MB, so keep the two in step when it merges.
+// The scan video limit from contracts PR #39: at most 40 MB, 60 s and 1280 by 720.
 export const SCAN_VIDEO_LIMITS = {
-  maxBytes: 60 * 1024 * 1024,
+  maxBytes: 40 * 1024 * 1024,
   maxDurationMs: 60_000,
   maxLongSidePx: 1280,
   maxShortSidePx: 720,

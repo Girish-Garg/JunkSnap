@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
+import { ROUTE_BUILDERS } from "../src/handlers/routes.js";
 import { buildScanRoutes, scanRoutes } from "../src/handlers/scanRoutes.js";
 import { createApp } from "../src/handlers/web.js";
 import { ScanIntake } from "../src/services/ScanIntake.js";
@@ -60,7 +61,7 @@ describe("POST /scans/presign", () => {
   });
 
   it.each([
-    ["over 60 MB", { size_bytes: 60 * 1024 * 1024 + 1 }, "size_bytes is over the scan video limit"],
+    ["over 40 MB", { size_bytes: 40 * 1024 * 1024 + 1 }, "size_bytes is over the scan video limit"],
     ["over 60 s", { duration_ms: 60_001 }, "duration_ms is over the scan video limit"],
     ["not a video type", { content_type: "image/jpeg" }, "content_type"],
     ["a bad checksum", { sha256: "XYZ" }, "sha256"],
@@ -165,15 +166,29 @@ describe("GET /scans/{id}", () => {
 });
 
 describe("buildScanRoutes", () => {
-  it("needs the bucket, queue and tables in its environment", () => {
-    const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
-    expect(() => buildScanRoutes({ core, env: { JUNKSNAP_STAGE: "dev" } })).toThrow("SCANS_TABLE");
-    const env = {
-      ORIGINALS_BUCKET: "junksnap-dev-originals-1",
-      REPORTS_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/1/junksnap-dev-reports",
-      SCANS_TABLE: "junksnap-dev-scans",
-      REPORTS_TABLE: "junksnap-dev-reports",
-    };
-    expect(typeof buildScanRoutes({ core, env })).toBe("function");
+  const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
+  const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
+  const env = {
+    JUNKSNAP_STAGE: "dev",
+    ORIGINALS_BUCKET: "junksnap-dev-originals-1",
+    REPORTS_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/1/junksnap-dev-reports",
+    SCANS_TABLE: "junksnap-dev-scans",
+    REPORTS_TABLE: "junksnap-dev-reports",
+  };
+
+  it("is registered with the api", () => {
+    expect(ROUTE_BUILDERS).toContain(buildScanRoutes);
+  });
+
+  it("stops the api from starting without the bucket, queue and tables", async () => {
+    const routes = [buildScanRoutes({ core, env: { JUNKSNAP_STAGE: "dev" } })];
+    await expect(createApp(core, routes, logger)).rejects.toThrow("SCANS_TABLE");
+  });
+
+  it("serves the scan routes once its environment is set, without calling AWS for a bad body", async () => {
+    const built = await createApp(core, [buildScanRoutes({ core, env })], logger);
+    const response = await built.inject({ method: "POST", url: "/scans/presign", payload: {} });
+    expect(response.statusCode).toBe(400);
+    await built.close();
   });
 });
