@@ -9,7 +9,8 @@ from pathlib import Path
 
 from training.cli import StoreFactory
 from training.domain import JunkSnapError
-from training.learn.commands import LearnCommands
+from training.learn.commands import DetectorCommands
+from training.learn.fit_commands import FitCommands
 from training.settings import Settings
 
 LOG = logging.getLogger("training.learn")
@@ -60,6 +61,10 @@ class LearnParser:
         stacker.add_argument("--val", required=True, help="signal scores JSONL on val")
         stacker.add_argument("--test", required=True, help="signal scores JSONL on test")
         stacker.add_argument("--version", default="meta-v1")
+        bench = self._sub.add_parser("bench")
+        bench.add_argument("runs", nargs="+", help="model=path/to/scores.jsonl")
+        publish = self._sub.add_parser("publish")
+        publish.add_argument("files", nargs="+", help="name=path@version, e.g. yolo=best.onnx@v1")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,8 +73,11 @@ def main(argv: list[str] | None = None) -> int:
     args = LearnParser().build().parse_args(argv)
     try:
         settings = Settings.from_env(Path.cwd())
-        commands = LearnCommands(settings, StoreFactory(settings).create(no_upload=False))
-        getattr(commands, args.command.replace("-", "_"))(args)
+        store = StoreFactory(settings).create(no_upload=False)
+        name = args.command.replace("-", "_")
+        for commands in (DetectorCommands(settings, store), FitCommands(settings, store)):
+            if hasattr(commands, name):
+                getattr(commands, name)(args)
     except JunkSnapError as error:
         LOG.error("%s", error)
         return 1

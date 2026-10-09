@@ -1,0 +1,55 @@
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+from training.domain import ConfigError, ManifestRow
+from training.learn.bench import JudgeBench
+from training.learn.publish import ModelPublisher, Release
+from training.learn.sample import BenchmarkSample
+
+
+def test_publish_uploads_under_a_hashed_key_and_pins_it(tmp_path: Path, store) -> None:
+    weights = tmp_path / "best.onnx"
+    weights.write_bytes(b"weights")
+    pins = tmp_path / "models.json"
+    ModelPublisher(store).publish([Release.parse(f"yolo={weights}@yolo26s-v1")], pins)
+    pinned = json.loads(pins.read_text())["models"]["yolo"]
+    digest = hashlib.sha256(b"weights").hexdigest()
+    assert pinned == {"key": f"models/yolo/{digest[:12]}-best.onnx", "sha256": digest,
+                      "size_bytes": 7, "version": "yolo26s-v1"}
+    assert store.uploaded[pinned["key"]] == b"weights"
+
+
+def test_release_needs_a_name_path_and_version() -> None:
+    with pytest.raises(ConfigError):
+        Release.parse("yolo=best.onnx")
+
+
+def bench_row(
+    source: str, waste: bool | None, judge: dict[str, object] | None
+) -> dict[str, object]:
+    return {"truth": {"source": source, "waste": waste, "burning": source == "dfire"},
+            "judge": judge, "judge_cost": {"usd": 0.002 if judge else 0.0}}
+
+
+def test_bench_counts_unanswered_photos_as_wrong() -> None:
+    rows = [
+        bench_row("qr4change", True, {"report_type": "waste_dump", "burning": False,
+                                      "latency_ms": 2000}),
+        bench_row("qr4change", False, None),
+        bench_row("dfire", None, {"report_type": "not_waste", "burning": True,
+                                  "latency_ms": 4000}),
+    ]
+    row = JudgeBench().summarise("nova", rows)
+    assert (row.answered, row.type_accuracy, row.burning_accuracy) == (2, 0.5, 1.0)
+    assert row.usd_per_thousand == pytest.approx(2.0)
+    assert "| nova | 3 | 2 |" in row.row()
+
+
+def test_benchmark_sample_is_capped_evenly_and_skips_the_holdout() -> None:
+    rows = [ManifestRow(f"s/{i:03d}", "s", "CC", None, None, None, split="train")
+            for i in range(10)]
+    rows.append(ManifestRow("f/h", "field", "private", None, None, None, split="holdout"))
+    picked = BenchmarkSample(5).rows(rows)
+    assert [r.id for r in picked] == ["s/000", "s/002", "s/004", "s/006", "s/008"]

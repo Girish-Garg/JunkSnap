@@ -1,4 +1,4 @@
-"""One method per `learn` step; builds the adapters each step needs."""
+"""Detector steps of `learn`: teacher boxes, the YOLO dataset, training, evaluation, export."""
 
 from __future__ import annotations
 
@@ -6,19 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
-import boto3
-from botocore.config import Config
-
 from training.class_map import ClassMap
-from training.learn.cases import CaseWriter
 from training.learn.detector import DetectorRun, ExportSpec
-from training.learn.embeddings import EmbeddingCache, EmbeddingTable
-from training.learn.heads import HeadCatalogue
-from training.learn.ports import DetectorTrainer, ImageEmbedder
-from training.learn.report import StackReport
-from training.learn.sample import BenchmarkSample
-from training.learn.selection import HeadSelector
-from training.learn.stacker import ScoredPhoto, StackerTrainer
+from training.learn.ports import DetectorTrainer
 from training.learn.teacher import TeacherBoxFile, TeacherLabeller
 from training.manifest import ManifestFile
 from training.ports import ObjectStore
@@ -30,7 +20,7 @@ EDGE_EXPORTS = (ExportSpec(imgsz=320, int8=True), ExportSpec(imgsz=320, half=Tru
 TEACHER_SOURCES = ("qr4change",)
 
 
-class LearnCommands:
+class DetectorCommands:
     def __init__(self, settings: Settings, store: ObjectStore) -> None:
         self._settings = settings
         self._cache = settings.require_cache()
@@ -75,67 +65,6 @@ class LearnCommands:
         for spec in (SERVER_EXPORT, *EDGE_EXPORTS):
             path = self._detector().export(Path(args.weights), spec, Path(args.data))
             print(f"{spec}: {path} ({path.stat().st_size / 1e6:.1f} MB)")
-
-    def embed(self, args: argparse.Namespace) -> None:
-        rows = BenchmarkSample(args.cap).rows(self._manifest().read())
-        embedder = self._embedder(args.embedder)
-        table = EmbeddingTable(self._cache, args.embedder)
-        vectors = EmbeddingCache(embedder, table, self._cache).fill(rows)
-        print(f"{embedder.model}: {len(vectors)} embeddings")
-
-    def heads(self, args: argparse.Namespace) -> None:
-        from training.learn.adapters.sklearn_fitter import (  # noqa: PLC0415
-            SklearnLogisticFitter,
-        )
-
-        rows = self._manifest().read()
-        vectors = EmbeddingTable(self._cache, args.embedder).read()
-        materials = ClassMap.load(self._settings.class_map_path).vocabulary.materials
-        selector = HeadSelector(HeadCatalogue.defaults(materials), SklearnLogisticFitter)
-        chosen = selector.select(rows, vectors)
-        out = self._cache / "models" / f"heads-{args.embedder}.json"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(chosen.to_json(), indent=1), encoding="utf-8")
-        print(chosen.table())
-
-    def cases(self, args: argparse.Namespace) -> None:
-        writer = CaseWriter(self._cache, tuple(args.sources.split(",")), args.fire_photos)
-        count = writer.write(self._manifest().read(), args.split, Path(args.out))
-        print(f"{count} {args.split} photos -> {args.out}")
-
-    def stacker(self, args: argparse.Namespace) -> None:
-        from training.learn.adapters.sklearn_fitter import (  # noqa: PLC0415
-            SklearnLogisticFitter,
-        )
-
-        val, test = self._scored(Path(args.val)), self._scored(Path(args.test))
-        meta = StackerTrainer(SklearnLogisticFitter()).fit(val, args.version)
-        fitted_on = {"photos": len(val), "judged": sum(p.judged for p in val)}
-        out = self._cache / "models" / f"{args.version}.json"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(meta.to_json(fitted_on), indent=1), encoding="utf-8")
-        report = StackReport(meta)
-        print(out, report.signals_alone(test), report.table(test), sep="\n\n")
-
-    @staticmethod
-    def _scored(path: Path) -> list[ScoredPhoto]:
-        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
-        return [p for raw in rows if (p := ScoredPhoto.from_json(raw)) is not None]
-
-    def _embedder(self, name: str) -> ImageEmbedder:
-        if name == "titan":
-            from training.learn.adapters.titan_embedder import (  # noqa: PLC0415
-                TitanImageEmbedder,
-            )
-
-            session = boto3.Session(region_name=self._settings.region)
-            config = Config(max_pool_connections=16, retries={"max_attempts": 4})
-            return TitanImageEmbedder(session.client("bedrock-runtime", config=config))
-        from training.learn.adapters.siglip_embedder import (  # noqa: PLC0415 (GPU only)
-            SiglipImageEmbedder,
-        )
-
-        return SiglipImageEmbedder()
 
     def _manifest(self) -> ManifestFile:
         return ManifestFile(self._cache, self._settings.datasets_dir, self._store)
