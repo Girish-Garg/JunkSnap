@@ -13,8 +13,10 @@ are any. Run with: uv run scripts/check_limits.py
 """
 
 import ast
+import io
 import subprocess
 import sys
+import tokenize
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +35,10 @@ EXEMPT_FOLDERS = ("contracts/fixtures/", "docs/research/")
 EXEMPT_DIR_NAMES = {"node_modules", "dist"}
 GENERATED_MARKERS = (".min.", ".d.ts", ".gen.")
 TEST_NAME_ENDINGS = ("_test.py", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")
+PYTHON_SKIPPED_TOKENS = {
+    tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE,
+    tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER,
+}
 
 
 def too_long(where: str, rule: str, actual: int, limit: int) -> str:
@@ -79,8 +85,31 @@ def file_limit(path: PurePosixPath) -> int | None:
     return CODE_FILE_LIMITS[path.suffix]
 
 
-def count_python_lines(lines: list[str]) -> int:
-    return sum(1 for line in lines if line.strip() and not line.strip().startswith("#"))
+def count_non_blank(lines: list[str]) -> int:
+    return sum(1 for line in lines if line.strip())
+
+
+def python_code_line_numbers(text: str) -> set[int]:
+    """Line numbers covered by any token other than a comment or layout token."""
+    numbers: set[int] = set()
+    for token in tokenize.generate_tokens(io.StringIO(text).readline):
+        if token.type not in PYTHON_SKIPPED_TOKENS:
+            numbers.update(range(token.start[0], token.end[0] + 1))
+    return numbers
+
+
+def count_python_lines(text: str) -> int:
+    """Count lines with code or strings, skipping blank lines and real comment tokens.
+
+    A line inside a triple-quoted string that starts with `#` still counts. If the file
+    cannot be tokenized, every non-blank line counts (the AST check reports the error).
+    """
+    lines = text.split("\n")
+    try:
+        numbers = python_code_line_numbers(text)
+    except (tokenize.TokenError, SyntaxError):
+        return count_non_blank(lines)
+    return sum(1 for number in numbers if number <= len(lines) and lines[number - 1].strip())
 
 
 def classify_typescript_line(text: str, in_block: bool) -> tuple[bool, bool]:
@@ -102,6 +131,9 @@ def count_typescript_lines(lines: list[str]) -> int:
     Lines in a block comment that never closes still count, so a stray `/*` (for example
     inside a template literal) cannot hide the rest of the file.
     """
+    # Known residuals of this line-based rule (no real TS tokenizer): a line inside a
+    # template literal that starts with `/*` and is followed later by a real `*/` hides the
+    # lines in between; a block comment opened after code on the same line over-counts.
     count = 0
     unclosed = 0
     in_block = False
@@ -118,12 +150,12 @@ def count_typescript_lines(lines: list[str]) -> int:
 
 
 def counted_lines(path: PurePosixPath, text: str) -> int:
-    lines = text.splitlines()
     if path.suffix == ".py":
-        return count_python_lines(lines)
+        return count_python_lines(text)
+    lines = text.splitlines()
     if path.suffix in (".ts", ".tsx"):
         return count_typescript_lines(lines)
-    return sum(1 for line in lines if line.strip())
+    return count_non_blank(lines)
 
 
 def span_violation(path: PurePosixPath, node: ast.AST) -> str | None:
