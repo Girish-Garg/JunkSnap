@@ -1,0 +1,12 @@
+{
+  "upload_id": "upl_jdh_1",
+  "report_type": "waste_dump",
+  "context": "vacant_plot",
+  "capture_mode": "snap",
+  "sha256": "361477fa40d0646366e6b4a37679e846f82bfb66b3f791e64428ff5c21aca03c",
+  "gps": { "lat": 26.26183, "lon": 73.00352, "accuracy_m": 6 },
+  "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
+  "captured_at": "2026-10-10T02:14:05Z",
+  "note": "Behind the community hall, smells bad after rain",
+  "hints": { "model": "yolo-junk-nano-v0", "waste_score": 0.81, "recall_audit": false }
+}

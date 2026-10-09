@@ -1,0 +1,43 @@
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [73.0035, 26.2618] },
+  "properties": {
+    "site_id": "site_jdh_1",
+    "report_type": "waste_dump",
+    "context": "vacant_plot",
+    "status": "open",
+    "verification": "verified",
+    "report_count": 7,
+    "verified_count": 6,
+    "corroborations": 4,
+    "votes": { "confirm": 2, "reject": 0 },
+    "photo_urls": [
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1a.jpg"
+    ],
+    "cleanup_status": "checking",
+    "cleanup_photo_url": null,
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
+      "town": "Jodhpur",
+      "local_body": { "id": "jodhpur-south-mc", "name": "Jodhpur Municipal Corporation (South)", "head_office": "Commissioner" },
+      "ward": { "id": "jodhpur-south-mc-w37", "name": "Ward 37" },
+      "assembly_seat": { "id": "s20-ac-127", "name": "Sardarpura" },
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" },
+      "representatives": [
+        { "office": "councillor", "seat_id": "jodhpur-south-mc-w37", "as_of": "2026-10-01", "source": "https://lsg.rajasthan.gov.in/" },
+        { "office": "mla", "seat_id": "s20-ac-127", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+        { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+      ]
+    },
+    "brands": [
+      { "brand": "Sample Namkeen", "parent_company": "Sample Foods Pvt Ltd", "confidence": 0.93, "source_url": "https://example.org/brand-map/sample-namkeen" }
+    ],
+    "first_reported_at": "2026-10-09T03:40:00Z",
+    "last_reported_at": "2026-10-10T02:14:05Z",
+    "cleaned_at": null,
+    "pilot": true
+  }
+}

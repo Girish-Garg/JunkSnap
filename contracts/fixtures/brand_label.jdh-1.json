@@ -1,0 +1,12 @@
+{
+  "report_id": "rpt_jdh_1",
+  "brand": "Sample Namkeen",
+  "parent_company": "Sample Foods Pvt Ltd",
+  "confidence": 0.93,
+  "text_seen": "SAMPLE NAMKEEN",
+  "box": { "left": 0.41, "top": 0.58, "width": 0.14, "height": 0.05 },
+  "mapping_source_url": "https://example.org/brand-map/sample-namkeen",
+  "provider": "rekognition",
+  "model": "DetectText",
+  "version": "3.0"
+}

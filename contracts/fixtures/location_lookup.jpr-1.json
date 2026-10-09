@@ -1,0 +1,18 @@
+{
+  "lat": 26.853,
+  "lon": 75.8156,
+  "state": "Rajasthan",
+  "district": { "id": "rajasthan-jaipur", "name": "Jaipur" },
+  "town": "Jaipur",
+  "local_body": { "id": "jaipur-greater-mc", "name": "Jaipur Municipal Corporation Greater", "head_office": "Commissioner" },
+  "ward": null,
+  "assembly_seat": { "id": "s20-ac-54", "name": "Malviya Nagar" },
+  "loksabha_seat": { "id": "s20-pc-7", "name": "Jaipur" },
+  "representatives": [
+    { "office": "mla", "seat_id": "s20-ac-54", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+    { "office": "mp", "seat_id": "s20-pc-7", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+  ],
+  "geocoder": "amazon-location/esri",
+  "boundaries_version": "eci-2008-delimitation/v1",
+  "looked_up_at": "2026-10-10T04:03:25Z"
+}

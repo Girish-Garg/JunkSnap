@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/ward_scores.schema.json",
+  "title": "ward_scores",
+  "description": "Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. An area with sites but no score yet returns 200 with zero counts, every score withheld (too_few_reports), null metrics and an empty diagnosis; the worker seeds that row when a site first lands in the area. An area with no sites returns 404 area_not_found. Never invented history.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["area", "counts", "min_verified_reports", "scores", "metrics", "diagnosis", "formula_version", "pilot", "data_window", "computed_at"],
+  "properties": {
+    "area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "name"],
+      "properties": {
+        "kind": { "enum": ["ward", "assembly", "loksabha", "district"] },
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified_reports", "no_bin_reports", "sites", "open_sites", "cleaned_sites", "reopened_sites"],
+      "properties": {
+        "verified_reports": { "type": "integer", "minimum": 0 },
+        "no_bin_reports": { "type": "integer", "minimum": 0, "description": "Verified no_bin reports." },
+        "sites": { "type": "integer", "minimum": 0 },
+        "open_sites": { "type": "integer", "minimum": 0 },
+        "cleaned_sites": { "type": "integer", "minimum": 0 },
+        "reopened_sites": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "min_verified_reports": { "type": "integer", "minimum": 1, "description": "Guardrail; 10 in v1." },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["city", "citizen", "bin_access"],
+      "description": "0 to 100, higher is better.",
+      "properties": {
+        "city": { "$ref": "#/$defs/score" },
+        "citizen": { "$ref": "#/$defs/score" },
+        "bin_access": { "$ref": "#/$defs/score" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["median_days_to_clear", "cleared_within_7_days_pct", "redumped_pct", "no_bin_response_pct", "new_dumps_per_km2_month", "share_vacant_plot_drain_roadside_pct", "median_distance_to_disposal_m"],
+      "description": "Inputs behind the scores; each null when withheld or not measurable in the data window.",
+      "properties": {
+        "median_days_to_clear": { "type": ["number", "null"], "minimum": 0 },
+        "cleared_within_7_days_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "redumped_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "no_bin_response_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of no_bin sites cleared or served in the window (city score)." },
+        "new_dumps_per_km2_month": { "type": ["number", "null"], "minimum": 0 },
+        "share_vacant_plot_drain_roadside_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score)." },
+        "median_distance_to_disposal_m": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "diagnosis": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Empty when scores are withheld. dumping + no bins = infrastructure_gap; dumping + bins = behaviour; slow clearing = city_response; re-dumping = repeat_spot.",
+      "items": { "enum": ["infrastructure_gap", "behaviour", "city_response", "repeat_spot"] }
+    },
+    "formula_version": { "type": "string", "description": "Matches a formula decision file in docs/decisions/." },
+    "pilot": { "type": "boolean" },
+    "data_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "format": "date-time" },
+        "to": { "type": "string", "format": "date-time" }
+      }
+    },
+    "computed_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "reason"],
+      "properties": {
+        "value": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "reason": {
+          "enum": [null, "too_few_reports", "no_data"],
+          "description": "null when value is set; too_few_reports below min_verified_reports; no_data when an input is missing, for example disposal points."
+        }
+      },
+      "oneOf": [
+        { "properties": { "value": { "type": "number" }, "reason": { "const": null } } },
+        { "properties": { "value": { "type": "null" }, "reason": { "enum": ["too_few_reports", "no_data"] } } }
+      ]
+    }
+  }
+}

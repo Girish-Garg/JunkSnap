@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/location_lookup.schema.json",
+  "title": "location_lookup",
+  "description": "Where a point sits: reverse geocoding plus point-in-polygon for ward, assembly seat and Lok Sabha seat, and the representatives for those seats by office and seat only. No personal names and no party field anywhere. The worker copies all of it except lat, lon and provenance into site.location.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lat", "lon", "state", "district", "town", "local_body", "ward", "assembly_seat", "loksabha_seat", "representatives", "geocoder", "boundaries_version", "looked_up_at"],
+  "properties": {
+    "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+    "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+    "state": { "type": "string" },
+    "district": { "$ref": "#/$defs/area_ref" },
+    "town": { "type": ["string", "null"] },
+    "local_body": {
+      "description": "Urban local body responsible for waste; its head is the letter's To. Null outside known bodies.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "head_office"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+            "name": { "type": "string" },
+            "head_office": { "type": "string", "description": "Office of the head, for example Commissioner." }
+          }
+        }
+      ]
+    },
+    "ward": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null where no open ward map exists." },
+    "assembly_seat": { "$ref": "#/$defs/area_ref", "description": "id is <eci-state-code>-ac-<number>, for example s20-ac-127." },
+    "loksabha_seat": { "$ref": "#/$defs/area_ref", "description": "id is <eci-state-code>-pc-<number>, for example s20-pc-16." },
+    "representatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["office", "seat_id", "as_of", "source"],
+        "properties": {
+          "office": { "enum": ["councillor", "mla", "mp"] },
+          "seat_id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$", "description": "The ward, assembly or Lok Sabha id above." },
+          "as_of": { "type": "string", "format": "date" },
+          "source": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "geocoder": { "type": "string", "description": "Reverse geocoder used, for example amazon-location/esri." },
+    "boundaries_version": { "type": "string", "description": "Version of the boundary files used for point-in-polygon." },
+    "looked_up_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "area_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" }
+      }
+    }
+  }
+}

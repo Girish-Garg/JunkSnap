@@ -1,0 +1,19 @@
+{
+  "report_id": "rpt_jdh_1",
+  "outcome": "passed",
+  "reasons": [],
+  "blurred_key": "media/reports/rpt_jdh_1.jpg",
+  "blur": { "faces": 0, "plates": 1, "provider": "rekognition", "model": "DetectFaces+DetectText", "version": "3.0" },
+  "image_moderation": { "result": "pass", "labels": [], "provider": "rekognition", "model": "DetectModerationLabels+DetectLabels", "version": "7.0+3.0" },
+  "checks": {
+    "inside_india": { "result": "pass", "detail": "point inside the India boundary" },
+    "fresh_timestamp": { "result": "pass", "detail": "captured 47 s before upload; limit 72 h" },
+    "duplicate": { "result": "pass", "detail": "nearest earlier photo at pHash distance 21; limit 8" },
+    "rate_limit": { "result": "pass", "detail": "4 reports in the last hour; limit 20" },
+    "device_token": { "result": "pass", "detail": "known device, reputation 0.74" }
+  },
+  "phash": "c4e1b3a59d0f2687",
+  "duplicate_of": null,
+  "note_moderation": { "result": "clean", "reasons": [], "provider": "bedrock", "model": "in.anthropic.claude-haiku-4-5-20251001-v1:0", "version": "20251001-v1:0" },
+  "moderated_at": "2026-10-10T02:14:52Z"
+}
