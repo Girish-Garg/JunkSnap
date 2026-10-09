@@ -52,13 +52,13 @@ The same layers apply to both languages: `backend/server` (TypeScript) and `back
 
 | Layer | Contains | May import |
 |---|---|---|
-| `domain/` | Entities, value objects, domain errors | standard library only |
-| `ports/` | Abstract classes (Python) or interfaces (TypeScript) for every outside capability | `domain` |
+| `domain/` | Entities, value objects, domain errors | standard library; generated contract types, type-only |
+| `ports/` | Abstract classes (Python) or interfaces (TypeScript) for every outside capability | `domain`; generated contract types, type-only |
 | `services/` | Use-case classes; all business logic | `domain`, `ports` |
 | `adapters/` | Port implementations: AWS SDK v3 or boto3, Bedrock, OpenAI, OpenRouter, ONNX Runtime, Pillow, turf | `domain`, `ports`, third-party SDKs |
 | `handlers/` | Entry points (Fastify route plugins and the `web.ts`, `worker.ts` and `scores.ts` entry files in TypeScript; the FastAPI router in `ml`) that build the object graph and call one service | anything in the same project |
 
-Imports point down this table only. Services never import an AWS SDK or any other SDK. `backend/server` and `backend/ml` never import each other; they exchange contract shapes over HTTP. Inside `backend/server`, the three entry points share `domain`, `ports`, `services` and `adapters`, and a handler never imports another entry point's handlers.
+Imports point down this table only. `domain` and `ports` may import the generated contract types (`src/contracts/*.gen.ts`) with `import type` only, never the generated schemas or validators, which are runtime code (decision 20261010-0344). Services never import an AWS SDK or any other SDK. `backend/server` and `backend/ml` never import each other; they exchange contract shapes over HTTP. Inside `backend/server`, the three entry points share `domain`, `ports`, `services` and `adapters`, and a handler never imports another entry point's handlers.
 
 Frontend direction: components → hooks → services → `ApiClient`. Components hold no business logic; hooks only adapt service state to React.
 

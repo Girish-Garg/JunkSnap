@@ -1,0 +1,32 @@
+import { useEffect, useEffectEvent, useRef, type RefObject } from 'react';
+import { useServices } from '../../../app/useServices';
+import { SiteMap, type MapView } from '../SiteMap';
+
+interface MapCallbacks {
+  readonly onPick: (siteId: string | null) => void;
+  readonly onViewChange: (view: MapView) => void;
+}
+
+/** Creates one SiteMap for the container and removes it on unmount. */
+export function useMapInstance(container: RefObject<HTMLDivElement | null>, callbacks: MapCallbacks) {
+  const { layers, localization } = useServices();
+  const mapRef = useRef<SiteMap | null>(null);
+  const onPick = useEffectEvent(callbacks.onPick);
+  const onViewChange = useEffectEvent(callbacks.onViewChange);
+  useEffect(() => {
+    if (!container.current) return undefined;
+    const map = new SiteMap({
+      container: container.current,
+      layers,
+      attributionLabel: localization.i18n.t('map.attribution'),
+      onPick: (id) => onPick(id),
+      onViewChange: (view) => onViewChange(view),
+    });
+    mapRef.current = map;
+    return () => {
+      map.destroy();
+      mapRef.current = null;
+    };
+  }, [container, layers, localization]);
+  return mapRef;
+}

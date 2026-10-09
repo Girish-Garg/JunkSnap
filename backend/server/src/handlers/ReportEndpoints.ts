@@ -16,8 +16,8 @@ const PresignBody = z.strictObject({
   device_token: z.string().regex(UUID_V4),
 });
 
-// Snap stays open to guests, so every route reads the user optionally; a guest's report has no user_id.
-export type ReportGuard = Pick<RouteGuard, "optionalUser">;
+// Creating needs a signed-in user (decision 0227); GET also opens a guest report made before accounts by its device.
+export type ReportGuard = Pick<RouteGuard, "requireUser" | "optionalUser">;
 
 export interface ReportServices {
   readonly presigner: UploadPresigner;
@@ -39,12 +39,12 @@ export class ReportEndpoints {
     const guard = this.#guard;
     return async (app) => {
       app.post("/uploads/presign", async (request) => {
-        const user = await guard.optionalUser(request);
-        return presigner.presign(ReportEndpoints.#presignBody(request.body), user?.userId);
+        const user = await guard.requireUser(request);
+        return presigner.presign(ReportEndpoints.#presignBody(request.body), user.userId);
       });
       app.post("/reports", async (request, reply) => {
-        const user = await guard.optionalUser(request);
-        const accepted = await intake.submit(validateReportUpload(request.body), user?.userId);
+        const user = await guard.requireUser(request);
+        const accepted = await intake.submit(validateReportUpload(request.body), user.userId);
         return reply.status(202).send(accepted);
       });
       app.get<{ Params: { id: string } }>("/reports/:id", async (request) => {

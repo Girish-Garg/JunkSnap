@@ -32,7 +32,7 @@ export class ReportIntake {
     this.#ports = ports;
   }
 
-  async submit(upload: ReportUpload, userId?: string): Promise<AcceptedReport> {
+  async submit(upload: ReportUpload, userId: string): Promise<AcceptedReport> {
     if (upload.capture_mode !== "snap") {
       throw new ValidationError("POST /reports takes snap photos only; the worker makes scan frames");
     }
@@ -52,7 +52,7 @@ export class ReportIntake {
   }
 
   // A retry is never counted; it re-sends only a report still queued after the visibility timeout, whose message was lost.
-  async #resubmit(report: Report, upload: ReportUpload, userId?: string): Promise<AcceptedReport> {
+  async #resubmit(report: Report, upload: ReportUpload, userId: string): Promise<AcceptedReport> {
     if (!report.isOwnedBy({ deviceToken: upload.device_token, userId })) {
       throw new ValidationError("upload_id was already used for another report");
     }

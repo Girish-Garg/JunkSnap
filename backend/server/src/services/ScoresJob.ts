@@ -3,7 +3,7 @@ import type { AreaSite } from "../domain/AreaSite.js";
 import { AreaSites } from "../domain/AreaSites.js";
 import type { AreaFacts } from "../ports/AreaFacts.js";
 import type { AreaReportReader } from "../ports/AreaReportReader.js";
-import type { AreaSiteReader } from "../ports/AreaSiteReader.js";
+import type { AreaSiteReader, UnreadableSite } from "../ports/AreaSiteReader.js";
 import type { Logger } from "../ports/Logger.js";
 import type { ScoreRepository } from "../ports/ScoreRepository.js";
 import type { AreaGroup, AreaGrouper } from "./AreaGrouper.js";
@@ -19,6 +19,7 @@ export interface ScoresJobPorts {
 export interface ScoresRunSummary {
   readonly sites: number;
   readonly areas: number;
+  // Failed areas plus site items and ward records skipped for breaking their contracts.
   readonly failed: number;
 }
 
@@ -39,7 +40,8 @@ export class ScoresJob {
   }
 
   async run(now: Date): Promise<ScoresRunSummary> {
-    const sites = await this.#ports.sites.readAll();
+    const { sites, unreadable } = await this.#ports.sites.readAll();
+    const skipped = this.#logSkipped(unreadable);
     const groups = this.#grouper.group(sites);
     const times: ReportTimes = new Map();
     let failed = 0;
@@ -52,7 +54,18 @@ export class ScoresJob {
         this.#logger.error({ area, error }, "area scoring failed");
       }
     }
-    return { sites: sites.length, areas: groups.length, failed };
+    return { sites: sites.length, areas: groups.length, failed: failed + skipped };
+  }
+
+  #logSkipped(unreadable: readonly UnreadableSite[]): number {
+    for (const { siteId, error } of unreadable) {
+      this.#logger.error({ site_id: siteId, error }, "site skipped");
+    }
+    const records = this.#ports.facts.skippedRecords();
+    for (const { file, recordId, error } of records) {
+      this.#logger.error({ file, ward_record_id: recordId, error }, "ward record skipped");
+    }
+    return unreadable.length + records.length;
   }
 
   async #score({ area, sites }: AreaGroup, times: ReportTimes, now: Date): Promise<void> {

@@ -37,7 +37,7 @@ export class UploadPresigner {
     this.#ttlSeconds = ttlSeconds;
   }
 
-  async presign(request: PresignRequest, userId?: string): Promise<PresignResponse> {
+  async presign(request: PresignRequest, userId: string): Promise<PresignResponse> {
     const now = this.#ports.clock.now();
     if (request.purpose === "report") {
       await this.#ports.snapLimit.check({ deviceToken: request.device_token, userId }, now);

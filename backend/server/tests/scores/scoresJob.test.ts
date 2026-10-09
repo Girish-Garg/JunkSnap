@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { validateWardScores, type WardScores } from "../../src/contracts/index.gen.js";
 import type { AreaFactSheet } from "../../src/domain/AreaFactSheet.js";
+import { InternalDataError } from "../../src/domain/errors.js";
 import type { ComputedAreaScores } from "../../src/domain/AreaInsights.js";
 import type { AreaKey, AreaRef } from "../../src/domain/AreaKey.js";
 import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { runScores } from "../../src/handlers/scores.js";
-import type { AreaFacts } from "../../src/ports/AreaFacts.js";
+import type { AreaFacts, SkippedRecord } from "../../src/ports/AreaFacts.js";
 import type { AreaReportReader } from "../../src/ports/AreaReportReader.js";
-import type { AreaSiteReader } from "../../src/ports/AreaSiteReader.js";
+import type { AreaSiteReader, SiteRead, UnreadableSite } from "../../src/ports/AreaSiteReader.js";
 import type { ScoreRepository } from "../../src/ports/ScoreRepository.js";
 import { AreaGrouper } from "../../src/services/AreaGrouper.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
@@ -24,13 +25,14 @@ const OTHER_WARD: AreaRef = { kind: "ward", id: "jodhpur-mc-w38", name: "Ward 38
 
 class FakeSites implements AreaSiteReader {
   readonly #sites: AreaSite[];
+  readonly unreadable: UnreadableSite[] = [];
 
   constructor(sites: AreaSite[]) {
     this.#sites = sites;
   }
 
-  async readAll(): Promise<AreaSite[]> {
-    return this.#sites;
+  async readAll(): Promise<SiteRead> {
+    return { sites: this.#sites, unreadable: this.unreadable };
   }
 }
 
@@ -49,6 +51,11 @@ class FakeReports implements AreaReportReader {
 
 class FakeFacts implements AreaFacts {
   readonly asked: string[] = [];
+  readonly skipped: SkippedRecord[] = [];
+
+  skippedRecords(): readonly SkippedRecord[] {
+    return this.skipped;
+  }
 
   async factsFor(area: AreaKey, localBodyIds: readonly string[]): Promise<AreaFactSheet> {
     this.asked.push(`${area.toString()} ${localBodyIds.join(",")}`);
@@ -126,6 +133,26 @@ describe("ScoresJob", () => {
     expect(reports.asked.filter((id) => id === "site_bad")).toHaveLength(1);
   });
 
+  it("logs a site item that breaks the contract by id, counts it as failed and scores the rest", async () => {
+    const { job, sites, scores, sink } = setup([site({ verifiedCount: 3 })]);
+    sites.unreadable.push({ siteId: "site_broken", error: new InternalDataError("sites item site_broken breaks the site contract") });
+    expect(await job.run(NOW)).toEqual({ sites: 1, areas: 1, failed: 1 });
+    expect([...scores.rows.keys()]).toEqual(["ward:jodhpur-mc-w37"]);
+    const skipped = sink.records().filter((record) => record.message === "site skipped");
+    expect(skipped).toEqual([expect.objectContaining({ level: "ERROR", site_id: "site_broken" })]);
+  });
+
+  it("logs a skipped reviewed ward record at error and counts it as failed", async () => {
+    const { job, facts, scores, sink } = setup([site({ verifiedCount: 3 })]);
+    facts.skipped.push({ file: "wards/jodhpur.json", recordId: "jodhpur-uttar-037", error: new InternalDataError("area_km2 must be > 0") });
+    expect(await job.run(NOW)).toEqual({ sites: 1, areas: 1, failed: 1 });
+    expect(scores.rows.size).toBe(1);
+    const skipped = sink.records().filter((record) => record.message === "ward record skipped");
+    const logged = { level: "ERROR", file: "wards/jodhpur.json", ward_record_id: "jodhpur-uttar-037" };
+    expect(skipped).toEqual([expect.objectContaining(logged)]);
+    expect(skipped[0]?.error).toContain("area_km2");
+  });
+
   it("overwrites each area's row on the next run", async () => {
     const { job, scores } = setup([site({ verifiedCount: 3 })]);
     await job.run(new Date("2026-10-19T00:00:00Z"));
@@ -149,10 +176,10 @@ describe("runScores", () => {
     expect(sink.records()).toEqual([expect.objectContaining(summary)]);
   });
 
-  it("fails the run after the summary when any area failed", async () => {
+  it("fails the run after the summary when any area, site item or ward record failed", async () => {
     const sink = new LogSink();
     const job = { run: async () => ({ sites: 3, areas: 4, failed: 1 }) };
-    await expect(runScores(entryContext(sink), async () => job)).rejects.toThrow("1 of 4 areas failed");
+    await expect(runScores(entryContext(sink), async () => job)).rejects.toThrow("1 areas, site items or ward records failed");
     expect(sink.records()).toEqual([expect.objectContaining({ message: "scores done", failed: 1 })]);
   });
 

@@ -9,13 +9,16 @@ import { DynamoReportRepository } from "../src/adapters/DynamoReportRepository.j
 import { DynamoReputationReader } from "../src/adapters/DynamoReputationReader.js";
 import { DynamoSnapCounter } from "../src/adapters/DynamoSnapCounter.js";
 import { S3UploadSigner } from "../src/adapters/S3UploadSigner.js";
+import { AwsCalls } from "../src/adapters/sites/AwsCalls.js";
+import { DynamoReportStatusWriter } from "../src/adapters/sites/DynamoReportStatusWriter.js";
+import { SystemClock } from "../src/adapters/SystemClock.js";
 import { UlidIdGenerator } from "../src/adapters/UlidIdGenerator.js";
 import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { Report } from "../src/domain/Report.js";
 import { isoSeconds } from "../src/domain/timeUtils.js";
 import { IntakeSettings } from "../src/settings/IntakeSettings.js";
 import { ReportWorkerSettings } from "../src/settings/ReportWorkerSettings.js";
-import { upload } from "./reportFakes.js";
+import { upload, verification } from "./reportFakes.js";
 
 // Thin checks against a real stage; run with RUN_AWS_TESTS=1, AWS credentials and the api and worker variables.
 describe.runIf(process.env.RUN_AWS_TESTS === "1")("report adapters against AWS", () => {
@@ -57,6 +60,37 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("report adapters against AWS",
     await repository.save(first ?? report);
     await expect(repository.save(second ?? report)).rejects.toThrow(ConcurrentUpdateError);
     expect((await repository.get(report.id))?.version).toBe(2);
+  });
+
+  it("the sites status writer changes only verified or community_check reports and bumps their version", async () => {
+    const repository = new DynamoReportRepository(documents(), intake().reportsTable);
+    const now = () => isoSeconds(new Date());
+    const reportIn = async (status: "queued" | "processing" | "verified" | "community_check") => {
+      const report = guestReport();
+      await repository.create(report);
+      if (status !== "queued") {
+        report.start(now());
+      }
+      if (status === "verified" || status === "community_check") {
+        report.recordVerification({ ...verification(), decision: status === "verified" ? "auto_verified" : status });
+        report.finish(now());
+      }
+      if (status !== "queued") {
+        await repository.save(report);
+      }
+      return report;
+    };
+    const reports = await Promise.all([reportIn("queued"), reportIn("processing"), reportIn("verified"), reportIn("community_check")]);
+    const writer = new DynamoReportStatusWriter(documents(), intake().reportsTable, new SystemClock(), new AwsCalls());
+    await writer.followSite(reports.map((report) => report.id), "verified");
+    const after = await Promise.all(reports.map((report) => repository.get(report.id)));
+    expect(after.map((report) => [report?.status, report?.version])).toEqual([
+      ["queued", 1],
+      ["processing", 2],
+      ["verified", 2],
+      ["verified", 3],
+    ]);
+    await expect(repository.save(reports[3] ?? guestReport())).rejects.toThrow(ConcurrentUpdateError);
   });
 
   it("the by-device index counts a new snap within a few seconds", async () => {
