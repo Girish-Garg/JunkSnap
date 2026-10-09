@@ -1,0 +1,42 @@
+{
+  "city": "jodhpur",
+  "state": "Rajasthan",
+  "note": "Ward numbers follow the January 2020 ward formation of the two corporations, Nagar Nigam Jodhpur Uttar (80 wards) and Dakshin (80 wards). In 2025 the state merged them into one Nagar Nigam Jodhpur with 100 wards; that gazette was not found on an official host on 10 Oct 2026, so these records describe the 2020-2025 wards.",
+  "bbox": { "south": 26.15, "west": 72.9, "north": 26.4, "east": 73.15 },
+  "bodies": [
+    { "slug": "uttar", "name": "Nagar Nigam Jodhpur Uttar (Municipal Corporation Jodhpur North)" },
+    { "slug": "dakshin", "name": "Nagar Nigam Jodhpur Dakshin (Municipal Corporation Jodhpur South)" }
+  ],
+  "sources": [
+    {
+      "url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20north.pdf",
+      "holds": "Rajasthan Gazette, 6 Jan 2020, LSG order F.10 (Elec) LSG/20/3: ward formation of Municipal Corporation Jodhpur North. One row per new ward: serial, ward number, a column headed assembly name that only repeats the corporation name (not a seat), population, boundary description and localities. Hindi text, some letters garbled by PDF extraction.",
+      "body": "uttar",
+      "fields": ["population"]
+    },
+    {
+      "url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20south.pdf",
+      "holds": "Rajasthan Gazette, January 2020, LSG order: ward formation of Municipal Corporation Jodhpur South. One row per new ward: serial, ward number, a column headed assembly name that only repeats the corporation name (not a seat), population, boundary description and localities. Hindi text, some letters garbled by PDF extraction.",
+      "body": "dakshin",
+      "fields": ["population"]
+    }
+  ],
+  "not_used": [
+    {
+      "url": "https://election.rajasthan.gov.in/Delimitation/GP_Notification__Eng.PDF",
+      "why": "Delimitation Commission order (2006/2008) maps assembly seats 127 Sardarpura, 128 Jodhpur, 129 Soorsagar and Lok Sabha 16 Jodhpur to the old Jodhpur Municipal Corporation wards 1-60, which do not match the 2020 or 2025 ward numbers."
+    },
+    {
+      "url": "https://censusindia.gov.in/nada/index.php/catalog/1073/download/3306",
+      "why": "Census 2011 District Census Handbook Jodhpur Part B: ward-wise population for the 2011-era wards (about 65), not the 2020 or 2025 wards; area is given only for the whole town."
+    },
+    {
+      "url": "https://jodhpurmc.org/",
+      "why": "The domain no longer belongs to the corporation (unrelated blog)."
+    },
+    {
+      "url": "https://sec.rajasthan.gov.in/Winner_Runner.aspx?code=CEM",
+      "why": "2026 ward results need a form post and list candidates' names; not crawled."
+    }
+  ]
+}
