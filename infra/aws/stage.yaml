@@ -149,6 +149,26 @@ Resources:
       KeySchema:
         - { AttributeName: cleanup_id, KeyType: HASH }
 
+  ScansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-scans
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: scan_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: scan_id, KeyType: HASH }
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: user_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: user_id, KeyType: HASH }
+
   SitesTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -318,6 +338,7 @@ Resources:
                 Resource:
                   - !Sub "${OriginalsBucket.Arn}/reports/*"
                   - !Sub "${OriginalsBucket.Arn}/cleanups/*"
+                  - !Sub "${OriginalsBucket.Arn}/scans/*"
               - Sid: EncryptOriginals
                 Effect: Allow
                 Action: kms:GenerateDataKey
@@ -331,19 +352,22 @@ Resources:
                   - !GetAtt ReportsTable.Arn
                   - !Sub "${ReportsTable.Arn}/index/*"
                   - !GetAtt CleanupsTable.Arn
+                  - !GetAtt ScansTable.Arn
                   - !GetAtt SitesTable.Arn
                   - !Sub "${SitesTable.Arn}/index/*"
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
+                  - !GetAtt UsersTable.Arn
               - Sid: ReadScores
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
                   dynamodb:DescribeTable]
                 Resource: !GetAtt ScoresTable.Arn
-              - Sid: LetterFallbackKey
+              # Letters fall back from Bedrock to OpenAI, then OpenRouter (contracts README).
+              - Sid: LetterFallbackKeys
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
-                Resource: !Ref OpenAiSecret
+                Resource: [!Ref OpenAiSecret, !Ref OpenRouterSecret]
               - Sid: QueueReports
                 Effect: Allow
                 Action: [sqs:SendMessage, sqs:GetQueueAttributes]
@@ -367,16 +391,21 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: ReadOriginalsAndEmbeddings
+              - Sid: ReadOriginalsScansAndEmbeddings
                 Effect: Allow
                 Action: s3:GetObject
                 Resource:
                   - !Sub "${OriginalsBucket.Arn}/reports/*"
                   - !Sub "${OriginalsBucket.Arn}/cleanups/*"
+                  - !Sub "${OriginalsBucket.Arn}/scans/*"
                   - !Sub "${OriginalsBucket.Arn}/embeddings/*"
-              - Sid: DecryptOriginals
+              - Sid: WriteScanFrames
                 Effect: Allow
-                Action: kms:Decrypt
+                Action: s3:PutObject
+                Resource: !Sub "${OriginalsBucket.Arn}/reports/*"
+              - Sid: OriginalsKey
+                Effect: Allow
+                Action: [kms:Decrypt, kms:GenerateDataKey]
                 Resource: !GetAtt DataKey.Arn
               - Sid: WriteBlurredCopies
                 Effect: Allow
@@ -405,16 +434,14 @@ Resources:
                   - !GetAtt ReportsTable.Arn
                   - !Sub "${ReportsTable.Arn}/index/*"
                   - !GetAtt CleanupsTable.Arn
+                  - !GetAtt ScansTable.Arn
                   - !GetAtt SitesTable.Arn
                   - !Sub "${SitesTable.Arn}/index/*"
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
+                  - !GetAtt UsersTable.Arn
                   - !GetAtt ScoresTable.Arn
-              # The worker also reads originals, so it never gets the OpenRouter key.
-              - Sid: JudgeFallbackKey
-                Effect: Allow
-                Action: secretsmanager:GetSecretValue
-                Resource: !Ref OpenAiSecret
+              # No provider keys: the worker reads originals and its model calls are Bedrock only.
               - Sid: ConsumeReports
                 Effect: Allow
                 Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility,
@@ -600,6 +627,10 @@ Outputs:
     Value: !Ref ReportsTable
   CleanupsTableName:
     Value: !Ref CleanupsTable
+  ScansTableName:
+    Value: !Ref ScansTable
+  UsersTableName:
+    Value: !Ref UsersTable
   SitesTableName:
     Value: !Ref SitesTable
   VotesTableName:

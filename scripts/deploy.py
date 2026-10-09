@@ -29,6 +29,8 @@ IMAGES = {
 CONFIG_FROM_OUTPUTS = {
     "REPORTS_TABLE": "ReportsTableName",
     "CLEANUPS_TABLE": "CleanupsTableName",
+    "SCANS_TABLE": "ScansTableName",
+    "USERS_TABLE": "UsersTableName",
     "SITES_TABLE": "SitesTableName",
     "VOTES_TABLE": "VotesTableName",
     "DEVICES_TABLE": "DevicesTableName",

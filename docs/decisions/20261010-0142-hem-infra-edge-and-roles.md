@@ -14,7 +14,7 @@ Decision:
 - Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`); no place index exists and `PLACE_INDEX` is dropped.
 - The worker reaches ml at `ML_URL=http://ml` (replaces `AGENT_URL`; the contracts update renames it).
 - `dev` allows any browser origin (S3 upload CORS `*`, empty `CORS_ORIGINS`); `demo` lists its origins.
-- Roles: `ml` reads only the public bucket and `embeddings/` in the private one. Bedrock is one managed policy for api, worker and ml; api and worker get only the OpenAI key, ml both keys.
+- Roles: `ml` reads only the public bucket and `embeddings/` in the private one. Bedrock is one managed policy for api, worker and ml; api and ml get the two provider keys, the worker none (contracts v1.1).
 - `worker` runs 0 replicas until its SQS poller lands (issue #11).
 - Accounts: Cognito pool `junksnap-<stage>-users` (Lite tier, Cognito's sender, deletion protection outside dev); its ids reach pods as `COGNITO_USER_POOL_ID` and `COGNITO_CLIENT_ID`.
 
