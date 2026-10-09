@@ -36,6 +36,10 @@ export class BrandAlias {
     if (normalisedRun.includes(this.#normalised)) {
       return 0;
     }
+    // A fragment is a different word: "parle" (Parle Agro) must not become "parleg" (Parle-G).
+    if (this.#normalised.startsWith(normalisedRun) || this.#normalised.endsWith(normalisedRun)) {
+      return 0;
+    }
     const length = [...this.#normalised].length;
     const distance = BrandAlias.#distance([...normalisedRun], [...this.#normalised]);
     return distance <= this.#editBudget(length) ? 1 - distance / length : 0;

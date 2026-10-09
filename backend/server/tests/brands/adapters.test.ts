@@ -3,16 +3,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DetectLabelsCommand, DetectTextCommand, DetectTextCommandOutput } from "@aws-sdk/client-rekognition";
+import type { GetObjectCommand } from "@aws-sdk/client-s3";
 import { afterAll, describe, expect, it } from "vitest";
 import { BytesImageSource } from "../../src/adapters/brands/BytesImageSource.js";
 import { FileBrandMap } from "../../src/adapters/brands/FileBrandMap.js";
 import { PublicBucketImageSource } from "../../src/adapters/brands/PublicBucketImageSource.js";
 import { RekognitionTextPresence } from "../../src/adapters/brands/RekognitionTextPresence.js";
 import { RekognitionTextReader } from "../../src/adapters/brands/RekognitionTextReader.js";
+import { S3BlurredImageStore, type GetObjectClient } from "../../src/adapters/brands/S3BlurredImageStore.js";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { BlurredImage } from "../../src/domain/brands/BlurredImage.js";
 import { ConfigError, ExternalServiceError, NotFoundError, ValidationError } from "../../src/domain/errors.js";
 import { buildBrandLabeller } from "../../src/handlers/buildBrandLabeller.js";
+import { BrandLabeller } from "../../src/services/brands/BrandLabeller.js";
 import { BrandSettings } from "../../src/settings/BrandSettings.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
@@ -145,14 +148,36 @@ describe("BlurredImage, BrandSettings and buildBrandLabeller", () => {
     expect(() => BrandSettings.fromEnv({ PUBLIC_BUCKET: BUCKET })).toThrow(/ASSETS_DIR/);
   });
 
-  it("builds the worker's brands step and warns while no judge is wired", () => {
+  it("builds the worker's brands step with the LLM judge, without network calls", () => {
     const sink = new LogSink();
     const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
     const env = { JUNKSNAP_STAGE: "dev", PUBLIC_BUCKET: BUCKET, ASSETS_DIR: "/app/assets" };
-    const labeller = buildBrandLabeller({ core: CoreSettings.fromEnv(env), env, logger });
-    expect(labeller.label).toBeTypeOf("function");
-    expect(sink.records().map((record) => [record.level, record.message])).toEqual([
-      ["WARN", "brand judge not wired: near-threshold and unread-text cases are dropped"],
-    ]);
+    expect(buildBrandLabeller({ core: CoreSettings.fromEnv(env), env, logger })).toBeInstanceOf(BrandLabeller);
+    expect(sink.records()).toEqual([]);
+  });
+});
+
+describe("S3BlurredImageStore", () => {
+  const body = (bytes: Uint8Array) => ({ transformToByteArray: async () => bytes });
+
+  it("reads the blurred copy from the public bucket", async () => {
+    const commands: GetObjectCommand[] = [];
+    const client = {
+      send: async (command: GetObjectCommand) => {
+        commands.push(command);
+        return { Body: body(new Uint8Array([255, 216])) };
+      },
+    };
+    const bytes = await new S3BlurredImageStore(client as unknown as GetObjectClient, BUCKET).jpegBytes(IMAGE);
+    expect(bytes).toEqual(new Uint8Array([255, 216]));
+    expect(commands[0]?.input).toEqual({ Bucket: BUCKET, Key: "media/reports/rpt_jdh_1.jpg" });
+  });
+
+  it.each([
+    ["an SDK failure", async () => Promise.reject(new Error("AccessDenied"))],
+    ["a missing body", async () => ({})],
+  ])("turns %s into ExternalServiceError", async (_name, send) => {
+    const store = new S3BlurredImageStore({ send } as unknown as GetObjectClient, BUCKET);
+    await expect(store.jpegBytes(IMAGE)).rejects.toThrow(ExternalServiceError);
   });
 });

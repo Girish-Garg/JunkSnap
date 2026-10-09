@@ -4,26 +4,33 @@ import { BlurredImage } from "../../src/domain/brands/BlurredImage.js";
 import type { TextLine } from "../../src/domain/brands/TextReading.js";
 import { BrandJudgeStep } from "../../src/services/brands/BrandJudgeStep.js";
 import { BrandLabeller } from "../../src/services/brands/BrandLabeller.js";
-import { FakeBrandJudge, FakeBrandMap, FakeTextPresence, FakeTextReader, line, type VerdictRule } from "./fakes.js";
+import { ConfigError, ExternalServiceError } from "../../src/domain/errors.js";
+import { LogSink } from "../LogSink.js";
+import { brandLogger, FakeBrandJudge, FakeBrandMap, FakeTextPresence, FakeTextReader, line, type VerdictRule } from "./fakes.js";
 
 const IMAGE = new BlurredImage("rpt_jdh_1");
 
 interface Run {
   readonly lines: readonly TextLine[];
-  readonly rule?: VerdictRule;
+  readonly rule?: VerdictRule | Error;
   readonly hasText?: boolean;
 }
 
-async function labelsFor({ lines, rule, hasText = false }: Run) {
+function labellerFor({ lines, rule, hasText = false }: Run) {
   const judge = new FakeBrandJudge(rule);
   const presence = new FakeTextPresence(hasText);
+  const sink = new LogSink();
   const labeller = new BrandLabeller({
     reader: new FakeTextReader(lines),
     map: new FakeBrandMap(),
-    judgeStep: new BrandJudgeStep(judge, presence),
+    judgeStep: new BrandJudgeStep(judge, presence, brandLogger(sink)),
   });
-  const labels = await labeller.label(IMAGE);
-  return { labels, judge, presence };
+  return { labeller, judge, presence, sink };
+}
+
+async function labelsFor(run: Run) {
+  const { labeller, ...parts } = labellerFor(run);
+  return { labels: await labeller.label(IMAGE), ...parts };
 }
 
 function brandsOf(labels: readonly { brand: string; confidence: number }[]) {
@@ -70,6 +77,13 @@ describe("BrandLabeller matching", () => {
     expect(judge.calls).toEqual([]);
   });
 
+  it("never takes a fragment of an alias for the brand", async () => {
+    const fragments = await labelsFor({ lines: [line(["PARLE", 0.99]), line(["Agro", 0.99]), line(["URKURE", 0.99])] });
+    expect(fragments.labels).toEqual([]);
+    const typo = await labelsFor({ lines: [line(["PARIE-G", 0.99])] });
+    expect(brandsOf(typo.labels)).toEqual([["Parle-G", 0.825]]);
+  });
+
   it("drops matches below the judge floor without asking the judge", async () => {
     const { labels, judge } = await labelsFor({ lines: [line(["PEPSI", 0.6])] });
     expect(labels).toEqual([]);
@@ -108,6 +122,20 @@ describe("BrandLabeller judge step", () => {
     const { labels, judge } = await labelsFor({ lines: [line(["Kurkure", 0.75])] });
     expect(judge.calls).toHaveLength(1);
     expect(labels).toEqual([]);
+  });
+
+  it("keeps the OCR labels and warns when the judge is unavailable", async () => {
+    const lines = [line(["KURKURE", 0.95]), line(["PEPSI", 0.7])];
+    const { labels, sink } = await labelsFor({ lines, rule: new ExternalServiceError("no LLM provider answered") });
+    expect(brandsOf(labels)).toEqual([["Kurkure", 0.95]]);
+    expect(sink.records().map((record) => [record.level, record.message, record.cases])).toEqual([
+      ["WARN", "brand judge unavailable; OCR labels only", 1],
+    ]);
+  });
+
+  it("still fails on a judge error that is our bug or config", async () => {
+    const { labeller } = labellerFor({ lines: [line(["PEPSI", 0.7])], rule: new ConfigError("no TaskConfig for brands") });
+    await expect(labeller.label(IMAGE)).rejects.toThrow(ConfigError);
   });
 
   it("sends Devanagari brands to the judge only when text is present and the OCR read nothing", async () => {

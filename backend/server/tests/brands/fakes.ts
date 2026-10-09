@@ -1,3 +1,5 @@
+import type { Logger } from "pino";
+import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import type { BlurredImage } from "../../src/domain/brands/BlurredImage.js";
 import { Box } from "../../src/domain/brands/Box.js";
 import { BrandAlias } from "../../src/domain/brands/BrandAlias.js";
@@ -7,6 +9,7 @@ import type { BrandJudge, JudgeCase, JudgeVerdict } from "../../src/ports/brands
 import type { BrandMap } from "../../src/ports/brands/BrandMap.js";
 import type { TextPresence } from "../../src/ports/brands/TextPresence.js";
 import type { TextReader } from "../../src/ports/brands/TextReader.js";
+import type { LogSink } from "../LogSink.js";
 
 export const OCR: ModelSource = { provider: "rekognition", model: "DetectText", version: "3.0" };
 export const LLM: ModelSource = { provider: "bedrock", model: "sample-judge", version: "1" };
@@ -23,6 +26,7 @@ export const ENTRIES = [
   entry("Coca-Cola", [["Coca-Cola", false], ["Coca Cola", false]]),
   entry("Lay's", [["Lay's", true], ["Lays", true]]),
   entry("Britannia", [["Britannia", false]]),
+  entry("Parle-G", [["Parle-G", false], ["Parle G", false]]),
   entry("Bikaji", [["Bikaji", false], ["बीकाजी", false]]),
 ];
 
@@ -71,19 +75,28 @@ export class FakeTextPresence implements TextPresence {
 
 export type VerdictRule = (judgeCase: JudgeCase) => Omit<JudgeVerdict, "caseId" | "source"> | undefined;
 
+// Answers each case by a rule, or throws the given error.
 export class FakeBrandJudge implements BrandJudge {
   readonly calls: (readonly JudgeCase[])[] = [];
-  readonly #rule: VerdictRule;
+  readonly #rule: VerdictRule | Error;
 
-  constructor(rule: VerdictRule = () => undefined) {
+  constructor(rule: VerdictRule | Error = () => undefined) {
     this.#rule = rule;
   }
 
   async judge(_image: BlurredImage, cases: readonly JudgeCase[]): Promise<readonly JudgeVerdict[]> {
     this.calls.push(cases);
+    const rule = this.#rule;
+    if (rule instanceof Error) {
+      throw rule;
+    }
     return cases.flatMap((judgeCase) => {
-      const verdict = this.#rule(judgeCase);
+      const verdict = rule(judgeCase);
       return verdict === undefined ? [] : [{ ...verdict, caseId: judgeCase.id, source: LLM }];
     });
   }
+}
+
+export function brandLogger(sink: LogSink): Logger {
+  return new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
 }
