@@ -5,13 +5,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fakes import JPEG, FakeDetector, make_case
+from fakes import JPEG, JUDGE_JSON, FakeBuilder, FakeDetector, FakeProvider, FixedClock, make_case
 from jsonschema import Draft202012Validator
 
 from ml.domain.case import CombinerInfo, VerificationCase, VerificationResult
 from ml.domain.images import BlurredImage
-from ml.domain.insights import Insights, MaterialShare
+from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare, SizeEstimate
 from ml.domain.label_insights import LabelInsights
+from ml.domain.llm import TaskConfig
+from ml.domain.pricing import PriceTable
 from ml.domain.purposes import Purpose
 from ml.domain.verification import (
     CaseFeatures,
@@ -23,48 +25,53 @@ from ml.domain.verification import (
 )
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.label_signal import RekognitionLabelSignal
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import ProviderRouter
+from ml.services.stacked_verifier import StackedVerifier
+from ml.services.vision_judge import VisionJudge
 
 CONTRACTS = Path(__file__).resolve().parents[4] / "contracts"
-SCHEMA_PATH = CONTRACTS / "schemas" / "verification_result.schema.json"
+SCHEMA = json.loads((CONTRACTS / "schemas" / "verification_result.schema.json").read_text("utf-8"))
 DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+JUDGE_ANSWER = JUDGE_JSON.replace(
+    '"confidence": 0.9}',
+    '"confidence": 0.9, "composition": [{"material": "organic", "share": 0.3}],'
+    ' "size_class": "large", "hazards": [{"hazard": "dead_animal", "confidence": 0.6}],'
+    ' "scene_fits_site": true}',
+)
 
 
-def schema() -> dict[str, Any]:
-    loaded: dict[str, Any] = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    return loaded
-
-
-def validate(output: dict[str, Any]) -> None:
-    # Until the insights contract PR lands, the schema has no `insights` key to check.
-    if "insights" not in schema()["properties"]:
-        output = {key: value for key, value in output.items() if key != "insights"}
-    Draft202012Validator(schema()).validate(output)
-
-
-def fixtures() -> list[Path]:
-    return sorted((CONTRACTS / "fixtures").glob("verification_result.*.json"))
-
-
-def produced(purpose: str, labels: dict[str, float], judge: JudgeVerdict | None) -> dict[str, Any]:
-    case = make_case(purpose)
-    signals = [RekognitionLabelSignal(FakeDetector(labels), LabelInsights()).measure(case)]
-    combiner = FixedWeightCombiner(Thresholds())
-    result = VerificationResult(
-        case, combiner.combine(signals, case.purpose), combiner.thresholds, tuple(signals),
-        judge, combiner.info(), datetime.fromisoformat("2026-10-10T02:15:03+00:00"),
-        insights=signals[0].insights,
+def produced(purpose: str, labels: dict[str, float]) -> dict[str, Any]:
+    judge = FakeProvider("global.anthropic.claude-sonnet-4-6", [JUDGE_ANSWER])
+    factory = ProviderFactory({"bedrock": FakeBuilder({judge.name: judge})})
+    router = ProviderRouter({"judge": TaskConfig("bedrock", judge.name)}, factory, PriceTable())
+    verifier = StackedVerifier(
+        [RekognitionLabelSignal(FakeDetector(labels), LabelInsights())],
+        VisionJudge(router, "prompt"),
+        FixedWeightCombiner(Thresholds()),
+        FixedClock(),
     )
-    return result.to_contract()
+    return verifier.verify(make_case(purpose)).to_contract()
+
+
+def source_from(data: dict[str, str]) -> InsightSource:
+    return InsightSource(**data)
 
 
 def insights_from(data: dict[str, Any] | None) -> Insights:
     if data is None:
         return Insights()
+    size = data["size_class"]
     return Insights(
-        composition=tuple(MaterialShare(**share) for share in data["composition"]),
-        size_class=data["size_class"],
-        hazards=frozenset(data["hazards"]) - {"burning"},
-        burning=data["burning"],
+        composition=tuple(
+            MaterialShare(s["material"], s["share_pct"] / 100, source_from(s["source"]))
+            for s in data["composition"]
+        ),
+        size_class=size and SizeEstimate(size["value"], source_from(size["source"])),
+        hazards=tuple(
+            HazardSighting(h["hazard"], h["confidence"], source_from(h["source"]))
+            for h in data["hazards"]
+        ),
     )
 
 
@@ -86,38 +93,52 @@ def from_fixture(data: dict[str, Any]) -> VerificationResult:
         combiner=CombinerInfo(**data["combiner"]),
         decided_at=datetime.fromisoformat(data["decided_at"]),
         embedding_key=data["embedding_key"],
-        insights=insights_from(data.get("insights")),
+        insights=insights_from(data["insights"]),
     )
 
 
 @pytest.mark.parametrize(
     ("purpose", "labels"),
-    [("report", {"Garbage": 0.95, "Plastic": 0.8, "Smoke": 0.7}), ("report", {"Road": 0.9}),
-     ("cleanup", {"Road": 0.9}), ("cleanup", {"Garbage": 0.7})],
+    [
+        ("report", {"Garbage": 0.95, "Plastic": 0.8, "Smoke": 0.7}),
+        ("report", {"Garbage": 0.7, "Cardboard": 0.6}),
+        ("report", {"Road": 0.9}),
+        ("cleanup", {"Road": 0.9}),
+        ("cleanup", {"Garbage": 0.7}),
+    ],
 )
 def test_output_matches_schema(purpose: str, labels: dict[str, float]) -> None:
-    output = produced(purpose, labels, judge=None)
+    output = produced(purpose, labels)
 
-    validate(output)
+    Draft202012Validator(SCHEMA).validate(output)
     assert DATE_TIME.match(str(output["decided_at"]))
 
 
-def test_output_with_judge_matches_schema() -> None:
-    verdict = JudgeVerdict("not_waste", None, False, ("SAMPLE",), "A clean street.", 0.8)
+def test_report_insights_name_the_judge_when_it_filled_gaps() -> None:
+    output = produced("report", {"Garbage": 0.7, "Cardboard": 0.6})
 
-    validate(produced("report", {"Garbage": 0.7}, verdict))
+    insights = output["insights"]
+    assert [s["source"]["signal"] for s in insights["composition"]] == [
+        "rekognition_labels", "vision_judge"
+    ]
+    assert insights["size_class"]["source"]["model"] == "global.anthropic.claude-sonnet-4-6"
+    assert [h["hazard"] for h in insights["hazards"]] == ["dead_animal"]
+
+
+def test_cleanup_insights_are_null() -> None:
+    assert produced("cleanup", {"Road": 0.9})["insights"] is None
 
 
 def test_fixtures_exist() -> None:
-    assert len(fixtures()) >= 2
+    assert len(sorted((CONTRACTS / "fixtures").glob("verification_result.*.json"))) >= 2
 
 
-@pytest.mark.parametrize("path", fixtures(), ids=lambda path: path.name)
+@pytest.mark.parametrize(
+    "path",
+    sorted((CONTRACTS / "fixtures").glob("verification_result.*.json")),
+    ids=lambda path: path.name,
+)
 def test_fixture_round_trips(path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
 
-    output = from_fixture(data).to_contract()
-
-    if "insights" not in data:
-        output.pop("insights")
-    assert output == data
+    assert from_fixture(data).to_contract() == data

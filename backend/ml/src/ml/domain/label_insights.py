@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from ml.domain.insights import Insights, MaterialShare
+from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare
 from ml.domain.labels import DetectedLabel
 
 # Lower-case label names per material. No "cable": overhead power lines get that label.
@@ -37,7 +37,6 @@ HAZARD_LABELS: Mapping[str, frozenset[str]] = MappingProxyType(
     }
 )
 HAZARD_MIN_CONFIDENCE = 0.6
-SOURCE = "rekognition_labels"
 
 
 class LabelInsights:
@@ -49,29 +48,29 @@ class LabelInsights:
         self._materials = dict(materials)
         self._hazards = dict(hazards)
 
-    def read(self, labels: tuple[DetectedLabel, ...]) -> Insights:
-        """Material shares from the best label per material; no size class from labels."""
+    def read(self, labels: tuple[DetectedLabel, ...], source: InsightSource) -> Insights:
+        """Relative shares of the materials seen (best label each); no size class from labels."""
         weights: dict[str, float] = {}
         for label in labels:
             material = self._material(label.name.lower())
             if material is not None:
                 weights[material] = max(weights.get(material, 0.0), label.confidence)
-        hazards = self._hazards_in(labels)
+        total = sum(weights.values())
+        shares = {material: weight / total for material, weight in weights.items()}
         return Insights(
-            composition=MaterialShare.normalized(weights, SOURCE),
-            hazards=frozenset(hazards - {"burning"}),
-            # A missing smoke label is no evidence of no fire, so it stays unknown.
-            burning=True if "burning" in hazards else None,
+            composition=MaterialShare.from_weights(shares, source),
+            hazards=self._sightings(labels, source),
         )
 
     def _material(self, name: str) -> str | None:
         return next((m for m, names in self._materials.items() if name in names), None)
 
-    def _hazards_in(self, labels: tuple[DetectedLabel, ...]) -> set[str]:
-        return {
-            hazard
-            for label in labels
-            if label.confidence >= HAZARD_MIN_CONFIDENCE
-            for hazard, names in self._hazards.items()
-            if label.name.lower() in names
-        }
+    def _sightings(
+        self, labels: tuple[DetectedLabel, ...], source: InsightSource
+    ) -> tuple[HazardSighting, ...]:
+        best: dict[str, float] = {}
+        for label in labels:
+            for hazard, names in self._hazards.items():
+                if label.name.lower() in names and label.confidence >= HAZARD_MIN_CONFIDENCE:
+                    best[hazard] = max(best.get(hazard, 0.0), label.confidence)
+        return tuple(HazardSighting(hazard, conf, source) for hazard, conf in best.items())

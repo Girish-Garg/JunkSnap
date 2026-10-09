@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ml.domain.case import VerificationCase
 from ml.domain.errors import NoProviderAnsweredError
+from ml.domain.insights import InsightSource
 from ml.domain.llm import LlmRequest
 from ml.domain.verification import JudgeVerdict, SignalResult
 from ml.services.judge_answer import ANSWER_SCHEMAS
@@ -44,6 +45,7 @@ class VisionJudge:
             return None
         verdict = answer.value.to_verdict()
         response = answer.response
+        source = InsightSource(self.NAME, response.provider, response.model, response.version)
         signal = SignalResult(
             name=self.NAME,
             score=case.purpose.judge_support(verdict, case.claim),
@@ -52,6 +54,6 @@ class VisionJudge:
             version=response.version,
             latency_ms=response.latency_ms,
             notes=(f"{verdict.report_type} {verdict.confidence:.2f}",),
-            insights=answer.value.to_insights(),
+            insights=answer.value.to_insights(source),
         )
         return JudgeReading(verdict, signal)

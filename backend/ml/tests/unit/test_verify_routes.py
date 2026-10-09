@@ -66,7 +66,7 @@ def test_report_returns_verification_result() -> None:
     assert body["is_clean"] is None
     assert body["combiner"] == {"kind": "fixed_weights", "version": "fw-v0"}
     assert body["features"] == REQUEST["features"]
-    assert body["insights"]["burning"] is False
+    assert body["insights"] == {"composition": [], "size_class": None, "hazards": []}
 
 
 def test_cleanup_confirmed_by_the_judge_is_clean() -> None:
@@ -76,6 +76,7 @@ def test_cleanup_confirmed_by_the_judge_is_clean() -> None:
         "cleanup", True, "auto_verified"
     )
     assert body["judge"]["report_type"] == "not_waste"
+    assert body["insights"] is None
 
 
 @pytest.mark.parametrize(

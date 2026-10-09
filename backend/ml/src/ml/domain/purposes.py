@@ -19,6 +19,7 @@ class Purpose(ABC):
     id_prefix: str
     media_folder: str
     requires_judge: bool
+    reports_insights: bool
 
     @abstractmethod
     def support(self, waste_score: float) -> float:
@@ -51,6 +52,7 @@ class ReportPurpose(Purpose):
     id_prefix = "rpt"
     media_folder = "media/reports/"
     requires_judge = False
+    reports_insights = True
 
     def support(self, waste_score: float) -> float:
         return waste_score
@@ -86,6 +88,7 @@ class CleanupPurpose(Purpose):
     id_prefix = "cln"
     media_folder = "media/cleanups/"
     requires_judge = True
+    reports_insights = False  # the contract keeps insights null for cleanups
 
     def support(self, waste_score: float) -> float:
         return 1.0 - waste_score

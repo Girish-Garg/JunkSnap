@@ -68,6 +68,6 @@ class VerificationResult:
             "disagreement": self.outcome.disagreement,
             "combiner": {"kind": self.combiner.kind, "version": self.combiner.version},
             "embedding_key": self.embedding_key,
-            "insights": self.insights.to_contract(),
+            "insights": self.insights.to_contract() if self.case.purpose.reports_insights else None,
             "decided_at": self.decided_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }

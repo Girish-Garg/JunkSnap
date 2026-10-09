@@ -6,11 +6,16 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ml.domain.insights import Insights, MaterialShare
+from ml.domain.insights import (
+    HazardSighting,
+    Insights,
+    InsightSource,
+    MaterialShare,
+    SizeEstimate,
+)
 from ml.domain.verification import REPORT_CONTEXTS, JudgeVerdict
 
 RATIONALE_MAX = 500
-SOURCE = "vision_judge"
 
 ReportTypeName = Literal[
     "waste_dump", "no_bin", "contaminated_water", "open_construction", "not_waste"
@@ -33,6 +38,13 @@ class MaterialAnswer(BaseModel):
     share: float = Field(ge=0.0, le=1.0)
 
 
+class HazardAnswer(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    hazard: HazardName
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
 class JudgeAnswer(BaseModel):
     model_config = ConfigDict(frozen=True, extra="ignore")
 
@@ -44,7 +56,7 @@ class JudgeAnswer(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     composition: tuple[MaterialAnswer, ...] = Field(default=(), max_length=9)
     size_class: Literal["small", "medium", "large"] | None = None
-    hazards: tuple[HazardName, ...] = ()
+    hazards: tuple[HazardAnswer, ...] = Field(default=(), max_length=5)
     scene_fits_site: bool | None = None
 
     def to_verdict(self) -> JudgeVerdict:
@@ -60,16 +72,27 @@ class JudgeAnswer(BaseModel):
             scene_fits_site=self.scene_fits_site,
         )
 
-    def to_insights(self) -> Insights:
+    def to_insights(self, source: InsightSource) -> Insights:
         weights: dict[str, float] = {}
         for item in self.composition:
             weights[item.material] = weights.get(item.material, 0.0) + item.share
+        size = None if self.size_class is None else SizeEstimate(self.size_class, source)
         return Insights(
-            composition=MaterialShare.normalized(weights, SOURCE),
-            size_class=self.size_class,
-            hazards=frozenset(self.hazards) - {"burning"},
-            burning=self.burning,  # the burning field decides, so judge and insights agree
+            composition=MaterialShare.from_weights(weights, source),
+            size_class=size,
+            hazards=self._sightings(source),
+            decides_burning=True,
         )
+
+    def _sightings(self, source: InsightSource) -> tuple[HazardSighting, ...]:
+        # The burning field decides burning, so judge.burning and the hazards always agree.
+        found: dict[str, float] = {
+            item.hazard: item.confidence for item in self.hazards if item.hazard != "burning"
+        }
+        if self.burning:
+            listed = [item.confidence for item in self.hazards if item.hazard == "burning"]
+            found["burning"] = listed[0] if listed else self.confidence
+        return tuple(HazardSighting(hazard, conf, source) for hazard, conf in found.items())
 
 
 class CleanupJudgeAnswer(JudgeAnswer):

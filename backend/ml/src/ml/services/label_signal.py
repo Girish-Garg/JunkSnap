@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 
 from ml.domain.case import VerificationCase
+from ml.domain.insights import InsightSource
 from ml.domain.label_insights import LabelInsights
 from ml.domain.labels import WASTE_KEYWORDS, KeywordGroup
 from ml.domain.verification import SignalResult
@@ -27,6 +28,7 @@ class RekognitionLabelSignal(Signal):
     def measure(self, case: VerificationCase) -> SignalResult:
         labels = self._detector.detect(case.image)
         waste_score, notes = self._keywords[case.claim.report_type].score(labels.labels)
+        source = InsightSource(self.NAME, self.PROVIDER, labels.model, labels.version)
         return SignalResult(
             name=self.NAME,
             score=case.purpose.support(waste_score),
@@ -35,5 +37,5 @@ class RekognitionLabelSignal(Signal):
             version=labels.version,
             latency_ms=labels.latency_ms,
             notes=notes,
-            insights=self._insights.read(labels.labels),
+            insights=self._insights.read(labels.labels, source),
         )

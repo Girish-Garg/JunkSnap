@@ -55,9 +55,12 @@ class ResultRow:
     @staticmethod
     def _insights(result: VerificationResult) -> str:
         insights = result.insights
-        mix = ", ".join(f"{s.material} {s.share:.2f} ({s.source})" for s in insights.composition)
-        hazards = ", ".join(sorted(insights.hazards | ({"burning"} if insights.burning else set())))
-        return f"{mix or 'no materials'}; size {insights.size_class}; hazards {hazards or 'none'}"
+        mix = ", ".join(
+            f"{s.material} {s.share:.0%} ({s.source.signal})" for s in insights.composition
+        )
+        hazards = ", ".join(f"{h.hazard} {h.confidence:.2f}" for h in insights.hazards)
+        size = insights.size_class.value if insights.size_class else "none"
+        return f"{mix or 'no materials'}; size {size}; hazards {hazards or 'none'}"
 
 
 class VerifyCli:
