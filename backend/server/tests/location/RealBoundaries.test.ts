@@ -1,17 +1,19 @@
+import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { FileAssetReader } from "../../src/adapters/FileAssetReader.js";
 import { LocationAssetLoader } from "../../src/adapters/location/LocationAssetLoader.js";
 import { GeoPoint } from "../../src/domain/location/GeoPoint.js";
 import type { SeatLocator } from "../../src/ports/location/SeatLocator.js";
-import { AssetSettings } from "../../src/settings/AssetSettings.js";
 import { DELHI, KATHMANDU, LEH, SAMPLES } from "./samples.js";
 
-// The committed data/ files, through the default ASSETS_DIR; no network.
+const REPO_DATA = fileURLToPath(new URL("../../../../data/", import.meta.url));
+
+// The committed data/ files; no network.
 describe("seat lookup on the real boundary files", () => {
   let seats: SeatLocator;
 
   beforeAll(async () => {
-    const reader = new FileAssetReader(AssetSettings.fromEnv({}).assetsDir);
+    const reader = new FileAssetReader(REPO_DATA);
     seats = await new LocationAssetLoader(reader).loadSeats();
   });
 
