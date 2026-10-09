@@ -26,12 +26,25 @@ describe("IndianPlatePattern", () => {
     },
   );
 
+  it.each(["MH I2 AB I234", "TN O7 BT 2349", "KA 0S Z 1B34", "DL 3C AB 1Z34", "22 BH I234 AA"])(
+    "reads %s, with OCR's O, I, Z, S and B in digit slots, as a plate",
+    (text) => {
+      expect(pattern.isPlate(text)).toBe(true);
+    },
+  );
+
+  it.each(["MH 12 A8 1234", "WARD NO 49", "SBI 1234"])("does not read look-alikes in letter slots, as in %s", (text) => {
+    expect(pattern.isPlate(text)).toBe(false);
+  });
+
   it("knows the two halves of a two-line plate", () => {
     expect(pattern.isTopLine("WB '25")).toBe(true);
     expect(pattern.isTopLine("MH12AB")).toBe(true);
     expect(pattern.isBottomLine("D 2676")).toBe(true);
     expect(pattern.isBottomLine("0.2676")).toBe(true);
     expect(pattern.isTopLine("the 500")).toBe(false);
+    expect(pattern.isTopLine("WB 2S")).toBe(true);
+    expect(pattern.isBottomLine("D 26I6")).toBe(true);
   });
 });
 
@@ -68,12 +81,9 @@ describe("PlateTextScanner", () => {
 });
 
 describe("Box", () => {
-  it("grows by a fraction around its centre and stays inside the image", () => {
-    const grown = box(0.4, 0.4, 0.2, 0.2).grow(0.15);
-    expect(grown.left).toBeCloseTo(0.385);
-    expect(grown.width).toBeCloseTo(0.23);
-    const edge = box(0, 0.9, 0.1, 0.1).grow(0.5);
-    expect([edge.left, edge.bottom]).toEqual([0, 1]);
+  it("pads by a fraction or a pixel minimum and stays inside the image", () => {
+    expect(box(0, 0.9, 0.1, 0.1).toPaddedPixels({ fraction: 0.5, minPixels: 0 }, 100, 100)).toEqual({ left: 0, top: 87, width: 13, height: 13 });
+    expect(box(0.5, 0.5, 0, 0).toPaddedPixels({ fraction: 0.3, minPixels: 6 }, 100, 100)).toEqual({ left: 44, top: 44, width: 12, height: 12 });
   });
 
   it("maps fractions to whole pixels", () => {

@@ -1,8 +1,7 @@
 import type { PerceptualHash } from "./PerceptualHash.js";
 
 export interface LoadedPhoto {
-  readonly original: Uint8Array;
-  // At most 5 MB, which Rekognition accepts; the original itself when it is small enough.
-  readonly detectorCopy: Uint8Array;
+  // Auto-oriented and re-encoded without metadata, at most 5 MB: Rekognition and the blur both use these pixels.
+  readonly upright: Uint8Array;
   readonly hash: PerceptualHash;
 }

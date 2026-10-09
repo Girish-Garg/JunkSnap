@@ -1,11 +1,16 @@
+import type { ConverseCommand, ConverseCommandOutput } from "@aws-sdk/client-bedrock-runtime";
 import { describe, expect, it } from "vitest";
+import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import type { AnswerSchema } from "../../src/domain/llm/AnswerSchema.js";
 import type { LlmRequest } from "../../src/domain/llm/LlmRequest.js";
 import { LlmResponse } from "../../src/domain/llm/LlmResponse.js";
 import type { ProviderName } from "../../src/domain/llm/LlmTask.js";
+import { LlmRequest as Request } from "../../src/domain/llm/LlmRequest.js";
 import { NoteFlagsSchema } from "../../src/domain/moderation/NoteFlagsSchema.js";
+import { NoteRouterBuilder } from "../../src/handlers/moderation/NoteRouterBuilder.js";
 import { LlmNoteModerator, type NoteRouter } from "../../src/services/moderation/LlmNoteModerator.js";
+import { LogSink } from "../LogSink.js";
 
 const HAIKU = "in.anthropic.claude-haiku-4-5-20251001-v1:0";
 
@@ -79,5 +84,41 @@ describe("NoteFlagsSchema", () => {
     expect(schema.safeParse({ toxic: "no", personal_data: false }).success).toBe(false);
     expect(schema.safeParse({ toxic: false }).success).toBe(false);
     expect(schema.safeParse(null).success).toBe(false);
+  });
+});
+
+// Bedrock Converse stand-in: the first model refuses, the rest answer with the scripted JSON.
+class FakeConverseClient {
+  readonly models: string[] = [];
+
+  async send(command: ConverseCommand): Promise<ConverseCommandOutput> {
+    this.models.push(command.input.modelId ?? "");
+    if (this.models.length === 1) {
+      throw Object.assign(new Error("Model use case details have not been submitted"), { name: "ResourceNotFoundException" });
+    }
+    return {
+      output: { message: { role: "assistant", content: [{ text: '{"toxic": false, "personal_data": true}' }] } },
+      stopReason: "end_turn",
+      usage: { inputTokens: 170, outputTokens: 17, totalTokens: 187 },
+      metrics: { latencyMs: 600 },
+      $metadata: {},
+    };
+  }
+}
+
+describe("NoteRouterBuilder", () => {
+  const logger = () => new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage: "dev" });
+
+  it("tries the Haiku India profile, then Nova Pro APAC, and nothing outside Bedrock", async () => {
+    const client = new FakeConverseClient();
+    const verdict = await new LlmNoteModerator(new NoteRouterBuilder(client).build(logger())).review("Call 98290 12345");
+    expect(client.models).toEqual(["in.anthropic.claude-haiku-4-5-20251001-v1:0", "apac.amazon.nova-pro-v1:0"]);
+    expect(verdict).toMatchObject({ result: "removed", reasons: ["personal_data"], provider: "bedrock", model: "apac.amazon.nova-pro-v1:0" });
+  });
+
+  it("knows no task but note_moderation, so no other caller can reuse it", async () => {
+    const router = new NoteRouterBuilder(new FakeConverseClient()).build(logger());
+    const letters = new Request({ task: "letters", system: "s", userText: "u" });
+    await expect(router.complete(letters)).rejects.toThrow(/no TaskConfig/);
   });
 });

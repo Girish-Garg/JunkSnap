@@ -3,9 +3,11 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import sharp from "sharp";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
+import { NoWasteLocator } from "../src/adapters/moderation/NoWasteLocator.js";
 import { RekognitionFaceFinder } from "../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../src/adapters/moderation/RekognitionPlateFinder.js";
@@ -17,8 +19,8 @@ import { type ModerationResult, validateModerationResult } from "../src/contract
 import { GeoPoint } from "../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
-import { buildProviderRouter } from "../src/handlers/LlmModule.js";
 import { INDIA_BUFFER_DEG } from "../src/handlers/moderation/ModerationServiceFactory.js";
+import { NoteRouterBuilder } from "../src/handlers/moderation/NoteRouterBuilder.js";
 import { AuthenticityService } from "../src/services/moderation/AuthenticityService.js";
 import { CheckFactory } from "../src/services/moderation/CheckFactory.js";
 import { LlmNoteModerator } from "../src/services/moderation/LlmNoteModerator.js";
@@ -50,21 +52,25 @@ class PhotoRun {
     this.#service = new ModerationService({
       loader: new PhotoLoader(this.#store, new SharpImageCodec()),
       gate: new RekognitionImageModerator(rekognition),
+      waste: new NoWasteLocator(),
       blur: new PrivacyBlur({
         faces: new RekognitionFaceFinder(rekognition),
         plates: new RekognitionPlateFinder(rekognition),
         blurrer: new SharpBlurrer(),
         store: this.#store,
       }),
-      authenticity: new AuthenticityService(new CheckFactory({ india, hashes: this.#hashes, devices: this.#devices })),
-      notes: new LlmNoteModerator(PhotoRun.#router()),
+      authenticity: new AuthenticityService(
+        new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices }),
+      ),
+      notes: new LlmNoteModerator(PhotoRun.#noteRouter()),
       clock: new SystemClock(),
     });
   }
 
-  static #router() {
+  static #noteRouter() {
     const core = CoreSettings.fromEnv(process.env);
-    return buildProviderRouter(process.env, core, new JsonLoggerFactory().create({ service: "worker", stage: core.stage }));
+    const logger = new JsonLoggerFactory().create({ service: "worker", stage: core.stage });
+    return new NoteRouterBuilder(new BedrockRuntimeClient({ region: core.awsRegion })).build(logger);
   }
 
   async moderate(name: string, bytes: Uint8Array, note?: string): Promise<ModerationResult> {
@@ -96,7 +102,7 @@ class PhotoRun {
 
 async function main(inDir: string, outDir: string): Promise<void> {
   await mkdir(outDir, { recursive: true });
-  const placeholders = { ORIGINALS_BUCKET: "-", PUBLIC_BUCKET: "-", REPORTS_TABLE: "-", SITES_TABLE: "-" };
+  const placeholders = { ORIGINALS_BUCKET: "-", PUBLIC_BUCKET: "-", REPORTS_TABLE: "-", CLEANUPS_TABLE: "-", SITES_TABLE: "-" };
   const run = new PhotoRun(outDir, ModerationSettings.fromEnv({ ...process.env, ...placeholders }).indiaOutlinePath());
   const files = (await readdir(inDir)).filter((file) => /\.jpe?g$/i.test(file)).sort();
   const results: Record<string, ModerationResult> = {};

@@ -24,10 +24,13 @@ import {
   FakeImageModerator,
   FakeImageStore,
   FakeRemovingNoteModerator,
+  FakeWasteLocator,
   JODHPUR,
+  meanDiff,
   noiseJpeg,
   reportSubmission,
   sha256,
+  sidewaysJpeg,
   testJpeg,
 } from "./fakes.js";
 
@@ -36,15 +39,19 @@ class Harness {
   readonly gate = new FakeImageModerator();
   readonly faces = new FakeFinder("DetectFaces", null);
   readonly plates = new FakeFinder("DetectText+DetectLabels", "3.0+3.0");
-  readonly hashes = new FakeHashIndex();
+  readonly waste = new FakeWasteLocator();
+  readonly reportHashes = new FakeHashIndex();
+  readonly cleanupHashes = new FakeHashIndex();
   readonly devices = new FakeDeviceRegistry();
   readonly india = new FakeGeofence();
 
   service(notes: NoteModerator = new FakeCleanNoteModerator()): ModerationService {
-    const checks = new CheckFactory({ india: this.india, hashes: this.hashes, devices: this.devices });
+    const { india, reportHashes, cleanupHashes, devices } = this;
+    const checks = new CheckFactory({ india, reportHashes, cleanupHashes, devices });
     return new ModerationService({
       loader: new PhotoLoader(this.store, new SharpImageCodec()),
       gate: this.gate,
+      waste: this.waste,
       blur: new PrivacyBlur({ faces: this.faces, plates: this.plates, blurrer: new SharpBlurrer(), store: this.store }),
       authenticity: new AuthenticityService(checks),
       notes,
@@ -80,19 +87,39 @@ describe("ModerationService on a clean photo", () => {
     expect((await sharp(blurred).metadata()).format).toBe("jpeg");
   });
 
-  it("sends Rekognition the original when it is under 5 MB", async () => {
+  it("sends Rekognition an upright re-encode without EXIF, and blurs those same pixels", async () => {
     await harness.service().moderate(reportSubmission(jpeg));
-    expect(harness.gate.seen[0]).toBe(jpeg);
+    const seen = harness.gate.seen[0];
+    expect(seen).not.toBe(jpeg);
+    expect((await sharp(seen).metadata()).exif).toBeUndefined();
+    const published = harness.store.written.get("media/reports/rpt_jdh_1.jpg");
+    expect((await sharp(published).metadata()).width).toBe((await sharp(seen).metadata()).width);
   });
 
-  it("shrinks a photo over 5 MB for Rekognition but blurs the full-size original", async () => {
+  it("blurs a face found in the upright frame of a photo stored sideways with EXIF orientation 6", async () => {
+    const sideways = await sidewaysJpeg();
+    harness.store.originals.set("reports/upl_jdh_1.jpg", sideways);
+    // Upright, the stored checker square at x 10-50, y 10-50 sits at x 49-89, y 10-50 of a 100 x 200 image.
+    harness.faces.boxes = [box(0.49, 0.05, 0.41, 0.2)];
+    expect((await harness.service().moderate(reportSubmission(sideways))).outcome).toBe("passed");
+    const seen = await sharp(harness.gate.seen[0]).metadata();
+    expect(seen).toMatchObject({ width: 100, height: 200 });
+    expect(seen.orientation).toBeUndefined();
+    const upright = await sharp(sideways).autoOrient().removeAlpha().raw().toBuffer();
+    const published = await sharp(harness.store.written.get("media/reports/rpt_jdh_1.jpg")).removeAlpha().raw().toBuffer();
+    expect(meanDiff(upright, published, 100, (x, y) => x >= 49 && x < 89 && y >= 10 && y < 50)).toBeGreaterThan(40);
+    expect(meanDiff(upright, published, 100, (_x, y) => y >= 120)).toBeLessThan(2);
+  });
+
+  it("shrinks a photo over 5 MB for Rekognition and publishes the same shrunk pixels", async () => {
     const big = await noiseJpeg(2100);
     expect(big.byteLength).toBeGreaterThan(5 * 1024 * 1024);
     harness.store.originals.set("reports/upl_jdh_1.jpg", big);
     expect((await harness.service().moderate(reportSubmission(big))).outcome).toBe("passed");
-    expect(harness.gate.seen[0]?.byteLength).toBeLessThanOrEqual(5_000_000);
-    const blurred = harness.store.written.get("media/reports/rpt_jdh_1.jpg");
-    expect((await sharp(blurred).metadata()).width).toBe(2100);
+    const seen = harness.gate.seen[0];
+    expect(seen?.byteLength).toBeLessThanOrEqual(5_000_000);
+    const published = harness.store.written.get("media/reports/rpt_jdh_1.jpg");
+    expect((await sharp(published).metadata()).width).toBe((await sharp(seen).metadata()).width);
   });
 
   it("leaves note_moderation null without a note and records a removed note without rejecting", async () => {
@@ -144,25 +171,35 @@ describe("ModerationService rejections", () => {
     expect((await harness.service().moderate(reportSubmission(jpeg))).outcome).toBe("passed");
   });
 
-  it("rejects a person whose box overlaps a waste box as person_dumping", async () => {
+  it("rejects a person over a located waste box as person_dumping, with no public copy", async () => {
     harness.gate.people = [box(0.2, 0.1, 0.3, 0.7)];
-    harness.gate.waste = [{ label: "Garbage", box: box(0.3, 0.5, 0.4, 0.4) }];
+    harness.waste.boxes = [{ label: "Garbage", box: box(0.3, 0.5, 0.4, 0.4) }];
     const result = validateModerationResult(await harness.service().moderate(reportSubmission(jpeg)));
-    expect(result.reasons).toEqual(["person_dumping"]);
+    expect(result).toMatchObject({ reasons: ["person_dumping"], blurred_key: null, blur: null });
     expect(result.image_moderation.labels).toEqual(["Person", "Garbage"]);
+    expect(harness.store.written.size).toBe(0);
   });
 
-  it("keeps a person standing apart from the waste", async () => {
+  it("gives the waste locator only the blurred copy", async () => {
+    harness.faces.boxes = [box(0.25, 0.33, 0.25, 0.33)];
+    await harness.service().moderate(reportSubmission(jpeg));
+    expect(harness.waste.seen[0]).toEqual(harness.store.written.get("media/reports/rpt_jdh_1.jpg"));
+    expect(harness.waste.seen[0]).not.toEqual(harness.gate.seen[0]);
+  });
+
+  it("keeps a person standing apart from the waste, and a person with no waste box at all", async () => {
     harness.gate.people = [box(0.0, 0.1, 0.2, 0.6)];
-    harness.gate.waste = [{ label: "Garbage", box: box(0.6, 0.5, 0.4, 0.4) }];
+    harness.waste.boxes = [{ label: "Garbage", box: box(0.6, 0.5, 0.4, 0.4) }];
+    expect((await harness.service().moderate(reportSubmission(jpeg))).outcome).toBe("passed");
+    harness.waste.boxes = [];
     expect((await harness.service().moderate(reportSubmission(jpeg))).outcome).toBe("passed");
   });
 
   it("catches a duplicate of an earlier photo but never of itself", async () => {
     const hash = PerceptualHash.fromGrayscale(await new SharpImageCodec().grayscale(jpeg, PerceptualHash.SIDE));
-    harness.hashes.photos = [{ photoId: "rpt_jdh_1", hash, location: JODHPUR }];
+    harness.reportHashes.photos = [{ photoId: "rpt_jdh_1", hash, location: JODHPUR }];
     expect((await harness.service().moderate(reportSubmission(jpeg))).outcome).toBe("passed");
-    harness.hashes.photos.push({ photoId: "rpt_jdh_0", hash, location: JODHPUR });
+    harness.reportHashes.photos.push({ photoId: "rpt_jdh_0", hash, location: JODHPUR });
     const result = validateModerationResult(await harness.service().moderate(reportSubmission(jpeg)));
     expect(result).toMatchObject({ outcome: "rejected", reasons: ["duplicate"], duplicate_of: "rpt_jdh_0" });
     expect(result.blurred_key).toBe("media/reports/rpt_jdh_1.jpg");
@@ -184,6 +221,7 @@ describe("ModerationService on cleanup after-photos", () => {
   const cleanup = (bytes: Uint8Array, lat: number) =>
     PhotoSubmission.fromCleanup(
       {
+        site_id: "site_jdh_3",
         upload_id: "upl_jdh_3c",
         device_token: DEVICE,
         sha256: sha256(bytes),
@@ -208,6 +246,17 @@ describe("ModerationService on cleanup after-photos", () => {
     const result = validateModerationResult(await harness.service().moderate(cleanup(jpeg, 26.2711)));
     expect(result.reasons).toEqual(["not_near_site"]);
     expect(result.checks.near_site?.result).toBe("fail");
+  });
+
+  it("compares an after-photo with earlier after-photos of the site, never with its before-photos", async () => {
+    const hash = PerceptualHash.fromGrayscale(await new SharpImageCodec().grayscale(jpeg, PerceptualHash.SIDE));
+    const near = new GeoPoint(26.2702, 73.0458);
+    harness.reportHashes.photos = [{ photoId: "rpt_jdh_3", hash, location: near }];
+    expect((await harness.service().moderate(cleanup(jpeg, 26.2702))).outcome).toBe("passed");
+    harness.cleanupHashes.photos = [{ photoId: "cln_jdh_3b", hash, location: near }];
+    const result = validateModerationResult(await harness.service().moderate(cleanup(jpeg, 26.2702)));
+    expect(result).toMatchObject({ reasons: ["duplicate"], duplicate_of: "cln_jdh_3b" });
+    expect(result.checks.duplicate.detail).toBe("pHash distance 0 to an earlier after-photo of this site within 100 m; limit 8");
   });
 
   it("keeps near_site in a rejected cleanup, as the schema requires", async () => {

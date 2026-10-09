@@ -9,6 +9,6 @@ export interface ImageCodec {
   describe(bytes: Uint8Array): Promise<ImageFacts>;
   // Fully decodes and auto-orients, then returns side x side grayscale pixels, row-major.
   grayscale(bytes: Uint8Array, side: number): Promise<Uint8Array>;
-  // An auto-oriented JPEG of at most maxBytes.
-  shrinkBelow(bytes: Uint8Array, maxBytes: number): Promise<Uint8Array>;
+  // An auto-oriented JPEG without metadata of at most maxBytes, at full size when that fits.
+  uprightBelow(bytes: Uint8Array, maxBytes: number): Promise<Uint8Array>;
 }

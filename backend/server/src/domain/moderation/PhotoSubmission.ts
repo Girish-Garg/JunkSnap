@@ -11,6 +11,7 @@ export interface Sender {
 
 // The fields of the SQS cleanup message that moderation reads (contracts/README.md).
 export interface CleanupPhoto {
+  readonly site_id: string;
   readonly upload_id: string;
   readonly device_token: string;
   readonly user_id?: string;
@@ -18,6 +19,12 @@ export interface CleanupPhoto {
   readonly gps: { readonly lat: number; readonly lon: number };
   readonly captured_at: string;
   readonly received_at: string;
+}
+
+// The site a cleanup after-photo claims to clear.
+export interface CleanupSite {
+  readonly id: string;
+  readonly point: GeoPoint;
 }
 
 export interface SubmissionFields {
@@ -31,7 +38,7 @@ export interface SubmissionFields {
   readonly capturedAt: Date;
   readonly receivedAt: Date;
   readonly note: string | null;
-  readonly site: GeoPoint | null;
+  readonly site: CleanupSite | null;
 }
 
 // One photo to moderate: a report photo, or a cleanup after-photo with its site's position.
@@ -57,7 +64,7 @@ export class PhotoSubmission {
     });
   }
 
-  static fromCleanup(cleanup: CleanupPhoto, site: GeoPoint): PhotoSubmission {
+  static fromCleanup(cleanup: CleanupPhoto, sitePoint: GeoPoint): PhotoSubmission {
     return new PhotoSubmission({
       photoId: PhotoId.fromUpload("cleanup", cleanup.upload_id),
       sha256: cleanup.sha256,
@@ -68,7 +75,7 @@ export class PhotoSubmission {
       capturedAt: new Date(cleanup.captured_at),
       receivedAt: new Date(cleanup.received_at),
       note: null,
-      site,
+      site: { id: cleanup.site_id, point: sitePoint },
     });
   }
 

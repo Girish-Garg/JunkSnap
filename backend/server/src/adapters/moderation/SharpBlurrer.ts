@@ -1,5 +1,5 @@
 import sharp, { type OverlayOptions } from "sharp";
-import type { Box, PixelRect } from "../../domain/moderation/Box.js";
+import type { BlurRegion, PixelRect } from "../../domain/moderation/Box.js";
 import type { Blurrer } from "../../ports/moderation/Blurrer.js";
 import { callService } from "./utils.js";
 
@@ -20,14 +20,14 @@ export class SharpBlurrer implements Blurrer {
     this.#quality = quality;
   }
 
-  async obscure(jpeg: Uint8Array, boxes: readonly Box[]): Promise<Uint8Array> {
-    return callService("sharp blur", () => this.#obscure(jpeg, boxes));
+  async obscure(jpeg: Uint8Array, regions: readonly BlurRegion[]): Promise<Uint8Array> {
+    return callService("sharp blur", () => this.#obscure(jpeg, regions));
   }
 
-  async #obscure(jpeg: Uint8Array, boxes: readonly Box[]): Promise<Uint8Array> {
+  async #obscure(jpeg: Uint8Array, regions: readonly BlurRegion[]): Promise<Uint8Array> {
     const { data, info } = await sharp(jpeg).autoOrient().removeAlpha().raw().toBuffer({ resolveWithObject: true });
     const image: RawImage = { data, raw: { width: info.width, height: info.height, channels: info.channels } };
-    const rects = boxes.flatMap((box) => box.toPixels(info.width, info.height) ?? []);
+    const rects = regions.flatMap((region) => region.box.toPaddedPixels(region.padding, info.width, info.height) ?? []);
     const patches = await Promise.all(rects.map((rect) => this.#patch(image, rect)));
     const output = await sharp(data, { raw: image.raw }).composite(patches).jpeg({ quality: this.#quality }).toBuffer();
     return new Uint8Array(output);

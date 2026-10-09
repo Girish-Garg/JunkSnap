@@ -15,6 +15,7 @@ import type { ImageModerator } from "../../src/ports/moderation/ImageModerator.j
 import type { ImageStore } from "../../src/ports/moderation/ImageStore.js";
 import type { NoteModerator } from "../../src/ports/moderation/NoteModerator.js";
 import type { PlateFinder } from "../../src/ports/moderation/PlateFinder.js";
+import type { WasteLocator } from "../../src/ports/moderation/WasteLocator.js";
 
 export const JODHPUR = new GeoPoint(26.26183, 73.00352);
 export const DEVICE = "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14";
@@ -24,21 +25,47 @@ export function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-// White on alternate 8 px cells inside the square from 64 to 128 px.
-function checkerAt(x: number, y: number): boolean {
-  const inSquare = Math.min(x, y) >= 64 && Math.max(x, y) < 128;
+// White on alternate 8 px cells inside the square from `from` to `to` px on both axes.
+function checkerAt(x: number, y: number, from: number, to: number): boolean {
+  const inSquare = Math.min(x, y) >= from && Math.max(x, y) < to;
   return inSquare && (Math.floor(x / 8) + Math.floor(y / 8)) % 2 === 0;
 }
 
 // A smooth gradient with a sharp checkerboard square, so blurring that square changes it a lot.
-export async function testJpeg(width = 256, height = 192, quality = 95): Promise<Uint8Array> {
+function gradientPixels(width: number, height: number, from: number, to: number): Buffer {
   const pixels = Buffer.alloc(width * height * 3);
   for (let i = 0; i < width * height; i += 1) {
     const x = i % width;
     const y = Math.floor(i / width);
-    pixels.fill(checkerAt(x, y) ? 255 : Math.round((x / width) * 160 + (y / height) * 60), i * 3, i * 3 + 3);
+    pixels.fill(checkerAt(x, y, from, to) ? 255 : Math.round((x / width) * 160 + (y / height) * 60), i * 3, i * 3 + 3);
   }
+  return pixels;
+}
+
+export async function testJpeg(width = 256, height = 192, quality = 95): Promise<Uint8Array> {
+  const pixels = gradientPixels(width, height, 64, 128);
   return new Uint8Array(await sharp(pixels, { raw: { width, height, channels: 3 } }).jpeg({ quality }).toBuffer());
+}
+
+// Stored 200 x 100 with the square at 10 to 50 px; EXIF orientation 6 shows it upright as 100 x 200.
+export async function sidewaysJpeg(): Promise<Uint8Array> {
+  const pixels = gradientPixels(200, 100, 10, 50);
+  const stored = sharp(pixels, { raw: { width: 200, height: 100, channels: 3 } }).withMetadata({ orientation: 6 });
+  return new Uint8Array(await stored.jpeg({ quality: 95 }).toBuffer());
+}
+
+// Mean absolute difference of the first two channels over the pixels for which `inside(x, y)` holds.
+export function meanDiff(a: Buffer, b: Buffer, width: number, inside: (x: number, y: number) => boolean): number {
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i < a.length; i += 3) {
+    const pixel = i / 3;
+    if (inside(pixel % width, Math.floor(pixel / width))) {
+      total += Math.abs((a[i] ?? 0) - (b[i] ?? 0)) + Math.abs((a[i + 1] ?? 0) - (b[i + 1] ?? 0));
+      count += 2;
+    }
+  }
+  return total / count;
 }
 
 // Seeded noise compresses badly: 2100 px at quality 100 is about 5.9 MB.
@@ -92,12 +119,21 @@ export const REKOGNITION_STAMP = { provider: "rekognition", model: "DetectModera
 export class FakeImageModerator implements ImageModerator {
   moderationLabels: ModerationLabel[] = [];
   people: Box[] = [];
-  waste: LabeledBox[] = [];
   readonly seen: Uint8Array[] = [];
 
   async screen(jpeg: Uint8Array): Promise<ImageScreening> {
     this.seen.push(jpeg);
-    return { moderationLabels: this.moderationLabels, people: this.people, waste: this.waste, stamp: REKOGNITION_STAMP };
+    return { moderationLabels: this.moderationLabels, people: this.people, stamp: REKOGNITION_STAMP };
+  }
+}
+
+export class FakeWasteLocator implements WasteLocator {
+  boxes: LabeledBox[] = [];
+  readonly seen: Uint8Array[] = [];
+
+  async locate(jpeg: Uint8Array): Promise<LabeledBox[]> {
+    this.seen.push(jpeg);
+    return this.boxes;
   }
 }
 
@@ -119,7 +155,7 @@ export class FakeFinder implements FaceFinder, PlateFinder {
 export class FakeHashIndex implements HashIndex {
   photos: IndexedPhoto[] = [];
 
-  async near(): Promise<IndexedPhoto[]> {
+  async earlierPhotos(): Promise<IndexedPhoto[]> {
     return this.photos;
   }
 }

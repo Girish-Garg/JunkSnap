@@ -5,7 +5,8 @@ import { SharpImageCodec } from "../../src/adapters/moderation/SharpImageCodec.j
 import { InternalDataError } from "../../src/domain/errors.js";
 import { InvalidImageError } from "../../src/domain/moderation/errors.js";
 import { PerceptualHash } from "../../src/domain/moderation/PerceptualHash.js";
-import { box, noiseJpeg, testJpeg } from "./fakes.js";
+import { FACE_PADDING, PLATE_PADDING, PrivacyBlur } from "../../src/services/moderation/PrivacyBlur.js";
+import { box, FakeFinder, FakeImageStore, meanDiff, noiseJpeg, sidewaysJpeg, testJpeg } from "./fakes.js";
 
 const codec = new SharpImageCodec();
 
@@ -16,20 +17,6 @@ async function hashOf(jpeg: Uint8Array): Promise<PerceptualHash> {
 async function rgb(jpeg: Uint8Array): Promise<{ data: Buffer; width: number }> {
   const { data, info } = await sharp(jpeg).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   return { data, width: info.width };
-}
-
-// Mean absolute channel difference over the pixels for which `inside(x, y)` holds.
-function meanDiff(a: Buffer, b: Buffer, width: number, inside: (x: number, y: number) => boolean): number {
-  let total = 0;
-  let count = 0;
-  for (let i = 0; i < a.length; i += 3) {
-    const pixel = i / 3;
-    if (inside(pixel % width, Math.floor(pixel / width))) {
-      total += Math.abs((a[i] ?? 0) - (b[i] ?? 0)) + Math.abs((a[i + 1] ?? 0) - (b[i + 1] ?? 0));
-      count += 2;
-    }
-  }
-  return total / count;
 }
 
 describe("PerceptualHash", () => {
@@ -62,9 +49,17 @@ describe("SharpImageCodec", () => {
     await expect(codec.grayscale((await testJpeg()).slice(0, 600), 32)).rejects.toThrow(InvalidImageError);
   });
 
+  it("re-encodes upright and without EXIF, at full size when it fits", async () => {
+    const withExif = new Uint8Array(await sharp(await testJpeg()).withExif({ IFD0: { Make: "PhoneMaker" } }).jpeg().toBuffer());
+    const meta = await sharp(await codec.uprightBelow(withExif, 5_000_000)).metadata();
+    expect(meta).toMatchObject({ format: "jpeg", width: 256, height: 192 });
+    expect(meta.exif).toBeUndefined();
+    expect(await sharp(await codec.uprightBelow(await sidewaysJpeg(), 5_000_000)).metadata()).toMatchObject({ width: 100, height: 200 });
+  });
+
   it("shrinks below a byte limit and keeps the aspect ratio", async () => {
     const big = await noiseJpeg(1200);
-    const small = await codec.shrinkBelow(big, big.byteLength / 2);
+    const small = await codec.uprightBelow(big, big.byteLength / 2);
     expect(small.byteLength).toBeLessThanOrEqual(big.byteLength / 2);
     const meta = await sharp(small).metadata();
     expect(meta.width).toBe(meta.height);
@@ -74,7 +69,7 @@ describe("SharpImageCodec", () => {
 describe("SharpBlurrer", () => {
   const blurrer = new SharpBlurrer(95);
   // The checkerboard square at pixels 64 to 128 in both directions of the 256 x 192 test image.
-  const target = box(64 / 256, 64 / 192, 64 / 256, 64 / 192);
+  const target = { box: box(64 / 256, 64 / 192, 64 / 256, 64 / 192), padding: { fraction: 0, minPixels: 0 } };
 
   it("changes pixels inside the box and leaves the rest as it was", async () => {
     const original = await testJpeg();
@@ -98,7 +93,32 @@ describe("SharpBlurrer", () => {
   });
 
   it("ignores boxes that cover no whole pixel", async () => {
-    const out = await blurrer.obscure(await testJpeg(), [box(0.5, 0.5, 0, 0), box(1.2, 1.2, 0.1, 0.1)]);
+    const none = { fraction: 0, minPixels: 0 };
+    const regions = [{ box: box(0.5, 0.5, 0, 0), padding: none }, { box: box(1.2, 1.2, 0.1, 0.1), padding: none }];
+    const out = await blurrer.obscure(await testJpeg(), regions);
     expect((await sharp(out).metadata()).width).toBe(256);
+  });
+});
+
+describe("PrivacyBlur padding", () => {
+  it("grows face boxes by 40% and gives plates at least 6 px or 30% on every side", () => {
+    expect(box(0.4, 0.4, 0.2, 0.2).toPaddedPixels(FACE_PADDING, 100, 100)).toEqual({ left: 36, top: 36, width: 28, height: 28 });
+    // A tight 20 x 10 px OCR box: 30% would add only 3 px and 1.5 px, so the 6 px minimum applies.
+    expect(box(0.5, 0.5, 0.02, 0.01).toPaddedPixels(PLATE_PADDING, 1000, 1000)).toEqual({ left: 494, top: 494, width: 32, height: 22 });
+    expect(box(0.5, 0.5, 0.2, 0.1).toPaddedPixels(PLATE_PADDING, 1000, 1000)).toEqual({ left: 470, top: 485, width: 260, height: 130 });
+  });
+
+  it("blurs past the edge of a tight plate box", async () => {
+    const plates = new FakeFinder("DetectText+DetectLabels", "3.0+3.0");
+    // 16 x 8 px inside the checkerboard; the 6 px margin reaches x 66 to 94 and y 66 to 86.
+    plates.boxes = [box(72 / 256, 72 / 192, 16 / 256, 8 / 192)];
+    const blur = new PrivacyBlur({ faces: new FakeFinder("DetectFaces", null), plates, blurrer: new SharpBlurrer(95), store: new FakeImageStore() });
+    const upright = await testJpeg();
+    const blurred = await blur.blur({ upright, hash: PerceptualHash.fromHex("0000000000000000") });
+    const before = await rgb(upright);
+    const after = await rgb(blurred.jpeg);
+    expect(meanDiff(before.data, after.data, before.width, (x, y) => x >= 66 && x < 72 && y >= 72 && y < 80)).toBeGreaterThan(30);
+    expect(meanDiff(before.data, after.data, before.width, (x, y) => x >= 104 && y >= 104 && x < 128 && y < 128)).toBeLessThan(1.5);
+    expect(blurred.record.toContract()).toMatchObject({ faces: 0, plates: 1 });
   });
 });

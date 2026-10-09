@@ -13,7 +13,9 @@ import { RateLimitCheck } from "./checks/RateLimitCheck.js";
 
 export interface CheckPorts {
   readonly india: Geofence;
-  readonly hashes: HashIndex;
+  readonly reportHashes: HashIndex;
+  // Earlier after-photos of the same site only: a cleared site can look like its before-photo.
+  readonly cleanupHashes: HashIndex;
   readonly devices: DeviceRegistry;
 }
 
@@ -22,17 +24,26 @@ export class CheckFactory {
   readonly #chains: Readonly<Record<PhotoKind, readonly Check[]>>;
 
   constructor(ports: CheckPorts) {
-    const report = [
-      new InsideIndiaCheck(ports.india),
-      new FreshTimestampCheck(),
-      new DuplicateCheck(ports.hashes),
-      new RateLimitCheck(ports.devices),
-      new DeviceTokenCheck(ports.devices),
-    ];
-    this.#chains = { report, cleanup: [...report, new NearSiteCheck()] };
+    this.#chains = {
+      report: this.#chain(ports, new DuplicateCheck(ports.reportHashes, "earlier photo")),
+      cleanup: [
+        ...this.#chain(ports, new DuplicateCheck(ports.cleanupHashes, "earlier after-photo of this site")),
+        new NearSiteCheck(),
+      ],
+    };
   }
 
   checksFor(submission: PhotoSubmission): readonly Check[] {
     return this.#chains[submission.photoId.kind];
+  }
+
+  #chain(ports: CheckPorts, duplicate: DuplicateCheck): Check[] {
+    return [
+      new InsideIndiaCheck(ports.india),
+      new FreshTimestampCheck(),
+      duplicate,
+      new RateLimitCheck(ports.devices),
+      new DeviceTokenCheck(ports.devices),
+    ];
   }
 }

@@ -7,8 +7,8 @@ import type { ImageCodec } from "../../ports/moderation/ImageCodec.js";
 import type { ImageStore } from "../../ports/moderation/ImageStore.js";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-// Rekognition's 5 MB image limit, read as decimal to be safe; its boxes are fractions, so they fit the original too.
-const MAX_DETECTOR_BYTES = 5_000_000;
+// Rekognition's 5 MB image limit, read as decimal to be safe.
+const MAX_UPRIGHT_BYTES = 5_000_000;
 const JPEG_MAGIC = [0xff, 0xd8, 0xff];
 
 // Either a usable photo, or the short cause that makes it invalid_image.
@@ -50,8 +50,8 @@ export class PhotoLoader {
       return { invalid: "not_jpeg" };
     }
     const hash = PerceptualHash.fromGrayscale(await this.#codec.grayscale(original, PerceptualHash.SIDE));
-    const detectorCopy =
-      original.byteLength > MAX_DETECTOR_BYTES ? await this.#codec.shrinkBelow(original, MAX_DETECTOR_BYTES) : original;
-    return { photo: { original, detectorCopy, hash } };
+    // Always re-encoded, so an EXIF rotation can never put Rekognition's boxes and the blur in different frames.
+    const upright = await this.#codec.uprightBelow(original, MAX_UPRIGHT_BYTES);
+    return { photo: { upright, hash } };
   }
 }

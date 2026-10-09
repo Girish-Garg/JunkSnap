@@ -3,12 +3,14 @@ const STATE_CODES: ReadonlySet<string> = new Set([
   "AN", "AP", "AR", "AS", "BR", "CG", "CH", "DD", "DL", "DN", "GA", "GJ", "HP", "HR", "JH", "JK", "KA", "KL", "LA", "LD",
   "MH", "ML", "MN", "MP", "MZ", "NL", "OD", "OR", "PB", "PY", "RJ", "SK", "TG", "TN", "TR", "TS", "UA", "UK", "UP", "WB",
 ]);
-const STATE_SERIES = /^([A-Z]{2})[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$/;
-const BHARAT_SERIES = /^[0-9]{2}BH[0-9]{4}[A-Z]{1,2}$/;
+// A digit slot also takes the letters OCR reads in place of digits: O for 0, I for 1, Z for 2, S for 5, B for 8.
+const D = "[0-9OIZSB]";
+const STATE_SERIES = new RegExp(`^([A-Z]{2})${D}{1,2}[A-Z]{0,3}${D}{4}$`);
+const BHARAT_SERIES = new RegExp(`^${D}{2}BH${D}{4}[A-Z]{1,2}$`);
 // Top line of a two-line bike or auto plate, for example MH12 or MH12AB.
-const TOP_LINE = /^([A-Z]{2})[0-9]{1,2}[A-Z]{0,3}$/;
+const TOP_LINE = new RegExp(`^([A-Z]{2})${D}{1,2}[A-Z]{0,3}$`);
 // Bottom line, for example AB1234 or 1234; OCR often reads the series letter D as 0, so letters may be digits.
-const BOTTOM_LINE = /^[A-Z0-9]{0,3}[0-9]{4}$/;
+const BOTTOM_LINE = new RegExp(`^[A-Z0-9]{0,3}${D}{4}$`);
 
 export class IndianPlatePattern {
   normalise(text: string): string {

@@ -4,18 +4,22 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it, vi } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
+import { DynamoCleanupHashIndex } from "../../src/adapters/moderation/DynamoCleanupHashIndex.js";
 import { DynamoHashIndex } from "../../src/adapters/moderation/DynamoHashIndex.js";
+import { DynamoReader } from "../../src/adapters/moderation/DynamoReader.js";
 import { RekognitionFaceFinder } from "../../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../src/adapters/moderation/RekognitionPlateFinder.js";
 import { S3ImageStore } from "../../src/adapters/moderation/S3ImageStore.js";
 import { ConfigError, ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
+import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
+import { PhotoSubmission } from "../../src/domain/moderation/PhotoSubmission.js";
 import { ModerationServiceFactory } from "../../src/handlers/moderation/ModerationServiceFactory.js";
 import { ModerationService } from "../../src/services/moderation/ModerationService.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { ModerationSettings } from "../../src/settings/ModerationSettings.js";
 import { LogSink } from "../LogSink.js";
-import { FakeDeviceRegistry, JODHPUR } from "./fakes.js";
+import { FakeDeviceRegistry, JODHPUR, RECEIVED_AT, reportSubmission } from "./fakes.js";
 
 interface SentCommand {
   readonly constructor: { readonly name: string };
@@ -40,7 +44,7 @@ const bbox = (Left: number, Top: number, Width: number, Height: number) => ({ Le
 const rekognition = () => new RekognitionClient({ region: "ap-south-1" });
 
 describe("RekognitionImageModerator", () => {
-  it("walks ParentName to the top category and keeps Person and waste instance boxes", async () => {
+  it("walks ParentName to the top category and keeps Person instance boxes", async () => {
     const client = rekognition();
     const sent = stub(client, (command) =>
       command.constructor.name === "DetectModerationLabelsCommand"
@@ -56,8 +60,6 @@ describe("RekognitionImageModerator", () => {
             LabelModelVersion: "3.0",
             Labels: [
               { Name: "Person", Instances: [{ BoundingBox: bbox(0.1, 0.1, 0.2, 0.5) }, { BoundingBox: {} }] },
-              { Name: "Garbage", Instances: [] },
-              { Name: "Trash", Instances: [{ BoundingBox: bbox(0.5, 0.5, 0.3, 0.3) }] },
             ],
           },
     );
@@ -68,10 +70,9 @@ describe("RekognitionImageModerator", () => {
       { name: "Blood & Gore", category: "Graphic Violence" },
     ]);
     expect(screening.people).toHaveLength(1);
-    expect(screening.waste.map((item) => item.label)).toEqual(["Trash"]);
     expect(screening.stamp).toEqual({ provider: "rekognition", model: "DetectModerationLabels+DetectLabels", version: "7.0+3.0" });
     const labels = sent.find((command) => command.constructor.name === "DetectLabelsCommand");
-    expect(labels?.input).toMatchObject({ MinConfidence: 70, Settings: { GeneralLabels: { LabelInclusionFilters: expect.arrayContaining(["Person", "Garbage"]) } } });
+    expect(labels?.input).toMatchObject({ MinConfidence: 70, Settings: { GeneralLabels: { LabelInclusionFilters: ["Person"] } } });
   });
 
   it("turns an SDK failure into ExternalServiceError", async () => {
@@ -158,7 +159,8 @@ describe("DynamoHashIndex", () => {
         ? { Items: [{ report_id: "rpt_a", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon }, moderation_result: { phash: "c4e1b3a59d0f2687" } }], LastEvaluatedKey: { report_id: "rpt_a" } }
         : { Items: [{ report_id: "rpt_b", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon } }] };
     });
-    const photos = await new DynamoHashIndex(client, { reports: "reports-table", sites: "sites-table" }).near(JODHPUR, 100);
+    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" });
+    const photos = await index.earlierPhotos(reportSubmission(new Uint8Array()), 100);
     expect(photos.map((photo) => [photo.photoId, photo.hash.toHex()])).toEqual([["rpt_a", "c4e1b3a59d0f2687"]]);
     const siteQueries = sent.filter((command) => command.input.IndexName === "by-site");
     expect(siteQueries.map((command) => command.input.ExpressionAttributeValues)).toEqual([{ ":site": "site_near" }, { ":site": "site_near" }]);
@@ -173,8 +175,28 @@ describe("DynamoHashIndex on bad rows", () => {
         ? { Items: [{ site_id: "site_near", lat: JODHPUR.lat, lon: JODHPUR.lon }] }
         : { Items: [{ report_id: "rpt_a", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon }, moderation_result: { phash: "zz" } }] },
     );
-    const index = new DynamoHashIndex(client, { reports: "reports-table", sites: "sites-table" });
-    await expect(index.near(JODHPUR, 100)).rejects.toThrow(InternalDataError);
+    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" });
+    await expect(index.earlierPhotos(reportSubmission(new Uint8Array()), 100)).rejects.toThrow(InternalDataError);
+  });
+});
+
+describe("DynamoCleanupHashIndex", () => {
+  it("scans the cleanups table for this site's earlier after-photos, across pages", async () => {
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: "ap-south-1" }));
+    const gps = { lat: 26.2702, lon: 73.0458 };
+    const sent = stub(client, (command) =>
+      command.input.ExclusiveStartKey === undefined
+        ? { Items: [{ cleanup_id: "cln_a", gps, moderation_result: { phash: "c4e1b3a59d0f2687" } }], LastEvaluatedKey: { cleanup_id: "cln_a" } }
+        : { Items: [{ cleanup_id: "cln_b", gps }] },
+    );
+    const submission = PhotoSubmission.fromCleanup(
+      { site_id: "site_jdh_3", upload_id: "upl_c", device_token: "d", sha256: "0".repeat(64), gps, captured_at: RECEIVED_AT, received_at: RECEIVED_AT },
+      new GeoPoint(26.2701, 73.0458),
+    );
+    const photos = await new DynamoCleanupHashIndex(new DynamoReader(client), "cleanups-table").earlierPhotos(submission);
+    expect(photos.map((photo) => photo.photoId)).toEqual(["cln_a"]);
+    expect(sent[0]?.input).toMatchObject({ TableName: "cleanups-table", FilterExpression: "site_id = :site", ExpressionAttributeValues: { ":site": "site_jdh_3" } });
+    await expect(new DynamoCleanupHashIndex(new DynamoReader(client), "t").earlierPhotos(reportSubmission(new Uint8Array()))).rejects.toThrow(InternalDataError);
   });
 });
 
@@ -183,6 +205,7 @@ describe("ModerationSettings and ModerationServiceFactory", () => {
     ORIGINALS_BUCKET: "junksnap-dev-originals-1",
     PUBLIC_BUCKET: "junksnap-dev-public-1",
     REPORTS_TABLE: "junksnap-dev-reports",
+    CLEANUPS_TABLE: "junksnap-dev-cleanups",
     SITES_TABLE: "junksnap-dev-sites",
   };
 
@@ -193,7 +216,7 @@ describe("ModerationSettings and ModerationServiceFactory", () => {
     expect(ModerationSettings.fromEnv({ ...env, ASSETS_DIR: "/assets" }, "/x").assetsDir.replaceAll("\\", "/")).toMatch(/\/assets$/);
   });
 
-  it("builds the worker's service graph, LLM router included, without calling AWS", () => {
+  it("builds the worker's service graph, Bedrock note router included, without calling AWS", () => {
     const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
     const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage: "dev" });
     const service = ModerationServiceFactory.forWorker({ settings: core, logger, env }, new FakeDeviceRegistry());

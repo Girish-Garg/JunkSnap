@@ -10,7 +10,7 @@ export class MemoryHashIndex implements HashIndex {
     this.#photos.push({ photoId, hash, location });
   }
 
-  async near(): Promise<IndexedPhoto[]> {
+  async earlierPhotos(): Promise<IndexedPhoto[]> {
     return [...this.#photos];
   }
 }

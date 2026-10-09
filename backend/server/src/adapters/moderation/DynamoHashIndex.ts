@@ -1,11 +1,10 @@
-import { type DynamoDBDocumentClient, QueryCommand, type QueryCommandInput } from "@aws-sdk/lib-dynamodb";
 import ngeohash from "ngeohash";
 import { z } from "zod";
-import { InternalDataError } from "../../domain/errors.js";
 import { GeoPoint } from "../../domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../../domain/moderation/PerceptualHash.js";
+import type { PhotoSubmission } from "../../domain/moderation/PhotoSubmission.js";
 import type { HashIndex, IndexedPhoto } from "../../ports/moderation/HashIndex.js";
-import { callService } from "./utils.js";
+import type { DynamoReader } from "./DynamoReader.js";
 
 export interface HashTables {
   readonly reports: string;
@@ -24,18 +23,18 @@ const ReportItem = z.object({
   moderation_result: z.object({ phash: z.string().regex(/^[0-9a-f]{16}$/) }),
 });
 
-// Reads pHashes through the sites by-geohash and reports by-site indexes; reports not yet merged into a site are not seen.
+// Report photos, through the sites by-geohash and reports by-site indexes; reports not yet merged into a site are not seen.
 export class DynamoHashIndex implements HashIndex {
-  readonly #client: DynamoDBDocumentClient;
+  readonly #reader: DynamoReader;
   readonly #tables: HashTables;
 
-  constructor(client: DynamoDBDocumentClient, tables: HashTables) {
-    this.#client = client;
+  constructor(reader: DynamoReader, tables: HashTables) {
+    this.#reader = reader;
     this.#tables = tables;
   }
 
-  async near(point: GeoPoint, radiusM: number): Promise<IndexedPhoto[]> {
-    const siteIds = await this.#sitesNear(point, radiusM + SITE_SPREAD_M);
+  async earlierPhotos(submission: PhotoSubmission, radiusM: number): Promise<IndexedPhoto[]> {
+    const siteIds = await this.#sitesNear(submission.fields.location, radiusM + SITE_SPREAD_M);
     const photos = await Promise.all(siteIds.map((siteId) => this.#photosAt(siteId)));
     return photos.flat();
   }
@@ -44,16 +43,26 @@ export class DynamoHashIndex implements HashIndex {
     const dLat = radiusM / METRES_PER_DEGREE;
     const dLon = radiusM / (METRES_PER_DEGREE * Math.cos((point.lat * Math.PI) / 180));
     const cells = ngeohash.bboxes(point.lat - dLat, point.lon - dLon, point.lat + dLat, point.lon + dLon, GEOHASH_PRECISION);
-    const pages = await Promise.all(cells.map((cell) => this.#queryAll(this.#siteQuery(cell))));
+    const pages = await Promise.all(
+      cells.map((cell) =>
+        this.#reader.query({
+          TableName: this.#tables.sites,
+          IndexName: "by-geohash",
+          KeyConditionExpression: "geohash4 = :cell",
+          ExpressionAttributeValues: { ":cell": cell },
+          ProjectionExpression: "site_id, lat, lon",
+        }),
+      ),
+    );
     return pages
       .flat()
-      .map((item) => this.#parse(SiteItem, item, "site"))
+      .map((row) => this.#reader.parse(SiteItem, row, "site"))
       .filter((site) => new GeoPoint(site.lat, site.lon).distanceTo(point) <= radiusM)
       .map((site) => site.site_id);
   }
 
   async #photosAt(siteId: string): Promise<IndexedPhoto[]> {
-    const items = await this.#queryAll({
+    const rows = await this.#reader.query({
       TableName: this.#tables.reports,
       IndexName: "by-site",
       KeyConditionExpression: "site_id = :site",
@@ -61,43 +70,12 @@ export class DynamoHashIndex implements HashIndex {
       ProjectionExpression: "report_id, gps, moderation_result.phash",
     });
     // A report still being processed has no moderation_result yet.
-    return items
-      .filter((item) => item.moderation_result !== undefined)
-      .map((item) => this.#toPhoto(this.#parse(ReportItem, item, "report")));
-  }
-
-  #siteQuery(cell: string): QueryCommandInput {
-    return {
-      TableName: this.#tables.sites,
-      IndexName: "by-geohash",
-      KeyConditionExpression: "geohash4 = :cell",
-      ExpressionAttributeValues: { ":cell": cell },
-      ProjectionExpression: "site_id, lat, lon",
-    };
-  }
-
-  #parse<T>(shape: z.ZodType<T>, item: Record<string, unknown>, kind: string): T {
-    const parsed = shape.safeParse(item);
-    if (!parsed.success) {
-      throw new InternalDataError(`unreadable ${kind} row in the duplicate index: ${z.prettifyError(parsed.error)}`);
-    }
-    return parsed.data;
-  }
-
-  #toPhoto(report: z.infer<typeof ReportItem>): IndexedPhoto {
-    const location = new GeoPoint(report.gps.lat, report.gps.lon);
-    return { photoId: report.report_id, hash: PerceptualHash.fromHex(report.moderation_result.phash), location };
-  }
-
-  async #queryAll(input: QueryCommandInput): Promise<Record<string, unknown>[]> {
-    const items: Record<string, unknown>[] = [];
-    let start: Record<string, unknown> | undefined;
-    do {
-      const command = new QueryCommand({ ...input, ExclusiveStartKey: start });
-      const page = await callService(`DynamoDB query ${input.IndexName ?? ""}`, () => this.#client.send(command));
-      items.push(...(page.Items ?? []));
-      start = page.LastEvaluatedKey;
-    } while (start !== undefined);
-    return items;
+    return rows
+      .filter((row) => row.moderation_result !== undefined)
+      .map((row) => {
+        const report = this.#reader.parse(ReportItem, row, "report");
+        const location = new GeoPoint(report.gps.lat, report.gps.lon);
+        return { photoId: report.report_id, hash: PerceptualHash.fromHex(report.moderation_result.phash), location };
+      });
   }
 }

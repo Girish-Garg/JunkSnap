@@ -7,6 +7,7 @@ const ModerationEnv = z.object({
   ORIGINALS_BUCKET: z.string().min(1),
   PUBLIC_BUCKET: z.string().min(1),
   REPORTS_TABLE: z.string().min(1),
+  CLEANUPS_TABLE: z.string().min(1),
   SITES_TABLE: z.string().min(1),
   ASSETS_DIR: z.string().min(1).optional(),
 });
@@ -16,6 +17,7 @@ export class ModerationSettings {
   readonly originalsBucket: string;
   readonly publicBucket: string;
   readonly reportsTable: string;
+  readonly cleanupsTable: string;
   readonly sitesTable: string;
   readonly assetsDir: string;
 
@@ -24,6 +26,7 @@ export class ModerationSettings {
     this.originalsBucket = values.ORIGINALS_BUCKET;
     this.publicBucket = values.PUBLIC_BUCKET;
     this.reportsTable = values.REPORTS_TABLE;
+    this.cleanupsTable = values.CLEANUPS_TABLE;
     this.sitesTable = values.SITES_TABLE;
     this.assetsDir = assetsDir;
   }

@@ -85,7 +85,7 @@ describe("DuplicateCheck", () => {
   function checkWith(...photos: { photoId: string; hash: PerceptualHash; location: GeoPoint }[]): DuplicateCheck {
     const index = new FakeHashIndex();
     index.photos = photos;
-    return new DuplicateCheck(index);
+    return new DuplicateCheck(index, "earlier photo");
   }
 
   it("passes when nothing was photographed nearby", async () => {
@@ -172,6 +172,7 @@ describe("NearSiteCheck", () => {
   const cleanupAt = (lat: number): CheckSubject => ({
     submission: PhotoSubmission.fromCleanup(
       {
+        site_id: "site_x",
         upload_id: "upl_x",
         device_token: "d",
         sha256: "0".repeat(64),

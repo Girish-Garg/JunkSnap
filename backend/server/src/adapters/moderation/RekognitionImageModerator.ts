@@ -5,13 +5,8 @@ import {
   type ModerationLabel as RekognitionLabel,
   type RekognitionClient,
 } from "@aws-sdk/client-rekognition";
-import {
-  type ImageScreening,
-  type LabeledBox,
-  type ModerationLabel,
-  PERSON_LABEL,
-  WASTE_LABELS,
-} from "../../domain/moderation/GatePolicy.js";
+import type { Box } from "../../domain/moderation/Box.js";
+import { type ImageScreening, type ModerationLabel, PERSON_LABEL } from "../../domain/moderation/GatePolicy.js";
 import type { ImageModerator } from "../../ports/moderation/ImageModerator.js";
 import { callService, toBoxes } from "./utils.js";
 
@@ -32,8 +27,7 @@ export class RekognitionImageModerator implements ImageModerator {
     const found = labels.Labels ?? [];
     return {
       moderationLabels: this.#categorise(moderation.ModerationLabels ?? []),
-      people: this.#instances(found.filter((label) => label.Name === PERSON_LABEL)).map((item) => item.box),
-      waste: this.#instances(found.filter((label) => WASTE_LABELS.includes(label.Name ?? ""))),
+      people: this.#instances(found.filter((label) => label.Name === PERSON_LABEL)),
       stamp: {
         provider: "rekognition",
         model: "DetectModerationLabels+DetectLabels",
@@ -52,7 +46,7 @@ export class RekognitionImageModerator implements ImageModerator {
       Image: { Bytes: jpeg },
       MinConfidence: LABEL_MIN_CONFIDENCE,
       Features: ["GENERAL_LABELS"],
-      Settings: { GeneralLabels: { LabelInclusionFilters: [PERSON_LABEL, ...WASTE_LABELS] } },
+      Settings: { GeneralLabels: { LabelInclusionFilters: [PERSON_LABEL] } },
     });
     return callService("Rekognition DetectLabels", () => this.#client.send(command));
   }
@@ -75,11 +69,7 @@ export class RekognitionImageModerator implements ImageModerator {
     return current.Name ?? "";
   }
 
-  #instances(labels: readonly Label[]): LabeledBox[] {
-    return labels.flatMap((label) =>
-      (label.Instances ?? []).flatMap((instance) =>
-        toBoxes(instance.BoundingBox).map((box) => ({ label: label.Name ?? "", box })),
-      ),
-    );
+  #instances(labels: readonly Label[]): Box[] {
+    return labels.flatMap((label) => (label.Instances ?? []).flatMap((instance) => toBoxes(instance.BoundingBox)));
   }
 }

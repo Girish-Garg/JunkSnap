@@ -1,3 +1,14 @@
+export interface Padding {
+  readonly fraction: number;
+  readonly minPixels: number;
+}
+
+// A detected box and how far past it to blur.
+export interface BlurRegion {
+  readonly box: Box;
+  readonly padding: Padding;
+}
+
 export interface PixelRect {
   readonly left: number;
   readonly top: number;
@@ -49,15 +60,6 @@ export class Box {
     return Math.max(0, this.width) * Math.max(0, this.height);
   }
 
-  // Grows width and height by `fraction` around the centre, clipped to the image.
-  grow(fraction: number): Box {
-    const dx = (this.width * fraction) / 2;
-    const dy = (this.height * fraction) / 2;
-    const left = Math.max(0, this.left - dx);
-    const top = Math.max(0, this.top - dy);
-    return new Box(left, top, Math.min(1, this.right + dx) - left, Math.min(1, this.bottom + dy) - top);
-  }
-
   intersectionArea(other: Box): number {
     const width = Math.min(this.right, other.right) - Math.max(this.left, other.left);
     const height = Math.min(this.bottom, other.bottom) - Math.max(this.top, other.top);
@@ -78,10 +80,17 @@ export class Box {
 
   // Null when the box covers no whole pixel.
   toPixels(imageWidth: number, imageHeight: number): PixelRect | null {
-    const left = Math.max(0, Math.floor(this.left * imageWidth));
-    const top = Math.max(0, Math.floor(this.top * imageHeight));
-    const right = Math.min(imageWidth, Math.ceil(this.right * imageWidth));
-    const bottom = Math.min(imageHeight, Math.ceil(this.bottom * imageHeight));
+    return this.toPaddedPixels({ fraction: 0, minPixels: 0 }, imageWidth, imageHeight);
+  }
+
+  // Each side moves out by half of `fraction` of the box size, and by at least minPixels; clipped to the image.
+  toPaddedPixels(padding: Padding, imageWidth: number, imageHeight: number): PixelRect | null {
+    const padX = Math.max(padding.minPixels, (this.width * imageWidth * padding.fraction) / 2);
+    const padY = Math.max(padding.minPixels, (this.height * imageHeight * padding.fraction) / 2);
+    const left = Math.max(0, Math.floor(this.left * imageWidth - padX));
+    const top = Math.max(0, Math.floor(this.top * imageHeight - padY));
+    const right = Math.min(imageWidth, Math.ceil(this.right * imageWidth + padX));
+    const bottom = Math.min(imageHeight, Math.ceil(this.bottom * imageHeight + padY));
     if (right <= left || bottom <= top) {
       return null;
     }

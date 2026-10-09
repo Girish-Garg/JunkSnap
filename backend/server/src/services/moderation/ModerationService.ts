@@ -11,6 +11,7 @@ import type { NoteVerdict } from "../../domain/moderation/types.js";
 import type { Clock } from "../../ports/moderation/Clock.js";
 import type { ImageModerator } from "../../ports/moderation/ImageModerator.js";
 import type { NoteModerator } from "../../ports/moderation/NoteModerator.js";
+import type { WasteLocator } from "../../ports/moderation/WasteLocator.js";
 import type { AuthenticityService } from "./AuthenticityService.js";
 import type { PhotoLoader } from "./PhotoLoader.js";
 import type { PrivacyBlur } from "./PrivacyBlur.js";
@@ -18,6 +19,7 @@ import type { PrivacyBlur } from "./PrivacyBlur.js";
 export interface ModerationSteps {
   readonly loader: PhotoLoader;
   readonly gate: ImageModerator;
+  readonly waste: WasteLocator;
   readonly blur: PrivacyBlur;
   readonly authenticity: AuthenticityService;
   readonly notes: NoteModerator;
@@ -34,7 +36,7 @@ interface ImageOutcome {
 const INVALID = "not run: the image is invalid";
 const GATE_FAILED = "not run: the image failed the moderation gate";
 
-// Gate, then blur, then the authenticity chain; only Rekognition ever sees the original.
+// Gate, blur, the person_dumping check on the blurred copy, publish, then the authenticity chain.
 export class ModerationService {
   readonly #steps: ModerationSteps;
   readonly #policy = new GatePolicy();
@@ -59,13 +61,24 @@ export class ModerationService {
   }
 
   async #moderatePhoto(submission: PhotoSubmission, photo: LoadedPhoto): Promise<ImageOutcome> {
-    const gate = this.#policy.judge(await this.#steps.gate.screen(photo.detectorCopy));
-    if (gate.failed) {
-      return { hash: photo.hash, gate, blur: null, checks: this.#steps.authenticity.skipAll(submission, GATE_FAILED) };
+    const { gate, waste, blur, authenticity } = this.#steps;
+    const screening = await gate.screen(photo.upright);
+    const unsafe = this.#policy.unsafe(screening);
+    if (unsafe.failed) {
+      return this.#rejected(submission, photo, unsafe);
     }
-    const blur = await this.#steps.blur.apply(photo, submission.photoId);
-    const checks = await this.#steps.authenticity.verify({ submission, hash: photo.hash });
-    return { hash: photo.hash, gate, blur, checks };
+    const blurred = await blur.blur(photo);
+    const verdict = this.#policy.dumping(screening, await waste.locate(blurred.jpeg));
+    if (verdict.failed) {
+      return this.#rejected(submission, photo, verdict);
+    }
+    await blur.publish(blurred, submission.photoId);
+    const checks = await authenticity.verify({ submission, hash: photo.hash });
+    return { hash: photo.hash, gate: verdict, blur: blurred.record, checks };
+  }
+
+  #rejected(submission: PhotoSubmission, photo: LoadedPhoto, gate: GateVerdict): ImageOutcome {
+    return { hash: photo.hash, gate, blur: null, checks: this.#steps.authenticity.skipAll(submission, GATE_FAILED) };
   }
 
   async #reviewNote(note: string | null): Promise<NoteVerdict | null> {
