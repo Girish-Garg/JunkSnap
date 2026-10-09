@@ -4,7 +4,7 @@ This folder is the source of truth for every shape, route, table, S3 key, queue 
 
 Contracts v1.1 (decisions 20261010-0159 to -0203 and -0227) adds `insights` to `verification_result`, `site` and `ward_scores`, a `scan` link and `user_id` on `report_upload`, a Lok Sabha seat `status`, a nullable assembly seat, accounts, and the new `scan_session` and `ward_record` (the ward crawler's shape, issue 9). The new fields on existing schemas are not in `required`, so v1 producers stay valid, but new code always sends them. After any schema change, run `cd backend/server; npm ci; npm run gen:contracts` and commit the regenerated `src/contracts/*.gen.ts` in the same PR.
 
-Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema. It lists the worker's fields on the `reports` and `sites` rows, states that every GSI projects all attributes, adds `ASSETS_DIR` and drops `OPENROUTER_SECRET_ID` from `ml`.
+Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema shape. It lists the worker's fields on the `reports` and `sites` rows, states that every GSI projects all attributes, adds `ASSETS_DIR`, marks `OPENROUTER_SECRET_ID` as planned, and rewords the description of `letter_draft` `source_sha256` (decision 20261010-0330).
 
 ## Files and CI
 
@@ -266,7 +266,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `PRESIGN_TTL_SECONDS` | api | `300`, for photos and scan videos |
 | `ML_URL` | worker | `http://ml` (the Service in the same namespace); replaces `AGENT_URL` |
 | `OPENAI_SECRET_ID` | api (letters), ml (judge) | `junksnap/<stage>/openai-api-key` (Secrets Manager, decision 0133) |
-| `OPENROUTER_SECRET_ID` | api (letters) | `junksnap/<stage>/openrouter-api-key` (Secrets Manager); `ml` has no OpenRouter provider |
+| `OPENROUTER_SECRET_ID` | planned (decision 0133); no provider yet | `junksnap/<stage>/openrouter-api-key` (Secrets Manager); neither `api` nor `ml` has an OpenRouter provider |
 | `ASSETS_DIR` | api, worker, scores | directory holding the repo's `data/` files (`rules/`, `brands/`, `boundaries/`, `wards/`, `representatives/`); `/app/data` in the image |
 | `LLM_TASKS` | api, worker, ml | optional JSON `{"<task>": {"provider", "model", "fallback": []}}`; each service reads only its own tasks (api: letters; worker: note moderation, Bedrock only; ml: judge); defaults live in code |
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
