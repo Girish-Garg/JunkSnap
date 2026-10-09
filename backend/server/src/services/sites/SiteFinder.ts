@@ -1,0 +1,43 @@
+import type { BoundingBox } from "../../domain/sites/BoundingBox.js";
+import type { Site } from "../../domain/sites/Site.js";
+import { SiteNotFoundError } from "../../domain/sites/SiteErrors.js";
+import type { SiteFeature } from "../../domain/sites/SiteTypes.js";
+import type { GeoCells } from "../../ports/sites/GeoCells.js";
+import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
+
+const MAX_SITES = 500;
+
+export class SiteFinder {
+  readonly #sites: SiteRepository;
+  readonly #cells: GeoCells;
+
+  constructor(sites: SiteRepository, cells: GeoCells) {
+    this.#sites = sites;
+    this.#cells = cells;
+  }
+
+  // Newest first, at most 500, rejected sites left out (contracts/README.md).
+  async inBox(box: BoundingBox): Promise<SiteFeature[]> {
+    const cells = this.#cells.covering(box);
+    const perCell = await Promise.all(cells.map((cell) => this.#sites.inCell(cell)));
+    return perCell
+      .flat()
+      .filter((site) => site.isListed() && box.contains(site.point))
+      .sort(SiteFinder.#newestFirst)
+      .slice(0, MAX_SITES)
+      .map((site) => site.toFeature());
+  }
+
+  async byId(siteId: string): Promise<SiteFeature> {
+    const site = await this.#sites.get(siteId);
+    if (site === null) {
+      throw new SiteNotFoundError(`No site ${siteId}`);
+    }
+    return site.toFeature();
+  }
+
+  static #newestFirst(a: Site, b: Site): number {
+    const byTime = Date.parse(b.lastReportedAt) - Date.parse(a.lastReportedAt);
+    return byTime !== 0 ? byTime : a.siteId.localeCompare(b.siteId);
+  }
+}
