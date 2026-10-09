@@ -1,4 +1,4 @@
-import { Credentials, MIN_PASSWORD_LENGTH } from '../../domain/Credentials';
+import { Credentials } from '../../domain/Credentials';
 
 export type Field = 'email' | 'password' | 'terms' | 'code';
 
@@ -35,6 +35,6 @@ export class AuthValidator {
   }
 
   static #newPassword(password: string): FieldErrors {
-    return password.length >= MIN_PASSWORD_LENGTH ? {} : { password: 'auth.errors.passwordShort' };
+    return Credentials.meetsPolicy(password) ? {} : { password: 'auth.errors.passwordShort' };
   }
 }

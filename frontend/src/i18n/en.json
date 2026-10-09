@@ -142,8 +142,46 @@
   },
   "snap": {
     "title": "Report a waste site",
-    "soon": "Camera capture comes in the next build. Until then the map shows sample reports.",
-    "close": "Close"
+    "close": "Close",
+    "shutter": "Take photo",
+    "phoneCamera": "Use phone camera",
+    "starting": "Starting camera",
+    "saving": "Saving photo",
+    "camera_denied": "Camera is blocked. Allow it in the browser settings, or use the phone camera.",
+    "camera_unavailable": "The camera could not start. Use the phone camera instead.",
+    "insecure": "This page cannot open the camera here. Use the phone camera.",
+    "encode_failed": "Could not save that photo. Try again.",
+    "saveFailed": "Could not save the report on this phone. Try again.",
+    "gps": {
+      "searching": "Finding location",
+      "fix": "Location ±{{metres}} m",
+      "weak": "Weak location ±{{metres}} m",
+      "denied": "Location blocked",
+      "unavailable": "No location yet"
+    },
+    "gpsWeak": "Wait a moment or step into the open for a better fix.",
+    "gpsNeeded": "The report needs your location. Allow location in the browser settings.",
+    "guest": "You are signed out. Photos wait on this phone until you sign in.",
+    "signIn": "Sign in",
+    "sample": "Sample mode: reports stay on this phone and are not sent.",
+    "reviewTitle": "What did you see?",
+    "photoAlt": "The photo you just took",
+    "type": "Type",
+    "context": "Where is it?",
+    "contextHint": "Pick one to send.",
+    "note": "Note (optional)",
+    "noteHint": "No names or phone numbers. {{left}} characters left.",
+    "send": "Send report",
+    "retake": "Retake",
+    "sentTitle": "Report saved",
+    "again": "Report another",
+    "seeActivity": "See all in Activity",
+    "steps": {
+      "saved": "Saved on this phone",
+      "uploaded": "Photo uploaded",
+      "sent": "Report sent",
+      "checked": "Photo checked"
+    }
   },
   "account": {
     "title": "Account",
@@ -182,7 +220,8 @@
     "verify": {
       "title": "Check your email",
       "text": "Enter the 6-digit code we sent to {{email}}.",
-      "submit": "Verify"
+      "submit": "Verify",
+      "done": "Email verified. Sign in to continue."
     },
     "forgot": {
       "title": "Reset password",
@@ -192,15 +231,15 @@
       "done": "Password changed. Sign in with your new password."
     },
     "strength": {
-      "hint": "Use 8 or more characters.",
-      "weak": "Too short: use 8 or more characters.",
+      "hint": "Use 8 or more characters with a small letter and a number.",
+      "weak": "Too short: use 8 or more characters with a small letter and a number.",
       "fair": "Fair: add a capital, a number or a symbol.",
       "strong": "Strong password."
     },
     "errors": {
       "email": "Enter a valid email, like name@example.com.",
       "passwordMissing": "Enter your password.",
-      "passwordShort": "Use 8 or more characters.",
+      "passwordShort": "Use 8 or more characters with a small letter and a number.",
       "terms": "Accept the terms to continue.",
       "code": "Enter the 6 digits from the email.",
       "wrong_credentials": "Email or password is wrong.",
@@ -208,7 +247,10 @@
       "bad_code": "That code is wrong or has expired.",
       "not_confirmed": "Verify your email first.",
       "unknown": "Something went wrong. Try again.",
-      "unavailable": "Sign-in is not available yet."
+      "unavailable": "Sign-in is not available yet.",
+      "weak_password": "Use 8 or more characters with a small letter and a number.",
+      "too_many": "Too many tries. Wait a few minutes and try again.",
+      "network": "No connection. Check the network and try again."
     },
     "unavailable": "Sign-in is not available yet. You can still browse the map."
   },
@@ -219,8 +261,33 @@
   },
   "activity": {
     "title": "Activity",
-    "text": "Your reports and the letters you draft.",
+    "text": "Reports from this phone.",
     "empty": "Nothing yet. Reports you send will show here with their status.",
-    "close": "Close activity"
+    "close": "Close activity",
+    "loading": "Loading your reports",
+    "retry": "Try again",
+    "remove": "Remove",
+    "openSite": "Open site",
+    "noPhoto": "Blurred photo not ready yet",
+    "photoAlt": "Blurred photo of your report"
+  },
+  "queue": {
+    "waiting_one": "{{count}} report waiting to send",
+    "waiting_other": "{{count}} reports waiting to send",
+    "retry": "Send now"
+  },
+  "progress": {
+    "sending": "Sending",
+    "offline": "Waiting for network",
+    "sign_in": "Sign in to send",
+    "rate_limited": "Hourly limit reached, sending later",
+    "server": "Server busy, trying again soon",
+    "refused": "Not accepted",
+    "queued": "In line for checking",
+    "processing": "Checking the photo",
+    "verified": "Verified",
+    "community_check": "Waiting for a neighbour check",
+    "rejected": "Not accepted after checking",
+    "needs_review": "Needs a manual check"
   }
 }

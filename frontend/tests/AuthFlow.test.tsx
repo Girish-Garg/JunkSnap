@@ -42,7 +42,7 @@ describe('sign-up and sign-in errors', () => {
     await user.type(screen.getByLabelText('Email'), 'not-an-email');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Enter a valid email, like name@example.com.');
-    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription('Use 8 or more characters.');
+    expect(screen.getByLabelText('Password')).toHaveAccessibleDescription('Use 8 or more characters with a small letter and a number.');
     expect(screen.getByText('Accept the terms to continue.')).toBeInTheDocument();
   });
 
@@ -81,5 +81,22 @@ describe('gated site actions and password reset', () => {
     await user.type(screen.getByLabelText('New password'), 'New-password-1');
     await user.click(screen.getByRole('button', { name: 'Save password' }));
     expect(await screen.findByText('Password changed. Sign in with your new password.')).toBeInTheDocument();
+  });
+});
+
+describe('email code without a remembered password', () => {
+  it('sends a verified new user to sign in when the code step cannot sign in by itself', async () => {
+    const user = userEvent.setup();
+    const services = testServices();
+    await services.auth.signUp(EMAIL, PASSWORD);
+    vi.spyOn(services.auth, 'confirmSignUp').mockResolvedValue(null);
+    await renderApp(<AppRoutes />, { services });
+    await user.click(screen.getByRole('button', { name: 'Account' }));
+    await user.type(screen.getByLabelText('Email'), EMAIL);
+    await user.type(screen.getByLabelText('Password'), PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+    await user.type(await screen.findByLabelText('6-digit code'), '123456');
+    await user.click(screen.getByRole('button', { name: 'Verify' }));
+    expect(await screen.findByText('Email verified. Sign in to continue.')).toBeInTheDocument();
   });
 });

@@ -15,6 +15,7 @@ import { MockApiClient } from '../src/services/MockApiClient';
 import { MockAuthService } from '../src/services/MockAuthService';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
+import { testSnapServices, type SnapTestOptions } from './snapFakes';
 
 export class MemoryStore implements KeyValueStore {
   readonly #values = new Map<string, string>();
@@ -34,15 +35,17 @@ export interface RenderOptions {
   readonly services?: ServiceContainer;
 }
 
-export function testServices(store: KeyValueStore = new MemoryStore()): ServiceContainer {
+export function testServices(store: KeyValueStore = new MemoryStore(), snap: Partial<SnapTestOptions> = {}): ServiceContainer {
+  const auth = snap.auth ?? new MockAuthService(store, 0);
   return new ServiceContainer({
     config: AppConfig.fromEnv({}),
     api: new MockApiClient(siteFixtureLoaders),
-    auth: new MockAuthService(store, 0),
+    auth,
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),
     locator: new GeoLocator(undefined),
     sharer: new Sharer({ clipboard: { writeText: async () => undefined } as unknown as Clipboard }),
+    snap: testSnapServices({ ...snap, auth }),
   });
 }
 

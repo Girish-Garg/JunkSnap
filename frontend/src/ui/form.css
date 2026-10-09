@@ -66,6 +66,47 @@
   line-height: 16px;
 }
 
+.field__input--area {
+  height: auto;
+  min-height: 72px;
+  padding: 12px var(--edge);
+  line-height: 20px;
+  resize: vertical;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* 40 px chips with a 48 px touch target. */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dadce0;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chip[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
 .checkbox {
   display: flex;
   align-items: center;

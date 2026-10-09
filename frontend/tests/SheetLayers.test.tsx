@@ -23,11 +23,12 @@ describe('Escape with stacked sheets', () => {
 });
 
 describe('sign-in in live mode', () => {
-  it('says sign-in is not available yet until the Cognito adapter lands', async () => {
+  it('says sign-in is not available when live mode has no Cognito pool', async () => {
     const user = userEvent.setup();
     const config = AppConfig.fromEnv({ VITE_API_URL: 'https://api.example.test' });
     const share = { clipboard: { writeText: async () => undefined } as unknown as Clipboard };
-    const services = ServiceContainer.build(config, { store: new MemoryStore(), geolocation: undefined, share });
+    const browser = { store: new MemoryStore(), geolocation: undefined, share, mediaDevices: undefined, crypto, locks: undefined };
+    const services = ServiceContainer.build(config, browser);
     await renderApp(<AppRoutes />, { services });
     await user.click(screen.getByRole('button', { name: 'Report' }));
     expect(screen.getByText('Sign-in is not available yet. You can still browse the map.')).toBeInTheDocument();
