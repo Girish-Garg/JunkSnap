@@ -13,6 +13,8 @@ RUN npm run build
 FROM node:24-slim
 ENV NODE_ENV=production
 WORKDIR /app
+# The worker cuts scan videos into frames with ffmpeg.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 # Dependencies first, so code changes reuse this layer; sharp's linux-x64 binary comes from the lockfile.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
