@@ -6,14 +6,14 @@ Built 2026-10-10. Use `eci-2008-delimitation/v1` as `location_lookup.boundaries_
 
 | File | Holds | Size | Licence |
 |---|---|---|---|
-| `rajasthan_assembly.geojson` | 200 Rajasthan assembly seats (2008 delimitation). Properties: `id` (`s20-ac-<n>`), `ac_no`, `name`, `category` (`GEN`, `SC`, `ST`), `pc_id` (`s20-pc-<n>`) | 624 KB | CC BY 2.5 India: credit DataMeet and the Election Commission of India |
-| `india_loksabha.geojson` | 543 Lok Sabha seats. Properties: `id` (`<eci-state>-pc-<n>`), `pc_no`, `name`, `category`, `eci_state`, `state`, `status` (`current` or `outdated`) | 1.57 MB | CC0 1.0 (credit DataMeet) |
+| `rajasthan_assembly.geojson` | 200 Rajasthan assembly seats (2008 delimitation). Properties: `id` (`s20-ac-<n>`), `ac_no`, `name`, `category` (`GEN`, `SC`, `ST`), `pc_id` (`s20-pc-<n>`) | 624 KB | [CC BY 2.5 India](https://creativecommons.org/licenses/by/2.5/in/): credit DataMeet and the Election Commission of India |
+| `india_loksabha.geojson` | 543 Lok Sabha seats. Properties: `id` (`<eci-state>-pc-<n>`), `pc_no`, `name`, `category`, `eci_state`, `state`, `status` (`current` or `outdated`) | 1.57 MB | Mixed. The 518 seats outside Rajasthan: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), credit DataMeet. The 25 Rajasthan seats (`s20-pc-*`) are unions of the assembly seats, so they follow the assembly file's [CC BY 2.5 India](https://creativecommons.org/licenses/by/2.5/in/): credit DataMeet and the Election Commission of India |
 
 ### Sources
 
-- DataMeet assembly seats: <https://github.com/datameet/maps/tree/master/assembly-constituencies> (`India_AC.shp`, scraped from ECI's polling station site), CC BY 2.5 India.
-- DataMeet Lok Sabha seats: <https://github.com/datameet/maps/tree/master/parliamentary-constituencies> (`india_pc_2019_simplified.geojson`, corrected attributes), CC0 1.0.
-- ECI polling station locations, 2017 (source psleci.nic.in): <https://github.com/ramSeraph/indian_facilities/releases/tag/elections> (`ECI_PollingStations_2017`), CC0 1.0 with a request to credit DataMeet and the government source.
+- DataMeet assembly seats: <https://github.com/datameet/maps/tree/master/assembly-constituencies> (`India_AC.shp`, scraped from ECI's polling station site), [CC BY 2.5 India](https://creativecommons.org/licenses/by/2.5/in/).
+- DataMeet Lok Sabha seats: <https://github.com/datameet/maps/tree/master/parliamentary-constituencies> (`india_pc_2019_simplified.geojson`, corrected attributes), [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+- ECI polling station locations, 2017 (source psleci.nic.in): <https://github.com/ramSeraph/indian_facilities/releases/tag/elections> (`ECI_PollingStations_2017`), [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) with a request to credit DataMeet and the government source.
 - Seat numbers, names and the assembly-to-Lok Sabha mapping were checked against the Delimitation Order 2008 list as published on Wikipedia (List of constituencies of the Rajasthan Legislative Assembly) and the polling station data; ECI state codes against the 2024 ECI results site (`S20` Rajasthan, `U05` Delhi, and so on).
 
 ### How `rajasthan_assembly.geojson` was built
@@ -37,7 +37,7 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 ## Wards: none yet
 
-Jodhpur's two corporations (North and South, 80 wards each) became one Jodhpur Municipal Corporation with 100 newly delimited wards in November 2025; Jaipur's became one corporation with 150 wards. No open map of the new wards was found: OpenStreetMap has no `admin_level=10` boundaries in Jodhpur (checked 2026-10-10), and the open ward maps that exist (DataMeet Municipal_Spatial_Data for Jaipur, Swachh Bharat Mission wards in indian_admin_boundaries) predate the 2025 merger, so their ward numbers are wrong now. `ward` stays null until a current map is published or the ward records task (W1) provides one.
+Jodhpur's two corporations (North and South, 80 wards each) became one Jodhpur Municipal Corporation with newly delimited wards in November 2025 (100 per a news report, unverified until the gazette notification is found; see `../representatives/SOURCES.md`); Jaipur's became one corporation with 150 wards. No open map of the new wards was found: OpenStreetMap has no `admin_level=10` boundaries in Jodhpur (checked 2026-10-10), and the open ward maps that exist (DataMeet Municipal_Spatial_Data for Jaipur, Swachh Bharat Mission wards in indian_admin_boundaries) predate the 2025 merger, so their ward numbers are wrong now. `ward` stays null until a current map is published or the ward records task (W1) provides one.
 
 ## india_outline.geojson
 

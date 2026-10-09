@@ -9,6 +9,7 @@
   ],
   "wards": 100,
   "ward_map": null,
+  "note": "Ward count from a news report; unverified until the gazette notification is found.",
   "as_of": "2026-10-10",
   "source": "https://zeenews.india.com/hindi/india/rajasthan/jodhpur/state-government-approved-proposal-for-municipal-corporation-in-jodhpur/1758197513018"
  },
@@ -22,6 +23,7 @@
   ],
   "wards": 150,
   "ward_map": null,
+  "note": null,
   "as_of": "2026-10-10",
   "source": "https://www.theweek.in/wire-updates/national/2025/11/11/des109-rj-municipal-corporation.html"
  }
