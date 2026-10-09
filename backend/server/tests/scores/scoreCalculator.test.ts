@@ -13,10 +13,6 @@ function calculate(sites: readonly AreaSite[], facts: AreaFactSheet = NO_FACTS) 
   return calculator.calculate({ area: WARD, sites, facts, now: NOW });
 }
 
-function withoutInsights(row: object): object {
-  return Object.fromEntries(Object.entries(row).filter(([field]) => field !== "insights"));
-}
-
 // 10 verified reports over 4 verified sites; the decision file's worked example.
 function workedExample(): AreaSite[] {
   return [
@@ -27,7 +23,7 @@ function workedExample(): AreaSite[] {
   ];
 }
 
-const FULL_FACTS: AreaFactSheet = { areaKm2: 2, disposalPoints: [northOf(300), northOf(5_000)], sensitivePlaces: [] };
+const FULL_FACTS: AreaFactSheet = { areaKm2: 2, disposalPoints: [northOf(300), northOf(5_000)], placesMapped: true };
 
 describe("ScoreCalculator guardrail", () => {
   it("withholds every score, metric and diagnosis at 9 verified reports but keeps the counts", () => {
@@ -75,9 +71,9 @@ describe("ScoreCalculator window, pilot and version", () => {
     expect(calculate([site({ pilot: false }), site({ pilot: true, verification: "rejected" })]).pilot).toBe(true);
   });
 
-  it("validates against the ward_scores contract, insights aside until PR #25", () => {
-    expect(() => validateWardScores(withoutInsights(calculate(workedExample(), FULL_FACTS)))).not.toThrow();
-    expect(() => validateWardScores(withoutInsights(calculate([site()])))).not.toThrow();
+  it("validates against the ward_scores contract, insights included", () => {
+    expect(() => validateWardScores(calculate(workedExample(), FULL_FACTS))).not.toThrow();
+    expect(() => validateWardScores(calculate([site()]))).not.toThrow();
   });
 });
 

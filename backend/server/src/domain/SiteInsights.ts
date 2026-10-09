@@ -1,13 +1,8 @@
-import type { Material } from "./AreaInsights.js";
-import type { PlaceKind } from "./SensitivePlace.js";
+import type { Site } from "../contracts/index.gen.js";
 
-// The parts of site.insights (contracts v1.1, PR #25) that area insights read.
-export interface SiteInsights {
-  readonly reports: number;
-  readonly composition: readonly { readonly material: Material; readonly share_pct: number }[];
-  readonly hazards: readonly { readonly hazard: string }[];
-  readonly near: readonly { readonly kind: PlaceKind; readonly distance_m: number }[];
-}
+export type SiteInsights = NonNullable<Site["properties"]["insights"]>;
+
+export type PlaceKind = SiteInsights["near"][number]["kind"];
 
 export interface CompositionEstimate {
   readonly reports: number;

@@ -13,7 +13,7 @@ import type { EntryContext } from "./EntryPoint.js";
 
 // Composition root of the scores CronJob.
 export class ScoresJobFactory {
-  async create({ settings: core, env }: EntryContext): Promise<ScoresJob> {
+  async create({ settings: core, env, logger }: EntryContext): Promise<ScoresJob> {
     const settings = ScoresSettings.fromEnv(env);
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: core.awsRegion }));
     const ports = {
@@ -22,6 +22,6 @@ export class ScoresJobFactory {
       facts: await WardRecordAreaFacts.fromDirectory(settings.assetsDir),
       scores: new DynamoScoreRepository(client, settings.scoresTable),
     };
-    return new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper());
+    return new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger);
   }
 }

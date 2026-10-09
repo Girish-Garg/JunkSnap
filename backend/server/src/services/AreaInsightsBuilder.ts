@@ -55,7 +55,7 @@ export class AreaInsightsBuilder {
       repeat_spots: parts.repeats.measure(scope),
       hour_of_day: parts.times.hourOfDay(scope, enough),
       day_of_week: parts.times.dayOfWeek(scope, enough, window),
-      near_school_or_water_count: parts.near.measure(scope, facts.sensitivePlaces),
+      near_school_or_water_count: parts.near.measure(scope, facts.placesMapped),
     };
   }
 }

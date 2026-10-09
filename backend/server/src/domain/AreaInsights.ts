@@ -1,19 +1,7 @@
 import type { WardScores } from "../contracts/index.gen.js";
+import type { InsightSource, Material } from "../contracts/site.gen.js";
 
-// Mirrors ward_scores.insights from the contracts v1.1 PR (#25); swap for the generated type once it merges.
-export const MATERIALS = [
-  "plastic",
-  "organic",
-  "construction_debris",
-  "paper",
-  "glass",
-  "metal",
-  "textile",
-  "e_waste",
-  "medical",
-] as const;
-
-export type Material = (typeof MATERIALS)[number];
+export type { InsightSource, Material };
 
 export type InsightReason = null | "too_few_reports" | "no_data";
 
@@ -29,8 +17,9 @@ export interface BrandCount {
   labels: number;
 }
 
+// ward_scores.insights with plain arrays: the generated type spells maxItems as tuple unions; the repository validates it.
 export interface AreaInsights {
-  composition: { value: MaterialShare[] | null; reports: number; reason: InsightReason };
+  composition: { value: MaterialShare[] | null; reports: number; sources: InsightSource[]; reason: InsightReason };
   hazardous_share_pct: { value: number | null; hazardous_sites: number; sites: number; reason: InsightReason };
   top_brands: { value: BrandCount[] | null; labels: number; reason: InsightReason };
   repeat_spots: { value: string[] | null; count: number; reason: InsightReason };
@@ -39,7 +28,4 @@ export interface AreaInsights {
   near_school_or_water_count: { value: number | null; sites: number; reason: InsightReason };
 }
 
-// A stored row; rows the worker seeds may lack insights, rows the scores job writes always have them.
-export type AreaScoresRow = WardScores & { insights?: AreaInsights };
-
-export type ComputedAreaScores = WardScores & { insights: AreaInsights };
+export type ComputedAreaScores = Omit<WardScores, "insights"> & { insights: AreaInsights };

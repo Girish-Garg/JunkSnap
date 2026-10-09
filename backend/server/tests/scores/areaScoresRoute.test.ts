@@ -1,8 +1,8 @@
-import { readFileSync } from "node:fs";
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
-import type { AreaScoresRow } from "../../src/domain/AreaInsights.js";
+import { validateWardScores, type WardScores } from "../../src/contracts/index.gen.js";
+import type { ComputedAreaScores } from "../../src/domain/AreaInsights.js";
 import type { AreaKey } from "../../src/domain/AreaKey.js";
 import { ConfigError } from "../../src/domain/errors.js";
 import { areaScoresRoutes, buildAreaScoresRoutes } from "../../src/handlers/areaScoresRoutes.js";
@@ -12,21 +12,19 @@ import { AreaScoresQuery } from "../../src/services/AreaScoresQuery.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
-import { NO_FACTS, NOW, site, WARD } from "./siteBuilder.js";
+import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
 
-function fixture(name: string): AreaScoresRow {
-  const url = new URL(`../../../../contracts/fixtures/ward_scores.${name}.json`, import.meta.url);
-  return JSON.parse(readFileSync(url, "utf8")) as AreaScoresRow;
-}
+const fixture = (sample: string) => readContract<WardScores>(`fixtures/ward_scores.${sample}.json`);
+const urlOf = (row: Pick<WardScores, "area">) => `/areas/${row.area.kind}/${row.area.id}/scores`;
 
 class InMemoryScores implements ScoreRepository {
-  readonly #rows = new Map<string, AreaScoresRow>();
+  readonly #rows = new Map<string, WardScores>();
 
-  async save(row: AreaScoresRow): Promise<void> {
-    this.#rows.set(`${row.area.kind}:${row.area.id}`, row);
+  async save(row: ComputedAreaScores | WardScores): Promise<void> {
+    this.#rows.set(`${row.area.kind}:${row.area.id}`, validateWardScores(row));
   }
 
-  async find(area: AreaKey): Promise<AreaScoresRow | null> {
+  async find(area: AreaKey): Promise<WardScores | null> {
     return this.#rows.get(area.toString()) ?? null;
   }
 }
@@ -40,7 +38,7 @@ async function start(routes: FastifyPluginAsync): Promise<FastifyInstance> {
   return app;
 }
 
-async function startWithRows(rows: readonly AreaScoresRow[]): Promise<FastifyInstance> {
+async function startWithRows(rows: readonly (ComputedAreaScores | WardScores)[]): Promise<FastifyInstance> {
   const scores = new InMemoryScores();
   for (const row of rows) {
     await scores.save(row);
@@ -55,13 +53,15 @@ afterEach(async () => {
 
 describe("GET /areas/{kind}/{id}/scores", () => {
   it("returns the stored row", async () => {
-    const response = await (await startWithRows([fixture("jdh-1")])).inject({ url: "/areas/ward/jodhpur-south-mc-w37/scores" });
+    const row = fixture("jdh-1");
+    const response = await (await startWithRows([row])).inject({ url: urlOf(row) });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual(fixture("jdh-1"));
+    expect(response.json()).toEqual(row);
   });
 
   it("returns 200 with zero counts and withheld scores for a seeded area", async () => {
-    const response = await (await startWithRows([fixture("jpr-1")])).inject({ url: "/areas/assembly/s20-ac-54/scores" });
+    const row = fixture("jpr-1");
+    const response = await (await startWithRows([row])).inject({ url: urlOf(row) });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       counts: { verified_reports: 0 },
@@ -72,12 +72,12 @@ describe("GET /areas/{kind}/{id}/scores", () => {
 
   it("returns a computed row with its insights", async () => {
     const row = ScoreCalculator.standard().calculate({ area: WARD, sites: [site()], facts: NO_FACTS, now: NOW });
-    const response = await (await startWithRows([row])).inject({ url: `/areas/ward/${WARD.id}/scores` });
+    const response = await (await startWithRows([row])).inject({ url: urlOf(row) });
     expect(response.json()).toMatchObject({ insights: { repeat_spots: { value: [], count: 0, reason: null } } });
   });
 
   it("returns 404 area_not_found for an area with no sites", async () => {
-    const response = await (await startWithRows([])).inject({ url: "/areas/ward/jodhpur-south-mc-w99/scores" });
+    const response = await (await startWithRows([])).inject({ url: "/areas/ward/jodhpur-mc-w99/scores" });
     expect(response.statusCode).toBe(404);
     expect(response.json()).toMatchObject({ error: "area_not_found" });
   });

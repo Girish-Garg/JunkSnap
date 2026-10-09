@@ -1,13 +1,13 @@
 import { GetCommand, PutCommand, type DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { validateWardScores, type WardScores } from "../contracts/index.gen.js";
-import type { AreaInsights, AreaScoresRow } from "../domain/AreaInsights.js";
+import type { ComputedAreaScores } from "../domain/AreaInsights.js";
 import type { AreaKey } from "../domain/AreaKey.js";
 import { ExternalServiceError, InternalDataError } from "../domain/errors.js";
 import type { ScoreRepository } from "../ports/ScoreRepository.js";
 
-const NOT_IN_CONTRACT_YET = new Set(["area_kind", "area_id", "insights"]);
+const TABLE_KEYS = new Set(["area_kind", "area_id"]);
 
-// One item per area: the ward_scores body plus the area_kind and area_id keys.
+// One item per area: the ward_scores body plus the area_kind and area_id keys; every row passes the contract both ways.
 export class DynamoScoreRepository implements ScoreRepository {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -17,22 +17,20 @@ export class DynamoScoreRepository implements ScoreRepository {
     this.#table = table;
   }
 
-  async save(row: AreaScoresRow): Promise<void> {
-    DynamoScoreRepository.#checked(row);
-    const item = { area_kind: row.area.kind, area_id: row.area.id, ...row };
+  async save(row: ComputedAreaScores): Promise<void> {
+    const scores = DynamoScoreRepository.#checked(row);
+    const item = { area_kind: scores.area.kind, area_id: scores.area.id, ...scores };
     await this.#send(() => this.#client.send(new PutCommand({ TableName: this.#table, Item: item })));
   }
 
-  async find(area: AreaKey): Promise<AreaScoresRow | null> {
+  async find(area: AreaKey): Promise<WardScores | null> {
     const key = { area_kind: area.kind, area_id: area.id };
     const output = await this.#send(() => this.#client.send(new GetCommand({ TableName: this.#table, Key: key })));
     if (output.Item === undefined) {
       return null;
     }
-    const scores = DynamoScoreRepository.#checked(output.Item);
-    const insights: unknown = output.Item.insights;
-    // Checked by the generated validator once ward_scores has insights (contracts v1.1, PR #25).
-    return insights === undefined ? scores : { ...scores, insights: insights as AreaInsights };
+    const body = Object.fromEntries(Object.entries(output.Item).filter(([field]) => !TABLE_KEYS.has(field)));
+    return DynamoScoreRepository.#checked(body);
   }
 
   async #send<T>(call: () => Promise<T>): Promise<T> {
@@ -44,9 +42,8 @@ export class DynamoScoreRepository implements ScoreRepository {
   }
 
   static #checked(row: object): WardScores {
-    const scores = Object.fromEntries(Object.entries(row).filter(([field]) => !NOT_IN_CONTRACT_YET.has(field)));
     try {
-      return validateWardScores(scores);
+      return validateWardScores(row);
     } catch (error) {
       throw new InternalDataError("scores row breaks the ward_scores contract", { cause: error });
     }

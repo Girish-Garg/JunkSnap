@@ -1,7 +1,6 @@
 import type { AreaRef } from "./AreaKey.js";
 import type { GeoPoint } from "./GeoPoint.js";
-import type { PlaceKind, SensitivePlace } from "./SensitivePlace.js";
-import type { BrandSighting, CompositionEstimate, SiteInsights } from "./SiteInsights.js";
+import type { BrandSighting, CompositionEstimate, PlaceKind, SiteInsights } from "./SiteInsights.js";
 import { DAY_MS, istParts } from "./scoreUtils.js";
 
 export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction"] as const;
@@ -13,7 +12,6 @@ export type SiteStatus = (typeof SITE_STATUSES)[number];
 export type Verification = (typeof VERIFICATIONS)[number];
 
 const READABLE_BRAND_CONFIDENCE = 0.8;
-const NEAR_RADIUS_M = 100;
 
 export interface AreaSiteProps {
   readonly siteId: string;
@@ -27,6 +25,7 @@ export interface AreaSiteProps {
   readonly pilot: boolean;
   readonly burning: boolean;
   readonly point: GeoPoint;
+  readonly localBodyId: string | null;
   readonly areas: readonly AreaRef[];
   readonly brands: readonly BrandSighting[];
   readonly insights: SiteInsights | null;
@@ -51,6 +50,10 @@ export class AreaSite {
 
   get firstReportedAt(): string {
     return this.#props.firstReportedAt;
+  }
+
+  get localBodyId(): string | null {
+    return this.#props.localBodyId;
   }
 
   withReportTimes(reportTimes: readonly number[]): AreaSite {
@@ -129,14 +132,9 @@ export class AreaSite {
     return (this.#props.insights?.near.length ?? 0) > 0;
   }
 
-  // The worker's site.insights.near wins; older sites without insights are measured here.
-  isNear(kinds: ReadonlySet<PlaceKind>, places: readonly SensitivePlace[]): boolean {
-    const insights = this.#props.insights;
-    if (insights !== null) {
-      return insights.near.some((place) => kinds.has(place.kind));
-    }
-    const nearby = places.filter((place) => kinds.has(place.kind));
-    return nearby.some((place) => place.distanceFrom(this.#props.point) <= NEAR_RADIUS_M);
+  // site.insights.near is the worker's list of places within 100 m.
+  isNear(kinds: ReadonlySet<PlaceKind>): boolean {
+    return (this.#props.insights?.near ?? []).some((place) => kinds.has(place.kind));
   }
 
   compositionEstimate(): CompositionEstimate | null {

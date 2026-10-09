@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * One readable brand on a blurred report photo. The agent's POST /internal/brands returns an array of these, emitting a label only when the text was readable and confidence is 0.8 or more.
+ * One readable brand on a blurred report photo. The worker's brand step emits these inside the worker (no route), and only when the text was readable and confidence is 0.8 or more.
  */
 export interface BrandLabel {
   report_id: string;
@@ -38,7 +38,7 @@ export const brandLabelSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/brand_label.schema.json",
   "title": "brand_label",
-  "description": "One readable brand on a blurred report photo. The agent's POST /internal/brands returns an array of these, emitting a label only when the text was readable and confidence is 0.8 or more.",
+  "description": "One readable brand on a blurred report photo. The worker's brand step emits these inside the worker (no route), and only when the text was readable and confidence is 0.8 or more.",
   "type": "object",
   "additionalProperties": false,
   "required": [

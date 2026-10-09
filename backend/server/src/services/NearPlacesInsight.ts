@@ -1,17 +1,17 @@
 import type { AreaInsights } from "../domain/AreaInsights.js";
 import type { AreaSite } from "../domain/AreaSite.js";
-import type { PlaceKind, SensitivePlace } from "../domain/SensitivePlace.js";
+import type { PlaceKind } from "../domain/SiteInsights.js";
 
-const SCHOOL_OR_WATER: ReadonlySet<PlaceKind> = new Set(["school", "water_body", "open_drain"]);
+const SCHOOL_OR_WATER: ReadonlySet<PlaceKind> = new Set(["school", "water"]);
 
-// Sites within 100 m of a school, water body or open drain; no_data when nothing was crawled for the area.
+// Sites with a school or water body in site.insights.near; no_data when the city has no crawled map layers.
 export class NearPlacesInsight {
-  measure(sites: readonly AreaSite[], places: readonly SensitivePlace[]): AreaInsights["near_school_or_water_count"] {
-    const crawled = places.length > 0 || sites.some((site) => site.hasNearbyPlaces());
-    if (!crawled) {
+  measure(sites: readonly AreaSite[], placesMapped: boolean): AreaInsights["near_school_or_water_count"] {
+    const mapped = placesMapped || sites.some((site) => site.hasNearbyPlaces());
+    if (!mapped) {
       return { value: null, sites: sites.length, reason: "no_data" };
     }
-    const near = sites.filter((site) => site.isNear(SCHOOL_OR_WATER, places)).length;
+    const near = sites.filter((site) => site.isNear(SCHOOL_OR_WATER)).length;
     return { value: near, sites: sites.length, reason: null };
   }
 }

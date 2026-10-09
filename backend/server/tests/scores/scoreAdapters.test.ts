@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
   GetCommand,
   PutCommand,
@@ -11,11 +10,11 @@ import { DynamoAreaReportReader } from "../../src/adapters/DynamoAreaReportReade
 import { DynamoAreaSiteReader } from "../../src/adapters/DynamoAreaSiteReader.js";
 import { DynamoScoreRepository } from "../../src/adapters/DynamoScoreRepository.js";
 import { SiteItemParser } from "../../src/adapters/SiteItemParser.js";
-import type { AreaScoresRow } from "../../src/domain/AreaInsights.js";
+import type { Site, WardScores } from "../../src/contracts/index.gen.js";
 import { AreaKey } from "../../src/domain/AreaKey.js";
 import { ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
-import { NO_FACTS, NOW, site, WARD } from "./siteBuilder.js";
+import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
 
 type Item = Record<string, unknown>;
 
@@ -48,42 +47,45 @@ class FakeDocumentClient {
   }
 }
 
+const siteFixture = (sample: string) => readContract<Site>(`fixtures/site.${sample}.json`);
+
+// A sites-table item: the site properties plus lat, lon and fields the contract does not show.
 function siteItem(sample: string): Item {
-  const url = new URL(`../../../../contracts/fixtures/site.${sample}.json`, import.meta.url);
-  const feature = JSON.parse(readFileSync(url, "utf8")) as { geometry: { coordinates: [number, number] }; properties: Item };
-  const [lon, lat] = feature.geometry.coordinates;
-  return { ...feature.properties, lat, lon, geohash4: "tsq4", report_ids: ["rpt_x"] };
+  const { geometry, properties } = siteFixture(sample);
+  const [lon, lat] = geometry.coordinates;
+  return { ...properties, lat, lon, geohash4: "tsq4", report_ids: ["rpt_x"], device_tokens: ["d"] };
+}
+
+function expectedKinds({ properties: { location } }: Site): string[] {
+  const refs = { ward: location.ward, assembly: location.assembly_seat, loksabha: location.loksabha_seat, district: location.district };
+  return Object.entries(refs).flatMap(([kind, ref]) => (ref ? [kind] : []));
 }
 
 describe("SiteItemParser", () => {
   const parser = new SiteItemParser();
 
-  it.each([
-    ["jdh-1", ["ward", "assembly", "loksabha", "district"]],
-    ["jpr-1", ["assembly", "loksabha", "district"]],
-  ])("reads the %s site item with its areas", (sample, kinds) => {
+  it.each(["jdh-1", "jdh-2", "jdh-3", "jpr-1"])("reads the %s site item with its areas and local body", (sample) => {
+    const fixture = siteFixture(sample);
     const parsed = parser.parse(siteItem(sample));
-    expect(parsed.id).toBe(`site_${sample.replace("-", "_")}`);
-    expect(parsed.areas.map((area) => area.kind)).toEqual(kinds);
+    expect(parsed.id).toBe(fixture.properties.site_id);
+    expect(parsed.areas.map((area) => area.kind)).toEqual(expectedKinds(fixture));
+    expect(parsed.localBodyId).toBe(fixture.properties.location.local_body?.id ?? null);
   });
 
-  it("treats a missing ward or cleaned_at like null", () => {
-    const item = siteItem("jdh-3");
-    const location = { ...(item.location as Item) };
-    delete location.ward;
-    const parsed = parser.parse({ ...item, location, cleaned_at: undefined });
-    expect(parsed.areas.map((area) => area.kind)).toEqual(["assembly", "loksabha", "district"]);
-    expect(parsed.clearedWithinDays(365)).toBe(false);
+  it("keeps the site insights, near-places included", () => {
+    const fixture = siteFixture("jdh-3");
+    const parsed = parser.parse(siteItem("jdh-3"));
+    const kinds = new Set(fixture.properties.insights?.near.map((place) => place.kind));
+    expect(parsed.isNear(kinds)).toBe(kinds.size > 0);
+    expect(parsed.compositionEstimate()?.reports).toBe(fixture.properties.insights?.reports);
   });
 
-  it("reads site insights when present", () => {
-    const insights = { reports: 2, composition: [{ material: "plastic", share_pct: 50, reports: 2, sources: [] }], size_class: null, hazards: [], near: [] };
-    expect(parser.parse({ ...siteItem("jdh-1"), insights }).compositionEstimate()).toMatchObject({ reports: 2 });
-  });
-
-  it("throws InternalDataError naming the site for a bad item", () => {
+  it("throws InternalDataError naming the site for an item that breaks the contract", () => {
     expect(() => parser.parse({ ...siteItem("jdh-2"), verified_count: -1 })).toThrow(InternalDataError);
     expect(() => parser.parse({ ...siteItem("jdh-2"), lat: undefined })).toThrow(/site_jdh_2/);
+    const withoutCleanedAt = siteItem("jdh-2");
+    delete withoutCleanedAt.cleaned_at;
+    expect(() => parser.parse(withoutCleanedAt)).toThrow(InternalDataError);
   });
 });
 
@@ -94,7 +96,8 @@ describe("DynamoAreaSiteReader", () => {
       { Items: [siteItem("jdh-2"), siteItem("jpr-1")] },
     ]);
     const sites = await new DynamoAreaSiteReader(fake.asClient(), "junksnap-dev-sites", new SiteItemParser()).readAll();
-    expect(sites.map((each) => each.id)).toEqual(["site_jdh_1", "site_jdh_2", "site_jpr_1"]);
+    const ids = ["jdh-1", "jdh-2", "jpr-1"].map((sample) => siteFixture(sample).properties.site_id);
+    expect(sites.map((each) => each.id)).toEqual(ids);
     expect((fake.sent[1] as ScanCommand).input).toEqual({ TableName: "junksnap-dev-sites", ExclusiveStartKey: { site_id: "site_jdh_1" } });
   });
 
@@ -130,25 +133,27 @@ describe("DynamoScoreRepository", () => {
     const repository = new DynamoScoreRepository(fake.asClient(), "junksnap-dev-scores");
     const row = computed();
     await repository.save(row);
-    expect(fake.stored.get("ward:jodhpur-south-mc-w37")).toMatchObject({ area_kind: "ward", area_id: WARD.id, formula_version: "scores-v1" });
+    expect(fake.stored.get(AreaKey.of(WARD).toString())).toMatchObject({ area_kind: WARD.kind, area_id: WARD.id, formula_version: "scores-v1" });
     expect(await repository.find(AreaKey.of(WARD))).toEqual(row);
   });
 
-  it("reads a row the worker seeded without insights", async () => {
+  it.each(["jdh-1", "jpr-1"])("reads the ward_scores.%s fixture row", async (sample) => {
+    const fixture = readContract<WardScores>(`fixtures/ward_scores.${sample}.json`);
     const fake = new FakeDocumentClient();
-    const seeded = JSON.parse(readFileSync(new URL("../../../../contracts/fixtures/ward_scores.jpr-1.json", import.meta.url), "utf8")) as AreaScoresRow;
-    fake.stored.set("assembly:s20-ac-54", { area_kind: "assembly", area_id: "s20-ac-54", ...seeded });
+    const key = AreaKey.of(fixture.area);
+    fake.stored.set(key.toString(), { area_kind: key.kind, area_id: key.id, ...fixture });
     const repository = new DynamoScoreRepository(fake.asClient(), "t");
-    expect(await repository.find(AreaKey.parse("assembly", "s20-ac-54"))).toEqual(seeded);
+    expect(await repository.find(key)).toEqual(fixture);
     expect(await repository.find(AreaKey.parse("ward", "nowhere-w1"))).toBeNull();
   });
 
-  it("refuses to write or read a row that breaks the contract", async () => {
+  it("refuses to write or read a row that breaks the contract, insights included", async () => {
     const fake = new FakeDocumentClient();
     const repository = new DynamoScoreRepository(fake.asClient(), "t");
-    const broken = { ...computed(), formula_version: undefined } as unknown as AreaScoresRow;
-    await expect(repository.save(broken)).rejects.toThrow(InternalDataError);
-    fake.stored.set("ward:jodhpur-south-mc-w37", { area_kind: "ward", area_id: WARD.id, area: WARD });
+    const row = computed();
+    const badInsights = { ...row, insights: { ...row.insights, hour_of_day: { value: [1], reports: 1, reason: null } } };
+    await expect(repository.save(badInsights)).rejects.toThrow(InternalDataError);
+    fake.stored.set(AreaKey.of(WARD).toString(), { area_kind: WARD.kind, area_id: WARD.id, area: WARD });
     await expect(repository.find(AreaKey.of(WARD))).rejects.toThrow(InternalDataError);
   });
 });

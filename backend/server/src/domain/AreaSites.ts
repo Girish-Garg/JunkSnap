@@ -31,6 +31,11 @@ export class AreaSites {
     return sum(this.verified().filter((site) => site.isType("no_bin")).map((site) => site.verifiedReports()));
   }
 
+  localBodies(): string[] {
+    const ids = this.#all.map((site) => site.localBodyId).filter((id) => id !== null);
+    return [...new Set(ids)].sort();
+  }
+
   isPilot(): boolean {
     return this.#all.some((site) => site.isPilot());
   }

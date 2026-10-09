@@ -30,6 +30,9 @@ export interface LetterDraft {
      */
     body: string;
   };
+  /**
+   * Councillor only when the site has a ward, MLA only when it has an assembly seat, MP only when the Lok Sabha seat status is not outdated.
+   */
   cc: {
     office: "councillor" | "mla" | "mp";
     seat: {
@@ -173,6 +176,7 @@ export const letterDraftSchema = {
     },
     "cc": {
       "type": "array",
+      "description": "Councillor only when the site has a ward, MLA only when it has an assembly seat, MP only when the Lok Sabha seat status is not outdated.",
       "items": {
         "type": "object",
         "additionalProperties": false,

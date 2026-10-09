@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AreaFactSheet } from "../../src/domain/AreaFactSheet.js";
 import type { AreaSite } from "../../src/domain/AreaSite.js";
-import type { Position } from "../../src/domain/GeoPoint.js";
-import { SensitivePlace } from "../../src/domain/SensitivePlace.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
-import { HERE, insights, NO_FACTS, NOW, northOf, site, WARD } from "./siteBuilder.js";
+import { insights, JUDGE, NO_FACTS, NOW, nearPlace, share, site, WARD, YOLO } from "./siteBuilder.js";
 
 const calculator = ScoreCalculator.standard();
 
@@ -15,16 +13,11 @@ function areaInsights(sites: readonly AreaSite[], facts: AreaFactSheet = NO_FACT
 // Enough verified reports for shares and patterns to show.
 const filler = () => site({ verifiedCount: 10, firstReportedAt: "2026-10-01T00:00:00Z" });
 
-function placeAt(kind: SensitivePlace["kind"], metresNorth: number): SensitivePlace {
-  const point = northOf(metresNorth);
-  return new SensitivePlace(kind, [[[point.lon, point.lat]]], false);
-}
-
 describe("composition", () => {
-  it("averages each material over reports, weighting each site by its report count", () => {
+  it("averages each material over reports, weighting each site by its report count, and lists its models", () => {
     const sites = [
-      site({ insights: insights({ reports: 2, composition: [{ material: "plastic", share_pct: 50 }, { material: "organic", share_pct: 30 }] }) }),
-      site({ insights: insights({ reports: 1, composition: [{ material: "plastic", share_pct: 20 }, { material: "paper", share_pct: 40 }] }) }),
+      site({ insights: insights({ reports: 2, composition: [share("plastic", 50, JUDGE), share("organic", 30)] }) }),
+      site({ insights: insights({ reports: 1, composition: [share("plastic", 20), share("paper", 40, JUDGE)] }) }),
       filler(),
     ];
     expect(areaInsights(sites).composition).toEqual({
@@ -34,27 +27,30 @@ describe("composition", () => {
         { material: "paper", share_pct: 13.3 },
       ],
       reports: 3,
+      sources: [JUDGE, YOLO],
       reason: null,
     });
   });
 
   it("says no_data when no verified site carries an estimate, and too_few_reports below the guardrail", () => {
-    expect(areaInsights([filler()]).composition).toEqual({ value: null, reports: 0, reason: "no_data" });
-    const few = [site({ insights: insights({ reports: 2, composition: [{ material: "glass", share_pct: 10 }] }) })];
-    expect(areaInsights(few).composition).toEqual({ value: null, reports: 2, reason: "too_few_reports" });
+    expect(areaInsights([filler()]).composition).toEqual({ value: null, reports: 0, sources: [], reason: "no_data" });
+    const few = [site({ insights: insights({ reports: 2, composition: [share("glass", 10)] }) })];
+    expect(areaInsights(few).composition).toEqual({ value: null, reports: 2, sources: [], reason: "too_few_reports" });
   });
 
   it("ignores sites waiting for a neighbour check", () => {
-    const pending = site({ verification: "community_check", insights: insights({ reports: 4, composition: [{ material: "metal", share_pct: 90 }] }) });
+    const pending = site({ verification: "community_check", insights: insights({ reports: 4, composition: [share("metal", 90)] }) });
     expect(areaInsights([pending, filler()]).composition.reports).toBe(0);
   });
 });
 
 describe("hazardous_share_pct", () => {
+  const medical = { hazard: "medical_waste" as const, reports: 1, sources: [YOLO] as [typeof YOLO] };
+
   it("counts sites with burning or a hazard in their insights", () => {
     const sites = [
       site({ burning: true, insights: insights() }),
-      site({ insights: insights({ hazards: [{ hazard: "medical_waste" }] }) }),
+      site({ insights: insights({ hazards: [medical] }) }),
       site({ insights: insights() }),
       filler(),
     ];
@@ -133,37 +129,24 @@ describe("hour_of_day and day_of_week", () => {
 });
 
 describe("near_school_or_water_count", () => {
-  it("uses the worker's site insights, else measures sites against the ward's places", () => {
+  const mapped: AreaFactSheet = { ...NO_FACTS, placesMapped: true };
+
+  it("counts sites with a school or water place in site.insights.near, never a hospital or drain alone", () => {
     const sites = [
-      site({ insights: insights({ near: [{ kind: "school", distance_m: 83 }] }) }),
-      site({ insights: insights({ near: [{ kind: "hospital", distance_m: 40 }] }) }),
-      site({ point: HERE }),
-      site({ point: northOf(500) }),
+      site({ insights: insights({ near: [nearPlace("school", 83)] }) }),
+      site({ insights: insights({ near: [nearPlace("drain", 2), nearPlace("water", 60)] }) }),
+      site({ insights: insights({ near: [nearPlace("hospital", 40), nearPlace("drain", 10)] }) }),
+      site({ insights: insights() }),
+      site(),
     ];
-    const facts = { ...NO_FACTS, sensitivePlaces: [placeAt("open_drain", 60), placeAt("hospital", 480)] };
-    expect(areaInsights(sites, facts).near_school_or_water_count).toEqual({ value: 2, sites: 4, reason: null });
+    expect(areaInsights(sites, mapped).near_school_or_water_count).toEqual({ value: 2, sites: 5, reason: null });
   });
 
-  it("says no_data when nothing was crawled for the area, even below the guardrail", () => {
-    expect(areaInsights([site()]).near_school_or_water_count).toEqual({ value: null, sites: 1, reason: "no_data" });
-  });
-});
-
-describe("SensitivePlace.distanceFrom", () => {
-  const at = (metresNorth: number, metresEast = 0): Position => {
-    const north = northOf(metresNorth);
-    return [HERE.lon + (metresEast / (6_371_000 * Math.cos((HERE.lat * Math.PI) / 180))) * (180 / Math.PI), north.lat];
-  };
-
-  it("measures to the nearest point of a line", () => {
-    const drain = new SensitivePlace("open_drain", [[at(50, -100), at(50, 100)]], false);
-    expect(drain.distanceFrom(HERE)).toBeCloseTo(50, 0);
+  it("shows 0 in a mapped city with nothing near, even below the guardrail", () => {
+    expect(areaInsights([site({ insights: insights() })], mapped).near_school_or_water_count).toEqual({ value: 0, sites: 1, reason: null });
   });
 
-  it("is zero inside a water body and the edge distance outside it", () => {
-    const ring = [at(-50, -50), at(-50, 50), at(50, 50), at(50, -50), at(-50, -50)];
-    const pond = new SensitivePlace("water_body", [ring], true);
-    expect(pond.distanceFrom(HERE)).toBe(0);
-    expect(pond.distanceFrom(northOf(130))).toBeCloseTo(80, 0);
+  it("says no_data when the city has no crawled map layers", () => {
+    expect(areaInsights([site({ insights: insights() })]).near_school_or_water_count).toEqual({ value: null, sites: 1, reason: "no_data" });
   });
 });
