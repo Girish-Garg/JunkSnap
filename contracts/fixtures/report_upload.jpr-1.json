@@ -1,0 +1,10 @@
+{
+  "upload_id": "upl_jpr_1",
+  "report_type": "open_construction",
+  "context": "uncovered_debris",
+  "capture_mode": "scan",
+  "sha256": "788c3242b11bea71be7250fb1fc2a6aeb4c08b43b9d66d5cf75f443ddc303a75",
+  "gps": { "lat": 26.85297, "lon": 75.81562, "accuracy_m": 14 },
+  "device_token": "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63",
+  "captured_at": "2026-10-10T04:02:10Z"
+}

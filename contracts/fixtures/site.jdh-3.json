@@ -1,0 +1,41 @@
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [73.0458, 26.2701] },
+  "properties": {
+    "site_id": "site_jdh_3",
+    "report_type": "contaminated_water",
+    "context": "choked_drain",
+    "status": "reopened",
+    "verification": "verified",
+    "report_count": 5,
+    "verified_count": 5,
+    "corroborations": 3,
+    "votes": { "confirm": 0, "reject": 0 },
+    "photo_urls": [
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3.jpg",
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3a.jpg"
+    ],
+    "cleanup_status": "none",
+    "cleanup_photo_url": "https://d111111abcdef8.cloudfront.net/media/cleanups/cln_jdh_3c.jpg",
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
+      "town": "Jodhpur",
+      "local_body": { "id": "jodhpur-south-mc", "name": "Jodhpur Municipal Corporation (South)", "head_office": "Commissioner" },
+      "ward": { "id": "jodhpur-south-mc-w54", "name": "Ward 54" },
+      "assembly_seat": { "id": "s20-ac-129", "name": "Soorsagar" },
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" },
+      "representatives": [
+        { "office": "councillor", "seat_id": "jodhpur-south-mc-w54", "as_of": "2026-10-01", "source": "https://lsg.rajasthan.gov.in/" },
+        { "office": "mla", "seat_id": "s20-ac-129", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+        { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+      ]
+    },
+    "brands": [],
+    "first_reported_at": "2026-10-08T05:00:00Z",
+    "last_reported_at": "2026-10-10T02:50:00Z",
+    "cleaned_at": "2026-10-09T06:21:40Z",
+    "pilot": true
+  }
+}

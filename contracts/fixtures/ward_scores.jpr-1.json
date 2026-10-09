@@ -1,0 +1,24 @@
+{
+  "area": { "kind": "assembly", "id": "s20-ac-54", "name": "Malviya Nagar" },
+  "counts": { "verified_reports": 0, "no_bin_reports": 0, "sites": 1, "open_sites": 1, "cleaned_sites": 0, "reopened_sites": 0 },
+  "min_verified_reports": 10,
+  "scores": {
+    "city": { "value": null, "reason": "too_few_reports" },
+    "citizen": { "value": null, "reason": "too_few_reports" },
+    "bin_access": { "value": null, "reason": "too_few_reports" }
+  },
+  "metrics": {
+    "median_days_to_clear": null,
+    "cleared_within_7_days_pct": null,
+    "redumped_pct": null,
+    "no_bin_response_pct": null,
+    "new_dumps_per_km2_month": null,
+    "share_vacant_plot_drain_roadside_pct": null,
+    "median_distance_to_disposal_m": null
+  },
+  "diagnosis": [],
+  "formula_version": "scores-v1",
+  "pilot": false,
+  "data_window": { "from": "2026-10-08T00:00:00Z", "to": "2026-10-10T04:30:00Z" },
+  "computed_at": "2026-10-10T04:30:00Z"
+}
