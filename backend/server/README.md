@@ -8,3 +8,5 @@ One TypeScript image, three entry points: `api` (default, `node dist/handlers/we
 4. Contract validators (`validateSite()` and friends in `src/contracts/index.gen.ts`) are for request bodies and inbound messages only, and throw 400 `ValidationError`; call them only from handlers and adapters, never as Fastify route schemas (Fastify's Ajv is draft-07). After a schema change run `npm run gen:contracts` and commit the `.gen.ts` files.
 5. Contract types (`import type { Site } from "../contracts/index.gen.js"`) may be imported in any layer.
 6. Logs: services take the `Logger` port; inside a route plugin pass `app.log`. Entry points run through `EntryPoint`, which logs failures as one JSON line and exits 1. Never log images, tokens or names.
+7. Data files: read `data/{boundaries,representatives,brands,rules,wards}` through the `AssetReader` port (`FileAssetReader` rooted at `AssetSettings.assetsDir`); `ASSETS_DIR` defaults to `../../data` from the working directory.
+8. Before `docker build`, run `npm run assets`: it copies those folders into `assets/` (git-ignored), and the image reads them from `ASSETS_DIR=/app/assets`.

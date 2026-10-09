@@ -16,6 +16,9 @@ WORKDIR /app
 # Dependencies first, so code changes reuse this layer; sharp's linux-x64 binary comes from the lockfile.
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+# Data files from `npm run assets`, which must run before docker build.
+COPY assets ./assets
+ENV ASSETS_DIR=/app/assets
 COPY --from=build /app/dist ./dist
 
 # Numeric user and group, so Kubernetes runAsNonRoot can verify them.
