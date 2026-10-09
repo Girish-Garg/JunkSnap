@@ -12,6 +12,7 @@ import { DynamoScoreRepository } from "../../src/adapters/DynamoScoreRepository.
 import { SiteItemParser } from "../../src/adapters/SiteItemParser.js";
 import type { Site, WardScores } from "../../src/contracts/index.gen.js";
 import { AreaKey } from "../../src/domain/AreaKey.js";
+import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
@@ -109,6 +110,17 @@ describe("DynamoAreaSiteReader", () => {
     const read = await new DynamoAreaSiteReader(fake.asClient(), "t", new SiteItemParser()).readAll();
     expect(read.sites.map((each) => each.id)).toEqual(["jdh-1", "jpr-1"].map((sample) => siteFixture(sample).properties.site_id));
     expect(read.unreadable).toEqual([{ siteId: siteFixture("jdh-2").properties.site_id, error: expect.any(InternalDataError) }]);
+    expect(read.unreadable[0]?.error.message).toContain("cleaned_at");
+  });
+
+  it("stops the run when parsing fails for any reason other than the site contract", async () => {
+    class BrokenParser extends SiteItemParser {
+      override parse(): AreaSite {
+        throw new TypeError("parser bug");
+      }
+    }
+    const fake = new FakeDocumentClient([{ Items: [siteItem("jdh-1")] }]);
+    await expect(new DynamoAreaSiteReader(fake.asClient(), "t", new BrokenParser()).readAll()).rejects.toThrow("parser bug");
   });
 
   it("wraps SDK failures in ExternalServiceError", async () => {

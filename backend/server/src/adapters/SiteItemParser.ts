@@ -20,7 +20,8 @@ export class SiteItemParser {
     try {
       return validateSite(feature);
     } catch (error) {
-      throw new InternalDataError(`sites item ${siteId} breaks the site contract`, { cause: error });
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new InternalDataError(`sites item ${siteId} breaks the site contract: ${detail}`, { cause: error });
     }
   }
 

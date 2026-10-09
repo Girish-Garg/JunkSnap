@@ -19,7 +19,7 @@ export class ScoresJobFactory {
     const ports = {
       sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser()),
       reports: new DynamoAreaReportReader(client, settings.reportsTable),
-      facts: await WardRecordAreaFacts.fromDirectory(settings.assetsDir, logger),
+      facts: await WardRecordAreaFacts.fromDirectory(settings.assetsDir),
       scores: new DynamoScoreRepository(client, settings.scoresTable),
     };
     return new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger);

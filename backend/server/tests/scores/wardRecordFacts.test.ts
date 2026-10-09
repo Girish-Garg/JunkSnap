@@ -2,14 +2,12 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { WardRecordAreaFacts } from "../../src/adapters/WardRecordAreaFacts.js";
 import type { WardRecord } from "../../src/contracts/index.gen.js";
 import { AreaKey } from "../../src/domain/AreaKey.js";
 import { InternalDataError } from "../../src/domain/errors.js";
 import { GeoPoint } from "../../src/domain/GeoPoint.js";
 import { ScoresSettings } from "../../src/settings/ScoresSettings.js";
-import { LogSink } from "../LogSink.js";
 import { readContract } from "./siteBuilder.js";
 
 interface Provenance {
@@ -32,8 +30,8 @@ function reviewedWard(number: number, extra: Partial<WardRecord> = {}): WardReco
 
 const wardArea = (number: number) => AreaKey.parse("ward", `jodhpur-mc-w${number}`);
 
-function load(dir: string | null, sink = new LogSink()): Promise<WardRecordAreaFacts> {
-  return WardRecordAreaFacts.fromDirectory(dir, new JsonLoggerFactory(sink).create({ service: "scores", stage: "dev" }));
+function load(dir: string | null): Promise<WardRecordAreaFacts> {
+  return WardRecordAreaFacts.fromDirectory(dir);
 }
 
 let assets: string;
@@ -74,6 +72,7 @@ describe("WardRecordAreaFacts", () => {
   it("joins a ward area on its local body's city and ward number for km² and disposal points", async () => {
     const facts = await (await load(assets)).factsFor(wardArea(37), ["jodhpur-mc"]);
     expect(facts).toEqual({ areaKm2: 2.5, disposalPoints: [new GeoPoint(26.2589, 73.0071)], placesMapped: true });
+    expect((await load(assets)).skippedRecords()).toEqual([]);
   });
 
   it("treats a ward number that two reviewed records share as unknown", async () => {
@@ -94,7 +93,7 @@ describe("WardRecordAreaFacts", () => {
     expect(await source.factsFor(wardArea(37), ["jodhpur-mc"])).toEqual(NOTHING);
   });
 
-  it("validates only reviewed records: logs and skips a bad reviewed one, ignores a bad unreviewed one", async () => {
+  it("validates only reviewed records: reports and skips a bad reviewed one, ignores a bad unreviewed one", async () => {
     const dir = await mkdtemp(join(tmpdir(), "server-20-scores-skip-"));
     await mkdir(join(dir, "wards"));
     await mkdir(join(dir, "representatives"));
@@ -103,12 +102,12 @@ describe("WardRecordAreaFacts", () => {
     const good = reviewedWard(38, { area_km2: { ...PROVENANCE, value: 1.5 } });
     await writeFile(join(dir, "wards", "jodhpur.json"), JSON.stringify({ records: [badReviewed, badUnreviewed, good] }));
     await writeFile(join(dir, "representatives", "local_bodies.json"), JSON.stringify([{ id: "jodhpur-mc", towns: ["Jodhpur"] }]));
-    const sink = new LogSink();
-    const source = await load(dir, sink);
+    const source = await load(dir);
     expect((await source.factsFor(wardArea(38), [])).areaKm2).toBe(1.5);
     expect((await source.factsFor(wardArea(37), [])).areaKm2).toBeNull();
-    const skipped = sink.records().filter((record) => record.message === "ward record skipped");
-    expect(skipped).toEqual([expect.objectContaining({ level: "WARN", ward_record_id: badReviewed.id })]);
+    const skipped = source.skippedRecords();
+    expect(skipped).toEqual([{ file: join(dir, "wards", "jodhpur.json"), recordId: badReviewed.id, error: expect.any(Error) }]);
+    expect(skipped[0]?.error.message).toContain("area_km2");
     await rm(dir, { recursive: true, force: true });
   });
 

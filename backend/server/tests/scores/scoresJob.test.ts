@@ -7,7 +7,7 @@ import type { ComputedAreaScores } from "../../src/domain/AreaInsights.js";
 import type { AreaKey, AreaRef } from "../../src/domain/AreaKey.js";
 import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { runScores } from "../../src/handlers/scores.js";
-import type { AreaFacts } from "../../src/ports/AreaFacts.js";
+import type { AreaFacts, SkippedRecord } from "../../src/ports/AreaFacts.js";
 import type { AreaReportReader } from "../../src/ports/AreaReportReader.js";
 import type { AreaSiteReader, SiteRead, UnreadableSite } from "../../src/ports/AreaSiteReader.js";
 import type { ScoreRepository } from "../../src/ports/ScoreRepository.js";
@@ -51,6 +51,11 @@ class FakeReports implements AreaReportReader {
 
 class FakeFacts implements AreaFacts {
   readonly asked: string[] = [];
+  readonly skipped: SkippedRecord[] = [];
+
+  skippedRecords(): readonly SkippedRecord[] {
+    return this.skipped;
+  }
 
   async factsFor(area: AreaKey, localBodyIds: readonly string[]): Promise<AreaFactSheet> {
     this.asked.push(`${area.toString()} ${localBodyIds.join(",")}`);
@@ -137,6 +142,17 @@ describe("ScoresJob", () => {
     expect(skipped).toEqual([expect.objectContaining({ level: "ERROR", site_id: "site_broken" })]);
   });
 
+  it("logs a skipped reviewed ward record at error and counts it as failed", async () => {
+    const { job, facts, scores, sink } = setup([site({ verifiedCount: 3 })]);
+    facts.skipped.push({ file: "wards/jodhpur.json", recordId: "jodhpur-uttar-037", error: new InternalDataError("area_km2 must be > 0") });
+    expect(await job.run(NOW)).toEqual({ sites: 1, areas: 1, failed: 1 });
+    expect(scores.rows.size).toBe(1);
+    const skipped = sink.records().filter((record) => record.message === "ward record skipped");
+    const logged = { level: "ERROR", file: "wards/jodhpur.json", ward_record_id: "jodhpur-uttar-037" };
+    expect(skipped).toEqual([expect.objectContaining(logged)]);
+    expect(skipped[0]?.error).toContain("area_km2");
+  });
+
   it("overwrites each area's row on the next run", async () => {
     const { job, scores } = setup([site({ verifiedCount: 3 })]);
     await job.run(new Date("2026-10-19T00:00:00Z"));
@@ -160,10 +176,10 @@ describe("runScores", () => {
     expect(sink.records()).toEqual([expect.objectContaining(summary)]);
   });
 
-  it("fails the run after the summary when any area or site item failed", async () => {
+  it("fails the run after the summary when any area, site item or ward record failed", async () => {
     const sink = new LogSink();
     const job = { run: async () => ({ sites: 3, areas: 4, failed: 1 }) };
-    await expect(runScores(entryContext(sink), async () => job)).rejects.toThrow("1 areas or site items failed");
+    await expect(runScores(entryContext(sink), async () => job)).rejects.toThrow("1 areas, site items or ward records failed");
     expect(sink.records()).toEqual([expect.objectContaining({ message: "scores done", failed: 1 })]);
   });
 
