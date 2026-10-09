@@ -2,7 +2,7 @@
 line-length = 100
 target-version = "py312"
 # Package source roots, so imports of our own packages sort as first-party everywhere.
-src = ["backend/pipeline/src", "backend/agent/src", "data/ward_crawler/src"]
+src = ["backend/pipeline/src", "backend/ml/src", "data/ward_crawler/src"]
 
 [lint]
 select = ["E", "F", "I", "B", "C90", "PL", "N", "UP", "SIM", "RET", "ARG"]

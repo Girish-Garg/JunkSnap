@@ -8,7 +8,6 @@ export interface DraftedProse extends WrittenLetter {
   readonly templateFallback: boolean;
 }
 
-// The model's prose ships only if it passes the quote verifier; any failure falls back to the template.
 export class ProseDrafter {
   readonly #writer: LetterWriter;
   readonly #verifier: DraftVerifier;
@@ -24,7 +23,7 @@ export class ProseDrafter {
 
   async draft(brief: LetterBrief, rules: readonly Rule[]): Promise<DraftedProse> {
     const written = await this.#attempt(brief);
-    if (written !== null && this.#passes(written, rules)) {
+    if (written !== null && this.#passes(written, rules, brief)) {
       return { ...written, templateFallback: false };
     }
     return { ...this.#template.write(brief), templateFallback: true };
@@ -39,8 +38,8 @@ export class ProseDrafter {
     }
   }
 
-  #passes(written: WrittenLetter, rules: readonly Rule[]): boolean {
-    const problem = this.#verifier.problem(written, rules);
+  #passes(written: WrittenLetter, rules: readonly Rule[], brief: LetterBrief): boolean {
+    const problem = this.#verifier.problem(written, rules, brief.addressees.cc);
     if (problem !== null) {
       const fields = { ...written.provenance, problem };
       this.#logger.warn(fields, "model draft failed the quote verifier; using the template letter");

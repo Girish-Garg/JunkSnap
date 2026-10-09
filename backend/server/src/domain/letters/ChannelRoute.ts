@@ -17,7 +17,6 @@ export interface ChannelRouteProps {
   readonly filingUrl: string | null;
 }
 
-// One channel from data/rules/routing.json.
 export class ChannelRoute {
   readonly channel: Channel;
   readonly requiresLocalBody: boolean;

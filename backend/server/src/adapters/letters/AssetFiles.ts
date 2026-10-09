@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { ConfigError } from "../../domain/errors.js";
 
-// Reads files under one folder of ASSETS_DIR; any missing or malformed file stops startup.
+// A missing or malformed file is a ConfigError, so the api refuses to start.
 export class AssetFiles {
   readonly #dir: string;
 

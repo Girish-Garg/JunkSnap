@@ -24,7 +24,6 @@ const RULES = [
   'Reply with one JSON object {"subject": string, "body": string} and nothing else.',
 ];
 
-// The model gets only code-picked facts, addressees and citations; it writes prose and never picks a rule.
 export class LetterPrompt {
   readonly #brief: LetterBrief;
 

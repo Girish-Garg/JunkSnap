@@ -35,7 +35,6 @@ export class QuoteVerifier {
     return marker !== "" && starts.some((at) => page.slice(0, at).trimEnd().endsWith(marker));
   }
 
-  // Only rules whose quote is found become citations; the counts are "verified N of N".
   check(rules: readonly Rule[]): CheckedCitations {
     const passed = rules.filter((rule) => this.verifies(rule));
     return {

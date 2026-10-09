@@ -3,7 +3,6 @@ import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { RoutingTable } from "../../domain/letters/RoutingTable.js";
 import type { Addressees, Channel } from "../../domain/letters/types.js";
 
-// To from routing.json; Cc each seat the site has a representative for, never an outdated or missing seat.
 export class LetterRouter {
   readonly #table: RoutingTable;
 

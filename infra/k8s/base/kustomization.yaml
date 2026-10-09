@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: junksnap
+resources:
+  - serviceaccounts.yaml
+  - api.yaml
+  - worker.yaml
+  - scores.yaml
+  - ml.yaml
+  - ingress.yaml
+# Names from contracts/README.md; overlays merge in the per-stage values.
+configMapGenerator:
+  - name: junksnap-config
+    literals:
+      - AWS_REGION=ap-south-1
+      - AWS_DEFAULT_REGION=ap-south-1
+      - PRESIGN_TTL_SECONDS=300
+      - ML_URL=http://ml

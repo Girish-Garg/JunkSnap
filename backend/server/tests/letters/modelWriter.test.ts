@@ -5,7 +5,7 @@ import type { AnswerSchema } from "../../src/domain/llm/AnswerSchema.js";
 import type { LlmRequest } from "../../src/domain/llm/LlmRequest.js";
 import { LlmResponse } from "../../src/domain/llm/LlmResponse.js";
 import type { LetterModel } from "../../src/ports/letters/LetterModel.js";
-import { DEVICE, letterService, REAL_RULES_DIR, RecordingLogger, wardSite } from "./support.js";
+import { DEVICE, USER, letterService, REAL_RULES_DIR, RecordingLogger, wardSite } from "./support.js";
 
 const ANSWER = { provider: "bedrock", model: "apac.amazon.nova-pro-v1:0", version: "v1:0" } as const;
 
@@ -40,7 +40,7 @@ const request = {
   siteId: "site_jdh_1",
   channel: "local_body",
   language: "hi",
-  requester: { deviceToken: DEVICE, userId: null },
+  requester: { deviceToken: DEVICE, userId: USER },
 } as const;
 
 describe("ModelLetterWriter", () => {

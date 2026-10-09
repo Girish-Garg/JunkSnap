@@ -5,7 +5,6 @@ export interface CountRequest {
   readonly windowMs: number;
 }
 
-// A windowed letter counter on one row (letter_window_start, letter_count).
 export interface LetterCounter {
   // Reads only: true when one more letter fits in the current window.
   fits(request: CountRequest): Promise<boolean>;

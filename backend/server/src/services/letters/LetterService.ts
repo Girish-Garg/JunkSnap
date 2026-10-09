@@ -32,7 +32,6 @@ export interface LetterServiceParts {
 
 type NonEmpty<T> = [T, ...T[]];
 
-// Code picks addressees and clauses, the writer adds prose, the verifier gates it. Nothing is filed.
 export class LetterService {
   readonly #parts: LetterServiceParts;
 

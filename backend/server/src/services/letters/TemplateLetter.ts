@@ -6,7 +6,6 @@ import type { LetterBrief, WrittenLetter } from "../../ports/letters/LetterWrite
 const MAX_SUBJECT = 200;
 const BARE_RULE_NUMBER = /^\d/;
 
-// Fixed, neutral prose in one language; quotes stay in the official text.
 export interface TemplateWording {
   readonly language: Language;
   subject(site: LetterSite): string;

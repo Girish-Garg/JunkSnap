@@ -10,7 +10,6 @@ export interface LetterCounters {
   readonly users: LetterCounter;
 }
 
-// Letters: 5 an hour, counted per device and per signed-in user; the stricter one applies.
 export class LetterRateLimiter {
   readonly #counters: LetterCounters;
   readonly #limit: number;
@@ -37,8 +36,10 @@ export class LetterRateLimiter {
   }
 
   #counted(requester: Requester): (readonly [LetterCounter, string])[] {
-    const device = [this.#counters.devices, requester.deviceToken] as const;
-    return requester.userId === null ? [device] : [device, [this.#counters.users, requester.userId] as const];
+    return [
+      [this.#counters.devices, requester.deviceToken],
+      [this.#counters.users, requester.userId],
+    ];
   }
 
   #refuse(): never {

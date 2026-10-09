@@ -34,7 +34,6 @@ const RulesFile = z.object({ texts: z.array(TextEntry), rules: z.array(RuleEntry
 type TextEntry = z.output<typeof TextEntry>;
 type RuleEntry = z.output<typeof RuleEntry>;
 
-// Loads data/rules/rules.json and the stored texts, refusing any text whose SHA-256 differs from rules.json.
 export class RuleRepository {
   readonly #files: AssetFiles;
 

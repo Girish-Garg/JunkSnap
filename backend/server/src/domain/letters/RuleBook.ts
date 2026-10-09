@@ -4,7 +4,6 @@ import type { Rule } from "./Rule.js";
 // Stored text file name -> PDF page number -> page text.
 export type PageTexts = ReadonlyMap<string, ReadonlyMap<number, string>>;
 
-// The hashed official texts and the rules quoted from them, in rules.json order.
 export class RuleBook {
   readonly rules: readonly Rule[];
   readonly #pages: PageTexts;

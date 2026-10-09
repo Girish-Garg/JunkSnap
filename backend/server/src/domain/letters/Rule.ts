@@ -15,7 +15,6 @@ export interface RuleProps {
   readonly channels: readonly Channel[];
 }
 
-// One quotable clause from data/rules/rules.json.
 export class Rule {
   readonly ruleId: string;
   readonly clauseMarker: string;

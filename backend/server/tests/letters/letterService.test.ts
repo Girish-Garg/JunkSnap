@@ -5,6 +5,7 @@ import { NotVerifiedError, RateLimitedError } from "../../src/domain/letters/err
 import type { LetterRequest } from "../../src/services/letters/LetterService.js";
 import {
   DEVICE,
+  USER,
   downWriter,
   FakeWriter,
   FixedStamp,
@@ -24,7 +25,7 @@ const request: LetterRequest = {
   siteId: "site_jdh_1",
   channel: "local_body",
   language: "en",
-  requester: { deviceToken: DEVICE, userId: null },
+  requester: { deviceToken: DEVICE, userId: USER },
 };
 
 function expectValid(letter: LetterDraft): void {
@@ -138,11 +139,11 @@ describe("LetterService errors", () => {
   it("allows 5 letters an hour per device, then rate_limited, then again after an hour", async () => {
     const stamp = new FixedStamp();
     const service = await letterService({ sites: [jodhpur], stamp });
-    for (let letter = 0; letter < 5; letter += 1) {
-      await service.draft(request);
+    for (let user = 0; user < 5; user += 1) {
+      await service.draft({ ...request, requester: { deviceToken: DEVICE, userId: `user-${user}` } });
     }
     await expect(service.draft(request)).rejects.toThrow(RateLimitedError);
-    await service.draft({ ...request, requester: { deviceToken: "another-device", userId: null } });
+    await service.draft({ ...request, requester: { deviceToken: "another-device", userId: "user-9" } });
     stamp.advance(3_600_000);
     await expect(service.draft(request)).resolves.toMatchObject({ site_id: "site_jdh_1" });
   });

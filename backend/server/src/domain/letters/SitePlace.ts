@@ -48,7 +48,6 @@ export class SitePlace {
     this.#representatives = props.representatives;
   }
 
-  // Copies an office only when the site has that seat and the seat has a listed representative.
   ccLines(): CcLine[] {
     return this.#seats.flatMap(([office, seat]) =>
       seat !== null && this.#represented(office, seat.id)

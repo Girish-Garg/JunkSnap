@@ -33,6 +33,6 @@ export interface Prose {
 
 export interface Requester {
   readonly deviceToken: string;
-  // Null until the auth task's requireUser supplies it.
-  readonly userId: string | null;
+  // The Cognito token's sub; letters need sign-in (decision 20261010-0227).
+  readonly userId: string;
 }

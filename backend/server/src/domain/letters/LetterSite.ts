@@ -27,7 +27,6 @@ export interface LetterSiteProps {
   readonly evidence: SiteEvidence;
 }
 
-// The facts a letter needs from a site; the only place that reads the site contract's location.
 export class LetterSite {
   readonly siteId: string;
   readonly reportType: ReportType;

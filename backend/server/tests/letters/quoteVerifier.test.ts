@@ -5,6 +5,7 @@ import { Rule } from "../../src/domain/letters/Rule.js";
 import type { RuleBook } from "../../src/domain/letters/RuleBook.js";
 import { DraftVerifier } from "../../src/services/letters/DraftVerifier.js";
 import { QuoteVerifier } from "../../src/services/letters/QuoteVerifier.js";
+import { WordingCheck } from "../../src/services/letters/WordingCheck.js";
 import { FIXTURE_RULES_DIR, REAL_RULES_DIR } from "./support.js";
 
 const PAGE = "(x) schedule for street sweeping and placement of waste bins as per\n  prescribed norms;\nएक नियम लागू है।";
@@ -106,7 +107,7 @@ describe("DraftVerifier", () => {
   const bins = () => rule("fx-bins");
   const quoting = (quote: string, rest = "") => `Rule 39(2)(x) says "${quote}". Please act.${rest}`;
   const accepts = (body: string, rules = [bins()], subject = "Request") =>
-    new DraftVerifier(quotes, book).accepts({ subject, body }, rules);
+    new DraftVerifier(quotes, book, new WordingCheck()).accepts({ subject, body }, rules, []);
 
   it("accepts a draft that quotes each cited rule word for word", () => {
     expect(accepts(quoting(bins().exactText))).toBe(true);
@@ -136,8 +137,22 @@ describe("DraftVerifier", () => {
     ["single curly", "‘bins must be emptied daily’"],
     ["guillemet", "«bins must be emptied daily»"],
     ["low-high", "„bins must be emptied daily“"],
+    ["single straight", "'bins must be emptied daily'"],
+    ["backtick", "`bins must be emptied daily`"],
   ])("rejects an extra %s-quoted passage that is not on a cited page", (_name, extra) => {
     expect(accepts(quoting(bins().exactText, ` The law says ${extra}.`))).toBe(false);
+  });
+
+  it("checks straight single quotes and backticks, which may also hold a misquote", () => {
+    expect(accepts(`Rule 39(2)(x) says '${bins().exactText}'.`)).toBe(true);
+    expect(accepts(`Rule 39(2)(x) says \`${bins().exactText}\`.`)).toBe(true);
+    expect(accepts("Rule 39(2)(x) says 'schedule for street sweeping and placement of bins'.")).toBe(false);
+    expect(accepts(quoting(bins().exactText, " The law says `bins must be emptied"))).toBe(false);
+  });
+
+  it("leaves plain apostrophes alone but still reads a single-quoted passage with one inside", () => {
+    expect(accepts(quoting(bins().exactText, " The ward's residents' request, in 'Ward 37's bins' words, is 'street sweeping'."))).toBe(false);
+    expect(accepts(quoting(bins().exactText, " The ward's residents' request stands."))).toBe(true);
   });
 
   it("rejects an unclosed quote", () => {

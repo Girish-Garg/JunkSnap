@@ -5,13 +5,13 @@ import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { validateLetterDraft } from "../../src/contracts/index.gen.js";
-import { ConfigError } from "../../src/domain/errors.js";
-import { LettersEndpoint } from "../../src/handlers/letters/LettersEndpoint.js";
+import { ConfigError, UnauthorizedError } from "../../src/domain/errors.js";
+import { LettersEndpoint, type UserGuard } from "../../src/handlers/letters/LettersEndpoint.js";
 import { buildLettersRoutes } from "../../src/handlers/lettersRoutes.js";
 import { createApp } from "../../src/handlers/web.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
-import { DEVICE, FIXTURE_RULES_DIR, letterService, siteWith, wardSite } from "./support.js";
+import { DEVICE, FIXTURE_RULES_DIR, letterService, siteWith, USER, wardSite } from "./support.js";
 
 const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
 const jodhpur = wardSite();
@@ -31,12 +31,24 @@ async function start(routes: FastifyPluginAsync): Promise<FastifyInstance> {
   return app;
 }
 
+// Stands in for RouteGuard: the bearer token is the user id itself.
+const fakeGuard: UserGuard = {
+  async requireUser(request) {
+    const token = /^Bearer (\S+)$/.exec(request.headers.authorization ?? "")?.[1];
+    if (token === undefined) {
+      throw new UnauthorizedError("Sign in to do this.");
+    }
+    return { userId: token };
+  },
+};
+
 async function withFakes(): Promise<FastifyInstance> {
-  return start(new LettersEndpoint(await letterService({ sites })).plugin());
+  return start(new LettersEndpoint(await letterService({ sites }), fakeGuard).plugin());
 }
 
-function post(server: FastifyInstance, siteId: string, payload: object = body) {
-  return server.inject({ method: "POST", url: `/sites/${siteId}/letters`, payload });
+function post(server: FastifyInstance, siteId: string, payload: object = body, user: string | null = USER) {
+  const headers = user === null ? {} : { authorization: `Bearer ${user}` };
+  return server.inject({ method: "POST", url: `/sites/${siteId}/letters`, payload, headers });
 }
 
 afterEach(async () => {
@@ -92,6 +104,22 @@ describe("POST /sites/{id}/letters", () => {
     expect(response.json()).toMatchObject({ error: "no_local_body" });
   });
 
+  it("returns 401 unauthorized without a sign-in token, before reading anything else", async () => {
+    const response = await post(await withFakes(), "SITE-1", {}, null);
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: "unauthorized" });
+  });
+
+  it("counts the signed-in user across devices", async () => {
+    const server = await withFakes();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await post(server, "site_jdh_1")).statusCode).toBe(200);
+    }
+    const otherDevice = { ...body, device_token: "0b9c8d7e-6f5a-4b3c-8d2e-1f0a9b8c7d6e" };
+    expect((await post(server, "site_jdh_1", otherDevice)).json()).toMatchObject({ error: "rate_limited" });
+    expect((await post(server, "site_jdh_1", otherDevice, "another-user")).statusCode).toBe(200);
+  });
+
   it("returns 429 rate_limited on the sixth letter in an hour from one device", async () => {
     const server = await withFakes();
     const codes = [];
@@ -110,12 +138,14 @@ describe("buildLettersRoutes", () => {
     SITES_TABLE: "junksnap-dev-sites",
     DEVICES_TABLE: "junksnap-dev-devices",
     USERS_TABLE: "junksnap-dev-users",
+    COGNITO_USER_POOL_ID: "ap-south-1_TestPool1",
+    COGNITO_CLIENT_ID: "test-client-id",
   });
 
-  it("loads the rule book from ASSETS_DIR and serves the route", async () => {
+  it("loads the rule book from ASSETS_DIR and serves the route behind sign-in", async () => {
     const server = await start(buildLettersRoutes({ core, env: env(join(FIXTURE_RULES_DIR, "..")) }));
-    const response = await post(server, "site_jdh_1", { channel: "local_body" });
-    expect(response.statusCode).toBe(400);
+    const response = await post(server, "site_jdh_1", body, null);
+    expect(response.statusCode).toBe(401);
   });
 
   it("refuses to start without its settings", async () => {

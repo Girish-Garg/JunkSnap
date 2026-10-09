@@ -22,7 +22,6 @@ const RoutingFile = z.object({
 
 type ChannelEntry = z.output<typeof ChannelEntry>;
 
-// Loads data/rules/routing.json: who each letter channel goes to, by report type, burning and state.
 export class RoutingRepository {
   readonly #files: AssetFiles;
 

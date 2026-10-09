@@ -16,6 +16,7 @@ import { LetterService } from "../../services/letters/LetterService.js";
 import { ProseDrafter } from "../../services/letters/ProseDrafter.js";
 import { QuoteVerifier } from "../../services/letters/QuoteVerifier.js";
 import { TemplateLetter } from "../../services/letters/TemplateLetter.js";
+import { WordingCheck } from "../../services/letters/WordingCheck.js";
 
 export interface LettersAdapters {
   readonly sites: SiteReader;
@@ -24,7 +25,6 @@ export interface LettersAdapters {
   readonly stamp: LetterStamp;
 }
 
-// Loads the rule book once at startup and refuses to start if any stored quote fails the verifier.
 export class LettersAssembly {
   readonly #rulesDir: string;
   readonly #logger: Logger;
@@ -47,7 +47,7 @@ export class LettersAssembly {
       picker: new ClausePicker(book),
       quotes,
       limiter: new LetterRateLimiter(adapters.counters),
-      drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book), template, this.#logger),
+      drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
     });
   }

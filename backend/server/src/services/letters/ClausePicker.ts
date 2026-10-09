@@ -12,7 +12,6 @@ interface Candidate {
   readonly score: number;
 }
 
-// Code, never the model, picks the clauses: best tag match first, then the narrower rule, then file order.
 export class ClausePicker {
   readonly #book: RuleBook;
   readonly #maxClauses: number;

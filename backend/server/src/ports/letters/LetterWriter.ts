@@ -12,7 +12,6 @@ export interface WrittenLetter extends Prose {
   readonly provenance: Provenance;
 }
 
-// A model writes the prose around code-picked citations; the quote verifier checks it afterwards.
 export interface LetterWriter {
   write(brief: LetterBrief): Promise<WrittenLetter>;
 }

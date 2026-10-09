@@ -4,6 +4,7 @@ import { channelSchema } from "../../adapters/letters/vocabulary.js";
 import { validateLetterDraft, type LetterDraft } from "../../contracts/index.gen.js";
 import { InternalDataError, NotFoundError, ValidationError } from "../../domain/errors.js";
 import type { LetterService } from "../../services/letters/LetterService.js";
+import type { RouteGuard } from "../auth/RouteGuard.js";
 
 const SITE_ID = /^site_[a-z0-9_]{1,40}$/;
 
@@ -15,24 +16,27 @@ const LetterBody = z.object({
 
 type LetterBody = z.output<typeof LetterBody>;
 
-// POST /sites/{id}/letters: a draft for the resident to file; JunkSnap never files anything.
+export type UserGuard = Pick<RouteGuard, "requireUser">;
+
 export class LettersEndpoint {
   readonly #service: LetterService;
+  readonly #guard: UserGuard;
 
-  constructor(service: LetterService) {
+  constructor(service: LetterService, guard: UserGuard) {
     this.#service = service;
+    this.#guard = guard;
   }
 
   plugin(): FastifyPluginAsync {
     return async (app) => {
       app.post<{ Params: { id: string } }>("/sites/:id/letters", async (request) => {
-        const userId = null; // Auth seam: (await guard.requireUser(request)).userId once sign-in lands.
-        return this.#draft(request.params.id, request.body, userId);
+        const user = await this.#guard.requireUser(request);
+        return this.#draft(request.params.id, request.body, user.userId);
       });
     };
   }
 
-  async #draft(siteId: string, body: unknown, userId: string | null): Promise<LetterDraft> {
+  async #draft(siteId: string, body: unknown, userId: string): Promise<LetterDraft> {
     if (!SITE_ID.test(siteId)) {
       throw new NotFoundError(`No site ${siteId}`);
     }

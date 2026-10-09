@@ -14,6 +14,7 @@ import type { LetterService } from "../../src/services/letters/LetterService.js"
 export const FIXTURE_RULES_DIR = fileURLToPath(new URL("./fixtures/rules/", import.meta.url));
 export const REAL_RULES_DIR = fileURLToPath(new URL("../../../../data/rules/", import.meta.url));
 export const DEVICE = "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14";
+export const USER = "8a1f3c2e-5b6d-4e7f-9a0b-1c2d3e4f5a6b";
 export const MODEL = { provider: "bedrock", model: "global.anthropic.claude-sonnet-4-6", version: "4.6" } as const;
 
 type Properties = Site["properties"];
