@@ -1,0 +1,346 @@
+:root {
+  --font-sans: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --surface: #ffffff;
+  --surface-muted: #f2f4f5;
+  --ink: #1a1f24;
+  --ink-muted: #4b5661;
+  --line: #d8dde1;
+  --line-strong: #aab3ba;
+  --accent: #0b5d57;
+  --accent-soft: #e2efed;
+  --on-accent: #ffffff;
+  --alert: #b42318;
+  --alert-soft: #fdecea;
+  --status-open: #b42318;
+  --status-open-soft: #fdecea;
+  --status-reopened: #b54708;
+  --status-reopened-soft: #fef0e6;
+  --status-cleaned: #067647;
+  --status-cleaned-soft: #e7f6ec;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --radius-chip: 8px;
+  --radius-card: 16px;
+  --radius-sheet: 24px;
+  --radius-bar: 28px;
+  --elev-1: 0 1px 2px rgb(16 24 32 / 0.16), 0 1px 3px rgb(16 24 32 / 0.08);
+  --elev-2: 0 2px 6px rgb(16 24 32 / 0.18), 0 1px 2px rgb(16 24 32 / 0.1);
+  --elev-3: 0 6px 16px rgb(16 24 32 / 0.2), 0 2px 4px rgb(16 24 32 / 0.1);
+  --target: 48px;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface-muted);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Devanagari needs room for matras above and below the line. */
+:lang(hi) {
+  font-family: 'Noto Sans Devanagari', 'Noto Sans', system-ui, sans-serif;
+  line-height: 1.65;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.icon {
+  display: block;
+  flex: none;
+}
+
+.marker-glyph {
+  display: block;
+  flex: none;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--target);
+  height: var(--target);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--surface-muted);
+}
+
+.icon-button--surface {
+  background: var(--surface);
+  box-shadow: var(--elev-2);
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  margin: var(--space-1) 0;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  background: var(--surface);
+  box-shadow: var(--elev-1);
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Grows the touch target to 48 px without growing the chip. */
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pill {
+  flex: none;
+  padding: 2px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 12px var(--space-2);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--elev-2);
+  font-size: 14px;
+}
+
+.notice--alert {
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+
+.skeleton {
+  display: block;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status--open {
+  background: var(--status-open-soft);
+  color: var(--status-open);
+}
+
+.status--reopened {
+  background: var(--status-reopened-soft);
+  color: var(--status-reopened);
+}
+
+.status--cleaned {
+  background: var(--status-cleaned-soft);
+  color: var(--status-cleaned);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.badge--alert {
+  border-color: var(--alert);
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+
+.language-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.language-switch__option {
+  min-width: 96px;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.language-switch__option[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action-row__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 72px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+}
+
+.action-row__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.action-row__button:disabled {
+  color: var(--ink-muted);
+  cursor: not-allowed;
+}
+
+.action-row__button:disabled .action-row__icon {
+  background: var(--surface-muted);
+  color: var(--ink-muted);
+}
+
+.facts {
+  margin-top: var(--space-3);
+}
+
+.facts__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.facts__list {
+  margin: 0;
+}
+
+.facts__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 12px 0;
+  border-top: 1px solid var(--surface-muted);
+}
+
+.facts__row dt {
+  color: var(--ink-muted);
+}
+
+.facts__row dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

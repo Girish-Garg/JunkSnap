@@ -1,0 +1,97 @@
+/* Phones: bottom sheet. Heights come from SheetDetents via --sheet-height. */
+.sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  height: var(--sheet-drag-height, var(--sheet-height));
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--surface);
+  box-shadow: var(--elev-3);
+  transition: height 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.sheet--dragging {
+  transition: none;
+}
+
+.sheet__bar {
+  position: relative;
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  height: var(--target);
+  padding: 0 4px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.sheet__handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: var(--target);
+  margin-left: -48px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+}
+
+.sheet__grip {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.sheet__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 var(--space-2) calc(var(--space-2) + env(safe-area-inset-bottom));
+}
+
+.sheet--full .sheet__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sheet-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.sheet-text {
+  color: var(--ink-muted);
+}
+
+/* Desktop: a left side panel under the search bar, like a map app. */
+@media (min-width: 768px) {
+  .sheet {
+    top: 0;
+    right: auto;
+    width: 408px;
+    height: auto;
+    padding-top: 80px;
+    border-radius: 0;
+    box-shadow: var(--elev-2);
+  }
+
+  .sheet__handle {
+    display: none;
+  }
+
+  .sheet__body {
+    overflow-y: auto;
+  }
+}

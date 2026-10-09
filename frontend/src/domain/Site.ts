@@ -1,0 +1,102 @@
+// Mirrors contracts/schemas/site.schema.json; change the contract first.
+import type { ReportType } from './ReportType';
+
+export type SiteContext =
+  | 'vacant_plot'
+  | 'roadside'
+  | 'drain'
+  | 'other'
+  | 'no_bin'
+  | 'no_pickup'
+  | 'stagnant'
+  | 'sewage'
+  | 'foam'
+  | 'choked_drain'
+  | 'uncovered_debris'
+  | 'dusty_site';
+
+export type SiteStatus = 'open' | 'cleaned' | 'reopened';
+
+/** GET /sites?bbox leaves out rejected sites. */
+export type SiteVerification = 'verified' | 'community_check' | 'rejected';
+
+/** Resets to none when the site reopens. */
+export type CleanupStatus = 'none' | 'checking' | 'accepted' | 'rejected';
+
+export interface AreaRef {
+  readonly id: string;
+  readonly name: string;
+}
+
+export interface LocalBody {
+  readonly id: string;
+  readonly name: string;
+  readonly head_office: string;
+}
+
+/** Offices only: never a name or a party. */
+export interface Representative {
+  readonly office: 'councillor' | 'mla' | 'mp';
+  readonly seat_id: string;
+  readonly as_of: string;
+  readonly source: string;
+}
+
+export interface SiteLocation {
+  readonly state: string;
+  readonly district: AreaRef;
+  readonly town: string | null;
+  readonly local_body: LocalBody | null;
+  readonly ward: AreaRef | null;
+  readonly assembly_seat: AreaRef;
+  readonly loksabha_seat: AreaRef;
+  readonly representatives: readonly Representative[];
+}
+
+export interface BrandSighting {
+  readonly brand: string;
+  readonly parent_company: string;
+  readonly confidence: number;
+  readonly source_url: string;
+}
+
+export interface SiteVotes {
+  readonly confirm: number;
+  readonly reject: number;
+}
+
+export interface SiteProperties {
+  readonly site_id: string;
+  readonly report_type: ReportType;
+  readonly context: SiteContext;
+  readonly status: SiteStatus;
+  readonly verification: SiteVerification;
+  readonly report_count: number;
+  readonly verified_count: number;
+  readonly corroborations: number;
+  readonly votes: SiteVotes;
+  readonly photo_urls: readonly string[];
+  readonly cleanup_status: CleanupStatus;
+  readonly cleanup_photo_url: string | null;
+  readonly burning: boolean;
+  readonly location: SiteLocation;
+  readonly brands: readonly BrandSighting[];
+  readonly first_reported_at: string;
+  readonly last_reported_at: string;
+  readonly cleaned_at: string | null;
+  readonly pilot: boolean;
+}
+
+export type LonLat = readonly [lon: number, lat: number];
+
+export interface SiteFeature {
+  readonly type: 'Feature';
+  readonly geometry: { readonly type: 'Point'; readonly coordinates: LonLat };
+  readonly properties: SiteProperties;
+}
+
+/** GET /sites?bbox response. */
+export interface SiteCollection {
+  readonly type: 'FeatureCollection';
+  readonly features: readonly SiteFeature[];
+}

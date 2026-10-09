@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "JunkSnap",
+    "sampleData": "Sample data"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "menu": {
+    "open": "Menu",
+    "title": "Menu",
+    "sampleNote": "Sample data: these are the project's test sites, not live reports.",
+    "liveNote": "Live reports from residents, checked before they appear."
+  },
+  "search": {
+    "label": "Search sites on the map",
+    "placeholder": "Search ward, seat or town",
+    "clear": "Clear search",
+    "results": "Matching sites",
+    "noResults": "No sites match. Try a ward or town name."
+  },
+  "filter": {
+    "label": "Filter sites",
+    "waste_dump": "Dumps",
+    "no_bin": "No bin",
+    "contaminated_water": "Water",
+    "open_construction": "Construction",
+    "verifiedOnly": "Verified only"
+  },
+  "map": {
+    "label": "Map of reported waste sites",
+    "locate": "Show my location",
+    "snap": "Snap",
+    "osmCredit": "© OpenStreetMap contributors"
+  },
+  "notice": {
+    "offline": "You are offline. Showing what was already loaded.",
+    "loadFailed": "Could not load sites. Check your connection and try again.",
+    "locationDenied": "Location is blocked. Allow it in your browser to see sites near you.",
+    "locationUnavailable": "Could not find your location. Try again in a moment.",
+    "filteredEmpty": "No sites match these filters. Turn a filter off.",
+    "zoomIn": "Zoom in to see every site in this area.",
+    "empty": "No reported sites here yet. Move the map or zoom out."
+  },
+  "sheet": {
+    "resize": "Show more or less"
+  },
+  "reportType": {
+    "waste_dump": "Waste dump",
+    "no_bin": "No bin or pickup",
+    "contaminated_water": "Contaminated water",
+    "open_construction": "Open construction"
+  },
+  "context": {
+    "vacant_plot": "Vacant plot",
+    "roadside": "Roadside",
+    "drain": "Drain",
+    "other": "Other place",
+    "no_bin": "No bin nearby",
+    "no_pickup": "Waste not picked up",
+    "stagnant": "Stagnant water",
+    "sewage": "Sewage",
+    "foam": "Foam",
+    "choked_drain": "Choked drain",
+    "uncovered_debris": "Uncovered debris",
+    "dusty_site": "Dusty site"
+  },
+  "status": {
+    "open": "Open",
+    "cleaned": "Cleared",
+    "reopened": "Reopened"
+  },
+  "verification": {
+    "verified": "Verified",
+    "community_check": "Waiting for a neighbour check",
+    "rejected": "Rejected after a neighbour check"
+  },
+  "actions": {
+    "label": "Site actions",
+    "confirm": "Confirm",
+    "metoo": "Me too",
+    "cleaned": "Cleaned",
+    "letter": "Letter",
+    "share": "Share",
+    "copied": "Link copied",
+    "comingSoon": "Coming soon"
+  },
+  "site": {
+    "close": "Close site details",
+    "loading": "Loading site",
+    "loadFailed": "Could not load this site.",
+    "distanceAway": "{{distance}} away",
+    "pilot": "Pilot city",
+    "burning": "Burning seen",
+    "cleanupChecking": "Cleanup photo being checked",
+    "photos": "Photos",
+    "photoAlt": "Blurred photo {{n}} of {{total}}",
+    "afterCleanup": "Blurred photo after the last cleanup",
+    "photoNote": "Faces and number plates are blurred.",
+    "photoMissing": "Photo not available",
+    "mla": "MLA seat: {{name}}",
+    "mp": "MP seat: {{name}}",
+    "reports": "Reports",
+    "verifiedReports": "Verified reports",
+    "location": "Location",
+    "localBody": "Local body",
+    "notKnown": "Not known",
+    "ward": "Ward",
+    "noWard": "No open ward map",
+    "assemblySeat": "Assembly seat (MLA)",
+    "loksabhaSeat": "Lok Sabha seat (MP)",
+    "history": "History",
+    "firstReported": "First reported",
+    "lastReported": "Last reported",
+    "lastCleared": "Last cleared",
+    "brands": "Packaging seen at this site"
+  },
+  "snap": {
+    "title": "Snap a waste site",
+    "soon": "Camera capture comes in the next build. Until then the map shows sample reports.",
+    "close": "Close"
+  }
+}

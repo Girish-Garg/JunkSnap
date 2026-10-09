@@ -1,0 +1,21 @@
+version: 1
+applications:
+  # Mock mode reads ../contracts/fixtures from the same clone.
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - nvm install 22
+            - npm ci --cache .npm --prefer-offline
+        build:
+          commands:
+            # Mock mode unless VITE_API_URL is set in the Amplify console.
+            - if [ -z "${VITE_API_URL:-}" ]; then VITE_API_MODE=mock npm run build; else npm run build; fi
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .npm/**/*
