@@ -2,6 +2,7 @@ import { buildAreaScoresRoutes } from "./areaScoresRoutes.js";
 import { buildLettersRoutes } from "./lettersRoutes.js";
 import { buildReportRoutes } from "./reportRoutes.js";
 import type { RouteBuilder } from "./RouteBuilder.js";
+import { buildScanRoutes } from "./scanRoutes.js";
 import { buildSitesRoutes } from "./sitesRoutes.js";
 
 // A task adds handlers/<topic>Routes.ts, then one import and one entry here.
@@ -11,4 +12,5 @@ export const ROUTE_BUILDERS: readonly RouteBuilder[] = [
   buildAreaScoresRoutes,
   buildLettersRoutes,
   buildReportRoutes,
+  buildScanRoutes,
 ];
