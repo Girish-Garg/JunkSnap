@@ -1,15 +1,18 @@
 [project]
 name = "junksnap-training"
 version = "0.1.0"
-description = "JunkSnap ML dataset tools: fetch public waste datasets, manifest, splits, labelling."
+description = "JunkSnap ML tools: datasets, splits, labelling, model training and evaluation."
 requires-python = ">=3.12"
 dependencies = [
     "boto3[crt]>=1.43",
+    "numpy>=2.5",
     "pillow>=12.3",
+    "scikit-learn>=1.9.1",
 ]
 
 [project.scripts]
 training = "training.cli:main"
+learn = "training.learn.cli:main"
 
 [dependency-groups]
 dev = [
@@ -18,6 +21,25 @@ dev = [
     "pytest>=9.1",
     "ruff>=0.16",
 ]
+# GPU training only (detector, local embeddings, ONNX export); CI never installs it.
+gpu = [
+    "onnx>=1.23.2",
+    "onnxruntime>=1.31",
+    "onnxslim>=0.1.98",
+    "torch>=2.14.1",
+    "torchvision>=0.29.1",
+    "transformers>=5.19",
+    "ultralytics>=8.4.175",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu130" }]
+torchvision = [{ index = "pytorch-cu130" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
 
 [build-system]
 requires = ["uv_build>=0.11,<0.12"]
@@ -28,6 +50,12 @@ module-name = "training"
 
 [tool.mypy]
 strict = true
+
+[[tool.mypy.overrides]]
+# GPU-only libraries: typed as Any so CI (without them) and a GPU machine check alike.
+module = ["torch.*", "torchvision.*", "transformers.*", "ultralytics.*", "onnxruntime.*", "onnx.*", "sklearn.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
