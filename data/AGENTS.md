@@ -5,7 +5,7 @@ Small reference data that the backend and the map use. Small files only: anythin
 ## Layout (docs/working.md section 1)
 
 - `boundaries/`: assembly (MLA) and Lok Sabha (MP) seat boundaries across India from the 2008 delimitation, and ward boundaries only where open ward maps exist. Simplified GeoJSON, small enough for git.
-- `representatives/`: all MPs and, first, Rajasthan MLAs. Each row has the seat, the representative's name, an as-of date and a source. No party field.
+- `representatives/`: all MPs and, first, Rajasthan MLAs. Each row stores the seat, the office, `as_of` and `source` only: no names (decision 20261010-0137, offices and seats only) and no party field.
 - `labels/`: the Label Studio setup and CSV exports for `report_type`, `context`, `burning` and `brands`, plus the fixed train and held-out test split (about 30% test).
 
 ## Conventions
@@ -25,6 +25,6 @@ Small reference data that the backend and the map use. Small files only: anythin
 ## Never
 
 - Commit photos, `.env` files or keys.
-- Store a reporter's name, phone number or exact home location in any file here.
+- Store any person's name (reporter or office holder), phone number or exact home location in any file here.
 - Add a party field to any table.
 - Write to `demo` data. The human promotes data to `demo` from a clean `main`.

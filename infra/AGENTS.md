@@ -38,6 +38,7 @@ Render with `kubectl kustomize` and read the output before every apply.
 - Originals stay private under KMS. The blurred bucket is the only public image store.
 - Only the `agent` letters route and the `api` public routes are reachable from outside the cluster.
 - Every queue has a dead-letter queue. Failed reports end in a "needs review" status, never silently dropped.
+- The demo deny rules in `.claude/settings.json` match any command text containing `junksnap-demo` or `overlays/demo` (also `overlays\demo`). So stage overlay files with `git add infra/`, and pass PR or commit text with `--body-file` or `-F`.
 
 ## Stop and ask before you
 

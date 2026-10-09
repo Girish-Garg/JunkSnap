@@ -16,15 +16,15 @@ uv run pytest -q
 
 ## What lives here
 
-- LLM layer: `LlmProvider` implementations for the OpenAI API, Bedrock (Claude) and OpenRouter. `ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` per task (judge, brands, letters, text moderation). Same prompts and JSON schema for every model; validate each answer and retry on the next provider.
-- Stacked verification: `RekognitionSignal`, `YoloSignal` and `EmbeddingSignal`; the `VisionJudge` only on unresolved cases (never trusted for counts or boxes); `MetaLearner` inside `StackedVerifier` gives a calibrated probability. 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected; strong disagreement always goes to community check.
+- LLM layer: `LlmProvider` implementations for Bedrock, the OpenAI API and OpenRouter. Bedrock is the default (Claude Sonnet 4.6, then Claude Haiku 4.5 India profile, then Nova Pro); fallbacks are OpenAI, then OpenRouter (decision 20261010-0133). `ProviderRouter` resolves a `TaskConfig {provider, model, fallback[]}` per task (judge, brands, letters, text moderation). Same prompts and JSON schema for every model; validate each answer and retry on the next provider.
+- Stacked verification: `RekognitionSignal`, `YoloSignal` and `EmbeddingSignal` decide first. The LLM judge (`VisionJudge`) runs only when other signals are unsure or disagree, and never sets counts or boxes. `MetaLearner` inside `StackedVerifier` gives a calibrated probability. 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected; strong disagreement always goes to community check.
 - Brands: `BrandLabeller` uses Rekognition DetectText plus the brand-to-parent-company map. A company name appears only when the label is readable and above the confidence threshold.
 - Rulebook and letters: `RuleRepository` serves hashed official texts and a hand-checked rules JSON. Code picks the rules and the addressees (`LetterRouter`); the model writes only the prose; `QuoteVerifier` checks every quote word for word; `TemplateLetter` is the fallback.
 
 ## Rules
 
 - Every model decision records provider, model and version in the evidence.
-- Only blurred images go to OpenAI or OpenRouter. Anything personal goes to Bedrock. OpenRouter requests exclude providers that store or train on data.
+- Only blurred images go to any model (decision 20261010-0133). Personal text goes to Bedrock only. OpenRouter requests exclude providers that store or train on data.
 - Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording. Never name an individual. Nothing is filed automatically.
 - Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026. Quote no rupee amounts under the 2026 Rules.
 - Keep the letters route under about 30 seconds (CloudFront's default origin timeout); fall back to the template letter when a model is slow.
@@ -34,6 +34,6 @@ uv run pytest -q
 
 ## Never
 
-- Send an unblurred image outside AWS, or log images, keys or personal data.
+- Send an unblurred image to any model, or log images, keys or personal data.
 - Let the model choose a rule, an addressee or a quote. A misquote must fail the verifier test.
 - Report a model score that was not measured on the held-out set.
