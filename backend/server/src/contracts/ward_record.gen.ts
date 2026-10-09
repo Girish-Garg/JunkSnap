@@ -6,7 +6,7 @@ import { ContractValidator } from "./ContractValidator.js";
  */
 export interface WardRecord {
   /**
-   * <city>-<body slug>-<ward number, 3 digits>, for example jodhpur-uttar-012.
+   * Ward area id <local-body-id>-w<n>, for example jaipur-mc-w23.
    */
   id: string;
   city: string;
@@ -27,10 +27,10 @@ export interface WardRecord {
   lok_sabha_seat: null | SourcedSeat;
   review_status: "unreviewed" | "reviewed" | "rejected";
   /**
-   * The model that read the newest facts in this record.
+   * The model that read the newest facts in this record; junksnap/row-pattern for the deterministic row parser.
    */
   extracted_by: {
-    provider: string;
+    provider: "bedrock" | "openai" | "openrouter" | "rekognition" | "comprehend" | "junksnap";
     model: string;
     version: string;
   };
@@ -100,7 +100,7 @@ export interface SourcedSeat {
 
 export const wardRecordSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "ward_record.schema.json",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/ward_record.schema.json",
   "title": "Ward record",
   "description": "Facts about one ward of one municipal body, read from official public pages by data/ward_crawler. Every fact is an object with its value, the page URL it came from, when that page was fetched and the page's SHA-256, or null when unknown. Offices and seats only: no personal names and no party field. Records stay unreviewed until a human checks them.",
   "type": "object",
@@ -125,9 +125,9 @@ export const wardRecordSchema = {
   "additionalProperties": false,
   "properties": {
     "id": {
-      "description": "<city>-<body slug>-<ward number, 3 digits>, for example jodhpur-uttar-012.",
+      "description": "Ward area id <local-body-id>-w<n>, for example jaipur-mc-w23.",
       "type": "string",
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-[0-9]{3}$"
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-w[0-9]+$"
     },
     "city": {
       "type": "string",
@@ -247,7 +247,7 @@ export const wardRecordSchema = {
       "default": "unreviewed"
     },
     "extracted_by": {
-      "description": "The model that read the newest facts in this record.",
+      "description": "The model that read the newest facts in this record; junksnap/row-pattern for the deterministic row parser.",
       "type": "object",
       "required": [
         "provider",
@@ -257,8 +257,14 @@ export const wardRecordSchema = {
       "additionalProperties": false,
       "properties": {
         "provider": {
-          "type": "string",
-          "minLength": 1
+          "enum": [
+            "bedrock",
+            "openai",
+            "openrouter",
+            "rekognition",
+            "comprehend",
+            "junksnap"
+          ]
         },
         "model": {
           "type": "string",
@@ -287,7 +293,7 @@ export const wardRecordSchema = {
         "fetched_at": {
           "type": "string",
           "format": "date-time",
-          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         },
         "page_sha256": {
           "type": "string",

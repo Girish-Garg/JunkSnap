@@ -18,7 +18,12 @@ NOVA = ModelChoice("apac.amazon.nova-pro-v1:0", "amazon.nova-pro-v1:0", 0.8, 3.2
 GOOD = json.dumps(
     {
         "wards": [
-            {"body": "uttar", "ward_number": 12, "evidence": "Ward 12 | Paota", "zone": "North"}
+            {
+                "body": "jodhpur-uttar-mc",
+                "ward_number": 12,
+                "evidence": "Ward 12 | Paota",
+                "zone": "North",
+            }
         ]
     }
 )
@@ -50,7 +55,7 @@ def extractor(client: FakeBedrockClient) -> BedrockRecordExtractor:
 
 def request() -> ExtractionRequest:
     city = make_city()
-    source = Source("https://lsg.rajasthan.gov.in/wards.html", "ward list", "uttar")
+    source = Source("https://lsg.rajasthan.gov.in/wards.html", "ward list", "jodhpur-uttar-mc")
     return ExtractionRequest(city.city, city.bodies, source, "Ward 12 | Paota | North")
 
 

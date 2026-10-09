@@ -7,7 +7,8 @@ from ward_crawler.adapters.answer_parser import AnswerParser
 from ward_crawler.adapters.host_throttle import HostThrottle
 from ward_crawler.adapters.page_text import HtmlText, PageTextReader, PdfText
 from ward_crawler.domain.errors import ExtractionError, FetchError
-from ward_crawler.domain.values import CouncillorSeat, Seat
+from ward_crawler.domain.utils import looks_garbled, ward_window
+from ward_crawler.domain.values import CouncillorSeat, OfficeContact, Seat
 
 
 def answer(**ward: object) -> str:
@@ -22,6 +23,21 @@ def test_parser_reads_json_inside_a_code_fence_and_converts_hindi_digits() -> No
     ward = AnswerParser().parse(text)[0]
 
     assert ward.facts["assembly_seat"] == Seat("सूरसागर", "123")
+
+
+def test_parser_keeps_offices_only_when_they_name_a_post() -> None:
+    unnamed = {"office": "Rakesh Kumar", "phone": "0291-2650000", "email": None}
+    post = {"office": "Health Officer, Zone North", "phone": "0291-2650000", "email": None}
+
+    assert (
+        "sanitation_office" not in AnswerParser().parse(answer(sanitation_office=unnamed))[0].facts
+    )
+    kept = AnswerParser().parse(answer(sanitation_office=post))[0].facts["sanitation_office"]
+    assert kept == OfficeContact("Health Officer, Zone North", "0291-2650000", None)
+
+
+def test_parser_drops_zone_text_with_an_honorific() -> None:
+    assert AnswerParser().parse(answer(zone="Shri Ram Zone"))[0].facts == {}
 
 
 def test_parser_drops_office_text_that_names_a_person() -> None:
@@ -94,10 +110,27 @@ def test_pdf_text_is_cut_at_page_breaks_when_pages_fit() -> None:
     assert page.chunks(40) == ("[page 1]\nWard 1 | A\nheading 1-2\n", "[page 2]\nWard 3 | C\n")
 
 
-def test_snippets_with_small_copy_slips_still_match_but_numbers_must_be_on_the_page() -> None:
-    row = "3 3 जोध्ुर- दक्षिण 7656 सीमा रावो की बगेची से वन र ववभाग िैर/न रगर नन रगम\n"
+def test_snippets_must_be_on_the_page_word_for_word() -> None:
+    row = "3 3 जोध्ुर- दक्षिण 7656 सीमा रावो की बगेची से वन र ववभाग\n"
     page = make_page("https://x.gov.in", row)
 
-    assert page.supports("3 3 जोध्ुर- दक्षिण 7656 सीमा रावो की बगेची से वन विभाग")
-    assert not page.supports("3 3 जोध्ुर- दक्षिण 7665 सीमा रावो की बगेची से")
-    assert not page.supports("4 4 कुछ और लिखा है जो पेज पर नहीं है")
+    assert page.supports("3  3 जोध्ुर- दक्षिण 7656 सीमा")
+    assert not page.supports("3 3 जोध्ुर- दक्षिण 7656 सीमा रावो की बगेची से वन विभाग")
+    assert page.mentions("रावो की बगेची")
+    assert not page.mentions("रावो का बगीचा")
+
+
+def test_ward_window_runs_from_the_ward_number_to_the_next_rows_number() -> None:
+    snippet = "12 | Paota | 9876\n13 | Mandore | 5555"
+
+    assert ward_window(snippet, 12) == "12 | Paota | 9876\n"
+    assert ward_window(snippet, 13) == "13 | Mandore | 5555"
+    assert ward_window("१२ पावटा ९८७६", 12) == "12 पावटा 9876"
+    assert ward_window(snippet, 14) == ""
+
+
+def test_garbled_pdf_text_is_spotted() -> None:
+    assert looks_garbled("िवȨाधर नगर")
+    assert looks_garbled("आदशŊ नगर")
+    assert not looks_garbled("विद्याधर नगर")
+    assert not looks_garbled("हवामहल - आमेर")

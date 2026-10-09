@@ -74,7 +74,7 @@ class BedrockRecordExtractor(RecordExtractor):
             except ExtractionError as error:
                 problems.append(f"{model.model_id}: {error}")
                 continue
-            return Extraction(wards, ModelInfo("amazon-bedrock", model.model_id, model.version))
+            return Extraction(wards, ModelInfo("bedrock", model.model_id, model.version))
         raise ExtractionError("no model gave a valid answer: " + " | ".join(problems))
 
     def usage(self) -> tuple[ModelCall, ...]:

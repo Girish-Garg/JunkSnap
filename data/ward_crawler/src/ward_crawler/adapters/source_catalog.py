@@ -1,6 +1,7 @@
 """Loads sources/<city>.json: the official URLs to crawl and what each one holds."""
 
 from pathlib import Path
+from types import MappingProxyType
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -30,9 +31,10 @@ class _Source(_Frozen):
     holds: str
     body: str | None = None
     fields: list[str] = []
+    row_pattern: str | None = None
 
     def to_domain(self) -> Source:
-        return Source(self.url, self.holds, self.body, tuple(self.fields))
+        return Source(self.url, self.holds, self.body, tuple(self.fields), self.row_pattern)
 
 
 class _Skipped(_Frozen):
@@ -48,6 +50,7 @@ class _SourceFile(_Frozen):
     bodies: list[_Body]
     sources: list[_Source]
     not_used: list[_Skipped] = []
+    aliases: dict[str, str] = {}
 
     def to_domain(self) -> CitySources:
         return CitySources(
@@ -57,6 +60,7 @@ class _SourceFile(_Frozen):
             bbox=BoundingBox(self.bbox.south, self.bbox.west, self.bbox.north, self.bbox.east),
             sources=tuple(item.to_domain() for item in self.sources),
             note=self.note,
+            aliases=MappingProxyType(dict(self.aliases)),
         )
 
     def unknown_names(self) -> list[str]:

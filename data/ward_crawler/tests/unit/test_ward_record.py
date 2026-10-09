@@ -11,8 +11,8 @@ from ward_crawler.domain.ward_book import WardBook
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
-MODEL_A = ModelInfo("amazon-bedrock", "model-a", "1")
-MODEL_B = ModelInfo("amazon-bedrock", "model-b", "2")
+MODEL_A = ModelInfo("bedrock", "model-a", "1")
+MODEL_B = ModelInfo("bedrock", "model-b", "2")
 KEY = WardKey("jodhpur", "uttar", 12)
 
 
@@ -93,7 +93,7 @@ def test_ward_book_merges_records_for_the_same_ward_and_sorts_by_id() -> None:
 
     records = book.records()
 
-    assert [item.key.id for item in records] == ["jodhpur-dakshin-003", "jodhpur-uttar-012"]
+    assert [item.key.id for item in records] == ["dakshin-w3", "uttar-w12"]
     assert records[1].facts["zone"].value == "New zone"
 
 

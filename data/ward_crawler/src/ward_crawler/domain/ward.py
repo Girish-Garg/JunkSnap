@@ -31,7 +31,7 @@ class WardKey:
 
     @property
     def id(self) -> str:
-        return f"{self.city}-{self.body}-{self.number:03d}"
+        return f"{self.body}-w{self.number}"
 
 
 @dataclass(frozen=True)
@@ -93,6 +93,10 @@ class WardRecord:
             extracted_by=newest.extracted_by,
             disposal_points=tuple(points.values()),
         )
+
+    def disagrees_with(self, other: "WardRecord") -> bool:
+        shared = set(self.facts) & set(other.facts)
+        return any(self.facts[name].value != other.facts[name].value for name in shared)
 
     def latest_fetch(self) -> datetime:
         return max(fact.provenance.fetched_at for fact in self.facts.values())

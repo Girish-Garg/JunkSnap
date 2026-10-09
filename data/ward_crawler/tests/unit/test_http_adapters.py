@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -13,6 +14,7 @@ from ward_crawler.adapters.http_page_fetcher import HttpPageFetcher
 from ward_crawler.adapters.overpass_map_layers import OverpassLayer, OverpassMapLayers
 from ward_crawler.adapters.page_cache import PageCache
 from ward_crawler.adapters.page_text import HtmlText, PageTextReader, PdfText
+from ward_crawler.adapters.politeness import Politeness
 from ward_crawler.domain.errors import FetchError
 
 DOWN = "https://overpass-down.example/api/interpreter"
@@ -68,31 +70,68 @@ def test_overpass_raises_when_every_endpoint_fails() -> None:
         OverpassMapLayers(client, (DOWN,), no_wait(), LAYERS).find("school", BOX)
 
 
+def fetcher(answer: Callable[[httpx.Request], httpx.Response], tmp_path: Path) -> HttpPageFetcher:
+    client = httpx.Client(transport=httpx.MockTransport(answer))
+    polite = Politeness(client, no_wait(), "JunkSnap-ward-crawler")
+    return HttpPageFetcher(polite, PageCache(tmp_path), PageTextReader(HtmlText(), PdfText()))
+
+
 def test_fetcher_hashes_the_bytes_converts_html_and_caches(tmp_path: Path) -> None:
     html = b"<html><body><p>Ward 12 Paota</p></body></html>"
     hits: list[str] = []
 
     def answer(request: httpx.Request) -> httpx.Response:
-        hits.append(str(request.url))
+        hits.append(request.url.path)
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
         return httpx.Response(200, content=html, headers={"content-type": "text/html"})
 
-    client = httpx.Client(transport=httpx.MockTransport(answer))
-    reader = PageTextReader(HtmlText(), PdfText())
-    fetcher = HttpPageFetcher(client, PageCache(tmp_path), no_wait(), reader)
-
-    first = fetcher.fetch("https://lsg.rajasthan.gov.in/wards")
-    second = fetcher.fetch("https://lsg.rajasthan.gov.in/wards")
+    subject = fetcher(answer, tmp_path)
+    first = subject.fetch("https://lsg.rajasthan.gov.in/wards")
+    second = subject.fetch("https://lsg.rajasthan.gov.in/wards")
 
     assert first.text == "Ward 12 Paota"
     assert first.sha256 == hashlib.sha256(html).hexdigest()
     assert second == first
-    assert len(hits) == 1
+    assert hits == ["/robots.txt", "/wards"]
 
 
 def test_fetcher_turns_http_errors_into_fetch_errors(tmp_path: Path) -> None:
-    client = httpx.Client(transport=httpx.MockTransport(lambda _r: httpx.Response(404)))
-    reader = PageTextReader(HtmlText(), PdfText())
-    fetcher = HttpPageFetcher(client, PageCache(tmp_path), no_wait(), reader)
-
     with pytest.raises(FetchError, match="404"):
-        fetcher.fetch("https://jodhpurmc.org/missing")
+        fetcher(lambda _r: httpx.Response(404), tmp_path).fetch("https://jodhpurmc.org/missing")
+
+
+def test_fetcher_obeys_robots_txt(tmp_path: Path) -> None:
+    def answer(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nDisallow: /private/\n")
+        return httpx.Response(200, text="ok")
+
+    with pytest.raises(FetchError, match="robots.txt"):
+        fetcher(answer, tmp_path).fetch("https://x.gov.in/private/wards")
+
+
+def test_fetcher_follows_redirects_hop_by_hop_and_honours_retry_after(tmp_path: Path) -> None:
+    asked: list[str] = []
+    busy = [True]
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        asked.append(f"{request.url.host}{request.url.path}")
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+        if request.url.host == "old.gov.in":
+            return httpx.Response(301, headers={"location": "https://new.gov.in/wards"})
+        if busy.pop() if busy else False:
+            return httpx.Response(503, headers={"retry-after": "7"})
+        return httpx.Response(200, text="Ward 1")
+
+    page = fetcher(answer, tmp_path).fetch("https://old.gov.in/wards")
+
+    assert page.text == "Ward 1"
+    assert asked == [
+        "old.gov.in/robots.txt",
+        "old.gov.in/wards",
+        "new.gov.in/robots.txt",
+        "new.gov.in/wards",
+        "new.gov.in/wards",
+    ]

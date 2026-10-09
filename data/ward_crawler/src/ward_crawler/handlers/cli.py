@@ -20,6 +20,7 @@ from ward_crawler.adapters.json_schema_validator import JsonSchemaRecordValidato
 from ward_crawler.adapters.overpass_map_layers import DEFAULT_LAYERS, OverpassMapLayers
 from ward_crawler.adapters.page_cache import PageCache
 from ward_crawler.adapters.page_text import HtmlText, PageTextReader, PdfText
+from ward_crawler.adapters.politeness import Politeness
 from ward_crawler.adapters.source_catalog import JsonSourceCatalog
 from ward_crawler.domain.city import CityWards
 from ward_crawler.domain.errors import WardCrawlerError
@@ -58,9 +59,8 @@ class Composition:
 
     def service(self) -> WardCrawlService:
         fetcher = HttpPageFetcher(
-            self._client,
+            Politeness(self._client, self._throttle, USER_AGENT),
             PageCache(self._args.cache),
-            self._throttle,
             PageTextReader(HtmlText(), PdfText()),
         )
         limits = ReadLimits(chunk_chars=self._args.chunk_chars, max_chunks=self._args.max_chunks)
@@ -135,7 +135,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     timeout = httpx.Timeout(60.0, connect=20.0)
     try:
         city = JsonSourceCatalog(args.sources).load(args.city)
-        with httpx.Client(headers=headers, timeout=timeout, follow_redirects=True) as client:
+        with httpx.Client(headers=headers, timeout=timeout) as client:
             composition = Composition(args, client)
             result = composition.service().run(city)
     except WardCrawlerError as error:

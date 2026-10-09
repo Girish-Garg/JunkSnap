@@ -32,8 +32,8 @@ def make_page(url: str, text: str, hour: int = 10) -> Page:
 
 def make_city(*sources: Source) -> CitySources:
     bodies = (
-        MunicipalBody("uttar", "Nagar Nigam Jodhpur Uttar"),
-        MunicipalBody("dakshin", "Nagar Nigam Jodhpur Dakshin"),
+        MunicipalBody("jodhpur-uttar-mc", "Nagar Nigam Jodhpur Uttar"),
+        MunicipalBody("jodhpur-dakshin-mc", "Nagar Nigam Jodhpur Dakshin"),
     )
     return CitySources("jodhpur", "Rajasthan", bodies, BOX, sources)
 

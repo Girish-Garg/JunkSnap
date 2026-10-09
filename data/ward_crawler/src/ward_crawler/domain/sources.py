@@ -1,16 +1,16 @@
 """What to crawl for a city, and the pages that come back."""
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
-from difflib import SequenceMatcher
 from functools import cached_property
+from types import MappingProxyType
 
 from ward_crawler.domain.provenance import Provenance
-from ward_crawler.domain.utils import digit_runs, squash
+from ward_crawler.domain.utils import squash, words
 
 MIN_SNIPPET = 4
-SHARED_RUN = 0.6  # share of a snippet that must appear on the page as one unbroken run
 
 
 @dataclass(frozen=True)
@@ -29,12 +29,13 @@ class BoundingBox:
 
 @dataclass(frozen=True)
 class Source:
-    """`body` is the slug its ward numbers belong to; `fields` limits which facts are kept."""
+    """`body`: whose ward numbers; `fields`: facts it may fill; `row_pattern`: regex fallback."""
 
     url: str
     holds: str
     body: str | None
     fields: tuple[str, ...] = ()
+    row_pattern: str | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class CitySources:
     bbox: BoundingBox
     sources: tuple[Source, ...]
     note: str = ""
+    aliases: Mapping[str, str] = MappingProxyType({})
 
     def body(self, slug: str) -> MunicipalBody | None:
         return next((body for body in self.bodies if body.slug == slug), None)
@@ -79,20 +81,17 @@ class Page:
         return tuple(pieces)
 
     def supports(self, snippet: str) -> bool:
-        """True when the snippet is on the page, allowing small copy slips in garbled PDF text."""
-        needle, haystack = squash(snippet), self._squashed
-        if len(needle) < MIN_SNIPPET or not digit_runs(snippet) <= digit_runs(self.text):
-            return False
-        if needle in haystack:
-            return True
-        matcher = SequenceMatcher(None, haystack, needle, autojunk=False)
-        block = matcher.find_longest_match(0, len(haystack), 0, len(needle))
-        return block.size >= SHARED_RUN * len(needle)
+        """True when the snippet is on the page word for word (spacing and case ignored)."""
+        needle = squash(snippet)
+        return len(needle) >= MIN_SNIPPET and needle in self._squashed
 
     def mentions(self, text: str) -> bool:
-        """Short text must be on the page as written; longer text may have small slips."""
-        needle = squash(text)
-        return bool(needle) and (needle in self._squashed or self.supports(text))
+        """True when every word of the text is a word on the page."""
+        return bool(words(text)) and words(text) <= self._words
+
+    @cached_property
+    def _words(self) -> set[str]:
+        return words(self.text)
 
     @cached_property
     def _squashed(self) -> str:

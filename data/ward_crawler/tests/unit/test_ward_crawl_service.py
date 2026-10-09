@@ -17,7 +17,7 @@ from ward_crawler.domain.ward import ModelInfo
 from ward_crawler.services.source_reader import ReadLimits, SourceReader
 from ward_crawler.services.ward_crawl_service import WardCrawlService
 
-MODEL = ModelInfo("amazon-bedrock", "global.anthropic.claude-sonnet-4-6", "4.6")
+MODEL = ModelInfo("bedrock", "global.anthropic.claude-sonnet-4-6", "4.6")
 LIST_URL = "https://lsg.rajasthan.gov.in/jodhpur-uttar-wards.html"
 SEATS_URL = "https://ceorajasthan.nic.in/jodhpur-seats.html"
 WARD_LIST = "Ward 12 | Paota | Zone North | population 9,876 (2011)\nWard 13 | Mandore\n"
@@ -28,8 +28,12 @@ def ward_list_answer(request: ExtractionRequest) -> Extraction | None:
     if request.source.url != LIST_URL:
         return Extraction((), MODEL)
     facts = {"ward_name": "Paota", "population": Population(9876, 2011)}
-    paota = ExtractedWard("uttar", 12, "Ward 12 | Paota | Zone North | population 9,876", facts)
-    invented = ExtractedWard("uttar", 14, "Ward 14 | Not on the page", {"ward_name": "Invented"})
+    paota = ExtractedWard(
+        "jodhpur-uttar-mc", 12, "Ward 12 | Paota | Zone North | population 9,876 (2011)", facts
+    )
+    invented = ExtractedWard(
+        "jodhpur-uttar-mc", 14, "Ward 14 | Not on the page", {"ward_name": "Invented"}
+    )
     wrong_body = ExtractedWard("kota", 13, "Ward 13 | Mandore", {"ward_name": "Mandore"})
     return Extraction((paota, invented, wrong_body), MODEL)
 
@@ -49,7 +53,7 @@ def build(
 
 
 def test_extracted_wards_become_validated_records_with_page_provenance() -> None:
-    city = make_city(Source(LIST_URL, "Uttar ward list", "uttar"))
+    city = make_city(Source(LIST_URL, "Uttar ward list", "jodhpur-uttar-mc"))
     service, store = build(FakeRecordExtractor(ward_list_answer), {LIST_URL: WARD_LIST})
 
     result = service.run(city)
@@ -57,21 +61,21 @@ def test_extracted_wards_become_validated_records_with_page_provenance() -> None
     assert store.saved == [result]
     # The source names its body, so ward 13 is kept under uttar whatever the model said.
     assert [record.key.id for record in result.records] == [
-        "jodhpur-uttar-012",
-        "jodhpur-uttar-013",
+        "jodhpur-uttar-mc-w12",
+        "jodhpur-uttar-mc-w13",
     ]
     record = result.records[0].to_json()
     assert record["ward_name"] == {
         "value": "Paota",
         "source_url": LIST_URL,
-        "fetched_at": "2026-10-10T10:00:00+00:00",
+        "fetched_at": "2026-10-10T10:00:00Z",
         "page_sha256": make_page(LIST_URL, WARD_LIST).sha256,
     }
     assert record["municipal_body"]["value"] == "Nagar Nigam Jodhpur Uttar"
     assert record["population"]["value"] == {"count": 9876, "census_year": 2011}
     assert record["review_status"] == "unreviewed"
     assert record["extracted_by"] == {
-        "provider": "amazon-bedrock",
+        "provider": "bedrock",
         "model": MODEL.model,
         "version": "4.6",
     }
@@ -84,22 +88,22 @@ def test_wards_with_invented_evidence_or_unknown_body_are_dropped() -> None:
     result = service.run(city)
 
     assert [record.key.number for record in result.records] == [12]
-    assert "3 ward(s) proposed, 1 kept" in result.sources[0].detail
+    assert "model proposed 3 ward(s); 1 kept in all" in result.sources[0].detail
 
 
 def test_facts_from_two_pages_merge_into_one_record() -> None:
+    seats = {"assembly_seat": Seat("Jodhpur", "122"), "lok_sabha_seat": Seat("Jodhpur", "17")}
+    seat_ward = ExtractedWard("jodhpur-uttar-mc", 12, SEATS.strip(), seats)
+
     def answer(request: ExtractionRequest) -> Extraction:
         if request.source.url == SEATS_URL:
-            seats = {
-                "assembly_seat": Seat("Jodhpur", "122"),
-                "lok_sabha_seat": Seat("Jodhpur", "17"),
-            }
-            return Extraction(
-                (ExtractedWard("uttar", 12, "Ward 12 falls in 122-Jodhpur", seats),), MODEL
-            )
+            return Extraction((seat_ward,), MODEL)
         return ward_list_answer(request) or Extraction((), MODEL)
 
-    city = make_city(Source(LIST_URL, "ward list", "uttar"), Source(SEATS_URL, "seats", "uttar"))
+    city = make_city(
+        Source(LIST_URL, "ward list", "jodhpur-uttar-mc"),
+        Source(SEATS_URL, "seats", "jodhpur-uttar-mc"),
+    )
     service, _ = build(FakeRecordExtractor(answer), {LIST_URL: WARD_LIST, SEATS_URL: SEATS})
 
     record = service.run(city).records[0].to_json()
@@ -111,7 +115,10 @@ def test_facts_from_two_pages_merge_into_one_record() -> None:
 
 def test_unreachable_sources_and_failed_extractions_are_logged_not_fatal() -> None:
     missing = "https://jodhpurmc.org/down.html"
-    city = make_city(Source(missing, "down", "uttar"), Source(LIST_URL, "ward list", "uttar"))
+    city = make_city(
+        Source(missing, "down", "jodhpur-uttar-mc"),
+        Source(LIST_URL, "ward list", "jodhpur-uttar-mc"),
+    )
     service, _ = build(FakeRecordExtractor(lambda _request: None), {LIST_URL: WARD_LIST})
 
     result = service.run(city)
@@ -127,7 +134,7 @@ def test_long_pages_are_split_and_capped() -> None:
     extractor = FakeRecordExtractor(lambda _request: Extraction((), MODEL))
     service, _ = build(extractor, {LIST_URL: long_page})
 
-    result = service.run(make_city(Source(LIST_URL, "ward list", "uttar")))
+    result = service.run(make_city(Source(LIST_URL, "ward list", "jodhpur-uttar-mc")))
 
     assert len(extractor.requests) == 5
     assert all(len(request.text) <= 500 for request in extractor.requests)
@@ -138,10 +145,10 @@ def test_only_the_fields_a_source_declares_are_kept() -> None:
     def answer(_request: ExtractionRequest) -> Extraction:
         facts = {"assembly_seat": Seat("Jodhpur", "122"), "ward_name": "Guessed"}
         return Extraction(
-            (ExtractedWard("uttar", 12, "Ward 12 falls in 122-Jodhpur", facts),), MODEL
+            (ExtractedWard("jodhpur-uttar-mc", 12, "Ward 12 falls in 122-Jodhpur", facts),), MODEL
         )
 
-    source = Source(SEATS_URL, "seats", "uttar", ("assembly_seat",))
+    source = Source(SEATS_URL, "seats", "jodhpur-uttar-mc", ("assembly_seat",))
     service, _ = build(FakeRecordExtractor(answer), {SEATS_URL: SEATS})
 
     record = service.run(make_city(source)).records[0]
@@ -157,21 +164,21 @@ def test_facts_the_page_does_not_show_are_dropped() -> None:
             "assembly_seat": Seat("Jodhpur", "999"),
             "ward_name": "Paota",
         }
-        return Extraction((ExtractedWard("uttar", 12, "Ward 12 | Paota", facts),), MODEL)
+        return Extraction((ExtractedWard("jodhpur-uttar-mc", 12, "Ward 12 | Paota", facts),), MODEL)
 
     service, _ = build(FakeRecordExtractor(answer), {LIST_URL: WARD_LIST})
 
-    record = service.run(make_city(Source(LIST_URL, "ward list", "uttar"))).records[0]
+    record = service.run(make_city(Source(LIST_URL, "ward list", "jodhpur-uttar-mc"))).records[0]
 
     assert set(record.facts) == {"municipal_body", "ward_number", "ward_name"}
 
 
 def test_a_ward_whose_number_is_not_in_its_snippet_is_dropped() -> None:
     def answer(_request: ExtractionRequest) -> Extraction:
-        return Extraction((ExtractedWard("uttar", 13, "Ward 12 | Paota", {}),), MODEL)
+        return Extraction((ExtractedWard("jodhpur-uttar-mc", 13, "Ward 12 | Paota", {}),), MODEL)
 
     service, _ = build(FakeRecordExtractor(answer), {LIST_URL: WARD_LIST})
-    result = service.run(make_city(Source(LIST_URL, "ward list", "uttar")))
+    result = service.run(make_city(Source(LIST_URL, "ward list", "jodhpur-uttar-mc")))
 
     assert result.records == ()
     assert "dropped as not shown on the page: 13" in result.sources[0].detail
@@ -190,3 +197,52 @@ def test_map_layers_are_saved_and_a_failed_layer_is_logged() -> None:
     saved = result.to_json()["map_layers"]
     assert saved[0]["count"] == 1
     assert saved[0]["features"] == [{"ref": "osm:node/7", "coords": [[26.29, 73.02]]}]
+
+
+TWO_ROWS = "12 | Paota | 9876\n13 | Mandore | 5555\n"
+ROW_PATTERN = r"(?m)^(?P<ward>\d+) \| (?P<ward_name>\w+) \| (?P<population>\d+)$"
+
+
+def test_a_two_row_snippet_cannot_give_ward_12_the_next_rows_population() -> None:
+    def answer(_request: ExtractionRequest) -> Extraction:
+        facts = {"population": Population(5555, None), "ward_name": "Mandore"}
+        snippet = "12 | Paota | 9876\n13 | Mandore | 5555"
+        return Extraction((ExtractedWard("jodhpur-uttar-mc", 12, snippet, facts),), MODEL)
+
+    service, _ = build(FakeRecordExtractor(answer), {LIST_URL: TWO_ROWS})
+
+    record = service.run(make_city(Source(LIST_URL, "ward list", "jodhpur-uttar-mc"))).records[0]
+
+    assert set(record.facts) == {"municipal_body", "ward_number"}
+
+
+def test_the_row_pattern_fills_missed_wards_and_corrects_wrong_values() -> None:
+    def answer(_request: ExtractionRequest) -> Extraction:
+        wrong = ExtractedWard("jodhpur-uttar-mc", 12, "12 | Paota | 9876", {"ward_name": "Paota"})
+        return Extraction((wrong,), MODEL)
+
+    source = Source(LIST_URL, "ward list", "jodhpur-uttar-mc", (), ROW_PATTERN)
+    service, _ = build(FakeRecordExtractor(answer), {LIST_URL: TWO_ROWS})
+
+    result = service.run(make_city(source))
+
+    by_number = {record.key.number: record for record in result.records}
+    assert by_number[13].facts["population"].value == Population(5555, None)
+    assert by_number[13].extracted_by.provider == "junksnap"
+    assert by_number[12].facts["population"].value == Population(9876, None)
+    assert "filled by the row pattern: 13" in result.sources[0].detail
+
+
+def test_the_row_pattern_overrides_a_model_value_it_disagrees_with() -> None:
+    def answer(_request: ExtractionRequest) -> Extraction:
+        wrong = ExtractedWard("jodhpur-uttar-mc", 12, "12 Paota renamed", {"ward_name": "Paota"})
+        return Extraction((wrong,), MODEL)
+
+    page = TWO_ROWS.replace("Paota", "Pavta") + "Notes: 12 Paota renamed\n"
+    source = Source(LIST_URL, "ward list", "jodhpur-uttar-mc", (), ROW_PATTERN)
+    service, _ = build(FakeRecordExtractor(answer), {LIST_URL: page})
+
+    result = service.run(make_city(source))
+
+    assert result.records[0].facts["ward_name"].value == "Pavta"
+    assert "corrected by the row pattern: 12" in result.sources[0].detail

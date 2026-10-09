@@ -6,6 +6,7 @@ from datetime import datetime
 
 from ward_crawler.domain.layers import FeatureLayer
 from ward_crawler.domain.sources import Page, Source
+from ward_crawler.domain.utils import utc_z
 from ward_crawler.domain.ward import FACT_FIELDS, WardRecord
 
 
@@ -54,7 +55,7 @@ class CityWards:
         return {
             "city": self.city,
             "state": self.state,
-            "generated_at": self.generated_at.isoformat(timespec="seconds"),
+            "generated_at": utc_z(self.generated_at),
             "review_status": "unreviewed",
             "note": self.note,
             "attribution": self.attribution,

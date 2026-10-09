@@ -25,3 +25,8 @@ class HostThrottle:
             if delay > 0:
                 self._sleep(delay)
         self._last[host] = self._clock()
+
+    def hold(self, url: str, seconds: float) -> None:
+        """The host asked for a pause (Retry-After): the next wait lasts at least `seconds`."""
+        host = urlsplit(url).netloc.lower()
+        self._last[host] = self._clock() + seconds - self._interval_s

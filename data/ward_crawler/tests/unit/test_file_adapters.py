@@ -19,7 +19,7 @@ SOURCES = Path(__file__).resolve().parents[2] / "sources"
 def city_result() -> CityWards:
     provenance = make_page("https://lsg.rajasthan.gov.in/a.pdf", "Ward 1").provenance()
     facts = {"municipal_body": Sourced("Body", provenance), "ward_number": Sourced(1, provenance)}
-    model = ModelInfo("amazon-bedrock", "m", "1")
+    model = ModelInfo("bedrock", "m", "1")
     record = WardRecord(WardKey("jodhpur", "uttar", 1), "Rajasthan", facts, model)
     when = datetime(2026, 10, 10, tzinfo=UTC)
     return CityWards("jodhpur", "Rajasthan", when, (record,), (), (), "credit")
@@ -49,7 +49,7 @@ def test_store_writes_the_city_file_and_reads_back(tmp_path: Path) -> None:
 
     saved = json.loads(Path(path).read_text(encoding="utf-8"))
 
-    assert saved["records"][0]["id"] == "jodhpur-uttar-001"
+    assert saved["records"][0]["id"] == "uttar-w1"
     assert saved["review_status"] == "unreviewed"
 
 

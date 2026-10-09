@@ -2,14 +2,27 @@
   "city": "jaipur",
   "state": "Rajasthan",
   "note": "Sample city. Ward numbers follow the 2025 ward formation of the merged Nagar Nigam Jaipur (150 wards, gazette of 20 Sep 2025). Only the zone is read. The ward list also prints assembly constituency headings with ward ranges, but the model assigned some wards to the wrong range, so seats are left for a deterministic range parser or for D2 point-in-polygon; population is left for a layout-aware parser of the gazette.",
-  "bbox": { "south": 26.75, "west": 75.65, "north": 27.05, "east": 75.95 },
-  "bodies": [{ "slug": "nagar-nigam", "name": "Nagar Nigam Jaipur (Municipal Corporation Jaipur)" }],
+  "bbox": {
+    "south": 26.75,
+    "west": 75.65,
+    "north": 27.05,
+    "east": 75.95
+  },
+  "bodies": [
+    {
+      "slug": "jaipur-mc",
+      "name": "Nagar Nigam Jaipur (Municipal Corporation Jaipur)"
+    }
+  ],
   "sources": [
     {
       "url": "https://jaipurmc.org/PDF/Others/ParshadList_Jaiupr.pdf",
       "holds": "Nagar Nigam Jaipur list of ward councillors, wards 1-150: zone name and ward number per row, with headings on each page that give the assembly constituency (vidhan sabha kshetra) for ranges of wards. The rows also print names, parties and mobile numbers: ignore those entirely. Hindi text, some letters garbled by PDF extraction.",
-      "body": "nagar-nigam",
-      "fields": ["zone"]
+      "body": "jaipur-mc",
+      "fields": [
+        "zone"
+      ],
+      "row_pattern": "(?m)^(?P<ward>\\d{1,3}) (?P<zone>\\D+?) (?P=ward) "
     }
   ],
   "not_used": [
@@ -25,5 +38,11 @@
       "url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jaipur%20greater.pdf",
       "why": "2020 Jaipur Greater wards, replaced by the 2025 merged ward formation."
     }
-  ]
+  ],
+  "aliases": {
+    "िवȨाधर नगर": "विद्याधर नगर",
+    "िसिवल लाइन": "सिविल लाइन",
+    "िकशनपोल": "किशनपोल",
+    "आदशŊ नगर": "आदर्श नगर"
+  }
 }

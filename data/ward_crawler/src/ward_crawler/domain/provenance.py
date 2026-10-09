@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from ward_crawler.domain.errors import UnsourcedFieldError
-from ward_crawler.domain.utils import fact_to_json
+from ward_crawler.domain.utils import fact_to_json, utc_z
 from ward_crawler.domain.values import FactValue
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -31,7 +31,7 @@ class Provenance:
     def to_json(self) -> dict[str, str]:
         return {
             "source_url": self.source_url,
-            "fetched_at": self.fetched_at.isoformat(timespec="seconds"),
+            "fetched_at": utc_z(self.fetched_at),
             "page_sha256": self.page_sha256,
         }
 

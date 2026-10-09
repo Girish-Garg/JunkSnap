@@ -1,12 +1,15 @@
-"""Turns a model's extraction into ward records that carry the page's provenance."""
+"""Turns an extraction into ward records that carry the page's provenance."""
 
 from ward_crawler.domain.extraction import ExtractedWard, Extraction
 from ward_crawler.domain.provenance import Sourced
 from ward_crawler.domain.sources import CitySources, Page, Source
-from ward_crawler.domain.utils import digit_runs
-from ward_crawler.domain.values import FactValue, Population
+from ward_crawler.domain.utils import looks_garbled, ward_window
+from ward_crawler.domain.values import FactValue
 from ward_crawler.domain.ward import ModelInfo, WardKey, WardRecord
 from ward_crawler.services.fact_check import FactCheck
+
+# These must sit in the ward's own row, between its number and the next row's number.
+WINDOW_FIELDS = ("population", "zone", "ward_name")
 
 
 class RecordBuilder:
@@ -24,24 +27,27 @@ class RecordBuilder:
 
     def _record(self, ward: ExtractedWard, model: ModelInfo) -> WardRecord | None:
         body = self._city.body(self._source.body or ward.body)
-        shown = str(ward.ward_number) in digit_runs(ward.evidence)
-        if body is None or not shown or not self._page.supports(ward.evidence):
+        window = ward_window(ward.evidence, ward.ward_number)
+        if body is None or not window or not self._page.supports(ward.evidence):
             return None
         provenance = self._page.provenance()
-        facts = {
-            name: Sourced(value, provenance)
-            for name, value in ward.facts.items()
-            if self._keeps(name, value, ward)
-        }
+        facts: dict[str, Sourced] = {}
+        for name, value in ward.facts.items():
+            kept = self._kept(name, value, window)
+            if kept is not None:
+                facts[name] = Sourced(kept, provenance)
         facts["municipal_body"] = Sourced(body.name, provenance)
         facts["ward_number"] = Sourced(ward.ward_number, provenance)
         key = WardKey(self._city.city, body.slug, ward.ward_number)
         return WardRecord(key, self._city.state, facts, model)
 
-    def _keeps(self, name: str, value: FactValue, ward: ExtractedWard) -> bool:
+    def _kept(self, name: str, value: FactValue, window: str) -> FactValue | None:
         if self._source.fields and name not in self._source.fields:
-            return False
-        # A count must sit in the ward's own snippet, not just somewhere on the page.
-        if isinstance(value, Population) and str(value.count) not in digit_runs(ward.evidence):
-            return False
-        return self._check.holds(value)
+            return None
+        if not self._check.holds(value, window if name in WINDOW_FIELDS else None):
+            return None
+        if not isinstance(value, str):
+            return value
+        # Garbled PDF text is used only through a hand-checked alias.
+        clean = self._city.aliases.get(value, value)
+        return None if looks_garbled(clean) else clean

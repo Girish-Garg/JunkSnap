@@ -12,4 +12,6 @@ class WardBook:
         self._records[record.key] = record if known is None else known.merged_with(record)
 
     def records(self) -> tuple[WardRecord, ...]:
-        return tuple(sorted(self._records.values(), key=lambda record: record.key.id))
+        return tuple(
+            sorted(self._records.values(), key=lambda record: (record.key.body, record.key.number))
+        )
