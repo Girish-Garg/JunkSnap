@@ -1,5 +1,6 @@
 import type { LocationLookup } from "../../contracts/index.gen.js";
-import { GeoPoint } from "../../domain/location/GeoPoint.js";
+import { ValidationError } from "../../domain/errors.js";
+import { GeoPoint } from "../../domain/GeoPoint.js";
 import { OutsideIndiaError } from "../../domain/location/OutsideIndiaError.js";
 import type { Place } from "../../domain/location/Place.js";
 import type { SeatMatch } from "../../domain/location/Seats.js";
@@ -7,6 +8,9 @@ import type { ReverseGeocoder } from "../../ports/location/ReverseGeocoder.js";
 import type { LocalBodyResolver } from "./LocalBodyResolver.js";
 import type { RepresentativeDirectory } from "./RepresentativeDirectory.js";
 import type { SeatResolver } from "./SeatResolver.js";
+
+const MAX_LAT = 90;
+const MAX_LON = 180;
 
 export interface LocationServiceDeps {
   readonly geocoder: ReverseGeocoder;
@@ -27,7 +31,7 @@ export class LocationService {
 
   // Seats first, so a point outside India never costs a geocoder call; the geocoder's state then picks among them.
   async locate(lat: number, lon: number): Promise<LocationLookup> {
-    const point = GeoPoint.of(lat, lon);
+    const point = LocationService.#pointAt(lat, lon);
     const nearby = this.#deps.seats.nearby(point);
     if (nearby === null) {
       throw new OutsideIndiaError("no Lok Sabha seat contains this point or lies within 1 km of it");
@@ -37,6 +41,14 @@ export class LocationService {
       throw new OutsideIndiaError(`the geocoder places this point in ${place.countryCode}, not India`);
     }
     return this.#lookup(point, place, nearby.forPlace(place));
+  }
+
+  // The negated test also rejects NaN.
+  static #pointAt(lat: number, lon: number): GeoPoint {
+    if (!(Math.abs(lat) <= MAX_LAT && Math.abs(lon) <= MAX_LON)) {
+      throw new ValidationError(`lat ${lat}, lon ${lon} is not a WGS 84 point`);
+    }
+    return new GeoPoint(lat, lon);
   }
 
   #lookup(point: GeoPoint, place: Place, seats: SeatMatch): LocationLookup {

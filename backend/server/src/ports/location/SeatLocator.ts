@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import type { AssemblySeat, LokSabhaSeat } from "../../domain/location/Seats.js";
 
 // The *Near methods list seats nearest first: those containing the point (0 m, in file order), then by edge distance.

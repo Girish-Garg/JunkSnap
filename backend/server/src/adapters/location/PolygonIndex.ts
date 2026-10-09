@@ -1,5 +1,5 @@
 import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon";
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import { BoundingBox } from "./BoundingBox.js";
 import { LocalPlane } from "./LocalPlane.js";
 import type { SeatGeometry, Shape } from "./SeatGeometry.js";
@@ -22,7 +22,7 @@ export class PolygonIndex<T> {
   near(point: GeoPoint, maxMeters: number): T[] {
     const plane = new LocalPlane(point);
     const margin = plane.span(maxMeters);
-    const position = point.toPosition();
+    const position = [point.lon, point.lat];
     return this.#entries
       .filter((entry) => entry.box.contains(point, margin))
       .map((entry) => ({

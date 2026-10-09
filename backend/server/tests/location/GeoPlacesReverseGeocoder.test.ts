@@ -2,9 +2,9 @@ import type { ReverseGeocodeCommand, ReverseGeocodeCommandOutput } from "@aws-sd
 import { describe, expect, it, vi } from "vitest";
 import { GeoPlacesReverseGeocoder } from "../../src/adapters/location/GeoPlacesReverseGeocoder.js";
 import { ExternalServiceError } from "../../src/domain/errors.js";
-import { GeoPoint } from "../../src/domain/location/GeoPoint.js";
+import { GeoPoint } from "../../src/domain/GeoPoint.js";
 
-const JDH_1 = GeoPoint.of(26.2618, 73.0035);
+const JDH_1 = new GeoPoint(26.2618, 73.0035);
 
 // Shape of the real jdh-1 answer (PR #32 evidence): Address.District is a neighbourhood.
 const JDH_1_ADDRESS = {

@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import type { Span } from "./LocalPlane.js";
 import type { Position, SeatGeometry } from "./SeatGeometry.js";
 

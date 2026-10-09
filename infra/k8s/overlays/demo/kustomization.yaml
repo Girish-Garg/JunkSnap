@@ -1,0 +1,15 @@
+# Human only, from a clean main. deploy.py --origins sets CORS_ORIGINS; the api refuses to start without it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: junksnap-demo
+labels:
+  - pairs:
+      junksnap/stage: demo
+resources:
+  - namespace.yaml
+  - ../../base
+configMapGenerator:
+  - name: junksnap-config
+    behavior: merge
+    literals:
+      - JUNKSNAP_STAGE=demo

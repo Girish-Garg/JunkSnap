@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FileAssetReader } from "../../src/adapters/FileAssetReader.js";
 import { LocationAssetLoader } from "../../src/adapters/location/LocationAssetLoader.js";
 import { InternalDataError } from "../../src/domain/errors.js";
-import { GeoPoint } from "../../src/domain/location/GeoPoint.js";
+import { GeoPoint } from "../../src/domain/GeoPoint.js";
 import type { AssetReader } from "../../src/ports/AssetReader.js";
 
 const FIXTURES = fileURLToPath(new URL("fixtures/", import.meta.url));
@@ -33,14 +33,14 @@ describe("LocationAssetLoader", () => {
 
   it("indexes Polygon and MultiPolygon seats, keeping id, name, pc_id, state and status", async () => {
     const seats = await loader.loadSeats();
-    const ids = (lat: number, lon: number) => seats.assemblySeatsNear(GeoPoint.of(lat, lon), 0).map((seat) => seat.id);
+    const ids = (lat: number, lon: number) => seats.assemblySeatsNear(new GeoPoint(lat, lon), 0).map((seat) => seat.id);
     expect(seats.boundariesVersion).toBe("eci-2008-delimitation/v1");
-    expect(seats.assemblySeatsNear(GeoPoint.of(26.2618, 73.0035), 0)).toEqual([
+    expect(seats.assemblySeatsNear(new GeoPoint(26.2618, 73.0035), 0)).toEqual([
       { id: "s20-ac-128", name: "Jodhpur", lokSabhaId: "s20-pc-16" },
     ]);
     expect(ids(26.3049, 73.0352)).toEqual(["s20-ac-127"]);
     expect(ids(26.2701, 73.0458)).toEqual(["s20-ac-127"]);
-    expect(seats.lokSabhaSeatsNear(GeoPoint.of(34.1526, 77.5771), 0)).toEqual([
+    expect(seats.lokSabhaSeatsNear(new GeoPoint(34.1526, 77.5771), 0)).toEqual([
       { id: "u09-pc-1", name: "Ladakh", state: "Ladakh", status: "outdated" },
     ]);
     expect(seats.lokSabhaSeat("s20-pc-7")).toEqual({ id: "s20-pc-7", name: "Jaipur", state: "Rajasthan", status: "current" });
@@ -50,8 +50,8 @@ describe("LocationAssetLoader", () => {
   it("lists every containing seat in file order, then seats whose edge is within the distance", async () => {
     const seats = await loader.loadSeats();
     const lokSabha = (lat: number, lon: number) =>
-      seats.lokSabhaSeatsNear(GeoPoint.of(lat, lon), 1_000).map((seat) => seat.id);
-    const inNotch = GeoPoint.of(26.27, 73.012);
+      seats.lokSabhaSeatsNear(new GeoPoint(lat, lon), 1_000).map((seat) => seat.id);
+    const inNotch = new GeoPoint(26.27, 73.012);
     expect(seats.assemblySeatsNear(inNotch, 0)).toEqual([]);
     expect(seats.assemblySeatsNear(inNotch, 1_000).map((seat) => seat.id)).toEqual(["s20-ac-128"]);
     expect(seats.assemblySeatsNear(inNotch, 500)).toEqual([]);

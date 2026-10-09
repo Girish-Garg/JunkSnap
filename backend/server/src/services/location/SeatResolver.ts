@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import { NearbySeats, type AssemblyCandidate } from "../../domain/location/NearbySeats.js";
 import type { SeatLocator } from "../../ports/location/SeatLocator.js";
 

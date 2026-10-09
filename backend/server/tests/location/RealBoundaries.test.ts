@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import { FileAssetReader } from "../../src/adapters/FileAssetReader.js";
 import { LocationAssetLoader } from "../../src/adapters/location/LocationAssetLoader.js";
-import { GeoPoint } from "../../src/domain/location/GeoPoint.js";
+import { GeoPoint } from "../../src/domain/GeoPoint.js";
 import { Place, type PlaceFields } from "../../src/domain/location/Place.js";
 import { SeatResolver } from "../../src/services/location/SeatResolver.js";
 import { CHURU_SLIVER, DELHI, JAIPUR_SLIVER, KATHMANDU, LEH, PLACES, SAMPLES, SANGARIA_OVERLAP } from "./samples.js";
@@ -15,7 +15,7 @@ describe("seat resolution on the real boundary files", () => {
   let resolver: SeatResolver;
 
   function ids(at: { readonly lat: number; readonly lon: number }, place: PlaceFields) {
-    const match = resolver.nearby(GeoPoint.of(at.lat, at.lon))?.forPlace(new Place(place));
+    const match = resolver.nearby(new GeoPoint(at.lat, at.lon))?.forPlace(new Place(place));
     return match === undefined ? null : [match.assembly?.id ?? null, match.lokSabha.id, match.lokSabha.status];
   }
 

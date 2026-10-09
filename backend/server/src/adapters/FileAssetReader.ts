@@ -15,7 +15,7 @@ export class FileAssetReader implements AssetReader {
     try {
       return await readFile(file);
     } catch (error) {
-      const hint = "set ASSETS_DIR, or run npm run assets before docker build";
+      const hint = "set ASSETS_DIR to the folder that holds the repo's data/ files";
       throw new ConfigError(`cannot read asset ${path} under ${this.#root}: ${hint}`, { cause: error });
     }
   }

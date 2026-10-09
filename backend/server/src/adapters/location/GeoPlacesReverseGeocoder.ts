@@ -5,7 +5,7 @@ import {
   type ReverseGeocodeCommandOutput,
 } from "@aws-sdk/client-geo-places";
 import { ExternalServiceError } from "../../domain/errors.js";
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import { Place } from "../../domain/location/Place.js";
 import type { ReverseGeocoder } from "../../ports/location/ReverseGeocoder.js";
 
@@ -31,7 +31,7 @@ export class GeoPlacesReverseGeocoder implements ReverseGeocoder {
 
   async #send(point: GeoPoint): Promise<ReverseGeocodeCommandOutput> {
     const command = new ReverseGeocodeCommand({
-      QueryPosition: point.toPosition(),
+      QueryPosition: [point.lon, point.lat],
       MaxResults: 1,
       Language: "en",
       IntendedUse: "Storage",

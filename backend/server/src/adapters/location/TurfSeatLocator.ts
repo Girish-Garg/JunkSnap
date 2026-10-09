@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import type { AssemblySeat, LokSabhaSeat } from "../../domain/location/Seats.js";
 import type { SeatLocator } from "../../ports/location/SeatLocator.js";
 import { PolygonIndex } from "./PolygonIndex.js";

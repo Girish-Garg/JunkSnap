@@ -13,8 +13,8 @@ describe("AssetSettings", () => {
   });
 
   it("takes ASSETS_DIR, relative to the working directory", () => {
-    expect(AssetSettings.fromEnv({ ASSETS_DIR: "/app/assets" }, "/x").assetsDir).toBe(resolve("/app/assets"));
-    expect(AssetSettings.fromEnv({ ASSETS_DIR: "assets" }, resolve("/app")).assetsDir).toBe(resolve("/app/assets"));
+    expect(AssetSettings.fromEnv({ ASSETS_DIR: "/app/data" }, "/x").assetsDir).toBe(resolve("/app/data"));
+    expect(AssetSettings.fromEnv({ ASSETS_DIR: "data" }, resolve("/app")).assetsDir).toBe(resolve("/app/data"));
   });
 });
 
@@ -38,7 +38,7 @@ describe("FileAssetReader", () => {
 
   it("names the fix when a file is missing", async () => {
     await expect(reader.readText("boundaries/none.geojson")).rejects.toThrow(ConfigError);
-    await expect(reader.readText("boundaries/none.geojson")).rejects.toThrow(/npm run assets/);
+    await expect(reader.readText("boundaries/none.geojson")).rejects.toThrow(/set ASSETS_DIR/);
   });
 
   it("rejects broken JSON and paths that leave the assets folder", async () => {

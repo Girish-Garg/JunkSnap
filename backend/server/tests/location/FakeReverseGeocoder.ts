@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../src/domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../src/domain/GeoPoint.js";
 import { Place, type PlaceFields } from "../../src/domain/location/Place.js";
 import type { ReverseGeocoder } from "../../src/ports/location/ReverseGeocoder.js";
 

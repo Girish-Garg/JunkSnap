@@ -1,4 +1,4 @@
-import type { GeoPoint } from "../../domain/location/GeoPoint.js";
+import type { GeoPoint } from "../../domain/GeoPoint.js";
 import type { Position, SeatGeometry } from "./SeatGeometry.js";
 
 const EARTH_RADIUS_M = 6_371_008.8;
