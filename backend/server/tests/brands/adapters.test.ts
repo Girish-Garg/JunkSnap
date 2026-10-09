@@ -113,6 +113,13 @@ describe("FileBrandMap", () => {
     expect(await map.entries()).toBe(entries);
   });
 
+  it("loads the shipped data/brands/brands.json with unique brand names", async () => {
+    const shipped = fileURLToPath(new URL("../../../../data/brands/brands.json", import.meta.url));
+    const brands = (await new FileBrandMap(shipped).entries()).map((entry) => entry.brand);
+    expect(brands.length).toBeGreaterThan(0);
+    expect(new Set(brands).size).toBe(brands.length);
+  });
+
   it.each([
     ["a missing file", null],
     ["broken JSON", "{"],
