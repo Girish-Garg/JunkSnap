@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RULES_DIR = ROOT / "data" / "rules"
 SCHEMAS = ROOT / "contracts" / "schemas"
 PAGE_MARKER = re.compile(r"^=== PDF page (\d+) ===$", re.MULTILINE)
+DEVANAGARI = re.compile("[ऀ-ॿ]")
 RULE_ID = re.compile(r"^[a-z0-9-]{1,64}$")
 EXTRA_TAGS = {"burning", "packaging"}
 REVIEW_STATUSES = {"unreviewed", "checked"}
@@ -22,6 +23,7 @@ RULE_FIELDS = (
     "rule_id",
     "document",
     "clause",
+    "clause_marker",
     "exact_text",
     "page",
     "language",
@@ -48,11 +50,18 @@ def load_json(path: Path) -> Any:
 
 class Vocabulary:
     def __init__(self) -> None:
-        site = load_json(SCHEMAS / "site.schema.json")["properties"]["properties"]["properties"]
+        site = load_json(SCHEMAS / "site.schema.json")["properties"]["properties"]
         letter = load_json(SCHEMAS / "letter_draft.schema.json")["properties"]
-        self.report_types = set(site["report_type"]["enum"])
-        self.tags = self.report_types | set(site["context"]["enum"]) | EXTRA_TAGS
+        fields = site["properties"]
+        self.report_types = set(fields["report_type"]["enum"])
+        self.tags = self.report_types | set(fields["context"]["enum"]) | EXTRA_TAGS
         self.channels = set(letter["channel"]["enum"])
+        self.contexts = {
+            pair["if"]["properties"]["report_type"]["const"]: pair["then"]["properties"]["context"][
+                "enum"
+            ]
+            for pair in site["allOf"]
+        }
 
 
 class StoredText:
@@ -63,14 +72,24 @@ class StoredText:
         actual = hashlib.sha256(data).hexdigest()
         if actual != entry["text_sha256"]:
             errors.append(f"{name}: sha256 {actual} does not match text_sha256")
-        parts = PAGE_MARKER.split(data.decode("utf-8"))
+        text = data.decode("utf-8")
+        if DEVANAGARI.search(text):
+            errors.append(f"{name}: holds Devanagari text; only official English is stored")
+        parts = PAGE_MARKER.split(text)
         self.pages = {int(n): words(body) for n, body in zip(parts[1::2], parts[2::2], strict=True)}
         if sorted(self.pages) != entry["pages"]:
             errors.append(f"{name}: page markers {sorted(self.pages)} differ from pages")
 
+    def starts(self, quote: str, page: int) -> list[int]:
+        """Start offsets of the quote on the page, only where it begins and ends on a word edge."""
+        pattern = re.compile(rf"(?<!\w){re.escape(words(quote))}(?!\w)")
+        return [match.start() for match in pattern.finditer(self.pages.get(page, ""))]
+
     def pages_with(self, quote: str) -> list[int]:
-        wanted = words(quote)
-        return [number for number, text in self.pages.items() if wanted in text]
+        return [number for number in self.pages if self.starts(quote, number)]
+
+    def marked(self, page: int, start: int, marker: str) -> bool:
+        return self.pages[page][:start].rstrip().endswith(words(marker))
 
 
 def check_fields(rule: Json, texts: dict[str, StoredText], errors: list[str]) -> StoredText | None:
@@ -94,11 +113,17 @@ def check_fields(rule: Json, texts: dict[str, StoredText], errors: list[str]) ->
 
 
 def check_quote(rule: Json, text: StoredText, errors: list[str]) -> None:
-    found = text.pages_with(rule["exact_text"])
-    if rule["page"] in found:
+    where, quote, page = f"rule {rule['rule_id']}", rule["exact_text"], rule["page"]
+    if not words(quote) or not words(rule["clause_marker"]):
+        errors.append(f"{where}: exact_text and clause_marker must not be empty")
         return
-    hint = f"found on pages {found}" if found else "not found word for word"
-    errors.append(f"rule {rule['rule_id']}: exact_text not on page {rule['page']} ({hint})")
+    starts = text.starts(quote, page)
+    if not starts:
+        found = text.pages_with(quote)
+        hint = f"found on pages {found}" if found else "not found word for word"
+        errors.append(f"{where}: exact_text not on page {page} ({hint})")
+    elif not any(text.marked(page, start, rule["clause_marker"]) for start in starts):
+        errors.append(f"{where}: clause_marker {rule['clause_marker']!r} not just before the quote")
 
 
 def check_vocabulary(rule: Json, vocabulary: Vocabulary, errors: list[str]) -> None:
@@ -110,9 +135,10 @@ def check_vocabulary(rule: Json, vocabulary: Vocabulary, errors: list[str]) -> N
         errors.append(f"{where}: bad channels {sorted(channels - vocabulary.channels)}")
 
 
-def check_rules(book: Json, vocabulary: Vocabulary, errors: list[str]) -> int:
+def check_rules(book: Json, vocabulary: Vocabulary, errors: list[str]) -> list[Json]:
     texts = {entry["text_file"]: StoredText(entry, errors) for entry in book["texts"]}
     seen: set[str] = set()
+    valid: list[Json] = []
     for rule in book["rules"]:
         text = check_fields(rule, texts, errors)
         if text is None:
@@ -122,10 +148,29 @@ def check_rules(book: Json, vocabulary: Vocabulary, errors: list[str]) -> int:
         seen.add(rule["rule_id"])
         check_quote(rule, text, errors)
         check_vocabulary(rule, vocabulary, errors)
-    return len(seen)
+        valid.append(rule)
+    return valid
 
 
-def check_routing(routing: Json, vocabulary: Vocabulary, errors: list[str]) -> None:
+def needed_situations(channel: Json, vocabulary: Vocabulary) -> list[tuple[str, str]]:
+    types = [kind for kind in channel["report_types"] if kind in vocabulary.contexts]
+    needs = [(kind, context) for kind in types for context in vocabulary.contexts[kind]]
+    return needs + [("burning", "burning")] if channel["or_burning"] else needs
+
+
+def check_coverage(channel: Json, rules: list[Json], vocabulary: Vocabulary) -> list[str]:
+    """Every situation a channel accepts needs a rule its letter can cite."""
+    name = channel["channel"]
+    tag_sets = [set(rule["situation_tags"]) for rule in rules if name in rule["channels"]]
+    return [
+        f"routing.json: no {name} rule fits {kind}/{context}"
+        for kind, context in needed_situations(channel, vocabulary)
+        if not any({kind, context} & tags for tags in tag_sets)
+    ]
+
+
+def check_routing(routing: Json, rules: list[Json], vocabulary: Vocabulary) -> list[str]:
+    errors: list[str] = []
     names = sorted(channel["channel"] for channel in routing["channels"])
     expected = sorted(vocabulary.channels)
     if names != expected:
@@ -134,23 +179,26 @@ def check_routing(routing: Json, vocabulary: Vocabulary, errors: list[str]) -> N
         unknown = set(channel["report_types"]) - vocabulary.report_types
         if unknown:
             errors.append(f"routing.json: {channel['channel']} has unknown types {sorted(unknown)}")
+        errors.extend(check_coverage(channel, rules, vocabulary))
     if routing["cc"]["marking"] != "for attention":
         errors.append('routing.json: cc marking must be "for attention"')
+    return errors
 
 
 def main() -> int:
     errors: list[str] = []
     vocabulary = Vocabulary()
     book = load_json(RULES_DIR / "rules.json")
-    count = check_rules(book, vocabulary, errors)
-    check_routing(load_json(RULES_DIR / "routing.json"), vocabulary, errors)
+    rules = check_rules(book, vocabulary, errors)
+    errors.extend(check_routing(load_json(RULES_DIR / "routing.json"), rules, vocabulary))
     for error in errors:
         print(error)
     if errors:
         return 1
     print(
-        f"data/rules: {len(book['texts'])} texts match their SHA-256, {count} of {count} quotes "
-        "found word for word on their page, routing covers every channel"
+        f"data/rules: {len(book['texts'])} texts match their SHA-256; {len(rules)} of "
+        f"{len(rules)} quotes word for word on their page after their clause marker; "
+        "every routing channel, report type and context has a rule"
     )
     return 0
 
