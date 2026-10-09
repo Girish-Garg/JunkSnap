@@ -16,6 +16,8 @@ BOX_COLOURS = ("#d62728", "#1f77b4", "#2ca02c", "#ff7f0e")
 SINGLE = 'choice="single"'
 REQUIRED = 'choice="single" required="true"'
 MULTIPLE = 'choice="multiple"'
+# Wording of $defs.size_class in contracts/schemas/verification_result.schema.json.
+SIZE_HINTS = {"small": "fits in a bin bag", "medium": "up to a handcart", "large": "needs a truck"}
 
 
 class LabelStudioConfig:
@@ -32,7 +34,7 @@ class LabelStudioConfig:
             *self._choices("burning", "Burning or smoke", ("no", "yes"), REQUIRED),
             *self._choices("materials", "Materials seen", v.materials, MULTIPLE),
             *self._choices("hazards", "Hazards", v.hazards, MULTIPLE),
-            *self._choices("size_class", "Size", v.size_classes, SINGLE),
+            *self._choices("size_class", "Size of the pile", v.size_classes, SINGLE),
             '  <Header value="Readable brands, one per line (packaging only, never people)"/>',
             '  <TextArea name="brands" toName="image" rows="2" editable="true"/>',
             '  <Header value="Boxes: draw one per waste pile, bag, bin or fire"/>',
@@ -59,9 +61,14 @@ class LabelStudioConfig:
         return [
             f"  <Header value={quoteattr(header)}/>",
             f'  <Choices name="{name}" toName="image" {mode} showInline="true">',
-            *(f"    <Choice value={quoteattr(value)}/>" for value in values),
+            *(f"    <Choice value={quoteattr(value)}{LabelStudioConfig._hint(value)}/>"
+              for value in values),
             "  </Choices>",
         ]
+
+    @staticmethod
+    def _hint(value: str) -> str:
+        return f" hint={quoteattr(SIZE_HINTS[value])}" if value in SIZE_HINTS else ""
 
     def _box_labels(self) -> list[str]:
         pairs = zip(self._vocab.yolo_classes, BOX_COLOURS, strict=False)
@@ -89,7 +96,19 @@ class FieldExportReader:
         path = urllib.parse.unquote(urllib.parse.urlparse(image).path)
         stem = safe_stem(posixpath.basename(path) or image)
         boxes = self._boxes(results)
-        return ImageRecord(f"{FIELD_SOURCE}/{stem}", FIELD_SOURCE, image, (), boxes, attrs)
+        group = self._group(task["data"])
+        return ImageRecord(
+            f"{FIELD_SOURCE}/{stem}", FIELD_SOURCE, image, (), boxes, attrs, group
+        )
+
+    @staticmethod
+    def _group(data: dict[str, Any]) -> str | None:
+        """Task data may carry `scan_id` or `site_id`; photos sharing one never straddle splits."""
+        if data.get("scan_id"):
+            return f"scan:{data['scan_id']}"
+        if data.get("site_id"):
+            return f"site:{data['site_id']}"
+        return None
 
     def _attributes(self, results: list[dict[str, Any]]) -> Attributes:
         picked = self._choices(results)

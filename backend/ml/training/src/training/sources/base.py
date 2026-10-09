@@ -27,6 +27,7 @@ class RawItem:
     labels: tuple[str, ...] = ()
     boxes: tuple[Box, ...] = ()
     attributes: Attributes | None = None
+    group: str | None = None
 
 
 class DatasetSource(ABC):

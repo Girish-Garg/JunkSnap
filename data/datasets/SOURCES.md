@@ -7,9 +7,9 @@ Images never go in git. `uv run training fetch` (in `backend/ml/training/`) down
 | Source id | Dataset | Licence | Images we keep | Classes | What we use it for |
 |---|---|---|---|---|---|
 | `qr4change` | Urban Civic Issues Image Dataset: Potholes and Garbage (QR4Change), Vishwakarma Institute of Information Technology, Pune. Mendeley Data, https://doi.org/10.17632/zndzygc3p3.2 | CC BY 4.0 | the garbage part only: 708 dump and 1,259 non-garbage photos (5 videos and the pothole part skipped) | `garbage`, `non_garbage` | India street scenes for the report-type classifier: `waste_dump` against `not_waste` |
-| `taco` | TACO: Trash Annotations in Context. https://zenodo.org/records/3587843, annotations from https://github.com/pedropro/TACO | CC BY 4.0 | 1,034 of 1,500, as the 640 px copies the TACO download script uses | 60 litter classes in 28 groups, with boxes | materials, hazards (battery: e-waste; aerosol: chemicals), `bag` boxes for the detector |
+| `taco` | TACO: Trash Annotations in Context. https://zenodo.org/records/3587843, annotations from https://github.com/pedropro/TACO | CC BY 4.0 | 1,034 of 1,500, as the 640 px copies the TACO download script uses | 60 litter classes in 28 groups, with boxes | materials, hazards (battery: e-waste; aerosol: chemicals), item and `bag` boxes for the detector. No report type: its Flickr close-ups would teach the type classifier photo style instead of waste vs not waste |
 | `garbage_od` | GARBAGE CLASSIFICATION 3, Roboflow Universe (https://universe.roboflow.com/material-identification/garbage-classification-3/dataset/2), mirrored at https://huggingface.co/datasets/keremberke/garbage-object-detection | CC BY 4.0 | 10,464 at 416 px | `biodegradable`, `cardboard`, `glass`, `metal`, `paper`, `plastic`, with boxes | material boxes and crops for the material classifier. Mostly product-style photos on plain backgrounds, so no report type |
-| `dfire` | D-Fire fire and smoke dataset, https://github.com/gaiasd/DFireDataset, files read from the public mirror https://huggingface.co/datasets/badsaarow/d-fire | CC0 1.0 | a fixed, evenly spaced 1,500 of the mirror's 3,013 train image/label pairs (the other train files have no matching partner) | `smoke`, `fire` (YOLO boxes); unlabelled images are `none` | the `burning` hazard and the detector's `burning` class |
+| `dfire` | D-Fire fire and smoke dataset, https://github.com/gaiasd/DFireDataset, files read from the public mirror https://huggingface.co/datasets/badsaarow/d-fire | CC0 1.0 | a fixed, evenly spaced 1,500 of the mirror's 3,013 train image/label pairs (the other train files have no matching partner) | `smoke`, `fire` (YOLO boxes); unlabelled images are `none` | the `burning` hazard and the detector's `burning` class. This is general fire and smoke (wildfires, buildings, vehicles), not specifically burning waste, so field photos of burning heaps must confirm it |
 | `field` | JunkSnap field audit, Jodhpur and other cities | private, never redistributed | added by `import-field` from a Label Studio export; only the pipeline's blurred copies (`media/reports/…`), never originals | see `data/labels/label_studio.xml` | the only source of real JunkSnap photos; about 30% held out for evaluation |
 
 Excluded inside TACO: 466 images from OpenLitterMap batches carry "ODbL (c) OpenLitterMap & Contributors" per image (share-alike database licence, no 640 px copy), so `fetch` skips them.
@@ -37,13 +37,13 @@ Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, const
 
 ## Class map and manifest
 
-- `class_map.json` maps every source class to a JunkSnap report type (`waste_dump`, `open_construction`, `contaminated_water`, `no_bin`, `not_waste`), materials (`plastic`, `organic`, `construction_debris`, `paper`, `glass`, `metal`, `textile`, `e_waste`, `medical`), hazards (`burning`, `medical_waste`, `e_waste`, `dead_animal`, `chemicals`) and a detector class (`waste_pile`, `bag`, `bin`, `burning`). When one image's labels give several report types, the order of `report_types` wins.
+- `class_map.json` maps every source class to a JunkSnap report type (`waste_dump`, `open_construction`, `contaminated_water`, `no_bin`, `not_waste`), materials (`plastic`, `organic`, `construction_debris`, `paper`, `glass`, `metal`, `textile`, `e_waste`, `medical`), hazards (`burning`, `medical_waste`, `e_waste`, `dead_animal`, `chemicals`) and a detector class (`waste_pile`, `bag`, `bin`, `burning`). Materials, hazards and the size classes `small`, `medium` and `large` are the `verification_result` contract's enums, and a test keeps them equal. When one image's labels give several report types, the order of `report_types` wins.
 - `manifest.jsonl`: one line per image with `id`, `source`, `licence`, `s3_key`, `local_path` (inside the cache), `report_type`, `context`, `materials`, `hazards`, `size_class`, `brands`, `has_boxes` and `split`. Past 5 MB it lives at `datasets/manifest.jsonl` in the private bucket instead of here; with the four public sources (14,965 rows) it is there now.
 - `manifest_summary.json`: counts per source, licence, split, source and split, report type, material and hazard.
 
 ## Splits
 
-Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26, recorded in `manifest_summary.json`; `build-manifest`, `split` and `import-field` refuse another seed unless given `--force`.
+Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26, recorded in `manifest_summary.json`; `build-manifest`, `split` and `import-field` refuse another seed unless given `--force`. Field rows hash on a group key instead of their id: `scan:<scan_id>` or else `site:<site_id>`, read from the Label Studio task data. So frames of one scan and repeat reports of one site never straddle holdout and train. Put `scan_id` and `site_id` in each task's data when they are known.
 
 | Source | test | val | train | holdout |
 |---|---|---|---|---|
@@ -70,7 +70,7 @@ Field photos are labelled and stored only as the blurred copies the app pipeline
 - `s3://junksnap-<stage>-public-<account_id>/media/reports/<report_id>.jpg`, by connecting Label Studio's S3 source storage to the public bucket with prefix `media/reports/`; or
 - the CloudFront URL `<PUBLIC_BASE_URL>/media/reports/<report_id>.jpg`.
 
-`import-field` refuses every other reference: originals (`reports/…` in the private bucket), local files and uploads.
+`import-field` refuses every other reference: originals (`reports/…` in the private bucket), cleanup after-photos (`media/cleanups/`), local files and uploads.
 
 For each blurred copy, `import-field`:
 1. re-encodes it, which also drops any EXIF;
@@ -79,6 +79,6 @@ For each blurred copy, `import-field`:
 
 A missing or unreadable copy stops the import. The export is merged with the recorded field photos by image id. An export that lacks photos already recorded is refused: `--keep-missing` keeps them, and `--replace` drops them.
 
-One machine (the lead's) writes the shared manifest. A local cache copy is trusted over S3, so a stale cache elsewhere could overwrite newer field rows.
+One machine (the lead's) writes the shared manifest. Before uploading `datasets/manifest.jsonl`, every write checks the S3 copy, and it refuses to drop ids the S3 copy has unless given `--force`.
 
 Labels describe waste only and never name a person.

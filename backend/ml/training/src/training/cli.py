@@ -64,12 +64,12 @@ class Commands:
         manifest = self._manifest(store)
         splitter = Splitter(self._seed(args, manifest))
         rows = splitter.assign(self._builder().build(store))
-        self._print(manifest.write(rows, splitter.seed))
+        self._print(manifest.write(rows, splitter.seed, args.force))
 
     def split(self, args: argparse.Namespace) -> None:
         manifest = self._manifest(self._stores.create(args.no_upload))
         splitter = Splitter(self._seed(args, manifest))
-        self._print(manifest.write(splitter.assign(manifest.read()), splitter.seed))
+        self._print(manifest.write(splitter.assign(manifest.read()), splitter.seed, args.force))
 
     def labelstudio_config(self, args: argparse.Namespace) -> None:
         out = Path(args.out) if args.out else self._settings.label_studio_path
@@ -86,7 +86,7 @@ class Commands:
         records = Fetcher(cache, store, ImageNormaliser()).fetch(source, None)
         print(f"field: {len(records)} labelled photos")
         rows = splitter.assign(self._builder().build(store))
-        self._print(manifest.write(rows, splitter.seed))
+        self._print(manifest.write(rows, splitter.seed, args.force))
 
     def _field_source(
         self, args: argparse.Namespace, cache: Path, store: ObjectStore
@@ -158,7 +158,9 @@ class CliParser:
         for name in ("build-manifest", "split", "import-field"):
             command = self._sub.add_parser(name, parents=[self._common])
             command.add_argument("--seed", type=int, default=None)
-            command.add_argument("--force", action="store_true", help="allow a new split seed")
+            command.add_argument(
+                "--force", action="store_true", help="allow a new seed or dropping S3 manifest ids"
+            )
 
     def _import_field(self) -> None:
         command = self._sub.choices["import-field"]

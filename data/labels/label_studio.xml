@@ -65,13 +65,11 @@
     <Choice value="dead_animal"/>
     <Choice value="chemicals"/>
   </Choices>
-  <Header value="Size"/>
+  <Header value="Size of the pile"/>
   <Choices name="size_class" toName="image" choice="single" showInline="true">
-    <Choice value="few_items"/>
-    <Choice value="bag"/>
-    <Choice value="cart"/>
-    <Choice value="truck"/>
-    <Choice value="many_trucks"/>
+    <Choice value="small" hint="fits in a bin bag"/>
+    <Choice value="medium" hint="up to a handcart"/>
+    <Choice value="large" hint="needs a truck"/>
   </Choices>
   <Header value="Readable brands, one per line (packaging only, never people)"/>
   <TextArea name="brands" toName="image" rows="2" editable="true"/>

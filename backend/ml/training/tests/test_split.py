@@ -69,6 +69,15 @@ def test_roboflow_augmented_copies_share_one_split() -> None:
     assert Splitter().split_of(copies[0]) == Splitter().split_of(original)
 
 
+def test_frames_of_one_scan_or_site_never_straddle_splits() -> None:
+    frames = [replace(row("field", f"f{i}"), group="scan:scn_1") for i in range(40)]
+    site = [replace(row("field", f"s{i}"), group="site:site_9") for i in range(40)]
+    assert len({r.split for r in Splitter().assign(frames)}) == 1
+    assert len({r.split for r in Splitter().assign(site)}) == 1
+    many = [replace(row("field", f"g{i}"), group=f"site:site_{i}") for i in range(300)]
+    assert {r.split for r in Splitter().assign(many)} == {"holdout", "val", "train"}
+
+
 def test_trainable_rows_exclude_test_and_holdout(tmp_path: Path, store) -> None:
     rows = Splitter().assign([row("field", f"p{i}") for i in range(200)])
     ManifestFile(tmp_path, tmp_path, store).write(rows, 26)
