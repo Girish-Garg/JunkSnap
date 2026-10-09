@@ -22,7 +22,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 
 - Capture is in-app camera only. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
 - Privacy: blur faces and number plates before any public copy exists; originals stay private (KMS); no photos of people dumping; never name an individual in any text.
-- Only blurred images ever go to OpenRouter. Bedrock is the default for anything personal.
+- Only blurred images go to any model (Bedrock, OpenAI, OpenRouter). Bedrock is the default; OpenAI and OpenRouter are fallbacks.
 - Company names appear only when a label is readable and above the confidence threshold.
 - Letters go To the local body head, Cc councillor, MLA and MP "for attention", in neutral wording with no party colours. Nothing is filed automatically; the resident files.
 - Every quoted rule comes from a hashed official text and passes the word-for-word verifier. Quotes stay in the official English or Hindi; letter prose may be regional. Cite the Solid Waste Management Rules, 2026 as S.O. 388(E), 27 January 2026, in force 1 April 2026.
@@ -55,7 +55,7 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 2. One task per branch and worktree. Plan first, unless the change fits in one sentence.
 3. Run the verify command and paste the evidence (test output or a screenshot).
 4. Record cross-task decisions with `/decide`. Never keep team decisions only in auto memory.
-5. Finish with `/handoff`, push the branch and open a PR.
+5. Push the branch and open a PR. Task agents skip `/handoff` and never commit `docs/status/*.md`; the lead session runs `/handoff` at checkpoints (proposed, 20261010-0136).
 
 Decision status: `accepted` binds, `proposed` is context only, `superseded` is history. If your task conflicts with an accepted decision, stop and ask.
 
@@ -68,13 +68,14 @@ Decision status: `accepted` binds, `proposed` is context only, `superseded` is h
 
 ## Never
 
-Push to `main` · force-push or rewrite history · merge a PR (the human merges) · commit secrets or `.env` files · use `--no-verify` · type passwords, keys or tokens · name a person in any text
+Push to `main` · force-push or rewrite history · commit secrets or `.env` files · use `--no-verify` · type passwords, keys or tokens · name a person in any text
 
 ## Git
 
 - One branch and worktree per task; PRs under about 400 changed lines. PR body: `Closes #n`, evidence, decisions, integration debt.
 - Commit trailers: no AI co-author trailer. Every commit ends with exactly one trailer, alternating commit by commit between `Co-authored-by: Hemang <coehemang@gmail.com>` and `Co-authored-by: Girish Garg <garggirish2020@gmail.com>`. The writeup still lists every AI tool used.
 - Before the first push: `git fetch`, then `git rebase origin/main`. After pushing, merge `origin/main` instead of force-pushing.
+- Claude merges a PR once CI is green and the reviewer says SHIP: squash through the GitHub API, with the commit message ending in exactly one co-author line, alternating as above (proposed, 20261010-0135).
 - Never hand-merge a lockfile; fix the manifest and regenerate it.
 
 ## Commands
@@ -87,4 +88,7 @@ Push to `main` · force-push or rewrite history · merge a PR (the human merges)
 
 ## AWS
 
-Region `ap-south-1`, CLI profile `junksnap`, stacks `junksnap-dev` and `junksnap-demo`, tags `project=junksnap` and `stage`. Deploy `demo` only from a clean `main`, and only when the human says so. Tests stub AWS and model calls.
+- Region `ap-south-1`, CLI profile `junksnap` (the human signs in with `aws login`), tags `project=junksnap` and `stage` (proposed, 20261010-0130, -0132).
+- Kubernetes: one EKS Auto Mode cluster `junksnap` (eksctl `infra/eks/cluster.yaml`), namespaces `junksnap-dev` and `junksnap-demo`. Workloads `api`, `agent`, `worker` and the `scores` CronJob, manifests in Kustomize `infra/k8s/`, images in ECR, AWS access through EKS Pod Identity, CloudFront over the ALB (proposed, 20261010-0130, -0132).
+- Per-stage AWS resources: CloudFormation `infra/aws/stage.yaml`, stacks `junksnap-dev` and `junksnap-demo` (proposed, 20261010-0130).
+- Deploy `demo` only from a clean `main`, and only when the human says so. Never run commands that change billing or account settings; read-only checks by the lead session are fine. Tests stub AWS and model calls.

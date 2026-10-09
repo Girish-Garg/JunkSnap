@@ -1,0 +1,18 @@
+# Shared lint rules for every Python file in the repo. Limits follow docs/working.md section 4.
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "B", "C90", "PL", "N", "UP", "SIM", "RET", "ARG"]
+
+[lint.per-file-ignores]
+# Tests assert on thresholds (0.85, 10 reports) and fake ports ignore some arguments.
+"**/tests/**" = ["PLR2004", "ARG"]
+
+[lint.mccabe]
+max-complexity = 8
+
+[lint.pylint]
+max-args = 4
+max-statements = 25
+max-branches = 8
