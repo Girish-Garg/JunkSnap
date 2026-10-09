@@ -18,7 +18,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "boto3-stubs[bedrock-runtime,rekognition,s3,secretsmanager]>=1.43",
+    "boto3-stubs[bedrock-runtime,dynamodb,rekognition,s3,secretsmanager]>=1.43",
     "httpx>=0.28",
     "mypy>=2.4",
     "pytest>=9.1",
@@ -31,24 +31,6 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "agent"
-
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "C90", "PL", "N", "UP", "SIM", "RET", "ARG"]
-
-[tool.ruff.lint.mccabe]
-max-complexity = 8
-
-[tool.ruff.lint.pylint]
-max-args = 4
-max-statements = 25
-max-branches = 8
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["PLR2004"]
 
 [tool.mypy]
 strict = true

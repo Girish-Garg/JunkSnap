@@ -132,6 +132,9 @@ wheels = [
 bedrock-runtime = [
     { name = "mypy-boto3-bedrock-runtime" },
 ]
+dynamodb = [
+    { name = "mypy-boto3-dynamodb" },
+]
 rekognition = [
     { name = "mypy-boto3-rekognition" },
 ]
@@ -357,7 +360,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "boto3-stubs", extra = ["bedrock-runtime", "rekognition", "s3", "secretsmanager"] },
+    { name = "boto3-stubs", extra = ["bedrock-runtime", "dynamodb", "rekognition", "s3", "secretsmanager"] },
     { name = "httpx" },
     { name = "mypy" },
     { name = "pytest" },
@@ -380,7 +383,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "boto3-stubs", extras = ["bedrock-runtime", "rekognition", "s3", "secretsmanager"], specifier = ">=1.43" },
+    { name = "boto3-stubs", extras = ["bedrock-runtime", "dynamodb", "rekognition", "s3", "secretsmanager"], specifier = ">=1.43" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "mypy", specifier = ">=2.4" },
     { name = "pytest", specifier = ">=9.1" },
@@ -549,6 +552,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/26/78/542f5804cf0f9e3c1ccbf30917eaa3b4b6002b91965de02d065d7441fc93/mypy_boto3_bedrock_runtime-1.43.62.tar.gz", hash = "sha256:beb70b08ef72cdfd5036bcd3270f2fbac0a2ce5e40f70dfc1d87c4f139d4d7ff", size = 31492, upload-time = "2026-07-31T19:54:15.291Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/b2/e3bff20acd290b909f1c28856d6d8d7984f7f7d5bda299d5957f64e97bb3/mypy_boto3_bedrock_runtime-1.43.62-py3-none-any.whl", hash = "sha256:603d9df54da5029fc0d0e3c09b6db33733af53182bee030c0c7af99e88ed3b39", size = 37865, upload-time = "2026-07-31T19:54:13.959Z" },
+]
+
+[[package]]
+name = "mypy-boto3-dynamodb"
+version = "1.43.106"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/3b/debe960b7687129df6584a0aaf3bc917c2e58546444087fee4fecc4bddb0/mypy_boto3_dynamodb-1.43.106.tar.gz", hash = "sha256:b51472f27ab55c83d983269cff2e618dee923851c433b7c933d21a0f8b0e18be", size = 50402, upload-time = "2026-09-30T22:44:34.15Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/fa/ec97f68da6997cc734d6ad991a9f6fc6413fa31293b5d3e89692b32864b3/mypy_boto3_dynamodb-1.43.106-py3-none-any.whl", hash = "sha256:46aeaa7261e74786908d0ee32089be997007127cb40f81d16ec80c21c37a52a3", size = 60590, upload-time = "2026-09-30T22:44:32.61Z" },
 ]
 
 [[package]]
