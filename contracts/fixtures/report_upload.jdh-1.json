@@ -7,6 +7,7 @@
   "gps": { "lat": 26.26183, "lon": 73.00352, "accuracy_m": 6 },
   "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
   "captured_at": "2026-10-10T02:14:05Z",
+  "user_id": "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7",
   "note": "Behind the community hall, smells bad after rain",
   "hints": { "model": "yolo-junk-nano-v0", "waste_score": 0.81, "recall_audit": false }
 }
