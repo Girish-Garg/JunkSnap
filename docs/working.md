@@ -64,6 +64,7 @@ Frontend direction: components → hooks → services → `ApiClient`. Component
 10. Free functions are allowed only as entry points (FastAPI route functions, the queue consumer and CronJob `main`) and as pure helpers of 10 lines or fewer in a `utils` module.
 11. Errors: one exception hierarchy per package, rooted at `JunkSnapError`. Adapters translate SDK errors into domain errors. No bare `except`, no silent fallbacks.
 12. Types everywhere: Python hints checked with `mypy --strict` on `src/`; TypeScript with `strict: true` and no `any`.
+13. Comments and docstrings are one line, written only when the code can't say it: a why, a gotcha, a unit. Never restate the code; no multi-paragraph docstrings or JSDoc blocks; no filler words.
 
 | Pattern | Where |
 |---|---|
