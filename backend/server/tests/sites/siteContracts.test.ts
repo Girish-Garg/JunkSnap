@@ -1,0 +1,104 @@
+import { describe, expect, it } from "vitest";
+import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
+import { SiteItemMapper, type SiteItem } from "../../src/adapters/sites/SiteItemMapper.js";
+import {
+  validateSite,
+  validateWardScores,
+  type LocationLookup,
+  type ModerationResult,
+  type ReportUpload,
+  type VerificationResult,
+} from "../../src/contracts/index.gen.js";
+import { InternalDataError } from "../../src/domain/errors.js";
+import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
+import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
+import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
+import { Site } from "../../src/domain/sites/Site.js";
+import type { SiteFeature } from "../../src/domain/sites/SiteTypes.js";
+import { VoteTally } from "../../src/domain/sites/VoteTally.js";
+import { ZeroScoreRows } from "../../src/domain/sites/ZeroScoreRows.js";
+import { BASE_URL, DEVICE_A, fixture, siteFixture } from "./builders.js";
+import { NOW } from "./fakes.js";
+
+const SAMPLES = ["jdh-1", "jdh-2", "jdh-3", "jpr-1"];
+const cells = new NgeohashCells();
+const mapper = new SiteItemMapper(cells);
+
+function itemOf(feature: SiteFeature): SiteItem {
+  const [lon, lat] = feature.geometry.coordinates;
+  const { corroborations, votes } = feature.properties;
+  return {
+    ...feature.properties,
+    lat,
+    lon,
+    geohash4: cells.cellOf(new GeoPoint(lat, lon)),
+    report_ids: [`rpt_${feature.properties.site_id.slice(5)}`],
+    reporter_devices: [DEVICE_A],
+    me_too_count: corroborations - votes.confirm,
+    embedding_key: null,
+    pending_cleanup_id: null,
+    version: 3,
+  };
+}
+
+describe("site fixtures round-trip", () => {
+  it.each(SAMPLES)("site.%s goes item -> Site -> Feature unchanged and valid", (sample) => {
+    const feature = siteFixture(sample);
+    const site = mapper.toSite(itemOf(feature));
+    expect(validateSite(site.toFeature())).toEqual(feature);
+  });
+
+  it.each(SAMPLES)("site.%s goes Site -> item -> Site with the next version and its geohash4", (sample) => {
+    const feature = siteFixture(sample);
+    const item = mapper.toItem(mapper.toSite(itemOf(feature)));
+    const [lon, lat] = feature.geometry.coordinates;
+    expect(item).toMatchObject({ version: 4, lat, lon, geohash4: cells.cellOf(new GeoPoint(lat, lon)) });
+    expect(item.reporter_devices).toEqual([DEVICE_A]);
+    expect(mapper.toSite(item).toFeature()).toEqual(feature);
+  });
+
+  it("refuses a stored item that breaks the site contract or lacks its internals", () => {
+    const item = itemOf(siteFixture("jdh-1"));
+    expect(() => mapper.toSite({ ...item, status: "gone" })).toThrow(InternalDataError);
+    expect(() => mapper.toSite({ ...item, cleaned_at: "yesterday" })).toThrow(InternalDataError);
+    expect(() => mapper.toSite({ ...item, version: undefined })).toThrow(InternalDataError);
+  });
+
+  it("keeps device tokens out of the Feature", () => {
+    const site = mapper.toSite(itemOf(siteFixture("jdh-1")));
+    expect(JSON.stringify(site.toFeature())).not.toContain(DEVICE_A);
+  });
+});
+
+describe("merging the jpr-1 report fixtures", () => {
+  it("rebuilds site.jpr-1 after one confirm vote", () => {
+    const factory = new MergeableReportFactory(new PublicMedia(BASE_URL));
+    const site = Site.found(
+      factory.create({
+        upload: fixture<ReportUpload>("report_upload.jpr-1.json"),
+        moderation: fixture<ModerationResult>("moderation_result.jpr-1.json"),
+        verification: fixture<VerificationResult>("verification_result.jpr-1.json"),
+        location: fixture<LocationLookup>("location_lookup.jpr-1.json"),
+        brands: [],
+      }),
+    );
+    site.recordVotes(VoteTally.of([{ siteId: "site_jpr_1", deviceToken: "d", choice: "confirm", weight: 1, votedAt: NOW }]));
+    const expected = siteFixture("jpr-1");
+    const built = validateSite(site.toFeature());
+    expect(built.properties).toEqual(expected.properties);
+    expect(site.point.distanceTo(new GeoPoint(26.853, 75.8156))).toBeLessThan(5);
+    expect(site.embeddingKey).toBe("embeddings/rpt_jpr_1.json");
+  });
+});
+
+describe("zero scores rows", () => {
+  it.each(SAMPLES)("every area of site.%s gets a valid ward_scores row", (sample) => {
+    const feature = siteFixture(sample);
+    const rows = new ZeroScoreRows(feature).rows(NOW);
+    expect(rows).toHaveLength(feature.properties.location.ward === null ? 3 : 4);
+    for (const row of rows) {
+      expect(validateWardScores(row).counts.sites).toBe(0);
+      expect(row.pilot).toBe(feature.properties.pilot);
+    }
+  });
+});
