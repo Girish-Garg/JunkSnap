@@ -1,20 +1,22 @@
 {
  "version": 1,
- "note": "Source class -> JunkSnap report type, materials, hazards and detector (yolo) class. report_types order is the priority when one image has labels of several types.",
+ "note": "Source class -> JunkSnap report type, materials, hazards and detector (yolo) class. report_types order is the priority when one image has labels of several types. A source's default yolo class applies to every class rule without one.",
  "vocabulary": {
   "report_types": ["waste_dump", "open_construction", "contaminated_water", "no_bin", "not_waste"],
   "contexts": {"waste_dump": ["vacant_plot", "roadside", "drain", "other"], "no_bin": ["no_bin", "no_pickup"], "contaminated_water": ["stagnant", "sewage", "foam", "choked_drain"], "open_construction": ["uncovered_debris", "dusty_site"]},
   "materials": ["plastic", "organic", "construction_debris", "paper", "glass", "metal", "textile", "e_waste", "medical"],
   "hazards": ["burning", "medical_waste", "e_waste", "dead_animal", "chemicals"],
   "size_classes": ["few_items", "bag", "cart", "truck", "many_trucks"],
-  "yolo_classes": ["waste_pile", "bag", "bin", "burning"]
+  "yolo_classes": ["waste_pile", "bag", "bin", "burning", "waste_item"]
  },
  "sources": {
   "qr4change": {"classes": {
    "garbage": {"report_type": "waste_dump"},
-   "non_garbage": {"report_type": "not_waste"}
+   "non_garbage": {"report_type": "not_waste"},
+   "waste_pile": {"yolo": "waste_pile"},
+   "bin": {"yolo": "bin"}
   }},
-  "taco": {"default": {"report_type": "waste_dump"}, "classes": {
+  "taco": {"default": {"report_type": "waste_dump", "yolo": "waste_item"}, "classes": {
    "Aluminium foil": {"materials": ["metal"]},
    "Battery": {"materials": ["e_waste"], "hazards": ["e_waste"]},
    "Aluminium blister pack": {"materials": ["plastic", "metal"]},
@@ -76,7 +78,7 @@
    "Unlabeled litter": {},
    "Cigarette": {}
   }},
-  "garbage_od": {"classes": {
+  "garbage_od": {"default": {"yolo": "waste_item"}, "classes": {
    "biodegradable": {"materials": ["organic"]},
    "cardboard": {"materials": ["paper"]},
    "glass": {"materials": ["glass"]},
@@ -93,7 +95,8 @@
    "waste_pile": {"yolo": "waste_pile"},
    "bag": {"yolo": "bag"},
    "bin": {"yolo": "bin"},
-   "burning": {"yolo": "burning"}
+   "burning": {"yolo": "burning"},
+   "waste_item": {"yolo": "waste_item"}
   }}
  }
 }

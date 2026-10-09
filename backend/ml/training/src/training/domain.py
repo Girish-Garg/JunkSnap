@@ -38,6 +38,13 @@ class Box:
             return None
         return Box(self.label, x0, y0, x1 - x0, y1 - y0)
 
+    def share_inside(self, other: Box) -> float:
+        """Share of this box's area that lies inside `other`."""
+        w = min(self.x + self.w, other.x + other.w) - max(self.x, other.x)
+        h = min(self.y + self.h, other.y + other.h) - max(self.y, other.y)
+        area = self.w * self.h
+        return max(w, 0.0) * max(h, 0.0) / area if area > 0 else 0.0
+
     def yolo_line(self, class_index: int) -> str:
         cx, cy = self.x + self.w / 2, self.y + self.h / 2
         return f"{class_index} {cx:.6f} {cy:.6f} {self.w:.6f} {self.h:.6f}"
