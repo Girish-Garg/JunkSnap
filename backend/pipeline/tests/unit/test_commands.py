@@ -2,6 +2,7 @@ import json
 from collections.abc import Callable
 
 import pytest
+
 from pipeline.handlers import scores, worker
 
 

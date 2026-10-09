@@ -1,4 +1,5 @@
 import pytest
+
 from agent.domain.errors import ConfigError
 from agent.settings.core import CoreSettings
 
