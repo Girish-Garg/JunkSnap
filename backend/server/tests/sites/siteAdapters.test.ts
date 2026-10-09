@@ -132,8 +132,18 @@ describe("DynamoReportStatusWriter", () => {
     expect(client.sent).toHaveLength(2);
     expect(client.sent[0]?.input).toMatchObject({
       Key: { report_id: "rpt_a" },
-      ConditionExpression: "attribute_exists(report_id) AND #status <> :status",
-      ExpressionAttributeValues: { ":status": "verified" },
+      ConditionExpression: "#status IN (:verified, :community_check) AND #status <> :status",
+      ExpressionAttributeValues: { ":status": "verified", ":verified": "verified", ":community_check": "community_check" },
+    });
+  });
+
+  it("bumps the report's version so the worker's optimistic lock sees the write", async () => {
+    const client = new ScriptedClient();
+    await new DynamoReportStatusWriter(dynamo(client), "r", new FixedClock(), calls).followSite(["rpt_a"], "verified");
+    expect(client.sent[0]?.input).toMatchObject({
+      UpdateExpression: "SET #status = :status, updated_at = :updated ADD #version :one",
+      ExpressionAttributeNames: { "#status": "status", "#version": "version" },
+      ExpressionAttributeValues: { ":one": 1 },
     });
   });
 
