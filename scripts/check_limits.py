@@ -83,16 +83,38 @@ def count_python_lines(lines: list[str]) -> int:
     return sum(1 for line in lines if line.strip() and not line.strip().startswith("#"))
 
 
+def classify_typescript_line(text: str, in_block: bool) -> tuple[bool, bool]:
+    """Return (is_code, in_block_after) for one stripped line."""
+    if in_block:
+        close = text.find("*/")
+    elif text.startswith("/*"):
+        close = text.find("*/", 2)
+    else:
+        return bool(text) and not text.startswith("//"), False
+    if close == -1:
+        return False, True
+    return bool(text[close + 2 :].strip()), False
+
+
 def count_typescript_lines(lines: list[str]) -> int:
+    """Count code lines, skipping blank and comment-only lines.
+
+    Lines in a block comment that never closes still count, so a stray `/*` (for example
+    inside a template literal) cannot hide the rest of the file.
+    """
     count = 0
-    in_block_comment = False
+    unclosed = 0
+    in_block = False
     for line in lines:
         text = line.strip()
-        if in_block_comment or text.startswith("/*"):
-            in_block_comment = "*/" not in text
-        elif text and not text.startswith("//"):
+        is_code, in_block = classify_typescript_line(text, in_block)
+        if is_code:
             count += 1
-    return count
+        if not in_block:
+            unclosed = 0
+        elif text:
+            unclosed += 1
+    return count + unclosed
 
 
 def counted_lines(path: PurePosixPath, text: str) -> int:
@@ -130,7 +152,8 @@ def check_file(path: PurePosixPath, limit: int) -> list[str]:
     full_path = ROOT / path.as_posix()
     if not full_path.is_file():
         return []
-    text = full_path.read_text(encoding="utf-8", errors="replace")
+    # utf-8-sig drops a byte order mark, which some Windows editors write.
+    text = full_path.read_text(encoding="utf-8-sig", errors="replace")
     found: list[str] = []
     count = counted_lines(path, text)
     if count > limit:
