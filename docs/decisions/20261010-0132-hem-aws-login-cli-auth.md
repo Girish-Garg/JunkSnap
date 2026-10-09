@@ -9,7 +9,7 @@ date: 2026-10-10T01:32+05:30
 
 Context: the handover asked the human to create an IAM user and a long-lived CLI access key.
 
-Decision: the human runs `aws login --profile junksnap`. It is a root session; short-lived credentials refresh automatically, and nothing is saved as a long-lived key. Agents never run billing or account commands.
+Decision: the human runs `aws login --profile junksnap`. It is a root session; short-lived credentials refresh automatically, and nothing is saved as a long-lived key. Agents never run commands that change billing or account settings; read-only checks by the lead session are fine.
 
 Consequences for other lanes: handover section 3 and AGENTS.md change. There is no access key to delete after judging.
 

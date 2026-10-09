@@ -88,7 +88,7 @@ Push to `main` · force-push or rewrite history · commit secrets or `.env` file
 
 ## AWS
 
-- Region `ap-south-1`, CLI profile `junksnap` (the human signs in with `aws login`), tags `project=junksnap` and `stage`.
-- Kubernetes: one EKS Auto Mode cluster `junksnap` (eksctl `infra/eks/cluster.yaml`), namespaces `junksnap-dev` and `junksnap-demo`. Workloads `api`, `agent`, `worker` and the `scores` CronJob, manifests in Kustomize `infra/k8s/`, images in ECR, AWS access through EKS Pod Identity, CloudFront over the ALB.
-- Per-stage AWS resources: CloudFormation `infra/aws/stage.yaml`, stacks `junksnap-dev` and `junksnap-demo`.
-- Deploy `demo` only from a clean `main`, and only when the human says so. Never run billing or account commands. Tests stub AWS and model calls.
+- Region `ap-south-1`, CLI profile `junksnap` (the human signs in with `aws login`), tags `project=junksnap` and `stage` (proposed, 20261010-0130, -0132).
+- Kubernetes: one EKS Auto Mode cluster `junksnap` (eksctl `infra/eks/cluster.yaml`), namespaces `junksnap-dev` and `junksnap-demo`. Workloads `api`, `agent`, `worker` and the `scores` CronJob, manifests in Kustomize `infra/k8s/`, images in ECR, AWS access through EKS Pod Identity, CloudFront over the ALB (proposed, 20261010-0130, -0132).
+- Per-stage AWS resources: CloudFormation `infra/aws/stage.yaml`, stacks `junksnap-dev` and `junksnap-demo` (proposed, 20261010-0130).
+- Deploy `demo` only from a clean `main`, and only when the human says so. Never run commands that change billing or account settings; read-only checks by the lead session are fine. Tests stub AWS and model calls.

@@ -80,17 +80,20 @@ Thresholds: probability 0.85 or more is auto-verified, 0.5 to 0.85 goes to commu
 
 ```mermaid
 stateDiagram-v2
-  [*] --> uploaded
-  uploaded --> rejected: moderation or authenticity fails
-  uploaded --> verifying
-  verifying --> auto_verified: p at least 0.85
-  verifying --> community_check: p 0.5 to 0.85, or disagreement
-  verifying --> rejected: p below 0.5
-  community_check --> auto_verified: confirmed by votes
+  [*] --> queued
+  queued --> processing
+  processing --> rejected: moderation or authenticity fails, or p below 0.5
+  processing --> verified: p at least 0.85
+  processing --> community_check: p 0.5 to 0.85, or disagreement
+  processing --> needs_review: retries exhausted
+  community_check --> verified: confirmed by votes
   community_check --> rejected: rejected by votes
-  auto_verified --> merged_into_site
-  merged_into_site --> [*]
+  verified --> [*]: merged into a site
+  rejected --> [*]
+  needs_review --> [*]
 ```
+
+State names are the `status` values of GET /reports/{id} in `contracts/README.md` (PR #14). A verified report is merged into a site, which sets its `site_id`.
 
 A site moves open → cleaned (only with an after-photo the pipeline confirms is clean) → reopened.
 

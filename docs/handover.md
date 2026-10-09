@@ -22,8 +22,8 @@ Claude merges PRs itself once CI is green and the reviewer says SHIP: squash thr
 ## 3. Machine setup
 
 - Tools: git, gh (logged in, write access to the repo), uv, Node 22+, Python 3.12+ (the session hook runs `python`; if `python` opens the Microsoft Store, disable that alias in Windows settings), AWS CLI v2 (`winget install --id Amazon.AWSCLI -e`, with the human's OK).
-- AWS: the human runs `aws login --profile junksnap` himself, region `ap-south-1`. It is a root session with short-lived credentials that refresh automatically; no long-lived key is saved (proposed, 20261010-0132). Check with `aws sts get-caller-identity --profile junksnap`. Agents never run billing or account commands.
-- The account finished card verification on 10 Oct and all services are active. It is on the Free plan with $100 credits: `aws freetier get-account-plan-state` on 10 Oct 2026 returned accountPlanType FREE, remaining credits 100.0 USD, expiry 2027-04-09. Upgrading keeps the credits. Bedrock Claude Sonnet 4.6, Haiku 4.5 and Nova work from ap-south-1; the Claude 5 family does not (proposed, 20261010-0133).
+- AWS: the human runs `aws login --profile junksnap` himself, region `ap-south-1`. It is a root session with short-lived credentials that refresh automatically; no long-lived key is saved (proposed, 20261010-0132). Check with `aws sts get-caller-identity --profile junksnap`. Agents never run commands that change billing or account settings; read-only checks by the lead session are fine.
+- The account finished card verification on 10 Oct and all services are active. Read-only plan check run by the lead session on 10 Oct 2026 (`aws freetier get-account-plan-state`): FREE plan, 100.0 USD credits, expires 2027-04-09. Upgrading keeps the credits. Bedrock Claude Sonnet 4.6, Haiku 4.5 and Nova work from ap-south-1; the Claude 5 family does not (proposed, 20261010-0133).
 - Windows: `git config --global core.longpaths true`.
 - Tear down the EKS cluster and the stacks after judging.
 
