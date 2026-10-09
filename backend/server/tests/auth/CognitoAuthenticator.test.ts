@@ -1,16 +1,22 @@
 import { FetchError, JwtExpiredError } from "aws-jwt-verify/error";
 import { describe, expect, it } from "vitest";
 import { CognitoAuthenticator } from "../../src/adapters/CognitoAuthenticator.js";
-import { ConfigError, ExternalServiceError, ForbiddenError, UnauthorizedError } from "../../src/domain/errors.js";
+import {
+  ConfigError,
+  ExternalServiceError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../../src/domain/errors.js";
 import { HttpErrorMapper } from "../../src/handlers/HttpErrorMapper.js";
 import { AuthSettings } from "../../src/settings/AuthSettings.js";
 import { FakeJwksFetcher } from "./FakeJwksFetcher.js";
 import { CLIENT_ID, ISSUER, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
 
 const ENV = { COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID };
-const settings = AuthSettings.fromEnv(ENV);
+const pool = { userPoolId: POOL_ID, clientId: CLIENT_ID };
 const minter = new TokenMinter();
-const authenticator = new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache());
+const authenticator = new CognitoAuthenticator(pool, new FakeJwksFetcher(minter.jwks()).cache());
 const now = () => Math.floor(Date.now() / 1000);
 
 describe("CognitoAuthenticator", () => {
@@ -20,14 +26,14 @@ describe("CognitoAuthenticator", () => {
 
   it("downloads the pool JWKS once and reuses it", async () => {
     const fetcher = new FakeJwksFetcher(minter.jwks());
-    const cached = new CognitoAuthenticator(settings, fetcher.cache());
+    const cached = new CognitoAuthenticator(pool, fetcher.cache());
     await cached.verify(minter.idToken());
     await cached.verify(minter.idToken());
     expect(fetcher.uris).toEqual([`${ISSUER}/.well-known/jwks.json`]);
   });
 
   it("turns a JWKS download failure into 500 ExternalServiceError and keeps the FetchError", async () => {
-    const offline = new CognitoAuthenticator(settings, new FakeJwksFetcher().cache());
+    const offline = new CognitoAuthenticator(pool, new FakeJwksFetcher().cache());
     const error = await offline.verify(minter.idToken()).catch((thrown: unknown) => thrown);
     expect(error).toBeInstanceOf(ExternalServiceError);
     expect(error).toMatchObject({ status: 500, code: "server_error" });
@@ -66,7 +72,7 @@ describe("CognitoAuthenticator", () => {
 
 describe("AuthSettings", () => {
   it("reads the pool and client id", () => {
-    expect(AuthSettings.fromEnv(ENV)).toMatchObject({ userPoolId: POOL_ID, clientId: CLIENT_ID });
+    expect(AuthSettings.fromEnv(ENV)).toMatchObject(pool);
   });
 
   it.each([
@@ -81,9 +87,10 @@ describe("AuthSettings", () => {
 
 describe("auth errors", () => {
   it.each([
-    [new UnauthorizedError("Sign in to do this."), 401, "unauthorized"],
-    [new ForbiddenError("Only the reporter can see this report."), 403, "forbidden"],
-  ])("%s maps to %i %s with its message", (error, status, code) => {
+    ["a missing or bad token", new UnauthorizedError("Sign in to do this."), 401, "unauthorized"],
+    ["a user blocked in the users table", new ForbiddenError("This account is blocked."), 403, "forbidden"],
+    ["a signed-in user who does not own the item", new NotFoundError("No report with that id."), 404, "not_found"],
+  ])("%s gets %i %s, with its message", (_case, error, status, code) => {
     expect(new HttpErrorMapper().map(error)).toEqual({ status, body: { error: code, message: error.message } });
   });
 });

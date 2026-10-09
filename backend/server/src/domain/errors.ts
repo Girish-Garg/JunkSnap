@@ -2,6 +2,7 @@
 const HTTP_STATUS = {
   bad_request: 400,
   bbox_too_large: 400,
+  scan_too_large: 400,
   unauthorized: 401,
   forbidden: 403,
   own_site: 403,
@@ -47,7 +48,7 @@ export class UnauthorizedError extends JunkSnapError {
   override readonly code: ErrorCode = "unauthorized";
 }
 
-// Signed in, but this user may not touch this resource.
+// Only for a user blocked in the users table; a user who does not own an item gets NotFoundError, as if it were missing.
 export class ForbiddenError extends JunkSnapError {
   override readonly code: ErrorCode = "forbidden";
 }
