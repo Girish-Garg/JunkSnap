@@ -5,7 +5,7 @@ description: Record a team decision that reaches beyond the current task (an int
 # Decide
 
 1. List `docs/decisions/` and read any decision on the same topic. If an accepted one exists and this replaces it, tell the human. The only change allowed to the old file is `status: superseded` plus `superseded_by: <new filename>`.
-2. Get your person code from `SABOOT_WHO` (`echo $SABOOT_WHO`, or `$env:SABOOT_WHO` in PowerShell). Get the IST time with `date`.
+2. Your person code is `hem`, `gir` or `har`, from `git config user.email` (coehemang -> hem, garggirish2020 -> gir); if unsure, ask the human. Get the IST time with `date`.
 3. Create `docs/decisions/YYYYMMDD-HHMM-<code>-<slug>.md`, with a 3–5 word kebab-case slug, using the shape of `docs/decisions/_template.md`. Keep it under about 25 lines. Write the title as the decision itself, e.g. "Draft endpoint is async: POST /draft returns case_id, client polls".
 4. Set `status: proposed` unless the human says in this session that it is agreed; then `accepted`. A decision that changes `contracts/` also needs a contract-only PR approved by every affected lane holder.
 5. Fill "Consequences for other lanes" honestly. If any other lane is affected, tell the human to post the decision in team chat now.

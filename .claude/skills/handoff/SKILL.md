@@ -4,20 +4,20 @@ description: Overwrite your docs/status/<code>.md with your current state before
 ---
 # Handoff
 
-1. Get your person code from the `SABOOT_WHO` environment variable (`echo $SABOOT_WHO`, or `$env:SABOOT_WHO` in PowerShell). If it is empty, ask the human.
-2. Read `.claude/roster.json` to list the lanes you hold.
+1. Your person code is `hem`, `gir` or `har`. Work it out from `git config user.email` (coehemang -> hem, garggirish2020 -> gir); if unsure, ask the human.
+2. List the areas this session worked on (frontend, pipeline, agent, infra, contracts, docs).
 3. Overwrite `docs/status/<code>.md`. Never append. Keep it under 30 lines with exactly these sections:
 
 ```markdown
 # <code> (<name>): status   (overwrite; at most 30 lines)
 Updated: <YYYY-MM-DD HH:MM> IST
-Lanes held: <lanes>
+Areas: <areas worked on>
 ## Now
-<worktree name> → #<issue> <title>, PR #<n> if open
+<branch name> → #<issue> <title>, PR #<n> if open
 ## Done since last update
 ## Next
 ## Blocked / needs from others
-(name the lane and the person you need)
+(name the area and the person you need)
 ## Handoff notes
 (half-done state, gotchas, exactly where to resume)
 ## AI tools used
