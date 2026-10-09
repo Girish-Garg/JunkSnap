@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: JunkSnap ECR repositories shared by every stage (stack junksnap-shared).
+
+Resources:
+  # Rule 1 matches the deployed stage-dev and stage-demo images, so rule 2 can never expire them.
+  ServerRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: junksnap-server
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules": [
+            {"rulePriority": 1, "description": "Never expire deployed stage images",
+             "selection": {"tagStatus": "tagged", "tagPrefixList": ["stage-"],
+               "countType": "imageCountMoreThan", "countNumber": 9999},
+             "action": {"type": "expire"}},
+            {"rulePriority": 2, "description": "Keep the last 50 images",
+             "selection": {"tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 50},
+             "action": {"type": "expire"}}]}
+
+  MlRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: junksnap-ml
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules": [
+            {"rulePriority": 1, "description": "Never expire deployed stage images",
+             "selection": {"tagStatus": "tagged", "tagPrefixList": ["stage-"],
+               "countType": "imageCountMoreThan", "countNumber": 9999},
+             "action": {"type": "expire"}},
+            {"rulePriority": 2, "description": "Keep the last 50 images",
+             "selection": {"tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 50},
+             "action": {"type": "expire"}}]}
+
+Outputs:
+  ServerRepositoryUri:
+    Description: TypeScript image for api, worker and scores
+    Value: !GetAtt ServerRepository.RepositoryUri
+  MlRepositoryUri:
+    Description: Python image for ml
+    Value: !GetAtt MlRepository.RepositoryUri
