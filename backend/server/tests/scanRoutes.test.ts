@@ -86,12 +86,12 @@ describe("POST /scans/presign", () => {
   });
 
   it.each([
-    ["over 40 MB", { size_bytes: 40 * 1024 * 1024 + 1 }, "scan_too_large", "size_bytes is over the scan video limit"],
-    ["over 60 s", { duration_ms: 60_001 }, "scan_too_large", "duration_ms is over the scan video limit"],
-    ["not a video type", { content_type: "image/jpeg" }, "bad_request", "content_type"],
-    ["a bad checksum", { sha256: "XYZ" }, "bad_request", "sha256"],
-    ["an unknown field", { user_id: "someone" }, "bad_request", "user_id"],
-  ])("rejects a video %s with 400 %s", async (_case, change, error, message) => {
+    ["over 40 MB", "scan_too_large", { size_bytes: 40 * 1024 * 1024 + 1 }, "size_bytes is over the scan video limit"],
+    ["over 60 s", "scan_too_large", { duration_ms: 60_001 }, "duration_ms is over the scan video limit"],
+    ["not a video type", "bad_request", { content_type: "image/jpeg" }, "content_type"],
+    ["a bad checksum", "bad_request", { sha256: "XYZ" }, "sha256"],
+    ["an unknown field", "bad_request", { user_id: "someone" }, "user_id"],
+  ])("rejects a video %s with 400 %s", async (_case, error, change, message) => {
     const response = await post("/scans/presign", { ...PRESIGN, ...change });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ error });
