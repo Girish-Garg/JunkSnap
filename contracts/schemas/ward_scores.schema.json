@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/ward_scores.schema.json",
   "title": "ward_scores",
-  "description": "Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. An area not yet scored returns 200 with zero counts, every score withheld (too_few_reports), null metrics and an empty diagnosis. Never invented history.",
+  "description": "Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. An area with sites but no score yet returns 200 with zero counts, every score withheld (too_few_reports), null metrics and an empty diagnosis; the worker seeds that row when a site first lands in the area. An area with no sites returns 404 area_not_found. Never invented history.",
   "type": "object",
   "additionalProperties": false,
   "required": ["area", "counts", "min_verified_reports", "scores", "metrics", "diagnosis", "formula_version", "pilot", "data_window", "computed_at"],

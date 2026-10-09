@@ -95,7 +95,12 @@
     },
     {
       "if": { "properties": { "purpose": { "const": "cleanup" } } },
-      "then": { "properties": { "is_clean": { "type": "boolean" }, "decision": { "enum": ["auto_verified", "rejected"] }, "report_id": { "pattern": "^cln_" } } }
+      "then": {
+        "properties": { "is_clean": { "type": "boolean" }, "decision": { "enum": ["auto_verified", "rejected"] }, "report_id": { "pattern": "^cln_" } },
+        "if": { "properties": { "decision": { "const": "auto_verified" } } },
+        "then": { "properties": { "is_clean": { "const": true } } },
+        "else": { "properties": { "is_clean": { "const": false } } }
+      }
     }
   ]
 }
