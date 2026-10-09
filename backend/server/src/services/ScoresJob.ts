@@ -19,6 +19,7 @@ export interface ScoresJobPorts {
 export interface ScoresRunSummary {
   readonly sites: number;
   readonly areas: number;
+  // Failed areas plus site items skipped for breaking the site contract.
   readonly failed: number;
 }
 
@@ -39,7 +40,10 @@ export class ScoresJob {
   }
 
   async run(now: Date): Promise<ScoresRunSummary> {
-    const sites = await this.#ports.sites.readAll();
+    const { sites, unreadable } = await this.#ports.sites.readAll();
+    for (const { siteId, error } of unreadable) {
+      this.#logger.error({ site_id: siteId, error }, "site skipped");
+    }
     const groups = this.#grouper.group(sites);
     const times: ReportTimes = new Map();
     let failed = 0;
@@ -52,7 +56,7 @@ export class ScoresJob {
         this.#logger.error({ area, error }, "area scoring failed");
       }
     }
-    return { sites: sites.length, areas: groups.length, failed };
+    return { sites: sites.length, areas: groups.length, failed: failed + unreadable.length };
   }
 
   async #score({ area, sites }: AreaGroup, times: ReportTimes, now: Date): Promise<void> {

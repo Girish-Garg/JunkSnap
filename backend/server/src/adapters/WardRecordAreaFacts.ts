@@ -4,12 +4,14 @@ import { z } from "zod";
 import { validateWardRecord, type WardRecord } from "../contracts/index.gen.js";
 import type { AreaFactSheet } from "../domain/AreaFactSheet.js";
 import type { AreaKey } from "../domain/AreaKey.js";
-import { InternalDataError } from "../domain/errors.js";
+import { InternalDataError, ValidationError } from "../domain/errors.js";
 import { GeoPoint } from "../domain/GeoPoint.js";
 import type { AreaFacts } from "../ports/AreaFacts.js";
+import type { Logger } from "../ports/Logger.js";
 
-// The city file and its map layers have no schema yet (contracts README); each record must pass ward_record.
+// The city file and its map layers have no schema yet (contracts README); each reviewed record must pass ward_record.
 const CityFile = z.object({ records: z.array(z.unknown()), map_layers: z.record(z.string(), z.unknown()).nullish() });
+const Reviewed = z.object({ review_status: z.literal("reviewed") });
 const LocalBodies = z.array(z.object({ id: z.string(), towns: z.array(z.string()) }));
 const WARD_AREA_ID = /^([a-z0-9-]+)-w([0-9]+)$/;
 const PLACE_LAYERS = ["school", "water"];
@@ -30,12 +32,12 @@ export class WardRecordAreaFacts implements AreaFacts {
     this.#bodyCities = bodyCities;
   }
 
-  static async fromDirectory(assetsDir: string | null): Promise<WardRecordAreaFacts> {
+  static async fromDirectory(assetsDir: string | null, logger: Logger): Promise<WardRecordAreaFacts> {
     if (assetsDir === null) {
       return new WardRecordAreaFacts(new Map(), new Map());
     }
     const files = await WardRecordAreaFacts.#jsonFiles(join(assetsDir, "wards"));
-    const cities = await Promise.all(files.map((file) => WardRecordAreaFacts.#readCity(file)));
+    const cities = await Promise.all(files.map((file) => WardRecordAreaFacts.#readCity(file, logger)));
     const bodies = await WardRecordAreaFacts.#bodyCitiesFrom(join(assetsDir, "representatives", "local_bodies.json"));
     return new WardRecordAreaFacts(new Map(cities.map((city) => [city.city, city])), bodies);
   }
@@ -59,25 +61,31 @@ export class WardRecordAreaFacts implements AreaFacts {
     return found.length === 1 ? (found[0] ?? null) : null;
   }
 
-  static async #readCity(file: string): Promise<CityWards> {
+  static async #readCity(file: string, logger: Logger): Promise<CityWards> {
     const parsed = CityFile.safeParse(await WardRecordAreaFacts.#json(file));
     if (!parsed.success) {
       throw new InternalDataError(`${file}: ${z.prettifyError(parsed.error)}`);
     }
-    const records = parsed.data.records.map((record) => WardRecordAreaFacts.#record(file, record));
+    const reviewed = parsed.data.records.filter((record) => Reviewed.safeParse(record).success);
     const layers = parsed.data.map_layers ?? {};
     return {
       city: basename(file, ".json"),
-      reviewed: records.filter((record) => record.review_status === "reviewed"),
+      reviewed: reviewed.flatMap((record) => WardRecordAreaFacts.#valid(file, record, logger)),
       placesMapped: PLACE_LAYERS.some((layer) => (layers[layer] ?? null) !== null),
     };
   }
 
-  static #record(file: string, record: unknown): WardRecord {
+  // A reviewed record that breaks ward_record is logged and left out, so one bad row never stops the job.
+  static #valid(file: string, record: unknown, logger: Logger): WardRecord[] {
     try {
-      return validateWardRecord(record);
+      return [validateWardRecord(record)];
     } catch (error) {
-      throw new InternalDataError(`${file}: a record breaks the ward_record contract`, { cause: error });
+      if (!(error instanceof ValidationError)) {
+        throw error;
+      }
+      const wardRecordId = z.object({ id: z.string() }).safeParse(record).data?.id ?? "unknown";
+      logger.warn({ file, ward_record_id: wardRecordId, error }, "ward record skipped");
+      return [];
     }
   }
 

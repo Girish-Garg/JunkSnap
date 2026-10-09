@@ -1,7 +1,6 @@
 import { ScanCommand, type DynamoDBDocumentClient, type ScanCommandOutput } from "@aws-sdk/lib-dynamodb";
-import type { AreaSite } from "../domain/AreaSite.js";
-import { ExternalServiceError } from "../domain/errors.js";
-import type { AreaSiteReader } from "../ports/AreaSiteReader.js";
+import { ExternalServiceError, InternalDataError } from "../domain/errors.js";
+import type { AreaSiteReader, SiteRead } from "../ports/AreaSiteReader.js";
 import type { SiteItemParser } from "./SiteItemParser.js";
 
 // Scans the whole sites table, page by page; fine for a 15-minute CronJob at pilot scale.
@@ -16,15 +15,30 @@ export class DynamoAreaSiteReader implements AreaSiteReader {
     this.#parser = parser;
   }
 
-  async readAll(): Promise<AreaSite[]> {
-    const sites: AreaSite[] = [];
+  async readAll(): Promise<SiteRead> {
+    const read: SiteRead = { sites: [], unreadable: [] };
     let startKey: Record<string, unknown> | undefined;
     do {
       const page = await this.#scan(startKey);
-      sites.push(...(page.Items ?? []).map((item) => this.#parser.parse(item)));
+      for (const item of page.Items ?? []) {
+        this.#add(read, item);
+      }
       startKey = page.LastEvaluatedKey;
     } while (startKey !== undefined);
-    return sites;
+    return read;
+  }
+
+  // Only a contract break is per item; anything else is our bug or an outage and still stops the run.
+  #add(read: SiteRead, item: Record<string, unknown>): void {
+    try {
+      read.sites.push(this.#parser.parse(item));
+    } catch (error) {
+      if (!(error instanceof InternalDataError)) {
+        throw error;
+      }
+      const siteId = typeof item.site_id === "string" ? item.site_id : "unknown";
+      read.unreadable.push({ siteId, error });
+    }
   }
 
   async #scan(startKey: Record<string, unknown> | undefined): Promise<ScanCommandOutput> {

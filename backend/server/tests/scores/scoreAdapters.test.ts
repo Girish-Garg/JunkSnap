@@ -95,10 +95,20 @@ describe("DynamoAreaSiteReader", () => {
       { Items: [siteItem("jdh-1")], LastEvaluatedKey: { site_id: "site_jdh_1" } },
       { Items: [siteItem("jdh-2"), siteItem("jpr-1")] },
     ]);
-    const sites = await new DynamoAreaSiteReader(fake.asClient(), "junksnap-dev-sites", new SiteItemParser()).readAll();
+    const read = await new DynamoAreaSiteReader(fake.asClient(), "junksnap-dev-sites", new SiteItemParser()).readAll();
     const ids = ["jdh-1", "jdh-2", "jpr-1"].map((sample) => siteFixture(sample).properties.site_id);
-    expect(sites.map((each) => each.id)).toEqual(ids);
+    expect(read.sites.map((each) => each.id)).toEqual(ids);
+    expect(read.unreadable).toEqual([]);
     expect((fake.sent[1] as ScanCommand).input).toEqual({ TableName: "junksnap-dev-sites", ExclusiveStartKey: { site_id: "site_jdh_1" } });
+  });
+
+  it("returns an item that breaks the site contract as unreadable, with its site id, and keeps the rest", async () => {
+    const broken = siteItem("jdh-2");
+    delete broken.cleaned_at;
+    const fake = new FakeDocumentClient([{ Items: [siteItem("jdh-1"), broken, siteItem("jpr-1")] }]);
+    const read = await new DynamoAreaSiteReader(fake.asClient(), "t", new SiteItemParser()).readAll();
+    expect(read.sites.map((each) => each.id)).toEqual(["jdh-1", "jpr-1"].map((sample) => siteFixture(sample).properties.site_id));
+    expect(read.unreadable).toEqual([{ siteId: siteFixture("jdh-2").properties.site_id, error: expect.any(InternalDataError) }]);
   });
 
   it("wraps SDK failures in ExternalServiceError", async () => {
