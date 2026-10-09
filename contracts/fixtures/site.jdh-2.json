@@ -12,15 +12,22 @@
     "corroborations": 2,
     "votes": { "confirm": 1, "reject": 0 },
     "photo_urls": ["https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_2.jpg"],
+    "cleanup_status": "none",
     "cleanup_photo_url": null,
     "burning": false,
     "location": {
       "state": "Rajasthan",
       "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
       "town": "Jodhpur",
+      "local_body": { "id": "jodhpur-north-mc", "name": "Jodhpur Municipal Corporation (North)", "head_office": "Commissioner" },
       "ward": { "id": "jodhpur-north-mc-w12", "name": "Ward 12" },
       "assembly_seat": { "id": "s20-ac-128", "name": "Jodhpur" },
-      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" }
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur" },
+      "representatives": [
+        { "office": "councillor", "seat_id": "jodhpur-north-mc-w12", "as_of": "2026-10-01", "source": "https://lsg.rajasthan.gov.in/" },
+        { "office": "mla", "seat_id": "s20-ac-128", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+        { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+      ]
     },
     "brands": [],
     "first_reported_at": "2026-10-09T04:05:00Z",

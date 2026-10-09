@@ -3,14 +3,13 @@
   "outcome": "passed",
   "reasons": [],
   "blurred_key": "media/reports/rpt_jpr_1.jpg",
-  "faces_blurred": 1,
-  "plates_blurred": 0,
-  "image_moderation": { "result": "pass", "labels": [], "provider": "rekognition", "model": "DetectModerationLabels", "version": "7.0" },
+  "blur": { "faces": 1, "plates": 0, "provider": "rekognition", "model": "DetectFaces+DetectText", "version": "3.0" },
+  "image_moderation": { "result": "pass", "labels": [], "provider": "rekognition", "model": "DetectModerationLabels+DetectLabels", "version": "7.0+3.0" },
   "checks": {
     "inside_india": { "result": "pass", "detail": "point inside the India boundary" },
-    "fresh_timestamp": { "result": "pass", "detail": "captured 12 s before upload" },
+    "fresh_timestamp": { "result": "pass", "detail": "captured 12 s before upload; limit 72 h" },
     "duplicate": { "result": "pass", "detail": "no earlier photo within 100 m" },
-    "rate_limit": { "result": "pass", "detail": "Scan frame 3 of this ride; Scan limit 1 per second" },
+    "rate_limit": { "result": "pass", "detail": "Scan frame 3 of this ride; limit 1 per second" },
     "device_token": { "result": "pass", "detail": "new device, reputation 0.5" }
   },
   "phash": "9b07d2e14fa863c5",

@@ -17,6 +17,7 @@ Decision:
 - Every model decision records flat `provider`, `model` and `version` fields. Scores are 0 to 100, higher is better, each `{value, reason}`, null below 10 verified reports.
 - Presign returns the headers to send, including `x-amz-checksum-sha256`, so S3 enforces the client hash. Blurred copies live under `media/` in the public bucket and are served by CloudFront `/media/*`.
 - DynamoDB: one table per entity, and a `by-geohash` (geohash4) GSI on sites for bbox queries and merging.
+- Cleanups reuse `moderation_result` and `verification_result` (`cln_` ids, `purpose: cleanup`, `is_clean`), live in a `cleanups` table, and are polled through `site.cleanup_status`. The api owns the community check: vote weight 0.5 + reputation, settling at +3 (verified) or -3 (rejected). `site.location` carries the full location, so letters need no extra lookup.
 
 Consequences for other lanes: I1 builds the tables, buckets, queue and ALB rules exactly as `contracts/README.md` lists them. F1 mocks from `contracts/fixtures/`. A1, D1, D2, D3 and A4 emit these shapes and round-trip the fixtures in contract tests.
 

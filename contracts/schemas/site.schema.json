@@ -28,13 +28,16 @@
     "properties": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "votes", "photo_urls", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
+      "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "votes", "photo_urls", "cleanup_status", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
       "properties": {
         "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
         "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
         "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"] },
         "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
-        "verification": { "enum": ["verified", "community_check"], "description": "verified once any report is verified; community_check while neighbours are asked to confirm." },
+        "verification": {
+          "enum": ["verified", "community_check", "rejected"],
+          "description": "verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value."
+        },
         "report_count": { "type": "integer", "minimum": 1 },
         "verified_count": { "type": "integer", "minimum": 0 },
         "corroborations": { "type": "integer", "minimum": 0, "description": "Confirm votes plus Me too reports from other devices." },
@@ -53,32 +56,69 @@
           "items": { "type": "string", "format": "uri" },
           "description": "Blurred public copies, newest first. Never an original."
         },
-        "cleanup_photo_url": { "type": ["string", "null"], "format": "uri", "description": "Blurred after-photo of the last confirmed cleanup." },
+        "cleanup_status": {
+          "enum": ["none", "checking", "accepted", "rejected"],
+          "description": "Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. Resets to none when the site reopens."
+        },
+        "cleanup_photo_url": { "type": ["string", "null"], "format": "uri", "description": "Blurred after-photo of the last accepted cleanup." },
         "burning": { "type": "boolean", "description": "The judge saw burning on a verified report of this site." },
         "location": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["state", "district", "town", "ward", "assembly_seat", "loksabha_seat"],
-          "description": "Summary of location_lookup. Ids link to GET /areas/{kind}/{id}/scores.",
+          "required": ["state", "district", "town", "local_body", "ward", "assembly_seat", "loksabha_seat", "representatives"],
+          "description": "The full location_lookup minus lat, lon and provenance. The worker writes it when merging; the agent reads it from the sites table, so letters and the site panel need no extra lookup. Ids link to GET /areas/{kind}/{id}/scores.",
           "properties": {
             "state": { "type": "string" },
             "district": { "$ref": "#/$defs/area_ref" },
             "town": { "type": ["string", "null"] },
+            "local_body": {
+              "description": "Urban local body; its head is a letter's To. Null outside known bodies.",
+              "anyOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "name", "head_office"],
+                  "properties": {
+                    "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+                    "name": { "type": "string" },
+                    "head_office": { "type": "string" }
+                  }
+                }
+              ]
+            },
             "ward": { "anyOf": [{ "$ref": "#/$defs/area_ref" }, { "type": "null" }], "description": "Null where no open ward map exists." },
             "assembly_seat": { "$ref": "#/$defs/area_ref" },
-            "loksabha_seat": { "$ref": "#/$defs/area_ref" }
+            "loksabha_seat": { "$ref": "#/$defs/area_ref" },
+            "representatives": {
+              "type": "array",
+              "description": "Offices and seats only; no names, no party.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["office", "seat_id", "as_of", "source"],
+                "properties": {
+                  "office": { "enum": ["councillor", "mla", "mp"] },
+                  "seat_id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+                  "as_of": { "type": "string", "format": "date" },
+                  "source": { "type": "string", "format": "uri" }
+                }
+              }
+            }
           }
         },
         "brands": {
           "type": "array",
-          "description": "Only labels that were readable and above the confidence threshold.",
+          "description": "Only labels that were readable with confidence 0.8 or more.",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["brand", "parent_company"],
+            "required": ["brand", "parent_company", "confidence", "source_url"],
             "properties": {
               "brand": { "type": "string" },
-              "parent_company": { "type": "string" }
+              "parent_company": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0.8, "maximum": 1 },
+              "source_url": { "type": "string", "format": "uri", "description": "Source for the brand-to-parent-company mapping." }
             }
           }
         },

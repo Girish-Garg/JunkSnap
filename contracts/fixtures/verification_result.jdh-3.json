@@ -1,0 +1,18 @@
+{
+  "report_id": "cln_jdh_3c",
+  "purpose": "cleanup",
+  "probability": 0.93,
+  "decision": "auto_verified",
+  "is_clean": true,
+  "thresholds": { "auto_verify_min": 0.85, "community_check_min": 0.5 },
+  "signals": [
+    { "name": "rekognition_labels", "score": 0.9, "provider": "rekognition", "model": "DetectLabels", "version": "3.0", "latency_ms": 360 },
+    { "name": "embedding_classifier", "score": 0.94, "provider": "junksnap", "model": "embedding-type-classifier", "version": "amazon.titan-embed-image-v1/clf-1", "latency_ms": 610 }
+  ],
+  "features": { "gps_accuracy_m": 8, "reputation": 0.66, "nearby_verified_reports": 0 },
+  "judge": null,
+  "disagreement": false,
+  "combiner": { "kind": "meta_learner", "version": "meta-v1" },
+  "embedding_key": "embeddings/cln_jdh_3c.json",
+  "decided_at": "2026-10-09T06:21:40Z"
+}

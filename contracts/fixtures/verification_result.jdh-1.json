@@ -1,11 +1,13 @@
 {
   "report_id": "rpt_jdh_1",
+  "purpose": "report",
   "probability": 0.91,
   "decision": "auto_verified",
+  "is_clean": null,
   "thresholds": { "auto_verify_min": 0.85, "community_check_min": 0.5 },
   "signals": [
     { "name": "rekognition_labels", "score": 0.84, "provider": "rekognition", "model": "DetectLabels", "version": "3.0", "latency_ms": 380 },
-    { "name": "vision_judge", "score": 0.95, "provider": "bedrock", "model": "anthropic.claude-sonnet-4-5", "version": "20250929-v1:0", "latency_ms": 2900 }
+    { "name": "vision_judge", "score": 0.95, "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6", "latency_ms": 2900 }
   ],
   "features": { "gps_accuracy_m": 6, "reputation": 0.74, "nearby_verified_reports": 5 },
   "judge": {
@@ -17,5 +19,6 @@
   },
   "disagreement": false,
   "combiner": { "kind": "fixed_weights", "version": "fw-v0" },
+  "embedding_key": null,
   "decided_at": "2026-10-10T02:15:03Z"
 }

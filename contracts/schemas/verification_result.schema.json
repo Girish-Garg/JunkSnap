@@ -2,14 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/verification_result.schema.json",
   "title": "verification_result",
-  "description": "Returned by the agent's POST /internal/verify. p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected. Strong disagreement always gives community_check.",
+  "description": "Returned by the agent's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["report_id", "probability", "decision", "thresholds", "signals", "features", "judge", "disagreement", "combiner", "decided_at"],
+  "required": ["report_id", "purpose", "probability", "decision", "is_clean", "thresholds", "signals", "features", "judge", "disagreement", "combiner", "embedding_key", "decided_at"],
   "properties": {
-    "report_id": { "type": "string", "pattern": "^rpt_[a-z0-9_]{1,40}$" },
-    "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Calibrated probability that the report shows what it claims." },
+    "report_id": { "type": "string", "pattern": "^(rpt|cln)_[a-z0-9_]{1,40}$", "description": "rpt_ for a report photo, cln_ for a cleanup after-photo." },
+    "purpose": { "enum": ["report", "cleanup"] },
+    "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Calibrated probability that the claim is true." },
     "decision": { "enum": ["auto_verified", "community_check", "rejected"] },
+    "is_clean": { "type": ["boolean", "null"], "description": "Cleanup judgement: true when the after-photo shows the site clean. Null for purpose report." },
     "thresholds": {
       "type": "object",
       "additionalProperties": false,
@@ -23,7 +25,7 @@
     "signals": {
       "type": "array",
       "minItems": 1,
-      "description": "One entry per model that ran. The vision_judge entry carries the judge's provider, model and version.",
+      "description": "One entry per model that ran; score is support for the claim. The vision_judge entry carries the judge's provider, model and version.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -46,7 +48,7 @@
       "properties": {
         "gps_accuracy_m": { "type": "number", "minimum": 0 },
         "reputation": { "type": "number", "minimum": 0, "maximum": 1, "description": "Device reputation; 0.5 for a new device." },
-        "nearby_verified_reports": { "type": "integer", "minimum": 0, "description": "Verified reports of the same type within about 40 m, before merging." }
+        "nearby_verified_reports": { "type": "integer", "minimum": 0, "description": "Verified reports of the same type within about 40 m, before merging; 0 for cleanups." }
       }
     },
     "judge": {
@@ -79,6 +81,21 @@
         "version": { "type": "string" }
       }
     },
+    "embedding_key": {
+      "type": ["string", "null"],
+      "pattern": "^embeddings/(rpt|cln)_[a-z0-9_]{1,40}\\.json$",
+      "description": "Key of the stored image embedding in the private bucket, for SiteMerger to compare. Null when the embedding signal did not run."
+    },
     "decided_at": { "type": "string", "format": "date-time" }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "purpose": { "const": "report" } } },
+      "then": { "properties": { "is_clean": { "type": "null" }, "report_id": { "pattern": "^rpt_" } } }
+    },
+    {
+      "if": { "properties": { "purpose": { "const": "cleanup" } } },
+      "then": { "properties": { "is_clean": { "type": "boolean" }, "decision": { "enum": ["auto_verified", "rejected"] }, "report_id": { "pattern": "^cln_" } } }
+    }
+  ]
 }

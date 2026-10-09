@@ -60,7 +60,7 @@
           "clause": { "type": "string" },
           "quote": { "type": "string" },
           "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the official text the quote was checked against." },
-          "verified": { "type": "boolean", "description": "True only when the quote appears word for word in that text." }
+          "verified": { "const": true, "description": "The quote appears word for word in that text. A draft with any unverified quote is never returned; the template letter is used instead." }
         }
       }
     },
@@ -68,13 +68,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["verified", "total"],
-      "description": "Shown as: verified <verified> of <total>.",
+      "description": "Shown as: verified <verified> of <total>. verified must equal total and the length of citations; the schema cannot compare them, so contract tests do.",
       "properties": {
         "verified": { "type": "integer", "minimum": 0 },
         "total": { "type": "integer", "minimum": 1 }
       }
     },
-    "template_fallback": { "type": "boolean", "description": "True when the model draft failed verification and the template letter was used." },
+    "template_fallback": { "type": "boolean", "description": "True when the model draft failed verification and the template letter, with the same verified citations, was used." },
     "filing_url": { "type": ["string", "null"], "format": "uri", "description": "Where the resident can file it, for portal channels; null for a printed letter." },
     "provider": { "enum": ["bedrock", "openai", "openrouter", "rekognition", "comprehend", "junksnap"], "description": "junksnap with model letter-template when template_fallback is true." },
     "model": { "type": "string" },

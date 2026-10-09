@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/location_lookup.schema.json",
   "title": "location_lookup",
-  "description": "Where a point sits: reverse geocoding plus point-in-polygon for ward, assembly seat and Lok Sabha seat, and the representatives for those seats by office. No party field anywhere.",
+  "description": "Where a point sits: reverse geocoding plus point-in-polygon for ward, assembly seat and Lok Sabha seat, and the representatives for those seats by office and seat only. No personal names and no party field anywhere. The worker copies all of it except lat, lon and provenance into site.location.",
   "type": "object",
   "additionalProperties": false,
   "required": ["lat", "lon", "state", "district", "town", "local_body", "ward", "assembly_seat", "loksabha_seat", "representatives", "geocoder", "boundaries_version", "looked_up_at"],
@@ -40,7 +40,6 @@
         "properties": {
           "office": { "enum": ["councillor", "mla", "mp"] },
           "seat_id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$", "description": "The ward, assembly or Lok Sabha id above." },
-          "name": { "type": "string", "description": "Optional. Never shown in letters, which address by office." },
           "as_of": { "type": "string", "format": "date" },
           "source": { "type": "string", "format": "uri" }
         }

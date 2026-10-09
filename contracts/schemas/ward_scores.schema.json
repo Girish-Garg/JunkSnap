@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/ward_scores.schema.json",
   "title": "ward_scores",
-  "description": "Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. Never invented history.",
+  "description": "Area scores for a ward, assembly seat, Lok Sabha seat or district, from GET /areas/{kind}/{id}/scores. Area level only. Counts are always present; scores and metrics are null with a reason below min_verified_reports. An area not yet scored returns 200 with zero counts, every score withheld (too_few_reports), null metrics and an empty diagnosis. Never invented history.",
   "type": "object",
   "additionalProperties": false,
   "required": ["area", "counts", "min_verified_reports", "scores", "metrics", "diagnosis", "formula_version", "pilot", "data_window", "computed_at"],
@@ -45,13 +45,15 @@
     "metrics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["median_days_to_clear", "cleared_within_7_days_pct", "redumped_pct", "new_dumps_per_km2_month", "median_distance_to_disposal_m"],
+      "required": ["median_days_to_clear", "cleared_within_7_days_pct", "redumped_pct", "no_bin_response_pct", "new_dumps_per_km2_month", "share_vacant_plot_drain_roadside_pct", "median_distance_to_disposal_m"],
       "description": "Inputs behind the scores; each null when withheld or not measurable in the data window.",
       "properties": {
         "median_days_to_clear": { "type": ["number", "null"], "minimum": 0 },
         "cleared_within_7_days_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "redumped_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "no_bin_response_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of no_bin sites cleared or served in the window (city score)." },
         "new_dumps_per_km2_month": { "type": ["number", "null"], "minimum": 0 },
+        "share_vacant_plot_drain_roadside_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score)." },
         "median_distance_to_disposal_m": { "type": ["number", "null"], "minimum": 0 }
       }
     },
