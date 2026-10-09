@@ -74,6 +74,8 @@
       "Bash(*SABOOT_STAGE=demo*)",
       "Bash(*deploy_demo*)",
       "Bash(aws bedrock-agent start-ingestion-job*)",
+      "Bash(*overlays/demo*)",
+      "Bash(*junksnap-demo*)",
       "PowerShell(git push *--force*)",
       "PowerShell(git push -f*)",
       "PowerShell(git push * -f*)",
@@ -88,7 +90,9 @@
       "PowerShell(*stage=demo*)",
       "PowerShell(*SABOOT_STAGE=demo*)",
       "PowerShell(*deploy_demo*)",
-      "PowerShell(aws bedrock-agent start-ingestion-job*)"
+      "PowerShell(aws bedrock-agent start-ingestion-job*)",
+      "PowerShell(*overlays/demo*)",
+      "PowerShell(*junksnap-demo*)"
     ]
   },
   "hooks": {
