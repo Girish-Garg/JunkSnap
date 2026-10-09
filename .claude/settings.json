@@ -1,36 +1,94 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git show *)",
-      "Bash(git branch --show-current)", "Bash(git add *)", "Bash(git commit *)", "Bash(git fetch*)",
-      "Bash(git rebase origin/main)", "Bash(git merge origin/main)",
-      "Bash(git push -u origin worktree-*)", "Bash(git push origin worktree-*)",
-      "Bash(gh issue view *)", "Bash(gh issue list*)", "Bash(gh issue comment *)",
-      "Bash(gh pr create*)", "Bash(gh pr view*)", "Bash(gh pr list*)", "Bash(gh pr checks*)",
-      "Bash(npm ci)", "Bash(npm run *)", "Bash(npm test*)", "Bash(npx tsc *)",
-      "Bash(uv sync*)", "Bash(uv lock*)", "Bash(uv run pytest*)", "Bash(uv run ruff *)", "Bash(uv run scripts/*)",
-
-      "PowerShell(git status*)", "PowerShell(git diff*)", "PowerShell(git log*)", "PowerShell(git show *)",
-      "PowerShell(git branch --show-current)", "PowerShell(git add *)", "PowerShell(git commit *)", "PowerShell(git fetch*)",
-      "PowerShell(git rebase origin/main)", "PowerShell(git merge origin/main)",
-      "PowerShell(git push -u origin worktree-*)", "PowerShell(git push origin worktree-*)",
-      "PowerShell(gh issue view *)", "PowerShell(gh issue list*)", "PowerShell(gh issue comment *)",
-      "PowerShell(gh pr create*)", "PowerShell(gh pr view*)", "PowerShell(gh pr list*)", "PowerShell(gh pr checks*)",
-      "PowerShell(npm ci)", "PowerShell(npm run *)", "PowerShell(npm test*)", "PowerShell(npx tsc *)",
-      "PowerShell(uv sync*)", "PowerShell(uv lock*)", "PowerShell(uv run pytest*)", "PowerShell(uv run ruff *)", "PowerShell(uv run scripts/*)"
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show *)",
+      "Bash(git branch --show-current)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git fetch*)",
+      "Bash(git rebase origin/main)",
+      "Bash(git merge origin/main)",
+      "Bash(git push -u origin *)",
+      "Bash(git push origin *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list*)",
+      "Bash(gh issue comment *)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr checks*)",
+      "Bash(npm ci)",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npx tsc *)",
+      "Bash(uv sync*)",
+      "Bash(uv lock*)",
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff *)",
+      "Bash(uv run scripts/*)",
+      "PowerShell(git status*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git log*)",
+      "PowerShell(git show *)",
+      "PowerShell(git branch --show-current)",
+      "PowerShell(git add *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git fetch*)",
+      "PowerShell(git rebase origin/main)",
+      "PowerShell(git merge origin/main)",
+      "PowerShell(git push -u origin *)",
+      "PowerShell(git push origin *)",
+      "PowerShell(gh issue view *)",
+      "PowerShell(gh issue list*)",
+      "PowerShell(gh issue comment *)",
+      "PowerShell(gh pr create*)",
+      "PowerShell(gh pr view*)",
+      "PowerShell(gh pr list*)",
+      "PowerShell(gh pr checks*)",
+      "PowerShell(npm ci)",
+      "PowerShell(npm run *)",
+      "PowerShell(npm test*)",
+      "PowerShell(npx tsc *)",
+      "PowerShell(uv sync*)",
+      "PowerShell(uv lock*)",
+      "PowerShell(uv run pytest*)",
+      "PowerShell(uv run ruff *)",
+      "PowerShell(uv run scripts/*)"
     ],
     "deny": [
-      "Bash(git push *--force*)", "Bash(git push -f*)", "Bash(git push * -f*)",
-      "Bash(git push origin main*)", "Bash(git push * main)", "Bash(git push *:main*)",
-      "Bash(git reset --hard*)", "Bash(*--no-verify*)", "Bash(gh pr merge*)",
-      "Bash(*--config-env demo*)", "Bash(*Stage=demo*)", "Bash(*stage=demo*)", "Bash(*SABOOT_STAGE=demo*)",
-      "Bash(*deploy_demo*)", "Bash(aws bedrock-agent start-ingestion-job*)",
-
-      "PowerShell(git push *--force*)", "PowerShell(git push -f*)", "PowerShell(git push * -f*)",
-      "PowerShell(git push origin main*)", "PowerShell(git push * main)", "PowerShell(git push *:main*)",
-      "PowerShell(git reset --hard*)", "PowerShell(*--no-verify*)", "PowerShell(gh pr merge*)",
-      "PowerShell(*--config-env demo*)", "PowerShell(*Stage=demo*)", "PowerShell(*stage=demo*)", "PowerShell(*SABOOT_STAGE=demo*)",
-      "PowerShell(*deploy_demo*)", "PowerShell(aws bedrock-agent start-ingestion-job*)"
+      "Bash(git push *--force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git push origin main*)",
+      "Bash(git push * main)",
+      "Bash(git push *:main*)",
+      "Bash(git reset --hard*)",
+      "Bash(*--no-verify*)",
+      "Bash(gh pr merge*)",
+      "Bash(*--config-env demo*)",
+      "Bash(*Stage=demo*)",
+      "Bash(*stage=demo*)",
+      "Bash(*SABOOT_STAGE=demo*)",
+      "Bash(*deploy_demo*)",
+      "Bash(aws bedrock-agent start-ingestion-job*)",
+      "PowerShell(git push *--force*)",
+      "PowerShell(git push -f*)",
+      "PowerShell(git push * -f*)",
+      "PowerShell(git push origin main*)",
+      "PowerShell(git push * main)",
+      "PowerShell(git push *:main*)",
+      "PowerShell(git reset --hard*)",
+      "PowerShell(*--no-verify*)",
+      "PowerShell(gh pr merge*)",
+      "PowerShell(*--config-env demo*)",
+      "PowerShell(*Stage=demo*)",
+      "PowerShell(*stage=demo*)",
+      "PowerShell(*SABOOT_STAGE=demo*)",
+      "PowerShell(*deploy_demo*)",
+      "PowerShell(aws bedrock-agent start-ingestion-job*)"
     ]
   },
   "hooks": {
@@ -38,15 +96,14 @@
       {
         "matcher": "startup|resume|clear|compact",
         "hooks": [
-          { "type": "command", "command": "python", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/brief.py"], "timeout": 20 }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          { "type": "command", "command": "python", "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/scope_guard.py"], "timeout": 10 }
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/brief.py"
+            ],
+            "timeout": 20
+          }
         ]
       }
     ]

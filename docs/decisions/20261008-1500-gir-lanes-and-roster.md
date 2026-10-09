@@ -1,6 +1,6 @@
 ---
-status: accepted
-superseded_by:
+status: superseded
+superseded_by: 20261010-0031-gir-drop-lane-guard.md
 area: process
 by: gir
 date: 2026-10-08T15:00+05:30

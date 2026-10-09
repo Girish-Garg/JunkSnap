@@ -44,16 +44,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Lint and test each Python lane
+      - name: Lint, type check and test each Python package
         shell: bash
         run: |
           found=0
-          for d in data backend/agent backend/firms; do
+          for d in backend/pipeline backend/agent data; do
             if [ -f "$d/pyproject.toml" ]; then
               found=1
               echo "::group::$d"
-              (cd "$d" && uv sync --locked && uv run ruff check . && uv run pytest -q)
+              (cd "$d" && uv sync --locked && uv run ruff check . \
+                && { [ ! -d src ] || uv run mypy --strict src; } && uv run pytest -q)
               echo "::endgroup::"
             fi
           done
-          if [ "$found" = 0 ]; then echo "No Python lanes with pyproject.toml yet, skipping"; fi
+          if [ "$found" = 0 ]; then echo "No Python packages with pyproject.toml yet, skipping"; fi

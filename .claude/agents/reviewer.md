@@ -13,9 +13,9 @@ Run only read-only commands: `git diff origin/main...HEAD`, `git log origin/main
 Check, in this order:
 1. Correctness bugs that would break the never-cut path.
 2. The issue's acceptance criteria: met, with evidence?
-3. Contracts: does every shape crossing a lane match its schema and fixtures?
-4. Lane boundaries: any file changed outside the lane named by the worktree?
-5. Product rules: cited rules only from retrieved documents, no person named, "thermal anomalies", "candidates", nothing filed automatically.
+3. Contracts: does every shape crossing a package boundary match its schema and fixtures?
+4. Scope and structure: files changed outside the issue's scope; breaches of docs/working.md (layers, strict OOP, size limits).
+5. Product rules: quoted rules only from hashed official texts and verified, faces and plates blurred, no person named, company names only when readable, neutral letters, nothing filed automatically.
 6. Accepted decisions: anything contradicting one?
 
 A reviewer told to find gaps will always find some. Report only problems in those six categories. No style nits, no speculative improvements, no "consider adding".
