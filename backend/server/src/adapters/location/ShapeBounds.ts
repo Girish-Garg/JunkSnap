@@ -4,7 +4,7 @@ import type { Position, SeatGeometry } from "./SeatGeometry.js";
 
 const NO_MARGIN: Span = { lat: 0, lon: 0 };
 
-export class BoundingBox {
+export class ShapeBounds {
   readonly #west: number;
   readonly #south: number;
   readonly #east: number;
@@ -17,7 +17,7 @@ export class BoundingBox {
     this.#north = north;
   }
 
-  static around(geometry: SeatGeometry): BoundingBox {
+  static around(geometry: SeatGeometry): ShapeBounds {
     const positions: Position[] =
       geometry.type === "Polygon" ? geometry.coordinates.flat() : geometry.coordinates.flat(2);
     let [west, south, east, north] = [Infinity, Infinity, -Infinity, -Infinity];
@@ -27,7 +27,7 @@ export class BoundingBox {
       south = Math.min(south, lat);
       north = Math.max(north, lat);
     }
-    return new BoundingBox(west, south, east, north);
+    return new ShapeBounds(west, south, east, north);
   }
 
   contains(point: GeoPoint, margin: Span = NO_MARGIN): boolean {
