@@ -1,6 +1,5 @@
 import sharp from "sharp";
 import { beforeEach, describe, expect, it } from "vitest";
-import { PassThroughNoteModerator } from "../../src/adapters/moderation/PassThroughNoteModerator.js";
 import { SharpBlurrer } from "../../src/adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../../src/adapters/moderation/SharpImageCodec.js";
 import { validateModerationResult } from "../../src/contracts/index.gen.js";
@@ -16,16 +15,17 @@ import { PrivacyBlur } from "../../src/services/moderation/PrivacyBlur.js";
 import {
   box,
   DEVICE,
+  FakeCleanNoteModerator,
+  FakeClock,
   FakeDeviceRegistry,
   FakeFinder,
   FakeGeofence,
   FakeHashIndex,
   FakeImageModerator,
   FakeImageStore,
-  FixedClock,
+  FakeRemovingNoteModerator,
   JODHPUR,
   noiseJpeg,
-  RemovingNoteModerator,
   reportSubmission,
   sha256,
   testJpeg,
@@ -40,7 +40,7 @@ class Harness {
   readonly devices = new FakeDeviceRegistry();
   readonly india = new FakeGeofence();
 
-  service(notes: NoteModerator = new PassThroughNoteModerator()): ModerationService {
+  service(notes: NoteModerator = new FakeCleanNoteModerator()): ModerationService {
     const checks = new CheckFactory({ india: this.india, hashes: this.hashes, devices: this.devices });
     return new ModerationService({
       loader: new PhotoLoader(this.store, new SharpImageCodec()),
@@ -48,7 +48,7 @@ class Harness {
       blur: new PrivacyBlur({ faces: this.faces, plates: this.plates, blurrer: new SharpBlurrer(), store: this.store }),
       authenticity: new AuthenticityService(checks),
       notes,
-      clock: new FixedClock(),
+      clock: new FakeClock(),
     });
   }
 }
@@ -72,7 +72,7 @@ describe("ModerationService on a clean photo", () => {
     expect(result.blur).toEqual({ faces: 1, plates: 1, provider: "rekognition", model: "DetectFaces+DetectText+DetectLabels", version: "3.0+3.0" });
     expect(result.image_moderation).toEqual({ result: "pass", labels: [], provider: "rekognition", model: "DetectModerationLabels+DetectLabels", version: "7.0+3.0" });
     expect(Object.values(result.checks).map((check) => check.result)).toEqual(["pass", "pass", "pass", "pass", "pass"]);
-    expect(result.note_moderation).toMatchObject({ result: "clean", provider: "junksnap" });
+    expect(result.note_moderation).toMatchObject({ result: "clean", provider: "bedrock" });
     expect(result.moderated_at).toBe("2026-10-10T02:15:03Z");
     expect(result.phash).toMatch(/^[0-9a-f]{16}$/);
     const blurred = harness.store.written.get("media/reports/rpt_jdh_1.jpg");
@@ -98,7 +98,7 @@ describe("ModerationService on a clean photo", () => {
   it("leaves note_moderation null without a note and records a removed note without rejecting", async () => {
     const plain = await harness.service().moderate(reportSubmission(jpeg));
     expect(plain.note_moderation).toBeNull();
-    const removed = await harness.service(new RemovingNoteModerator()).moderate(reportSubmission(jpeg, { note: "call 98290 00000" }));
+    const removed = await harness.service(new FakeRemovingNoteModerator()).moderate(reportSubmission(jpeg, { note: "call 98290 00000" }));
     expect(removed.outcome).toBe("passed");
     expect(removed.note_moderation).toMatchObject({ result: "removed", reasons: ["personal_data"] });
   });
@@ -171,7 +171,7 @@ describe("ModerationService rejections", () => {
 
   it("stops the chain at the first failure", async () => {
     harness.india.inside = false;
-    harness.devices.standingValue = { known: true, reputation: 0.1, blocked: true };
+    harness.devices.standings.device = { known: true, reputation: 0.1, blocked: true };
     const result = await harness.service().moderate(reportSubmission(jpeg));
     expect(result.reasons).toEqual(["outside_india"]);
     expect(result.checks.inside_india).toEqual({ result: "fail", detail: "point outside the India boundary" });
@@ -201,7 +201,7 @@ describe("ModerationService on cleanup after-photos", () => {
   it("passes near_site within 50 m and writes the cleanup key", async () => {
     const result = validateModerationResult(await harness.service().moderate(cleanup(jpeg, 26.2702)));
     expect(result).toMatchObject({ report_id: "cln_jdh_3c", outcome: "passed", blurred_key: "media/cleanups/cln_jdh_3c.jpg" });
-    expect(result.checks.near_site).toEqual({ result: "pass", detail: "after-photo 11 m from the site; limit 50 m" });
+    expect(result.checks.near_site).toEqual({ result: "pass", detail: "after-photo 12 m from the site; limit 50 m" });
   });
 
   it("rejects an after-photo taken away from the site", async () => {

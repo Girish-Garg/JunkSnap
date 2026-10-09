@@ -3,7 +3,6 @@ import { RekognitionClient } from "@aws-sdk/client-rekognition";
 import { S3Client } from "@aws-sdk/client-s3";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { DynamoHashIndex } from "../../adapters/moderation/DynamoHashIndex.js";
-import { PassThroughNoteModerator } from "../../adapters/moderation/PassThroughNoteModerator.js";
 import { RekognitionFaceFinder } from "../../adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../adapters/moderation/RekognitionPlateFinder.js";
@@ -13,21 +12,24 @@ import { SharpImageCodec } from "../../adapters/moderation/SharpImageCodec.js";
 import { SystemClock } from "../../adapters/moderation/SystemClock.js";
 import { TurfGeofence } from "../../adapters/moderation/TurfGeofence.js";
 import type { DeviceRegistry } from "../../ports/moderation/DeviceRegistry.js";
-import type { NoteModerator } from "../../ports/moderation/NoteModerator.js";
+import type { ProviderRouter } from "../../services/llm/ProviderRouter.js";
 import { AuthenticityService } from "../../services/moderation/AuthenticityService.js";
 import { CheckFactory } from "../../services/moderation/CheckFactory.js";
+import { LlmNoteModerator } from "../../services/moderation/LlmNoteModerator.js";
 import { ModerationService } from "../../services/moderation/ModerationService.js";
 import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
-import type { ModerationSettings } from "../../settings/ModerationSettings.js";
+import { ModerationSettings } from "../../settings/ModerationSettings.js";
+import type { EntryContext } from "../EntryPoint.js";
+import { buildProviderRouter } from "../LlmModule.js";
 
 // About 2 km: absorbs the outline's 500 m simplification and GPS drift at coasts and borders.
 export const INDIA_BUFFER_DEG = 0.02;
 
 export interface ModerationWiring {
   readonly devices: DeviceRegistry;
-  // Defaults to the pass-through stand-in.
-  readonly notes?: NoteModerator;
+  // One per process; notes go through task note_moderation, Bedrock only on the worker.
+  readonly router: ProviderRouter;
 }
 
 // Builds the moderation object graph once per worker process.
@@ -36,6 +38,12 @@ export class ModerationServiceFactory {
 
   constructor(settings: ModerationSettings) {
     this.#settings = settings;
+  }
+
+  // For the worker's entry point: reads settings when called, never at import.
+  static forWorker(context: EntryContext, devices: DeviceRegistry, router?: ProviderRouter): ModerationService {
+    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env));
+    return factory.create({ devices, router: router ?? buildProviderRouter(context.env, context.settings, context.logger) });
   }
 
   create(wiring: ModerationWiring): ModerationService {
@@ -55,7 +63,7 @@ export class ModerationServiceFactory {
         store,
       }),
       authenticity: new AuthenticityService(this.#checks(wiring.devices)),
-      notes: wiring.notes ?? new PassThroughNoteModerator(),
+      notes: new LlmNoteModerator(wiring.router),
       clock: new SystemClock(),
     });
   }

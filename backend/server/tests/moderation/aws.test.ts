@@ -8,7 +8,12 @@ import { RekognitionFaceFinder } from "../../src/adapters/moderation/Rekognition
 import { RekognitionImageModerator } from "../../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../src/adapters/moderation/RekognitionPlateFinder.js";
 import { S3ImageStore } from "../../src/adapters/moderation/S3ImageStore.js";
+import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { ExternalServiceError } from "../../src/domain/errors.js";
+import { buildProviderRouter } from "../../src/handlers/LlmModule.js";
+import { LlmNoteModerator } from "../../src/services/moderation/LlmNoteModerator.js";
+import { CoreSettings } from "../../src/settings/CoreSettings.js";
+import { LogSink } from "../LogSink.js";
 import { JODHPUR, testJpeg } from "./fakes.js";
 
 // Thin read-only checks against the real services: RUN_AWS_TESTS=1 with AWS_PROFILE set.
@@ -31,6 +36,17 @@ describe.skipIf(process.env.RUN_AWS_TESTS !== "1")("moderation adapters on AWS",
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
     const index = new DynamoHashIndex(client, { reports: `junksnap-${stage}-reports`, sites: `junksnap-${stage}-sites` });
     expect(Array.isArray(await index.near(JODHPUR, 100))).toBe(true);
+  });
+
+  // Follows the stage's task order; on 10 Oct the Claude models still needed the Anthropic use-case form, so Nova Pro answered.
+  it("removes a note with a phone number through Bedrock and keeps a plain one", async () => {
+    const env = { JUNKSNAP_STAGE: stage, LLM_TASKS: process.env.LLM_TASKS };
+    const core = CoreSettings.fromEnv(env);
+    const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage: core.stage });
+    const moderator = new LlmNoteModerator(buildProviderRouter(env, core, logger));
+    const phone = await moderator.review("Call 98290 12345 about this dump");
+    expect(phone).toMatchObject({ result: "removed", reasons: ["personal_data"], provider: "bedrock" });
+    expect(await moderator.review("Rotting vegetables dumped here every evening")).toMatchObject({ result: "clean", reasons: [] });
   });
 
   it("reports a missing original as ExternalServiceError", async () => {
