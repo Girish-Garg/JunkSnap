@@ -90,7 +90,7 @@ describe("ModerationService on a clean photo", () => {
     expect(big.byteLength).toBeGreaterThan(5 * 1024 * 1024);
     harness.store.originals.set("reports/upl_jdh_1.jpg", big);
     expect((await harness.service().moderate(reportSubmission(big))).outcome).toBe("passed");
-    expect(harness.gate.seen[0]?.byteLength).toBeLessThanOrEqual(5 * 1024 * 1024);
+    expect(harness.gate.seen[0]?.byteLength).toBeLessThanOrEqual(5_000_000);
     const blurred = harness.store.written.get("media/reports/rpt_jdh_1.jpg");
     expect((await sharp(blurred).metadata()).width).toBe(2100);
   });

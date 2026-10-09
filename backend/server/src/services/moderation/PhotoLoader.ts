@@ -7,8 +7,8 @@ import type { ImageCodec } from "../../ports/moderation/ImageCodec.js";
 import type { ImageStore } from "../../ports/moderation/ImageStore.js";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-// Rekognition's limit for image bytes; its boxes are fractions, so they still fit the original.
-const MAX_DETECTOR_BYTES = 5 * 1024 * 1024;
+// Rekognition's 5 MB image limit, read as decimal to be safe; its boxes are fractions, so they fit the original too.
+const MAX_DETECTOR_BYTES = 5_000_000;
 const JPEG_MAGIC = [0xff, 0xd8, 0xff];
 
 // Either a usable photo, or the short cause that makes it invalid_image.
