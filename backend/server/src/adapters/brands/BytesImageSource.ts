@@ -3,7 +3,7 @@ import type { BlurredImage } from "../../domain/brands/BlurredImage.js";
 import { NotFoundError } from "../../domain/errors.js";
 import type { RekognitionImageSource } from "./RekognitionImageSource.js";
 
-// Dev runs and AWS tests: JPEG bytes by report id, already blurred or free of people; 5 MB at most.
+// Dev runs and AWS tests only: JPEG bytes by report id; Rekognition takes 5 MB of bytes at most.
 export class BytesImageSource implements RekognitionImageSource {
   readonly #images: ReadonlyMap<string, Uint8Array>;
 
