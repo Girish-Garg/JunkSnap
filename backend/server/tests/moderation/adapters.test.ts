@@ -181,12 +181,18 @@ describe("DynamoHashIndex on bad rows", () => {
 });
 
 describe("DynamoCleanupHashIndex", () => {
-  it("scans the cleanups table for this site's earlier after-photos, across pages", async () => {
+  it("scans the cleanups table for this site's earlier passed after-photos, across pages", async () => {
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: "ap-south-1" }));
     const gps = { lat: 26.2702, lon: 73.0458 };
     const sent = stub(client, (command) =>
       command.input.ExclusiveStartKey === undefined
-        ? { Items: [{ cleanup_id: "cln_a", gps, moderation_result: { phash: "c4e1b3a59d0f2687" } }], LastEvaluatedKey: { cleanup_id: "cln_a" } }
+        ? {
+            Items: [
+              { cleanup_id: "cln_a", gps, moderation_result: { outcome: "passed", phash: "c4e1b3a59d0f2687" } },
+              { cleanup_id: "cln_r", gps, moderation_result: { outcome: "rejected", phash: "c4e1b3a59d0f2687" } },
+            ],
+            LastEvaluatedKey: { cleanup_id: "cln_r" },
+          }
         : { Items: [{ cleanup_id: "cln_b", gps }] },
     );
     const submission = PhotoSubmission.fromCleanup(
@@ -194,8 +200,10 @@ describe("DynamoCleanupHashIndex", () => {
       new GeoPoint(26.2701, 73.0458),
     );
     const photos = await new DynamoCleanupHashIndex(new DynamoReader(client), "cleanups-table").earlierPhotos(submission);
+    // cln_r was rejected, so a retake after it is never its duplicate; cln_b is still being processed.
     expect(photos.map((photo) => photo.photoId)).toEqual(["cln_a"]);
     expect(sent[0]?.input).toMatchObject({ TableName: "cleanups-table", FilterExpression: "site_id = :site", ExpressionAttributeValues: { ":site": "site_jdh_3" } });
+    expect(sent[0]?.input.ProjectionExpression).toContain("moderation_result.outcome");
     await expect(new DynamoCleanupHashIndex(new DynamoReader(client), "t").earlierPhotos(reportSubmission(new Uint8Array()))).rejects.toThrow(InternalDataError);
   });
 });
