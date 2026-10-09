@@ -63,6 +63,33 @@ jobs:
             echo "::endgroup::"
           done
 
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Lint, typecheck, test, build; generated contracts up to date
+        shell: bash
+        run: |
+          if [ ! -f backend/server/package.json ]; then
+            echo "No backend/server/package.json yet, skipping"
+            exit 0
+          fi
+          cd backend/server
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
+          npm run gen:contracts
+          if [ -n "$(git status --porcelain -- src/contracts)" ]; then
+            git status --short -- src/contracts
+            echo "Generated contracts are stale: run npm run gen:contracts and commit"
+            exit 1
+          fi
+
   limits:
     runs-on: ubuntu-latest
     steps:

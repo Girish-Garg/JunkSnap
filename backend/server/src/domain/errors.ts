@@ -1,0 +1,44 @@
+// HTTP status per error code, exactly as listed in contracts/README.md.
+const HTTP_STATUS = {
+  bad_request: 400,
+  bbox_too_large: 400,
+  own_site: 403,
+  too_far: 403,
+  not_found: 404,
+  area_not_found: 404,
+  cleanup_pending: 409,
+  already_cleaned: 409,
+  not_verified: 409,
+  no_local_body: 422,
+  rate_limited: 429,
+  server_error: 500,
+} as const;
+
+export type ErrorCode = keyof typeof HTTP_STATUS;
+
+// Subclasses set only `code`; the status follows from it, so the two never disagree.
+export class JunkSnapError extends Error {
+  readonly code: ErrorCode = "server_error";
+
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
+  }
+
+  get status(): number {
+    return HTTP_STATUS[this.code];
+  }
+}
+
+export class ConfigError extends JunkSnapError {}
+
+export class NotFoundError extends JunkSnapError {
+  override readonly code: ErrorCode = "not_found";
+}
+
+export class ValidationError extends JunkSnapError {
+  override readonly code: ErrorCode = "bad_request";
+}
+
+// Adapters translate SDK and HTTP failures into this.
+export class ExternalServiceError extends JunkSnapError {}
