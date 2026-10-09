@@ -4,9 +4,19 @@ import { EntryPoint } from "../src/handlers/EntryPoint.js";
 import { runScores } from "../src/handlers/scores.js";
 import { serveApi } from "../src/handlers/web.js";
 import { runWorker } from "../src/handlers/worker.js";
+import type { QueuePoller } from "../src/ports/QueuePoller.js";
 import { LogSink } from "./LogSink.js";
 
 const DEMO_WITHOUT_CORS = { JUNKSNAP_STAGE: "demo" };
+
+// Waits for the stop signal without touching SQS.
+class StoppablePoller implements QueuePoller {
+  async pollOnce(signal: AbortSignal): Promise<void> {
+    await new Promise<void>((resolve) => {
+      signal.addEventListener("abort", () => resolve(), { once: true });
+    });
+  }
+}
 
 function entry(service: "api" | "worker" | "scores") {
   const sink = new LogSink();
@@ -25,7 +35,7 @@ describe("EntryPoint", () => {
   it("runs the worker in demo without CORS_ORIGINS until SIGTERM", async () => {
     const { sink, exit, point } = entry("worker");
     const signals = new EventEmitter();
-    const done = point.run(DEMO_WITHOUT_CORS, (context) => runWorker(context, signals));
+    const done = point.run(DEMO_WITHOUT_CORS, (context) => runWorker(context, signals, () => new StoppablePoller()));
     signals.emit("SIGTERM");
     await done;
     expect(exit.exitCode).toBeUndefined();

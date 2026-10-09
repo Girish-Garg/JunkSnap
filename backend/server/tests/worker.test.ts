@@ -1,6 +1,5 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
-import { IdleQueuePoller } from "../src/adapters/IdleQueuePoller.js";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { runWorker } from "../src/handlers/worker.js";
 import type { QueuePoller } from "../src/ports/QueuePoller.js";
@@ -36,7 +35,7 @@ describe("runWorker", () => {
     const sink = new LogSink();
     const signals = new EventEmitter();
     const context = { settings: CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), logger: workerLogger(sink), env: {} };
-    const done = runWorker(context, signals);
+    const done = runWorker(context, signals, () => new FakeQueuePoller());
     signals.emit("SIGTERM");
     await done;
     const messages = sink.records().map((record) => [record.message, record.service, record.level]);
@@ -71,16 +70,5 @@ describe("WorkerLoop", () => {
   it("ends run() when a poll fails so the pod restarts", async () => {
     const loop = new WorkerLoop(new FailingQueuePoller(), workerLogger(new LogSink()));
     await expect(loop.run()).rejects.toThrow("queue unreachable");
-  });
-});
-
-describe("IdleQueuePoller", () => {
-  it("returns as soon as it is aborted", async () => {
-    const stopper = new AbortController();
-    const started = Date.now();
-    const poll = new IdleQueuePoller(60_000).pollOnce(stopper.signal);
-    stopper.abort();
-    await poll;
-    expect(Date.now() - started).toBeLessThan(1_000);
   });
 });
