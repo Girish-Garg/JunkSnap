@@ -14,7 +14,7 @@ from training.ports import Downloader, ObjectStore
 from training.sources.base import DatasetSource, RawItem, SourceInfo
 from training.utils import s3_key
 
-BLURRED = re.compile(r"^/?media/(reports|cleanups)/[^/]+\.jpe?g$")
+BLURRED = re.compile(r"^/?media/reports/[^/]+\.jpe?g$")
 
 
 @dataclass(frozen=True)
@@ -95,7 +95,10 @@ class FieldExportSource(DatasetSource):
     @staticmethod
     def _item(record: ImageRecord, read: Callable[[], bytes]) -> RawItem:
         stem = record.image_id.split("/", 1)[1]
-        return RawItem(stem=stem, read=read, boxes=record.boxes, attributes=record.attributes)
+        return RawItem(
+            stem=stem, read=read, boxes=record.boxes, attributes=record.attributes,
+            group=record.group,
+        )
 
     def _from_export(self, ref: str) -> Callable[[], bytes]:
         return lambda: self._photos.read(ref)

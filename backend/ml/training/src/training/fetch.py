@@ -89,7 +89,8 @@ class Fetcher:
                 LOG.warning("skipped %s: %s", item.stem, error)
                 return None
         return ImageRecord(
-            f"{name}/{item.stem}", name, relative, item.labels, item.boxes, item.attributes
+            f"{name}/{item.stem}", name, relative, item.labels, item.boxes, item.attributes,
+            item.group,
         )
 
     def _upload(self, name: str, records: list[ImageRecord]) -> None:

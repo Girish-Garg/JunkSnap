@@ -53,6 +53,7 @@ class ManifestBuilder:
             size_class=attrs.size_class,
             brands=attrs.brands,
             has_boxes=bool(record.boxes),
+            group=record.group,
         )
 
 
@@ -88,10 +89,14 @@ class ManifestFile:
             raise ConfigError("no manifest yet: run build-manifest")
         return data.decode("utf-8")
 
-    def write(self, rows: list[ManifestRow], seed: int | None = None) -> dict[str, Any]:
+    def write(
+        self, rows: list[ManifestRow], seed: int | None = None, allow_drops: bool = False
+    ) -> dict[str, Any]:
         """Publishes first, so a failed upload leaves the cache copy and summary untouched."""
         ordered = sorted(rows, key=lambda r: r.id)
         text = "".join(json.dumps(r.to_json(), sort_keys=True) + "\n" for r in ordered)
+        if len(text.encode("utf-8")) > MAX_REPO_BYTES and not allow_drops:
+            self._refuse_drops({r.id for r in ordered})
         pending = self._work.with_name(f"{self._work.name}.pending")
         pending.parent.mkdir(parents=True, exist_ok=True)
         pending.write_text(text, encoding="utf-8", newline="\n")
@@ -105,6 +110,17 @@ class ManifestFile:
         dumped = json.dumps(summary, indent=2) + "\n"
         self._summary.write_text(dumped, encoding="utf-8", newline="\n")
         return summary
+
+    def _refuse_drops(self, new_ids: set[str]) -> None:
+        """The shared S3 manifest may hold rows another machine added; never drop them quietly."""
+        data = self._store.read(s3_key("manifest.jsonl"))
+        lines = data.decode("utf-8").splitlines() if data else []
+        dropped = sorted({json.loads(line)["id"] for line in lines if line} - new_ids)
+        if dropped:
+            raise ConfigError(
+                f"the S3 manifest has {len(dropped)} ids this build lacks "
+                f"({', '.join(dropped[:3])}); pass --force to drop them"
+            )
 
     def _publish(self, pending: Path, size: int) -> str:
         if size <= MAX_REPO_BYTES:

@@ -73,6 +73,7 @@ def test_blurred_copies_from_s3_and_cloudfront_reach_the_private_bucket(
     "s3://junksnap-dev-originals-1/reports/upl_jdh_9.jpg",
     "/data/local-files/?d=field%2FIMG_0042.jpg",
     "/data/upload/1/IMG_1.jpg",
+    "s3://fake-bucket/media/cleanups/cln_jdh_3c.jpg",
 ])
 def test_originals_and_local_files_are_refused(tmp_path: Path, run_import: Importer, image) -> None:
     with pytest.raises(ConfigError, match="blurred"):

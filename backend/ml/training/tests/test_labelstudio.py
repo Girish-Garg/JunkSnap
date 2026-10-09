@@ -11,9 +11,11 @@ def choice(name: str, *values: str) -> dict[str, Any]:
     return {"from_name": name, "type": "choices", "value": {"choices": list(values)}}
 
 
-def task(image: str, results: list[dict[str, Any]], cancelled: bool = False) -> dict[str, Any]:
+def task(
+    image: str, results: list[dict[str, Any]], cancelled: bool = False, **data: str
+) -> dict[str, Any]:
     annotation = {"result": results, "was_cancelled": cancelled}
-    return {"id": 1, "data": {"image": image}, "annotations": [annotation]}
+    return {"id": 1, "data": {"image": image, **data}, "annotations": [annotation]}
 
 
 FAKE_EXPORT = [
@@ -23,17 +25,17 @@ FAKE_EXPORT = [
         choice("burning", "yes"),
         choice("materials", "plastic", "construction_debris"),
         choice("hazards", "dead_animal"),
-        choice("size_class", "truck"),
+        choice("size_class", "large"),
         {"from_name": "brands", "type": "textarea",
          "value": {"text": ["Brand A, Brand B\nBrand A"]}},
         {"from_name": "boxes", "type": "rectanglelabels", "original_width": 4000,
          "value": {"x": 10, "y": 20, "width": 50, "height": 40,
                    "rectanglelabels": ["waste_pile"]}},
-    ]),
+    ], scan_id="scn_jdh_1", site_id="site_jdh_1"),
     task("https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_10.jpg", [
         choice("report_type", "no_bin"), choice("context_no_bin", "no_pickup"),
         choice("burning", "no"),
-    ]),
+    ], site_id="site_jdh_2"),
     task("/data/upload/1/skipped.jpg", [choice("report_type", "waste_dump")], cancelled=True),
 ]
 
@@ -49,6 +51,10 @@ def test_config_has_every_question_and_box_label(class_map: ClassMap) -> None:
     assert len(materials) == len(class_map.vocabulary.materials)
     labels = [n.get("value") for n in root.iter("Label")]
     assert labels == ["waste_pile", "bag", "bin", "burning"]
+    size = next(n for n in root.iter("Choices") if n.get("name") == "size_class")
+    hints = {c.get("value"): c.get("hint") for c in size}
+    assert hints == {"small": "fits in a bin bag", "medium": "up to a handcart",
+                     "large": "needs a truck"}
 
 
 def test_import_reads_a_tiny_export(class_map: ClassMap) -> None:
@@ -57,7 +63,7 @@ def test_import_reads_a_tiny_export(class_map: ClassMap) -> None:
     attrs = first.attributes
     assert attrs is not None
     assert (attrs.report_type, attrs.context) == ("waste_dump", "vacant_plot")
-    assert attrs.size_class == "truck"
+    assert attrs.size_class == "large"
     assert attrs.materials == ("plastic", "construction_debris")
     assert attrs.hazards == ("burning", "dead_animal")
     assert attrs.brands == ("Brand A", "Brand B")
@@ -67,6 +73,7 @@ def test_import_reads_a_tiny_export(class_map: ClassMap) -> None:
     assert second.image_id == "field/rpt_jdh_10"
     assert second.path == "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_10.jpg"
     assert second.attributes is not None and second.attributes.hazards == ()
+    assert (first.group, second.group) == ("scan:scn_jdh_1", "site:site_jdh_2")
 
 
 def test_import_rejects_a_context_from_another_report_type(class_map: ClassMap) -> None:

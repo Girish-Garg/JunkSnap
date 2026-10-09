@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 from training.class_map import ClassMap, ClassRule, SourceRules
 from training.domain import Attributes, Box, ConfigError, ImageRecord
@@ -19,11 +22,21 @@ def test_every_source_class_uses_known_values(class_map: ClassMap) -> None:
 def test_taco_classes_map_to_materials_hazards_and_detector(class_map: ClassMap) -> None:
     box = Box("Garbage bag", 0.1, 0.1, 0.2, 0.2)
     attrs = class_map.attributes_for(record("taco", "Battery", "Food waste", boxes=(box,)))
-    assert attrs.report_type == "waste_dump"
+    assert attrs.report_type is None
     assert attrs.materials == ("plastic", "organic", "e_waste")
     assert attrs.hazards == ("e_waste",)
     assert class_map.yolo_class("taco", "Garbage bag") == "bag"
     assert class_map.yolo_class("taco", "Drink can") == "waste_item"
+
+
+def test_vocabulary_matches_the_verification_contract(class_map: ClassMap) -> None:
+    schemas = Path(__file__).resolve().parents[4] / "contracts" / "schemas"
+    raw = (schemas / "verification_result.schema.json").read_text(encoding="utf-8")
+    defs = json.loads(raw)["$defs"]
+    vocab = class_map.vocabulary
+    assert vocab.size_classes == tuple(defs["size_class"]["enum"]) == ("small", "medium", "large")
+    assert vocab.materials == tuple(defs["material"]["enum"])
+    assert vocab.hazards == tuple(defs["hazard"]["enum"])
 
 
 def test_india_dump_photos_map_to_report_types(class_map: ClassMap) -> None:

@@ -41,7 +41,7 @@ class Splitter:
 
     def split_of(self, row: ManifestRow) -> str:
         ratios = FIELD if row.source == FIELD_SOURCE else PUBLIC
-        point = self._point(self._group(row.id))
+        point = self._point(self._group(row))
         for name, bound in (ratios.first, ratios.second):
             if point < bound:
                 return name
@@ -52,6 +52,6 @@ class Splitter:
         return int(digest[:13], 16) / 16**13
 
     @staticmethod
-    def _group(image_id: str) -> str:
-        """Roboflow augmentation copies of one photo share a split, so they cannot leak."""
-        return ROBOFLOW_COPY.sub("", image_id)
+    def _group(row: ManifestRow) -> str:
+        """One scan, one site or one photo's Roboflow copies always share a split."""
+        return row.group or ROBOFLOW_COPY.sub("", row.id)

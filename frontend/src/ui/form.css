@@ -1,0 +1,135 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field__label {
+  font-weight: 500;
+}
+
+.field__control {
+  position: relative;
+}
+
+.field__input {
+  width: 100%;
+  height: var(--target);
+  padding: 0 var(--edge);
+  border: 1px solid #dadce0;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  font-size: 16px;
+}
+
+.field__input:focus {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+}
+
+.field__input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.field__input--code {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5em;
+  text-align: center;
+}
+
+.field__control .icon-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.field__control .field__input--with-button {
+  padding-right: 52px;
+}
+
+.field__hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.field__error {
+  color: var(--error);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--target);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.button--primary:hover {
+  background: var(--accent-hover);
+}
+
+.button--primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.button--text {
+  min-height: var(--target);
+  padding: 0 var(--space-1);
+  background: transparent;
+  color: var(--accent);
+}
+
+.form__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.form__error {
+  color: var(--error);
+}
+
+.form__note {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}

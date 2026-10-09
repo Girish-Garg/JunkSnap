@@ -33,9 +33,9 @@
     "taco/val": 79
   },
   "by_report_type": {
-    "none": 11964,
+    "none": 12998,
     "not_waste": 1259,
-    "waste_dump": 1742
+    "waste_dump": 708
   },
   "by_material": {
     "e_waste": 1,

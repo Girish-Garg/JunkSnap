@@ -17,7 +17,7 @@ from training.split import Splitter
 LICENCES = {"taco": "CC-BY-4.0", "field": "private"}
 MANIFEST_KEYS = {
     "id", "source", "licence", "s3_key", "local_path", "report_type", "context",
-    "materials", "hazards", "size_class", "brands", "has_boxes", "split",
+    "materials", "hazards", "size_class", "brands", "has_boxes", "split", "group",
 }
 
 
@@ -116,6 +116,20 @@ def test_large_manifests_go_to_s3(tmp_path: Path, store, class_map, monkeypatch)
     assert "fake-bucket" not in summary["manifest"]
     assert not (tmp_path / "manifest.jsonl").exists()
     assert ManifestFile(tmp_path / "other", tmp_path, store).read() == rows
+
+
+def test_a_build_never_quietly_drops_rows_from_the_s3_manifest(
+    tmp_path: Path, store, class_map, monkeypatch
+) -> None:
+    monkeypatch.setattr(manifest_module, "MAX_REPO_BYTES", 10)
+    fetch(tmp_path / "cache", store)
+    rows = ManifestBuilder(tmp_path / "cache", class_map, LICENCES).build(store)
+    extra = ManifestRow("field/rpt_other", "field", "private", None, None, "waste_dump")
+    ManifestFile(tmp_path / "other", tmp_path, store).write([*rows, extra])
+    with pytest.raises(ConfigError, match="1 ids this build lacks"):
+        ManifestFile(tmp_path / "cache", tmp_path, store).write(rows)
+    ManifestFile(tmp_path / "cache", tmp_path, store).write(rows, allow_drops=True)
+    assert ManifestFile(tmp_path / "fresh", tmp_path, store).read() == rows
 
 
 def test_large_manifest_needs_s3(tmp_path: Path, store, class_map, monkeypatch) -> None:
