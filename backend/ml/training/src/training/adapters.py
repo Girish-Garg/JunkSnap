@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, override
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from training.domain import ExternalServiceError
+from training.domain import ConfigError, ExternalServiceError
 from training.ports import Downloader, ObjectStore
 
 if TYPE_CHECKING:
@@ -71,6 +71,23 @@ class S3ObjectStore(ObjectStore):
         except (BotoCoreError, ClientError) as error:
             raise ExternalServiceError(f"s3 upload {key}: {error}") from error
 
+    def read(self, key_or_uri: str) -> bytes | None:
+        bucket, key = self._split(key_or_uri)
+        try:
+            return self._client.get_object(Bucket=bucket, Key=key)["Body"].read()
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") in ("NoSuchKey", "404"):
+                return None
+            raise ExternalServiceError(f"s3 read {key_or_uri}: {error}") from error
+        except BotoCoreError as error:
+            raise ExternalServiceError(f"s3 read {key_or_uri}: {error}") from error
+
+    def _split(self, key_or_uri: str) -> tuple[str, str]:
+        if not key_or_uri.startswith("s3://"):
+            return self._bucket, key_or_uri
+        bucket, _, key = key_or_uri.removeprefix("s3://").partition("/")
+        return bucket, key
+
     @property
     def is_remote(self) -> bool:
         return True
@@ -80,11 +97,15 @@ class S3ObjectStore(ObjectStore):
 
 
 class LocalOnlyStore(ObjectStore):
-    """Used when no bucket exists: images stay in the local cache."""
+    """Only behind an explicit --no-upload: files stay in the local cache."""
 
     @override
     def upload_file(self, local: Path, key: str) -> None:
         return None
+
+    @override
+    def read(self, key_or_uri: str) -> bytes | None:
+        raise ConfigError(f"{key_or_uri} is in S3; run without --no-upload")
 
     @property
     def is_remote(self) -> bool:
@@ -104,11 +125,13 @@ class StackBucketLocator:
         self._client = client
         self._stack = stack
 
-    def bucket(self) -> str | None:
+    def bucket(self) -> str:
         try:
             stacks = self._client.describe_stacks(StackName=self._stack)["Stacks"]
-        except (BotoCoreError, ClientError):
-            return None
+        except (BotoCoreError, ClientError) as error:
+            raise ConfigError(f"cannot read stack {self._stack}: {error}") from error
         outputs = stacks[0].get("Outputs", []) if stacks else []
         names = [o.get("OutputValue") for o in outputs if o.get("OutputKey") == self.OUTPUT_KEY]
-        return names[0] if names else None
+        if not names or not names[0]:
+            raise ConfigError(f"stack {self._stack} has no {self.OUTPUT_KEY} output")
+        return names[0]

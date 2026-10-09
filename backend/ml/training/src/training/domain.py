@@ -54,6 +54,16 @@ class Attributes:
     size_class: str | None = None
     brands: tuple[str, ...] = ()
 
+    @staticmethod
+    def from_json(raw: dict[str, Any]) -> Attributes:
+        lists = {k: tuple(raw.get(k, ())) for k in ("materials", "hazards", "brands")}
+        return Attributes(
+            report_type=raw.get("report_type"),
+            context=raw.get("context"),
+            size_class=raw.get("size_class"),
+            **lists,
+        )
+
 
 @dataclass(frozen=True)
 class ImageRecord:
@@ -78,18 +88,8 @@ class ImageRecord:
             path=raw["path"],
             labels=tuple(raw.get("labels", ())),
             boxes=tuple(Box(**box) for box in raw.get("boxes", ())),
-            attributes=_attributes(attrs) if attrs else None,
+            attributes=Attributes.from_json(attrs) if attrs else None,
         )
-
-
-def _attributes(raw: dict[str, Any]) -> Attributes:
-    lists = {k: tuple(raw.get(k, ())) for k in ("materials", "hazards", "brands")}
-    return Attributes(
-        report_type=raw.get("report_type"),
-        context=raw.get("context"),
-        size_class=raw.get("size_class"),
-        **lists,
-    )
 
 
 @dataclass(frozen=True)

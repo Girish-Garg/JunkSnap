@@ -84,14 +84,21 @@ class FieldExportReader:
             return None
         results = done[-1].get("result", [])
         image = str(task["data"]["image"])
-        stem = safe_stem(posixpath.basename(urllib.parse.urlparse(image).path) or image)
-        if "?d=" in image:
-            stem = safe_stem(posixpath.basename(urllib.parse.unquote(image.split("?d=", 1)[1])))
         attrs = self._attributes(results)
         self._vocab.check_attributes(f"task {task.get('id')}", attrs)
-        path = image if image.startswith("s3://") else f"{FIELD_SOURCE}/images/{stem}.jpg"
+        ref = self._reference(image)
+        stem = safe_stem(posixpath.basename(ref))
         boxes = self._boxes(results)
-        return ImageRecord(f"{FIELD_SOURCE}/{stem}", FIELD_SOURCE, path, (), boxes, attrs)
+        return ImageRecord(f"{FIELD_SOURCE}/{stem}", FIELD_SOURCE, ref, (), boxes, attrs)
+
+    @staticmethod
+    def _reference(image: str) -> str:
+        """An `s3://` URI, or the photo's file name for local-file and upload tasks."""
+        if image.startswith("s3://"):
+            return image
+        if "?d=" in image:
+            return posixpath.basename(urllib.parse.unquote(image.split("?d=", 1)[1]))
+        return posixpath.basename(urllib.parse.unquote(urllib.parse.urlparse(image).path))
 
     def _attributes(self, results: list[dict[str, Any]]) -> Attributes:
         picked = self._choices(results)

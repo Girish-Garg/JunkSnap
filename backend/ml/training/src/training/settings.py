@@ -16,15 +16,18 @@ class Settings:
     cache: Path | None
     repo: Path
     stack: str
+    bucket: str | None
     region: str
 
     @staticmethod
     def from_env(cwd: Path) -> Settings:
         cache = os.environ.get("JUNKSNAP_DATA_CACHE")
+        stage = os.environ.get("JUNKSNAP_STAGE", "dev")
         return Settings(
             cache=Path(cache) if cache else None,
             repo=Path(os.environ.get("JUNKSNAP_REPO") or Settings._find_repo(cwd)),
-            stack=os.environ.get("JUNKSNAP_STACK", "junksnap-dev"),
+            stack=f"junksnap-{stage}",
+            bucket=os.environ.get("ORIGINALS_BUCKET") or None,
             region=os.environ.get("AWS_REGION", "ap-south-1"),
         )
 
@@ -36,12 +39,15 @@ class Settings:
         raise ConfigError(f"no {CLASS_MAP} above {cwd}; set JUNKSNAP_REPO")
 
     def require_cache(self) -> Path:
-        """The cache must sit outside the repo so images can never be committed."""
         if self.cache is None:
             raise ConfigError("set JUNKSNAP_DATA_CACHE to a folder outside the repo")
-        if self.cache.resolve().is_relative_to(self.repo.resolve()):
-            raise ConfigError("JUNKSNAP_DATA_CACHE must be outside the repo")
-        return self.cache
+        return self.outside_repo(self.cache)
+
+    def outside_repo(self, path: Path) -> Path:
+        """Image folders must sit outside the repo so images can never be committed."""
+        if path.resolve().is_relative_to(self.repo.resolve()):
+            raise ConfigError(f"{path} is inside the repo; use a folder outside it")
+        return path
 
     @property
     def datasets_dir(self) -> Path:

@@ -8,12 +8,13 @@ from pathlib import Path
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from training.domain import ExternalServiceError
+from training.ports import ImageWriter
 
 MAX_SIDE = 1280
 QUALITY = 88
 
 
-class ImageNormaliser:
+class ImageNormaliser(ImageWriter):
     def __init__(self, max_side: int = MAX_SIDE) -> None:
         self._max_side = max_side
 

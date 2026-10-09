@@ -14,6 +14,9 @@ class FakeStore(ObjectStore):
     def upload_file(self, local: Path, key: str) -> None:
         self.uploaded[key] = local.read_bytes()
 
+    def read(self, key_or_uri: str) -> bytes | None:
+        return self.uploaded.get(key_or_uri.removeprefix("s3://fake-bucket/"))
+
     @property
     def is_remote(self) -> bool:
         return True

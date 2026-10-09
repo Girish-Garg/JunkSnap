@@ -1,6 +1,6 @@
 # ML datasets: sources, licences and splits
 
-Images never go in git. `uv run training fetch` (in `backend/ml/training/`) downloads each source into the local cache named by `JUNKSNAP_DATA_CACHE` (outside the repo), re-encodes every image to an upright JPEG of at most 1280 px, and uploads it to the private bucket of the `junksnap-dev` stack (`OriginalsBucketName` output, SSE-KMS) under `datasets/<source>/images/`. Each source's labels and normalised boxes go to `datasets/<source>/records.jsonl` next to them. This folder holds only the class map, the manifest and its summary. Sources fetched on 10 Oct 2026.
+Images never go in git. `uv run training fetch` (in `backend/ml/training/`) downloads each source into the local cache named by `JUNKSNAP_DATA_CACHE` (outside the repo), re-encodes every image to an upright JPEG of at most 1280 px, and uploads it to the private bucket (`ORIGINALS_BUCKET`, or the `OriginalsBucketName` output of the `junksnap-<JUNKSNAP_STAGE>` stack; SSE-KMS) under `datasets/<source>/images/`. Each source's labels and normalised boxes go to `datasets/<source>/records.jsonl` next to them. If the bucket cannot be found every command stops with an error; only an explicit `--no-upload` keeps files local. A machine without the cache rebuilds the manifest from those S3 records, and `yolo-export` downloads the images it lacks. This folder holds only the class map, the manifest summary and this file. Sources fetched on 10 Oct 2026.
 
 ## Used
 
@@ -43,14 +43,14 @@ Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, const
 
 ## Splits
 
-`split` is hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26.
+Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26, recorded in `manifest_summary.json`; `build-manifest`, `split` and `import-field` refuse another seed unless given `--force`.
 
 | Source | test | val | train | holdout |
 |---|---|---|---|---|
 | public sources | first 10% | next 10% | rest | never |
 | `field` | never | next 10% | rest | first 30% |
 
-Roboflow augmentation copies of one photo hash on the photo's name, so they always share a split. The field `holdout` split is the evaluation set for A2: `yolo-export` never writes it, and training code must read only `train` and `val`.
+Roboflow augmentation copies of one photo hash on the photo's name, so they always share a split. The field `holdout` split is the evaluation set for A2: `yolo-export` never writes it, and training code reads rows through `ManifestFile.trainable()`, which returns only `train` and `val`.
 
 ## Commands
 
@@ -59,11 +59,11 @@ cd backend/ml/training
 export JUNKSNAP_DATA_CACHE=/path/outside/repo AWS_PROFILE=junksnap
 uv run training fetch taco qr4change garbage_od
 uv run training fetch dfire --limit 1500
-uv run training build-manifest
-uv run training split --seed 26
+uv run training build-manifest                # builds rows and assigns splits with the recorded seed
+uv run training split                         # re-assigns splits; --seed N --force to change the seed
 uv run training labelstudio-config            # writes data/labels/label_studio.xml
-uv run training import-field export.json      # Label Studio JSON export; re-runs manifest and split
+uv run training import-field export.json --photos <folder>
 uv run training yolo-export --out /path/outside/repo/yolo
 ```
 
-Label Studio tasks should point at the blurred copies (`media/reports/<report_id>.jpg`) or at photos in the private bucket, never at a public link to an original. Labels describe waste only and never name a person.
+`import-field` reads a Label Studio JSON export. Photos of `s3://` tasks are read from S3; photos of local-file or upload tasks are read by file name from `--photos`. Each photo is re-encoded and uploaded to `datasets/field/images/` in the private bucket with its labels in `datasets/field/records.jsonl`, then the manifest is rebuilt. A missing photo stops the import. Label Studio tasks should point at the blurred copies (`media/reports/<report_id>.jpg`) or at photos in the private bucket, never at a public link to an original. Labels describe waste only and never name a person.

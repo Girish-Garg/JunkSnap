@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import zipfile
-from collections.abc import Callable
+from collections import Counter
+from collections.abc import Callable, Iterable
 
 S3_PREFIX = "datasets"
 
@@ -13,6 +14,11 @@ def safe_stem(text: str) -> str:
     """Turns a path inside an archive into a flat, filesystem-safe file stem."""
     keep = [c if c.isalnum() else "_" for c in text.rsplit(".", 1)[0].lower()]
     return "".join(keep).strip("_")[:80]
+
+
+def count_values(values: Iterable[str]) -> dict[str, int]:
+    """Counts as a key-sorted dict, so committed summaries diff cleanly."""
+    return dict(sorted(Counter(values).items()))
 
 
 def short_hash(text: str) -> str:

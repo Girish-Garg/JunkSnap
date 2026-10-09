@@ -1,4 +1,4 @@
-"""The interface every public dataset source implements."""
+"""The interface every dataset source implements."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-from training.domain import Box
+from training.domain import Attributes, Box
 from training.ports import Downloader
 
 
@@ -26,15 +26,20 @@ class RawItem:
     read: Callable[[], bytes]
     labels: tuple[str, ...] = ()
     boxes: tuple[Box, ...] = ()
+    attributes: Attributes | None = None
 
 
 class DatasetSource(ABC):
     def __init__(self, info: SourceInfo, downloader: Downloader) -> None:
-        self.info = info
+        self._info = info
         self._downloader = downloader
 
+    @property
+    def info(self) -> SourceInfo:
+        return self._info
+
     def raw_dir(self, cache: Path) -> Path:
-        return cache / self.info.name / "raw"
+        return cache / self._info.name / "raw"
 
     def ensure_file(self, url: str, dest: Path) -> Path:
         """Downloads once; an existing non-empty file is reused."""

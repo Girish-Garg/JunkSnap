@@ -65,7 +65,7 @@ def test_import_reads_a_tiny_export(class_map: ClassMap) -> None:
     assert box.label == "waste_pile"
     assert (box.x, box.y, box.w, box.h) == pytest.approx((0.1, 0.2, 0.5, 0.4))
     assert second.image_id == "field/img_0042"
-    assert second.path == "field/images/img_0042.jpg"
+    assert second.path == "IMG_0042.jpg"
     assert second.attributes is not None and second.attributes.hazards == ()
 
 
