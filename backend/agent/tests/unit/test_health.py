@@ -2,10 +2,11 @@ import json
 import logging
 
 import pytest
-from agent.handlers.web import create_app
-from agent.settings.core import CoreSettings
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
+
+from agent.handlers.web import create_app
+from agent.settings.core import CoreSettings
 
 
 def test_healthz_returns_ok() -> None:

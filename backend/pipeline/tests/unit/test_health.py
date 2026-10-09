@@ -4,6 +4,7 @@ import logging
 import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
+
 from pipeline.handlers.web import create_app
 from pipeline.settings.core import CoreSettings
 

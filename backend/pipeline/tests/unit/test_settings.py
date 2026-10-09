@@ -1,4 +1,5 @@
 import pytest
+
 from pipeline.domain.errors import ConfigError
 from pipeline.settings.core import CoreSettings
 
