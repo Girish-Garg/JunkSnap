@@ -20,7 +20,7 @@ describe('How JunkSnap works', () => {
     expect(screen.getByText('Local body (Municipal Corporation)')).toBeInTheDocument();
     expect(screen.getByText('Ward councillor')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    await user.click(screen.getByRole('button', { name: 'Explore the map' }));
+    await user.click(screen.getByRole('button', { name: 'Explore' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
