@@ -24,6 +24,13 @@ export function cleanupPath(siteId: string): string {
   return `${sitePath(siteId)}/cleanup`;
 }
 
+/** The query parameter that presets Snap to add a photo to one site (SitePhotoPreset). */
+export const SNAP_SITE_PARAM = 'site';
+
+export function addPhotoPath(siteId: string): string {
+  return `${SNAP_PATH}?${SNAP_SITE_PARAM}=${encodeURIComponent(siteId)}`;
+}
+
 export function letterPath(siteId: string): string {
   return `${sitePath(siteId)}/letter`;
 }

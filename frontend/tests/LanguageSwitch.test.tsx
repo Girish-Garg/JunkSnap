@@ -72,4 +72,13 @@ describe('translations and formats', () => {
     expect(english.dateTime('2026-10-09T03:40:00Z')).toMatch(/Oct/);
     expect(hindi.dateTime('2026-10-09T03:40:00Z')).toMatch(/अक्टू|अक्तू/);
   });
+
+  it('shows a dash, never NaN, for a missing number or distance', () => {
+    for (const formatter of [new LocaleFormatter('en'), new LocaleFormatter('hi')]) {
+      expect(formatter.number(Number.NaN)).toBe('–');
+      expect(formatter.number(Number(undefined))).toBe('–');
+      expect(formatter.distance(Number.NaN)).toBe('–');
+      expect(formatter.distance(Number.POSITIVE_INFINITY)).toBe('–');
+    }
+  });
 });

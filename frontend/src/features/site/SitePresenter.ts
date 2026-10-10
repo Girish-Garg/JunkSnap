@@ -56,8 +56,10 @@ export class SitePresenter {
     return [...reports, { url: cleanup, altKey: 'site.afterCleanup', altParams: {}, reportedAt: UlidTime.fromPhotoUrl(cleanup), photoId: null, warned: false }];
   }
 
+  /** The newest photo nobody has covered; a warned photo never shows uncovered in a card or list row. */
   thumbnail(): string | null {
-    return this.#site.photo_urls[0] ?? null;
+    const warned = new Set(this.photos().flatMap((photo) => (photo.warned ? [photo.url] : [])));
+    return this.#site.photo_urls.find((url) => !warned.has(url)) ?? null;
   }
 
   /** An unverified site needs people to back it; a verified one is ready for a letter. */
@@ -73,6 +75,11 @@ export class SitePresenter {
   /** The api drafts a letter only for a verified site (10 people; decision 20261010-1530) that is still on the map. */
   letterReady(): boolean {
     return this.#site.verification === 'verified' && this.closedReason() === null;
+  }
+
+  /** The status chip says verified or waiting only for an open site; any other status spells it out beside the chip. */
+  showsVerification(): boolean {
+    return this.#site.status !== 'open';
   }
 
   /** "n of 10 people confirmed" means nothing once a site is off the map, unless it was verified first. */
