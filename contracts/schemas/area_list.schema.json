@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/area_list.schema.json",
+  "title": "area_list",
+  "description": "Ranked areas of one kind within a district or local body, from GET /areas/{kind}?within=<id>&limit=<n>. Each item is a stored ward_scores row, returned as stored: withheld scores stay null with their reason, counts always show. Order: areas with at least one shown score first, lowest mean of the shown scores first; then the rest; ties go to more verified reports, then area id. An empty list (total 0) when no area of that kind has a site there yet.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "within", "total", "limit", "areas"],
+  "properties": {
+    "kind": { "enum": ["ward", "assembly", "loksabha", "district"] },
+    "within": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$", "description": "The district id (rajasthan-jodhpur) or local body id (jodhpur-mc) the areas lie in, as asked." },
+    "total": { "type": "integer", "minimum": 0, "description": "Matching areas before the limit." },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 200, "description": "The limit applied: 50 by default, capped at 200." },
+    "areas": {
+      "type": "array",
+      "maxItems": 200,
+      "description": "At most limit items. Each item is a full ward_scores body; validate it against ward_scores.schema.json (schemas here never reference each other).",
+      "items": {
+        "type": "object",
+        "required": ["area", "counts", "min_verified_reports", "scores", "metrics", "diagnosis", "formula_version", "pilot", "data_window", "computed_at"]
+      }
+    }
+  }
+}

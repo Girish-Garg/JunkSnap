@@ -3,7 +3,7 @@ import type { WardScores } from "../../contracts/index.gen.js";
 import type { AreaScoreSeeder } from "../../ports/sites/AreaScoreSeeder.js";
 import type { AwsCalls } from "./AwsCalls.js";
 
-// Scores item: key (area_kind, area_id) plus the ward_scores fields top-level.
+// Scores item: key (area_kind, area_id), the within ids and the ward_scores fields top-level.
 export class DynamoAreaScoreSeeder implements AreaScoreSeeder {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -15,10 +15,10 @@ export class DynamoAreaScoreSeeder implements AreaScoreSeeder {
     this.#calls = calls;
   }
 
-  async seedIfMissing(row: WardScores): Promise<void> {
+  async seedIfMissing(row: WardScores, within: readonly string[]): Promise<void> {
     const request = new PutCommand({
       TableName: this.#table,
-      Item: { area_kind: row.area.kind, area_id: row.area.id, ...row },
+      Item: { area_kind: row.area.kind, area_id: row.area.id, within: [...within], ...row },
       ConditionExpression: "attribute_not_exists(area_kind)",
     });
     await this.#calls.conditional("DynamoDB seed scores", () => this.#client.send(request));

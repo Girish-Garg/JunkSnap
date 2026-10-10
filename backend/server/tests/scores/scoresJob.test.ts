@@ -66,9 +66,11 @@ class FakeFacts implements AreaFacts {
 // Validates like the Dynamo repository, so every row the job writes passes ward_scores, insights included.
 class InMemoryScores implements ScoreRepository {
   readonly rows = new Map<string, WardScores>();
+  readonly within = new Map<string, readonly string[]>();
 
-  async save(row: ComputedAreaScores): Promise<void> {
+  async save(row: ComputedAreaScores, within: readonly string[]): Promise<void> {
     this.rows.set(`${row.area.kind}:${row.area.id}`, validateWardScores(row));
+    this.within.set(`${row.area.kind}:${row.area.id}`, within);
   }
 
   async find(area: AreaKey): Promise<WardScores | null> {
@@ -98,6 +100,8 @@ describe("ScoresJob", () => {
     expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts.verified_reports).toBe(6);
     expect(scores.rows.get("assembly:s20-ac-127")?.counts.verified_reports).toBe(11);
     expect(facts.asked).toContain("ward:jodhpur-mc-w37 jodhpur-mc");
+    expect(scores.within.get("ward:jodhpur-mc-w37")).toEqual(["jodhpur-mc", "rajasthan-jodhpur"]);
+    expect(scores.within.get("assembly:s20-ac-127")).toEqual(["jodhpur-mc", "rajasthan-jodhpur"]);
   });
 
   it("gives an area whose sites were all rejected a zero-count, withheld row", async () => {

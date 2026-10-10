@@ -1,33 +1,21 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
-import { validateWardScores, type WardScores } from "../../src/contracts/index.gen.js";
+import type { WardScores } from "../../src/contracts/index.gen.js";
 import type { ComputedAreaScores } from "../../src/domain/AreaInsights.js";
-import type { AreaKey } from "../../src/domain/AreaKey.js";
 import { ConfigError } from "../../src/domain/errors.js";
 import { areaScoresRoutes, buildAreaScoresRoutes } from "../../src/handlers/areaScoresRoutes.js";
 import { createApp } from "../../src/handlers/web.js";
-import type { ScoreRepository } from "../../src/ports/ScoreRepository.js";
+import { AreaListQuery } from "../../src/services/AreaListQuery.js";
 import { AreaScoresQuery } from "../../src/services/AreaScoresQuery.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
+import { InMemoryScores } from "./InMemoryScores.js";
 import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
 
 const fixture = (sample: string) => readContract<WardScores>(`fixtures/ward_scores.${sample}.json`);
 const urlOf = (row: Pick<WardScores, "area">) => `/areas/${row.area.kind}/${row.area.id}/scores`;
-
-class InMemoryScores implements ScoreRepository {
-  readonly #rows = new Map<string, WardScores>();
-
-  async save(row: ComputedAreaScores | WardScores): Promise<void> {
-    this.#rows.set(`${row.area.kind}:${row.area.id}`, validateWardScores(row));
-  }
-
-  async find(area: AreaKey): Promise<WardScores | null> {
-    return this.#rows.get(area.toString()) ?? null;
-  }
-}
 
 const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
 let app: FastifyInstance | undefined;
@@ -43,7 +31,7 @@ async function startWithRows(rows: readonly (ComputedAreaScores | WardScores)[])
   for (const row of rows) {
     await scores.save(row);
   }
-  return start(areaScoresRoutes(new AreaScoresQuery(scores)));
+  return start(areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores) }));
 }
 
 afterEach(async () => {

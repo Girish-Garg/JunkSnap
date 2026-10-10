@@ -57,12 +57,13 @@ describe("SiteMerger founding", () => {
       pilot: true,
       data_window: { from: "2026-10-10T02:14:05Z", to: NOW },
     });
+    expect(scores.within.get("assembly/s20-ac-128")).toEqual(["rajasthan-jodhpur", "jodhpur-mc"]);
   });
 
   it("never overwrites an existing scores row and skips a null ward or assembly seat", async () => {
     const { merger, scores } = setup();
     const existing = fixture<WardScores>("ward_scores.jpr-1.json");
-    await scores.seedIfMissing({ ...existing, area: { kind: "loksabha", id: "s20-pc-16", name: "Jodhpur" } });
+    await scores.seedIfMissing({ ...existing, area: { kind: "loksabha", id: "s20-pc-16", name: "Jodhpur" } }, ["rajasthan-jodhpur"]);
     const base = evidence();
     const ward = { id: "jodhpur-mc-w37", name: "Ward 37" };
     await merger.merge({ ...base, location: { ...base.location, ward, assembly_seat: null } });

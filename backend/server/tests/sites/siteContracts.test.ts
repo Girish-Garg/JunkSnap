@@ -119,4 +119,10 @@ describe("zero scores rows", () => {
       expect(row.pilot).toBe(feature.properties.pilot);
     }
   });
+
+  it.each(SAMPLES)("site.%s places its rows within its district and local body", (sample) => {
+    const { district, local_body } = siteFixture(sample).properties.location;
+    const expected = local_body === null ? [district.id] : [district.id, local_body.id];
+    expect(new ZeroScoreRows(siteFixture(sample)).within()).toEqual(expected);
+  });
 });
