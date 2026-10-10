@@ -10,6 +10,10 @@ export class Sharer {
     this.#navigator = navigator;
   }
 
+  copy(text: string): Promise<void> {
+    return this.#navigator.clipboard.writeText(text);
+  }
+
   async share(title: string, url: string): Promise<ShareResult> {
     if (!this.#navigator.share) {
       await this.#navigator.clipboard.writeText(url);
