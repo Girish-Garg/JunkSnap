@@ -9,7 +9,7 @@ from ml.domain.insights import Insights
 from ml.domain.verification import SignalResult
 from ml.ports.clock import Clock
 from ml.ports.signal import Signal
-from ml.services.combiner import FixedWeightCombiner
+from ml.services.combiner_base import Combiner
 from ml.services.vision_judge import VisionJudge
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class StackedVerifier:
         self,
         signals: Sequence[Signal],
         judge: VisionJudge,
-        combiner: FixedWeightCombiner,
+        combiner: Combiner,
         clock: Clock,
     ) -> None:
         self._signals = tuple(signals)
@@ -44,6 +44,7 @@ class StackedVerifier:
             judge=None if reading is None else reading.verdict,
             combiner=self._combiner.info(),
             decided_at=self._clock.now(),
+            embedding_key=next((r.artifact_key for r in results if r.artifact_key), None),
             insights=self._insights(results),
         )
         self._log(result)
