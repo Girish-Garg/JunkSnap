@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { renderApp } from './helpers';
 
+const COLLECTING = /We're collecting official ward data for this area/;
+
 // A map stand-in that reports the opening Jodhpur view, so the map loads its sites.
 vi.mock('../src/features/map/components/SiteMapView', async () => {
   const { useEffect } = await import('react');
@@ -60,7 +62,26 @@ describe('Area page', () => {
     await renderApp(<AppRoutes />, { route: '/areas/ward/jodhpur-mc-w99' });
     expect(await screen.findByText('No reports in this area yet.')).toBeInTheDocument();
   });
+});
 
+describe('Crawl banner on area pages and the list', () => {
+  it('shows on a district page while its ward crawl is queued', async () => {
+    await renderApp(<AppRoutes />, { route: '/areas/district/rajasthan-jodhpur' });
+    expect(await screen.findByText(COLLECTING)).toBeInTheDocument();
+    expect(screen.getByText(/^Expected by /)).toBeInTheDocument();
+  });
+
+  it('shows on a seat page whose sites on the map share one district', async () => {
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128' });
+    expect(await screen.findByText(COLLECTING)).toBeInTheDocument();
+  });
+
+  it('shows under each district in the Areas list', async () => {
+    await renderApp(<AppRoutes />, { route: '/areas' });
+    const districts = (await screen.findByRole('heading', { name: 'Districts' })).closest('section');
+    if (!districts) throw new Error('No district group');
+    expect(await within(districts).findByText(COLLECTING)).toBeInTheDocument();
+  });
 });
 
 describe('Area page language and links', () => {

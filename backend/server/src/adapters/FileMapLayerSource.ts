@@ -1,12 +1,10 @@
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
 import { InternalDataError } from "../domain/errors.js";
 import type { MapLayer } from "../domain/MapLayer.js";
-import type { AssetReader } from "../ports/AssetReader.js";
 import type { MapLayerSource } from "../ports/MapLayerSource.js";
+import type { WardFile, WardFileSource } from "../ports/WardFileSource.js";
+import { readWardFile } from "./wards/readWardFile.js";
 
-const WARDS = "wards";
 const PLACE_KINDS = ["school", "hospital", "water", "drain"] as const;
 
 // The city file has no schema yet (contracts README); only the layer fields used here are checked.
@@ -22,35 +20,24 @@ const Layer = z.object({
 });
 const CityFile = z.object({ map_layers: z.array(z.unknown()).nullish() });
 
-// Reads <ASSETS_DIR>/wards/*.json; no wards folder means no layers, so site.insights.near stays empty.
+// Reads every ward city file; no files means no layers, so site.insights.near stays empty.
 export class FileMapLayerSource implements MapLayerSource {
-  readonly #reader: AssetReader;
-  readonly #assetsDir: string;
+  readonly #files: WardFileSource;
 
-  constructor(reader: AssetReader, assetsDir: string) {
-    this.#reader = reader;
-    this.#assetsDir = assetsDir;
+  constructor(files: WardFileSource) {
+    this.#files = files;
   }
 
   async layers(): Promise<readonly MapLayer[]> {
-    const files = await this.#cityFiles();
-    const perCity = await Promise.all(files.map((file) => this.#cityLayers(file)));
+    const files = await this.#files.files();
+    const perCity = await Promise.all(files.map((file) => FileMapLayerSource.#cityLayers(file)));
     return perCity.flat();
   }
 
-  async #cityFiles(): Promise<string[]> {
-    try {
-      const names = await readdir(join(this.#assetsDir, WARDS));
-      return names.filter((name) => name.endsWith(".json")).map((name) => `${WARDS}/${name}`);
-    } catch {
-      return [];
-    }
-  }
-
-  async #cityLayers(file: string): Promise<MapLayer[]> {
-    const city = CityFile.safeParse(await this.#reader.readJson(file));
+  static async #cityLayers(file: WardFile): Promise<MapLayer[]> {
+    const city = CityFile.safeParse(await readWardFile(file.path));
     if (!city.success) {
-      throw new InternalDataError(`${file} is not a ward city file`);
+      throw new InternalDataError(`${file.path} is not a ward city file`);
     }
     const layers = (city.data.map_layers ?? []).map((raw) => Layer.safeParse(raw));
     return layers.flatMap((parsed) => (parsed.success ? FileMapLayerSource.#place(parsed.data) : []));

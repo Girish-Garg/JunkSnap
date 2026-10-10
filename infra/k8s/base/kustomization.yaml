@@ -8,6 +8,7 @@ resources:
   - api.yaml
   - worker.yaml
   - scores.yaml
+  - crawler.yaml
   - ml.yaml
   - ingress.yaml
 # Names from contracts/README.md; overlays merge in the per-stage values.
@@ -18,6 +19,15 @@ configMapGenerator:
       - AWS_DEFAULT_REGION=ap-south-1
       - PRESIGN_TTL_SECONDS=300
       - ML_URL=http://ml
+      # Ward crawls (decision 20261010-1445): queue a district on its first verified report, recrawl monthly.
+      - CRAWL_ACTIVATE_AFTER=1
+      - CRAWL_INTERVAL_DAYS=30
+      - CRAWL_RETRY_HOURS=6
+      - >-
+        CRAWL_MODELS=[{"model_id": "apac.amazon.nova-pro-v1:0", "version": "amazon.nova-pro-v1:0",
+        "usd_per_million_in": 0.8, "usd_per_million_out": 3.2},
+        {"model_id": "apac.amazon.nova-lite-v1:0", "version": "amazon.nova-lite-v1:0",
+        "usd_per_million_in": 0.06, "usd_per_million_out": 0.24}]
       # Brand judging runs in the worker, which has no provider keys: Bedrock only. Notes are pinned to Bedrock in code.
       - >-
         LLM_TASKS={"brands": {"provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6",

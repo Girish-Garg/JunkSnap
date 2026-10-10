@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FileAssetReader } from "../../src/adapters/FileAssetReader.js";
+import { DirectoryWardFiles } from "../../src/adapters/wards/DirectoryWardFiles.js";
 import { FileMapLayerSource } from "../../src/adapters/FileMapLayerSource.js";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import type { SiteFeature } from "../../src/domain/sites/SiteTypes.js";
@@ -66,14 +66,14 @@ describe("FileMapLayerSource", () => {
       "jaipur.json": { records: [], map_layers: [layer("hospital")] },
       "README.md": "not json",
     });
-    const layers = await new FileMapLayerSource(new FileAssetReader(root), root).layers();
+    const layers = await new FileMapLayerSource(new DirectoryWardFiles(join(root, "wards"))).layers();
     expect(layers.map((one) => one.kind).sort()).toEqual(["hospital", "school"]);
     expect(layers[0]?.source).toEqual(SOURCE);
   });
 
   it("has no layers without a wards folder", async () => {
     const root = mkdtempSync(join(tmpdir(), "junksnap-empty-"));
-    expect(await new FileMapLayerSource(new FileAssetReader(root), root).layers()).toEqual([]);
+    expect(await new FileMapLayerSource(new DirectoryWardFiles(join(root, "wards"))).layers()).toEqual([]);
   });
 });
 

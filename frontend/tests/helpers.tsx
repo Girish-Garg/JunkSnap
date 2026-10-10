@@ -13,6 +13,7 @@ import { LayerRegistry } from '../src/layers/LayerRegistry';
 import { BoundaryCatalog } from '../src/services/BoundaryCatalog';
 import { GeoLocator } from '../src/services/GeoLocator';
 import { areaFixtureLoaders } from '../src/services/areaFixtures';
+import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
 import { MockApiClient } from '../src/services/MockApiClient';
 import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
@@ -46,7 +47,7 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
   return new ServiceContainer({
     config: AppConfig.fromEnv({}),
     api: new MockApiClient(siteFixtureLoaders),
-    areas: new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders),
+    areas: new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
     auth,
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),

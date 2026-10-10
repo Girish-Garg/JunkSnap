@@ -168,6 +168,30 @@
   margin: var(--space-3) 0 var(--space-2);
 }
 
+/* Crawl banner: official ward data is still coming. Neutral tile, not a floating notice. */
+.crawl-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
+  padding: 12px var(--space-2);
+  border-radius: var(--radius-m);
+  background: var(--tile);
+  color: var(--text-secondary);
+}
+
+.crawl-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.crawl-banner__expected {
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .area-skeleton {
   display: grid;
   gap: 12px;

@@ -5,11 +5,12 @@ import { AreaRanking } from '../src/domain/AreaRanking';
 import type { AreaScores } from '../src/domain/AreaScores';
 import { areaFixtureLoaders } from '../src/services/areaFixtures';
 import { BoundaryCatalog } from '../src/services/BoundaryCatalog';
+import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
 import { HttpAreaApi } from '../src/services/HttpAreaApi';
 import { MockAreaApi } from '../src/services/MockAreaApi';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 
-const mock = () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders);
+const mock = () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders);
 
 describe('MockAreaApi.list', () => {
   it('lists the seats of Jodhpur district worst first, scored before withheld', async () => {

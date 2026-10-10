@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/area_crawl.schema.json",
+  "title": "area_crawl",
+  "description": "Where the ward crawl of a district stands, from GET /areas/district/{id}/crawl (public, no token). A district with no row in the crawls table is not_started. The worker queues a district when it settles the district's first verified report (CRAWL_ACTIVATE_AFTER); the hourly crawler CronJob runs queued and due districts. no_sources means the repo has no official source list for the district yet. Times are ISO 8601 UTC ending in Z.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["district_id", "status", "queued_at", "last_crawled_at", "next_due_at", "expected_by", "wards_found"],
+  "properties": {
+    "district_id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+    "status": { "enum": ["not_started", "queued", "running", "done", "failed", "no_sources"] },
+    "queued_at": { "type": ["string", "null"], "format": "date-time", "description": "When the district was first queued (activated)." },
+    "last_crawled_at": { "type": ["string", "null"], "format": "date-time", "description": "When the last crawl finished, done or failed." },
+    "next_due_at": { "type": ["string", "null"], "format": "date-time", "description": "When the CronJob crawls the district again: CRAWL_INTERVAL_DAYS after a done crawl, CRAWL_RETRY_HOURS after a failed one." },
+    "expected_by": { "type": ["string", "null"], "format": "date-time", "description": "When ward data should be in, for queued, running and failed; null for done, no_sources and not_started." },
+    "wards_found": { "type": ["integer", "null"], "minimum": 0, "description": "Ward records the last done crawl wrote; null before that." }
+  }
+}

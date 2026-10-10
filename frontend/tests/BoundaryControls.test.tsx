@@ -41,6 +41,7 @@ describe('Map fill when a city fails to load', () => {
       scores: (kind, id) => base.areas.scores(kind, id),
       list: (kind, within, limit) =>
         within === 'rajasthan-jaipur' ? Promise.reject(new Error('offline')) : base.areas.list(kind, within, limit),
+      crawl: (districtId) => base.areas.crawl(districtId),
     };
     await renderApp(<AppRoutes />, { services: new ServiceContainer({ ...base, areas }) });
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));

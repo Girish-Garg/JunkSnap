@@ -7,6 +7,7 @@ import { areaFixtureLoaders } from '../services/areaFixtures';
 import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
 import { BoundaryCatalog } from '../services/BoundaryCatalog';
 import type { AuthService } from '../services/AuthService';
+import { crawlFixtureLoaders } from '../services/crawlFixtures';
 import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { HttpAreaApi } from '../services/HttpAreaApi';
@@ -27,7 +28,7 @@ const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiCl
 };
 
 const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => AreaApi>> = {
-  mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders),
+  mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
   live: (config) => new HttpAreaApi(config.requireApiUrl()),
 };
 

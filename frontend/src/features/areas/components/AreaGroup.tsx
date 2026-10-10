@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { areaPath } from '../../../app/paths';
 import type { AreaKind } from '../../../domain/AreaScores';
 import type { AreaEntry } from '../hooks/useAreaDirectory';
+import { DistrictCrawl } from './DistrictCrawl';
 
 interface AreaGroupProps {
   readonly kind: AreaKind;
@@ -22,6 +23,7 @@ export function AreaGroup({ kind, entries }: AreaGroupProps) {
               <span className="area-row__name">{area.name}</span>
               <span className="area-row__meta">{t('areas.sitesOnMap', { n: String(sites) })}</span>
             </Link>
+            <DistrictCrawl districtId={area.districtId} />
           </li>
         ))}
       </ul>
