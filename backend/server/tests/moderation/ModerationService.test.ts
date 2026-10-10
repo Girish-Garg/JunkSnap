@@ -24,6 +24,7 @@ import {
   FakeImageModerator,
   FakeImageStore,
   FakeRemovingNoteModerator,
+  FakeSubjectFinder,
   FakeWasteLocator,
   JODHPUR,
   meanDiff,
@@ -38,7 +39,8 @@ class Harness {
   readonly store = new FakeImageStore();
   readonly gate = new FakeImageModerator();
   readonly faces = new FakeFinder("DetectFaces", null);
-  readonly plates = new FakeFinder("DetectText+DetectLabels", "3.0+3.0");
+  readonly plates = new FakeFinder("DetectText", "3.0");
+  readonly subjects = new FakeSubjectFinder();
   readonly waste = new FakeWasteLocator();
   readonly reportHashes = new FakeHashIndex();
   readonly cleanupHashes = new FakeHashIndex();
@@ -52,7 +54,7 @@ class Harness {
       loader: new PhotoLoader(this.store, new SharpImageCodec()),
       gate: this.gate,
       waste: this.waste,
-      blur: new PrivacyBlur({ faces: this.faces, plates: this.plates, blurrer: new SharpBlurrer(), store: this.store }),
+      blur: new PrivacyBlur({ faces: this.faces, plates: this.plates, subjects: this.subjects, blurrer: new SharpBlurrer(), store: this.store }),
       authenticity: new AuthenticityService(checks),
       notes,
       clock: new FakeClock(),
@@ -76,7 +78,15 @@ describe("ModerationService on a clean photo", () => {
     const result = validateModerationResult(await harness.service().moderate(reportSubmission(jpeg, { note: "near the hall" })));
     expect(result).toMatchObject({ report_id: "rpt_jdh_1", outcome: "passed", reasons: [], duplicate_of: null });
     expect(result.blurred_key).toBe("media/reports/rpt_jdh_1.jpg");
-    expect(result.blur).toEqual({ faces: 1, plates: 1, provider: "rekognition", model: "DetectFaces+DetectText+DetectLabels", version: "3.0+3.0" });
+    expect(result.blur).toEqual({
+      faces: 1,
+      plates: 1,
+      provider: "rekognition",
+      model: "DetectFaces+DetectText+DetectLabels",
+      version: "3.0+3.0",
+      regions: { faces: 1, plates: 1, heads: 0, plate_zones: 0, people: 0, vehicles: 0 },
+      low_light: false,
+    });
     expect(result.image_moderation).toEqual({ result: "pass", labels: [], provider: "rekognition", model: "DetectModerationLabels+DetectLabels", version: "7.0+3.0" });
     expect(Object.values(result.checks).map((check) => check.result)).toEqual(["pass", "pass", "pass", "pass", "pass"]);
     expect(result.note_moderation).toMatchObject({ result: "clean", provider: "bedrock" });

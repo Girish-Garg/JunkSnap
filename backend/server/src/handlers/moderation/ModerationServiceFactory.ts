@@ -10,6 +10,7 @@ import { NoWasteLocator } from "../../adapters/moderation/NoWasteLocator.js";
 import { RekognitionFaceFinder } from "../../adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../adapters/moderation/RekognitionPlateFinder.js";
+import { RekognitionSubjectFinder } from "../../adapters/moderation/RekognitionSubjectFinder.js";
 import { S3ImageStore } from "../../adapters/moderation/S3ImageStore.js";
 import { SharpBlurrer } from "../../adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../../adapters/moderation/SharpImageCodec.js";
@@ -67,6 +68,7 @@ export class ModerationServiceFactory {
       blur: new PrivacyBlur({
         faces: new RekognitionFaceFinder(rekognition),
         plates: new RekognitionPlateFinder(rekognition),
+        subjects: new RekognitionSubjectFinder(rekognition),
         blurrer: new SharpBlurrer(),
         store,
       }),

@@ -30,6 +30,15 @@ export class PhotoId {
     return new PhotoId(kind, uploadId.slice(UPLOAD_PREFIX.length));
   }
 
+  // The photo behind a public blurred copy's key, or null for any other key.
+  static fromBlurredKey(key: string): PhotoId | null {
+    const match = /^media\/(reports\/rpt|cleanups\/cln)_([a-z0-9_]{1,40})\.jpg$/.exec(key);
+    if (match === null) {
+      return null;
+    }
+    return new PhotoId(match[1] === "reports/rpt" ? "report" : "cleanup", match[2] ?? "");
+  }
+
   get value(): string {
     return `${KINDS[this.kind].prefix}_${this.#suffix}`;
   }

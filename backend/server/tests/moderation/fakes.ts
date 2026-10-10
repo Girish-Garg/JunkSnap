@@ -5,6 +5,7 @@ import { Box } from "../../src/domain/moderation/Box.js";
 import type { ImageScreening, LabeledBox, ModerationLabel } from "../../src/domain/moderation/GatePolicy.js";
 import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
 import { PhotoSubmission, type Sender } from "../../src/domain/moderation/PhotoSubmission.js";
+import type { FoundSubjects, Subject } from "../../src/domain/moderation/Subject.js";
 import type { FoundRegions, NoteVerdict } from "../../src/domain/moderation/types.js";
 import type { Clock } from "../../src/ports/moderation/Clock.js";
 import type { DeviceRegistry, DeviceStanding, PhotoWindow } from "../../src/ports/moderation/DeviceRegistry.js";
@@ -15,6 +16,7 @@ import type { ImageModerator } from "../../src/ports/moderation/ImageModerator.j
 import type { ImageStore } from "../../src/ports/moderation/ImageStore.js";
 import type { NoteModerator } from "../../src/ports/moderation/NoteModerator.js";
 import type { PlateFinder } from "../../src/ports/moderation/PlateFinder.js";
+import type { SubjectFinder } from "../../src/ports/moderation/SubjectFinder.js";
 import type { WasteLocator } from "../../src/ports/moderation/WasteLocator.js";
 
 export const JODHPUR = new GeoPoint(26.26183, 73.00352);
@@ -149,6 +151,15 @@ export class FakeFinder implements FaceFinder, PlateFinder {
 
   async find(): Promise<FoundRegions> {
     return { boxes: this.boxes, model: this.#model, version: this.#version };
+  }
+}
+
+export class FakeSubjectFinder implements SubjectFinder {
+  plates: Box[] = [];
+  subjects: Subject[] = [];
+
+  async find(): Promise<FoundSubjects> {
+    return { plates: this.plates, subjects: this.subjects, model: "DetectLabels", version: "3.0" };
   }
 }
 

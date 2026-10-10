@@ -20,6 +20,8 @@ Contracts v1.8 (decision 20261010-1630-hem-community-notes, issue 101) adds `POS
 
 Contracts v1.9 (decision 20261010-1700-hem-site-removal) adds `DELETE /sites/{id}/reports/mine` (a reporter withdraws their reports from a site that is not verified) and its inline response, the site `status` value `removed` with the optional `removed_reason` and `removed_at`, the optional `cleaned_by`, the vote value `cleaned` and the optional `site.votes.cleaned`, the report status `withdrawn`, the error `site_verified`, and table-only fields (`reports.withdrawn_at`, `sites.withdrawn_report_ids`, `withdraw_window_start` and `withdraw_count` on `users` and `devices`). `GET /sites?bbox` now also leaves out `removed` and `cleaned` sites. Additive only; new fixture `site.jdh-5`.
 
+Contracts v1.10 (decision 20261011-0900-hem-blur-fallback, issue 110) adds the optional `moderation_result.blur.regions` (every region blurred, by kind) and `blur.low_light`. Blurred public copies carry the S3 object metadata `blur-policy` (no key change). Additive only; `moderation_result.jdh-1` shows the new fields.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.

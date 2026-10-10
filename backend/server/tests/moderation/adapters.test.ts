@@ -10,8 +10,10 @@ import { DynamoReader } from "../../src/adapters/moderation/DynamoReader.js";
 import { RekognitionFaceFinder } from "../../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../src/adapters/moderation/RekognitionPlateFinder.js";
+import { RekognitionSubjectFinder } from "../../src/adapters/moderation/RekognitionSubjectFinder.js";
 import { S3ImageStore } from "../../src/adapters/moderation/S3ImageStore.js";
 import { ConfigError, ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
+import { BLUR_POLICY } from "../../src/domain/moderation/BlurPlanner.js";
 import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
 import { PhotoSubmission } from "../../src/domain/moderation/PhotoSubmission.js";
 import { ModerationServiceFactory } from "../../src/handlers/moderation/ModerationServiceFactory.js";
@@ -93,31 +95,44 @@ describe("RekognitionFaceFinder", () => {
 });
 
 describe("RekognitionPlateFinder", () => {
-  it("joins text plates with label plates that no text plate covers", async () => {
+  it("reads plates from DetectText lines only", async () => {
     const client = rekognition();
-    stub(client, (command) =>
-      command.constructor.name === "DetectTextCommand"
-        ? {
-            TextModelVersion: "3.0",
-            TextDetections: [
-              { Id: 0, Type: "LINE", DetectedText: "MERCHANT SHOP", Geometry: { BoundingBox: bbox(0.1, 0.1, 0.3, 0.05) } },
-              { Id: 1, Type: "LINE", DetectedText: "AP13 W 9238", Geometry: { BoundingBox: bbox(0.4, 0.6, 0.1, 0.03) } },
-              { Id: 2, Type: "WORD", ParentId: 1, DetectedText: "AP13", Geometry: { BoundingBox: bbox(0.4, 0.6, 0.04, 0.03) } },
-            ],
-          }
-        : {
-            LabelModelVersion: "3.0",
-            Labels: [
-              {
-                Name: "License Plate",
-                Instances: [{ BoundingBox: bbox(0.41, 0.6, 0.08, 0.03) }, { BoundingBox: bbox(0.8, 0.8, 0.1, 0.04) }],
-              },
-            ],
-          },
-    );
+    const sent = stub(client, () => ({
+      TextModelVersion: "3.0",
+      TextDetections: [
+        { Id: 0, Type: "LINE", DetectedText: "MERCHANT SHOP", Geometry: { BoundingBox: bbox(0.1, 0.1, 0.3, 0.05) } },
+        { Id: 1, Type: "LINE", DetectedText: "AP13 W 9238", Geometry: { BoundingBox: bbox(0.4, 0.6, 0.1, 0.03) } },
+        { Id: 2, Type: "WORD", ParentId: 1, DetectedText: "AP13", Geometry: { BoundingBox: bbox(0.4, 0.6, 0.04, 0.03) } },
+      ],
+    }));
     const found = await new RekognitionPlateFinder(client).find(new Uint8Array([1]));
-    expect(found.boxes.map((plate) => plate.left)).toEqual([0.4, 0.8]);
-    expect(found).toMatchObject({ model: "DetectText+DetectLabels", version: "3.0+3.0" });
+    expect(found.boxes.map((plate) => plate.left)).toEqual([0.4]);
+    expect(found).toMatchObject({ model: "DetectText", version: "3.0" });
+    expect(sent.map((command) => command.constructor.name)).toEqual(["DetectTextCommand"]);
+  });
+});
+
+describe("RekognitionSubjectFinder", () => {
+  it("asks DetectLabels once for plates, people and vehicles, and keeps each instance's own confidence", async () => {
+    const client = rekognition();
+    const sent = stub(client, () => ({
+      LabelModelVersion: "3.0",
+      Labels: [
+        { Name: "License Plate", Confidence: 80, Instances: [{ BoundingBox: bbox(0.8, 0.8, 0.1, 0.04), Confidence: 80 }, { BoundingBox: bbox(0.1, 0.1, 0.1, 0.04), Confidence: 45 }] },
+        { Name: "Person", Confidence: 90, Instances: [{ BoundingBox: bbox(0.1, 0.1, 0.2, 0.5), Confidence: 62 }, { BoundingBox: {} }] },
+        { Name: "Motorcycle", Confidence: 75, Instances: [{ BoundingBox: bbox(0.4, 0.5, 0.2, 0.3) }] },
+        { Name: "Bus", Confidence: 88, Instances: [{ BoundingBox: bbox(0.6, 0.2, 0.3, 0.5), Confidence: 88 }] },
+        { Name: "Transportation", Confidence: 88, Instances: [] },
+      ],
+    }));
+    const found = await new RekognitionSubjectFinder(client).find(new Uint8Array([1]));
+    expect(found.plates.map((plate) => plate.left)).toEqual([0.8]);
+    expect(found.subjects.map((subject) => [subject.kind, subject.confidence])).toEqual([["person", 62], ["two_wheeler", 75], ["vehicle", 88]]);
+    expect(found).toMatchObject({ model: "DetectLabels", version: "3.0" });
+    expect(sent).toHaveLength(1);
+    const filters = (sent[0]?.input as { Settings: { GeneralLabels: { LabelInclusionFilters: string[] } } }).Settings.GeneralLabels.LabelInclusionFilters;
+    expect(filters).toEqual(expect.arrayContaining(["License Plate", "Person", "Motorcycle", "Car", "Bus", "Truck", "Bicycle", "Vehicle"]));
+    expect(sent[0]?.input).toMatchObject({ MinConfidence: 40 });
   });
 });
 
@@ -143,7 +158,12 @@ describe("S3ImageStore", () => {
     const client = new S3Client({ region: "ap-south-1" });
     const sent = stub(client, () => ({}));
     await new S3ImageStore(client, buckets).writePublic("media/reports/rpt_x.jpg", new Uint8Array([1]));
-    expect(sent[0]?.input).toMatchObject({ Bucket: "public-bucket", Key: "media/reports/rpt_x.jpg", ContentType: "image/jpeg" });
+    expect(sent[0]?.input).toMatchObject({
+      Bucket: "public-bucket",
+      Key: "media/reports/rpt_x.jpg",
+      ContentType: "image/jpeg",
+      Metadata: { "blur-policy": BLUR_POLICY },
+    });
   });
 });
 
