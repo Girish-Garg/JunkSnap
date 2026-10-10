@@ -141,7 +141,8 @@
     "lastCleared": "Last cleared",
     "brands": "Packaging seen at this site",
     "noAssembly": "No assembly map here yet",
-    "seatOutdated": "Boundary out of date"
+    "seatOutdated": "Boundary out of date",
+    "district": "District"
   },
   "snap": {
     "title": "Report a waste site",
@@ -280,8 +281,94 @@
   },
   "areas": {
     "title": "Areas",
-    "soon": "Ward and seat scores come in the next build. A score shows only after 10 verified reports.",
-    "close": "Close areas"
+    "close": "Close areas",
+    "closeArea": "Close area",
+    "intro": "Scores for wards, seats and districts. A score shows only after 10 verified reports.",
+    "search": "Find an area",
+    "none": "No areas on the map yet. Move the map to a place with reports.",
+    "noMatch": "No area on the map matches that name.",
+    "sitesOnMap": "Sites on the map: {{n}}",
+    "all": "All areas",
+    "loading": "Loading area",
+    "loadFailed": "Could not load this area.",
+    "missing": "No reports in this area yet.",
+    "kind": {
+      "ward": "Ward",
+      "assembly": "Assembly seat (MLA)",
+      "loksabha": "Lok Sabha seat (MP)",
+      "district": "District"
+    },
+    "kinds": {
+      "ward": "Wards",
+      "assembly": "Assembly seats",
+      "loksabha": "Lok Sabha seats",
+      "district": "Districts"
+    },
+    "scores": "Scores",
+    "score": {
+      "city": "City response",
+      "citizen": "Citizen care",
+      "bin_access": "Bin access"
+    },
+    "scoreHint": {
+      "city": "How fast reported sites are cleared",
+      "citizen": "How rarely waste is dumped here",
+      "bin_access": "How close bins and pickup are"
+    },
+    "withheld": "No score yet",
+    "basedOn": "From {{n}} verified reports",
+    "notEnough": "Not enough reports yet ({{n}} of {{min}} verified)",
+    "noData": "Can't be measured here yet · {{n}} verified reports",
+    "diagnosisTitle": "What the reports show",
+    "diagnosis": {
+      "infrastructure_gap": {
+        "title": "Too few bins",
+        "text": "Waste is dumped, and bins or pickup are far away."
+      },
+      "behaviour": {
+        "title": "Dumping near bins",
+        "text": "Bins and pickup are close, but waste is still dumped."
+      },
+      "city_response": {
+        "title": "Slow clearing",
+        "text": "Reported sites take more than a week to clear."
+      },
+      "repeat_spot": {
+        "title": "Repeat spots",
+        "text": "Waste comes back to sites after they are cleared."
+      }
+    },
+    "counts": "Counts",
+    "count": {
+      "verified_reports": "Verified reports",
+      "no_bin_reports": "No-bin reports (verified)",
+      "sites": "Sites",
+      "open_sites": "Open sites",
+      "cleaned_sites": "Cleared sites",
+      "reopened_sites": "Reopened sites"
+    },
+    "composition": "What the waste is made of",
+    "compositionFrom": "Mean share over {{n}} verified reports, as estimated by the models.",
+    "material": {
+      "plastic": "Plastic",
+      "organic": "Organic",
+      "construction_debris": "Construction debris",
+      "paper": "Paper",
+      "glass": "Glass",
+      "metal": "Metal",
+      "textile": "Cloth",
+      "e_waste": "E-waste",
+      "medical": "Medical waste"
+    },
+    "insights": "Hazards and nearby places",
+    "insight": {
+      "hazards": "Sites with a hazard",
+      "near": "Sites near a school or water",
+      "repeat": "Repeat spots"
+    },
+    "ofSites": "{{part}} of {{whole}} sites",
+    "sitesTitle": "Sites on the map in this area",
+    "footnote": "Reports from {{from}} to {{to}}. Updated {{computed}}. Formula {{version}}. Scores describe the whole area, never a person."
   },
   "activity": {
     "title": "Activity",

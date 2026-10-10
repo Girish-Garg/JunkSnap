@@ -11,7 +11,9 @@ import { LanguagePreference, type KeyValueStore, type Language } from '../src/i1
 import { Localization } from '../src/i18n/Localization';
 import { LayerRegistry } from '../src/layers/LayerRegistry';
 import { GeoLocator } from '../src/services/GeoLocator';
+import { areaFixtureLoaders } from '../src/services/areaFixtures';
 import { MockApiClient } from '../src/services/MockApiClient';
+import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
@@ -40,6 +42,7 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
   return new ServiceContainer({
     config: AppConfig.fromEnv({}),
     api: new MockApiClient(siteFixtureLoaders),
+    areas: new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders),
     auth,
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),

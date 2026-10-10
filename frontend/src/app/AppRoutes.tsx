@@ -1,11 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { ActivityRoute } from '../features/activity/components/ActivityRoute';
+import { AreaRoute } from '../features/areas/components/AreaRoute';
 import { AreasRoute } from '../features/areas/components/AreasRoute';
 import { AccountRoute } from '../features/auth/components/AccountRoute';
 import { MapPage } from '../features/map/components/MapPage';
 import { SitePanelRoute } from '../features/site/components/SitePanelRoute';
 import { SnapRoute } from '../features/snap/components/SnapRoute';
-import { ACCOUNT_PATH, ACTIVITY_PATH, AREAS_PATH, SITE_PATH, SNAP_PATH } from './paths';
+import { ACCOUNT_PATH, ACTIVITY_PATH, AREA_PATH, AREAS_PATH, SITE_PATH, SNAP_PATH } from './paths';
 
 // The map stays mounted; every other screen is a sheet over it.
 export function AppRoutes() {
@@ -16,6 +17,7 @@ export function AppRoutes() {
         <Route path={SITE_PATH} element={<SitePanelRoute />} />
         <Route path={SNAP_PATH} element={<SnapRoute />} />
         <Route path={AREAS_PATH} element={<AreasRoute />} />
+        <Route path={AREA_PATH} element={<AreaRoute />} />
         <Route path={ACTIVITY_PATH} element={<ActivityRoute />} />
         <Route path={ACCOUNT_PATH} element={<AccountRoute />} />
       </Route>
