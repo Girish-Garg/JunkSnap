@@ -9,7 +9,7 @@ import { GeoPoint } from "../domain/GeoPoint.js";
 import type { AreaFacts, SkippedRecord } from "../ports/AreaFacts.js";
 
 // The city file and its map layers have no schema yet (contracts README); each reviewed record must pass ward_record.
-const CityFile = z.object({ records: z.array(z.unknown()), map_layers: z.record(z.string(), z.unknown()).nullish() });
+const CityFile = z.object({ records: z.array(z.unknown()), map_layers: z.array(z.object({ kind: z.string() })).nullish() });
 const Reviewed = z.object({ review_status: z.literal("reviewed") });
 const LocalBodies = z.array(z.object({ id: z.string(), towns: z.array(z.string()) }));
 const WARD_AREA_ID = /^([a-z0-9-]+)-w([0-9]+)$/;
@@ -74,12 +74,12 @@ export class WardRecordAreaFacts implements AreaFacts {
     }
     const reviewed = parsed.data.records.filter((record) => Reviewed.safeParse(record).success);
     const checked = reviewed.map((record) => WardRecordAreaFacts.#check(file, record));
-    const layers = parsed.data.map_layers ?? {};
+    const kinds = (parsed.data.map_layers ?? []).map((layer) => layer.kind);
     return {
       city: basename(file, ".json"),
       reviewed: checked.flatMap((each) => ("record" in each ? [each.record] : [])),
       skipped: checked.flatMap((each) => ("skipped" in each ? [each.skipped] : [])),
-      placesMapped: PLACE_LAYERS.some((layer) => (layers[layer] ?? null) !== null),
+      placesMapped: PLACE_LAYERS.some((kind) => kinds.includes(kind)),
     };
   }
 

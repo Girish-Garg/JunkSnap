@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WardRecordAreaFacts } from "../../src/adapters/WardRecordAreaFacts.js";
 import type { WardRecord } from "../../src/contracts/index.gen.js";
@@ -50,8 +51,8 @@ beforeAll(async () => {
   });
   const uttar = reviewedWard(40, { id: "jodhpur-uttar-mc-w40", area_km2: { ...PROVENANCE, value: 1.5 } });
   const records = [FIXTURE, measured, reviewedWard(12), reviewedWard(12), uttar];
-  await writeJson("wards/jodhpur.json", { records, map_layers: { school: LAYER, water: LAYER, disposal: LAYER } });
-  await writeJson("wards/jaipur.json", { records: [], map_layers: { disposal: LAYER } });
+  await writeJson("wards/jodhpur.json", { records, map_layers: [{ ...LAYER, kind: "school" }, { ...LAYER, kind: "water" }, { ...LAYER, kind: "disposal" }] });
+  await writeJson("wards/jaipur.json", { records: [], map_layers: [{ ...LAYER, kind: "disposal" }] });
   await writeJson("wards/notes.txt", "not a city file");
   await writeJson("representatives/local_bodies.json", [
     { id: "jodhpur-mc", towns: ["Jodhpur"] },
@@ -64,6 +65,11 @@ afterAll(async () => {
 });
 
 describe("WardRecordAreaFacts", () => {
+  it("loads the committed ward files in data/", async () => {
+    const repoData = fileURLToPath(new URL("../../../../data", import.meta.url));
+    await expect(load(repoData)).resolves.toBeInstanceOf(WardRecordAreaFacts);
+  });
+
   it("never uses the unreviewed contract fixture record", async () => {
     expect(FIXTURE.review_status).not.toBe("reviewed");
     const facts = await (await load(assets)).factsFor(wardArea(FIXTURE.ward_number.value), []);
