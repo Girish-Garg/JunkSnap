@@ -9,7 +9,7 @@ const StoredVote = z.object({
   site_id: z.string(),
   device_token: z.string(),
   user_id: z.string().optional(),
-  vote: z.enum(["confirm", "reject"]),
+  vote: z.enum(["confirm", "reject", "cleaned"]),
   voted_at: z.string(),
 });
 

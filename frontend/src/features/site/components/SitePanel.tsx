@@ -14,6 +14,7 @@ import { SiteLocationFacts } from './SiteLocationFacts';
 import { SiteLocationLine } from './SiteLocationLine';
 import { SitePanelHeader } from './SitePanelHeader';
 import { SitePhotoStrip } from './SitePhotoStrip';
+import { WithdrawReport } from './WithdrawReport';
 
 export const SITE_TITLE_ID = 'site-panel-title';
 
@@ -36,6 +37,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
       <SiteBackersBar backers={details.backers} />
       <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />
       {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} noBin={details.report_type === 'no_bin'} />}
+      <WithdrawReport site={details} onChanged={() => onChanged?.()} />
       <SitePhotoStrip photos={presenter.photos()} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />

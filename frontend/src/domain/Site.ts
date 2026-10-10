@@ -19,7 +19,8 @@ export type SiteContext =
   | 'overflowing'
   | 'damaged';
 
-export type SiteStatus = 'open' | 'cleaned' | 'reopened';
+/** removed: every report on an unverified site was withdrawn (decision 20261010-1700). GET /sites?bbox leaves out cleaned and removed sites. */
+export type SiteStatus = 'open' | 'cleaned' | 'reopened' | 'removed';
 
 /** Decision 20261010-1530: unverified until 10 people back it. GET /sites?bbox leaves out rejected sites. */
 export type SiteVerification = 'unverified' | 'verified' | 'rejected';
@@ -83,6 +84,8 @@ export interface BrandSighting {
 export interface SiteVotes {
   readonly confirm: number;
   readonly reject: number;
+  /** People whose latest vote says the site is cleared; absent on older rows. */
+  readonly cleaned?: number;
 }
 
 export interface SiteProperties {
@@ -107,6 +110,11 @@ export interface SiteProperties {
   readonly first_reported_at: string;
   readonly last_reported_at: string;
   readonly cleaned_at: string | null;
+  /** What set the last cleaned status; absent on older rows. */
+  readonly cleaned_by?: 'after_photo' | 'votes' | null;
+  /** Why a removed site left the map, and when; absent on older rows. */
+  readonly removed_reason?: 'withdrawn' | null;
+  readonly removed_at?: string | null;
   readonly pilot: boolean;
   /** v1.4: distinct people who reported the site (user id, else device); absent on older rows. */
   readonly reporters?: number;

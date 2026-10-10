@@ -103,6 +103,7 @@ describe("notes adapters", () => {
       { note: "clean, guest", device_token: DEVICE, moderation_result: { note_moderation: { result: "clean" } } },
       { note: "removed", user_id: USER, moderation_result: { note_moderation: { result: "removed" } } },
       { note: "not checked yet", user_id: USER },
+      { note: "withdrawn", user_id: USER, status: "withdrawn", moderation_result: { note_moderation: { result: "clean" } } },
     ];
     const reader = new DynamoReportNotes({ send: async () => ({ $metadata: {}, Items: items }) } as never, "reports");
     expect(await reader.shownFor("site_jdh_1")).toEqual([

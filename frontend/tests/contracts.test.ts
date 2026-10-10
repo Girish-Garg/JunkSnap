@@ -27,8 +27,12 @@ describe('site fixtures match contracts/schemas/site.schema.json', () => {
     expect(known).toEqual(expect.arrayContaining(keys));
   });
 
+  // An optional enum field (removed_reason, cleaned_by) may be left out; when present it must be a schema value.
   it.each(Object.entries(fixtures))('%s uses only enum values from the schema', (_path, fixture) => {
-    for (const [field, schema] of enums) expect(schema.enum).toContain(fixture.properties[field]);
+    const required: readonly string[] = propertiesSchema.required;
+    for (const [field, schema] of enums) {
+      if (field in fixture.properties || required.includes(field)) expect(schema.enum).toContain(fixture.properties[field]);
+    }
   });
 
   it('REPORT_TYPES equals the report_type enum', () => {

@@ -12,9 +12,14 @@ export function SitePanelRoute() {
   const { t } = useTranslation();
   const { siteId = '' } = useParams();
   const sheets = useSheetNavigation();
-  const { userLocation, showSite } = useMapContext();
+  const { userLocation, showSite, refreshSites } = useMapContext();
   const { site, failed, reload } = useSite(siteId);
   const close = useCallback(() => sheets.close('/'), [sheets]);
+  // A vote can clear or reject the site, so the map fetches again too.
+  const changed = useCallback(() => {
+    reload();
+    refreshSites();
+  }, [reload, refreshSites]);
   useEffect(() => {
     // A shared link may point outside the loaded area: move the map to the site.
     if (site) showSite(site);
@@ -27,7 +32,7 @@ export function SitePanelRoute() {
       onClose={close}
       focusKey={site?.properties.site_id ?? failed}
     >
-      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={reload} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
+      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={changed} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
     </BottomSheet>
   );
 }

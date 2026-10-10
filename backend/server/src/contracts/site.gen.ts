@@ -51,9 +51,21 @@ export interface Site {
       | "overflowing"
       | "damaged";
     /**
-     * open -> cleaned (only with an after-photo the pipeline confirms) -> reopened.
+     * open -> cleaned (an after-photo the pipeline confirms, or cleared votes: people whose latest vote is cleaned, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. GET /sites?bbox leaves out cleaned and removed sites.
      */
-    status: "open" | "cleaned" | "reopened";
+    status: "open" | "cleaned" | "reopened" | "removed";
+    /**
+     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. Null otherwise. Not in required so older rows stay valid.
+     */
+    removed_reason?: "withdrawn" | null;
+    /**
+     * When the site was removed; null otherwise. Not in required so older rows stay valid.
+     */
+    removed_at?: string | null;
+    /**
+     * Decision 20261010-1700: what set the last cleaned status: an accepted after-photo or the cleared votes. Null before the first cleanup. Not in required so older rows stay valid.
+     */
+    cleaned_by?: "after_photo" | "votes" | null;
     /**
      * Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value.
      */
@@ -86,6 +98,10 @@ export interface Site {
     votes: {
       confirm: number;
       reject: number;
+      /**
+       * People whose latest vote says the site is cleared (decision 20261010-1700). Not in required so older rows stay valid.
+       */
+      cleaned?: number;
     };
     /**
      * Blurred public copies, newest first. Never an original.
@@ -1125,9 +1141,33 @@ export const siteSchema = {
           "enum": [
             "open",
             "cleaned",
-            "reopened"
+            "reopened",
+            "removed"
           ],
-          "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened."
+          "description": "open -> cleaned (an after-photo the pipeline confirms, or cleared votes: people whose latest vote is cleaned, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. GET /sites?bbox leaves out cleaned and removed sites."
+        },
+        "removed_reason": {
+          "enum": [
+            "withdrawn",
+            null
+          ],
+          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. Null otherwise. Not in required so older rows stay valid."
+        },
+        "removed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the site was removed; null otherwise. Not in required so older rows stay valid."
+        },
+        "cleaned_by": {
+          "enum": [
+            "after_photo",
+            "votes",
+            null
+          ],
+          "description": "Decision 20261010-1700: what set the last cleaned status: an accepted after-photo or the cleared votes. Null before the first cleanup. Not in required so older rows stay valid."
         },
         "verification": {
           "enum": [
@@ -1199,6 +1239,11 @@ export const siteSchema = {
             "reject": {
               "type": "integer",
               "minimum": 0
+            },
+            "cleaned": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "People whose latest vote says the site is cleared (decision 20261010-1700). Not in required so older rows stay valid."
             }
           }
         },

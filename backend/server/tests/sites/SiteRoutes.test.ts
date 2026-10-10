@@ -13,8 +13,9 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
+import { Site } from "../../src/domain/sites/Site.js";
 import { LogSink } from "../LogSink.js";
-import { DEVICE_A, DEVICE_B, siteFixture, userOf } from "./builders.js";
+import { DEVICE_A, DEVICE_B, report, siteFixture, userOf } from "./builders.js";
 import {
   FakeCleanups,
   FakeQueue,
@@ -23,6 +24,7 @@ import {
   FakeVoteRepository,
   FixedClock,
 } from "./fakes.js";
+import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
 
 const JODHPUR = "72.9,26.2,73.1,26.4";
 const VOTE = { device_token: DEVICE_B, vote: "confirm", gps: { lat: 26.853, lon: 75.815, accuracy_m: 10 } };
@@ -51,6 +53,7 @@ const SIGNED_IN = { authorization: `Bearer ${userOf(DEVICE_B)}` };
 let app: FastifyInstance | undefined;
 let votes: FakeVoteRepository;
 let cleanups: FakeCleanups;
+let rig: WithdrawalRig;
 
 afterEach(async () => {
   await app?.close();
@@ -73,10 +76,12 @@ async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance>
   const retry = new ConflictRetry();
   votes = new FakeVoteRepository();
   cleanups = new FakeCleanups();
+  rig = withdrawalRig(sites);
   const routes = new SiteRoutes({
     finder: new SiteFinder(sites, new NgeohashCells()),
     votes: new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry }),
     cleanups: new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry }),
+    withdrawals: rig.service,
     users: new GuardedSiteUsers(new FakeGuard()),
   });
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
@@ -149,7 +154,7 @@ describe("POST /sites/{id}/votes", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       site_id: "site_jpr_1",
-      votes: { confirm: 1, reject: 0 },
+      votes: { confirm: 1, reject: 0, cleaned: 0 },
       backers: { count: 2, needed: 10, photo_people: 1, vote_people: 1 },
       verification: "unverified",
     });
@@ -217,5 +222,51 @@ describe("POST /sites/{id}/cleanup", () => {
     const response = await post(await start(), { ...CLEANUP, captured_at: "today" });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ error: "bad_request" });
+  });
+});
+
+describe("DELETE /sites/{id}/reports/mine", () => {
+  const withdraw = (headers: Record<string, string>) => ({ method: "DELETE" as const, url: "/sites/site_jdh_9/reports/mine", headers });
+  const MINE = { ...SIGNED_IN, "x-device-token": DEVICE_B };
+
+  async function startWithMine(): Promise<FastifyInstance> {
+    const sites = new FakeSiteRepository();
+    const mine = report({ id: "jdh_9", device: DEVICE_B });
+    sites.put(Site.found(mine));
+    const started = await start(sites);
+    rig.rows.add("site_jdh_9", mine);
+    return started;
+  }
+
+  it("needs a signed-in user before anything else", async () => {
+    const response = await (await startWithMine()).inject(withdraw({ "x-device-token": DEVICE_B }));
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("needs the device token header", async () => {
+    const response = await (await startWithMine()).inject(withdraw(SIGNED_IN));
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("answers 404 to a signed-in user who did not report the site", async () => {
+    const other = { authorization: `Bearer ${userOf(DEVICE_A)}`, "x-device-token": DEVICE_A };
+    const response = await (await startWithMine()).inject(withdraw(other));
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ error: "not_found" });
+  });
+
+  it("withdraws the reporter's report and removes the site they alone backed", async () => {
+    const response = await (await startWithMine()).inject(withdraw(MINE));
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      site_id: "site_jdh_9",
+      withdrawn_report_ids: ["rpt_jdh_9"],
+      site_removed: true,
+      status: "removed",
+      verification: "unverified",
+      backers: { count: 1, needed: 10, photo_people: 1, vote_people: 0 },
+    });
+    const listed = (await app?.inject({ url: `/sites?bbox=${JODHPUR}` }))?.json<{ features: SiteFeature[] }>();
+    expect(listed?.features.map((feature) => feature.properties.site_id)).not.toContain("site_jdh_9");
   });
 });

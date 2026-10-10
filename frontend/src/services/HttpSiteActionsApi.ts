@@ -1,5 +1,5 @@
 import type { NoteRequest, SiteNote } from '../domain/Community';
-import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
+import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import { HttpTransport } from './HttpTransport';
 import type { RequestIdentity } from './ReportApi';
 import type { SiteActionsApi } from './SiteActionsApi';
@@ -25,5 +25,9 @@ export class HttpSiteActionsApi implements SiteActionsApi {
 
   note(siteId: string, request: NoteRequest): Promise<SiteNote> {
     return this.#http.post<SiteNote>(`/sites/${encodeURIComponent(siteId)}/notes`, request);
+  }
+
+  withdraw(siteId: string): Promise<WithdrawalResult> {
+    return this.#http.json<WithdrawalResult>(`/sites/${encodeURIComponent(siteId)}/reports/mine`, { method: 'DELETE' });
   }
 }
