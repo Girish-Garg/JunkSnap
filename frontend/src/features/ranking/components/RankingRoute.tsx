@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router';
-import { AREAS_PATH } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { BOUNDARY_KINDS, CITIES } from '../../../domain/AreaListing';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import { Segmented } from '../../../ui/Segmented';
+import { AreaBackLink } from '../../areas/components/AreaBackLink';
 import { useRanking } from '../hooks/useRanking';
 import { useRankingQuery } from '../hooks/useRankingQuery';
 import '../../areas/areas.css';
@@ -15,17 +15,15 @@ import { RankingList } from './RankingList';
 /** /ranking: a city's areas worst first, from the scores the api shows today. */
 export function RankingRoute() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate('/'), [navigate]);
+  const sheets = useSheetNavigation();
+  const close = useCallback(() => sheets.close('/'), [sheets]);
   const { city, kind, update } = useRankingQuery();
   const ranking = useRanking(kind, city.id);
   const cities = CITIES.map((option) => ({ value: option.id, label: t(`ranking.city.${option.key}`) }));
   const kinds = BOUNDARY_KINDS.map((value) => ({ value, label: t(`boundaries.layer.${value}`) }));
   return (
     <BottomSheet labelledBy={RANKING_TITLE_ID} closeLabel={t('ranking.close')} resizeLabel={t('sheet.resize')} onClose={close} focusKey={ranking.rows}>
-      <Link className="area-back" to={AREAS_PATH}>
-        {t('areas.all')}
-      </Link>
+      <AreaBackLink />
       <h2 id={RANKING_TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('ranking.title', { city: t(`ranking.city.${city.key}`) })}
       </h2>

@@ -1,43 +1,4 @@
-/* Design tokens (frontend/DESIGN.md). Every colour in the app comes from here. */
-:root {
-  --font-sans: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
-  --text: #1f1f1f;
-  --text-secondary: #5f6368;
-  --divider: #e8eaed;
-  --surface: #ffffff;
-  --page: #f8f9fa;
-  --tile: #f1f3f4;
-  --accent: #0b6e63;
-  --accent-hover: #095c53;
-  --accent-tint: #e1f0ee;
-  --on-accent: #ffffff;
-  --error: #b3261e;
-  --type-dump: #c5221f;
-  --type-nobin: #e37400;
-  --type-water: #1967d2;
-  --type-construction: #5d4037;
-  --status-open: #c5221f;
-  --status-open-tint: #fce8e6;
-  --status-cleaned: #137333;
-  --status-cleaned-tint: #e6f4ea;
-  --status-reopened: #9c5700;
-  --status-reopened-tint: #fef7e0;
-  --status-check: #5f6368;
-  --status-check-tint: #f1f3f4;
-  --shadow-float: 0 1px 2px rgb(60 64 67 / 0.3), 0 1px 3px 1px rgb(60 64 67 / 0.15);
-  --shadow-sheet: 0 -1px 3px rgb(60 64 67 / 0.12), 0 -4px 12px rgb(60 64 67 / 0.12);
-  --space-1: 8px;
-  --space-2: 16px;
-  --space-3: 24px;
-  --edge: 16px;
-  --radius-s: 8px;
-  --radius-m: 12px;
-  --radius-l: 16px;
-  --radius-pill: 999px;
-  --target: 48px;
-  color-scheme: light;
-}
-
+/* Base styles and the small shared controls. Tokens live in tokens.css. */
 *,
 *::before,
 *::after {
@@ -52,17 +13,19 @@ body,
 }
 
 body {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 20px;
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-optical-sizing: auto;
   color: var(--text);
   background: var(--page);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Devanagari needs room for matras above and below the line. */
 :lang(hi) {
-  font-family: 'Noto Sans Devanagari', 'Noto Sans', system-ui, sans-serif;
+  --font-body: 'Noto Sans Devanagari', 'Hanken Grotesk Variable', sans-serif;
   line-height: 1.6;
 }
 
@@ -74,17 +37,19 @@ p {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   color: inherit;
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-ink);
+  text-underline-offset: 3px;
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -102,13 +67,42 @@ a {
   white-space: nowrap;
 }
 
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+
 .icon,
 .marker-glyph {
   display: block;
   flex: none;
 }
 
+/* Press feedback shared by every tappable control. */
+.icon-button,
+.pill,
+.button,
+.chip,
+.segmented__option,
+.action-row__icon,
+.nav-bar__indicator {
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+.icon-button:active,
+.pill:active,
+.button:active:not(:disabled),
+.chip:active,
+.segmented__option:active {
+  transform: scale(0.96);
+}
+
 .icon-button {
+  position: relative;
   display: inline-grid;
   place-items: center;
   flex: none;
@@ -123,68 +117,98 @@ a {
 
 .icon-button:hover {
   background: var(--tile);
+  color: var(--text);
 }
 
 /* Small controls keep their look but get a 48 px touch target. */
-.icon-button,
-.pill,
-.lang-toggle__option {
-  position: relative;
-}
-
 .icon-button::before {
   content: '';
   position: absolute;
   inset: calc((40px - var(--target)) / 2);
 }
 
-.pill::before,
-.lang-toggle__option::before {
-  content: '';
-  position: absolute;
-  inset: calc((32px - var(--target)) / 2) 0;
-}
-
 .icon-button--float {
+  width: var(--target);
+  height: var(--target);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   color: var(--text);
 }
 
+.icon-button--float:hover {
+  background: var(--surface);
+  color: var(--accent-ink);
+}
+
 .pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-4) 0 var(--s-3);
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--surface);
   box-shadow: var(--shadow-float);
-  font-weight: 500;
+  font-size: var(--text-small);
+  font-weight: 600;
   cursor: pointer;
 }
 
-.pill[aria-pressed='true'] {
-  background: var(--accent-tint);
-  color: var(--accent);
+.pill::before {
+  content: '';
+  position: absolute;
+  inset: calc((40px - var(--target)) / 2) 0;
 }
 
+.pill[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Status chips: a dot plus the word, so the colour is never the only cue. */
 .badge {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: var(--radius-pill);
-  background: var(--tile);
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-xs);
+  background: var(--status-check-tint);
+  color: var(--status-check);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
-.badge--open {
+.badge--open,
+.badge--reopened,
+.badge--cleaned,
+.badge--alert,
+.badge--progress-good,
+.badge--progress-alert {
+  padding-left: var(--s-2);
+}
+
+.badge--open::before,
+.badge--reopened::before,
+.badge--cleaned::before,
+.badge--alert::before,
+.badge--progress-good::before,
+.badge--progress-alert::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge--open,
+.badge--alert,
+.badge--progress-alert {
   background: var(--status-open-tint);
   color: var(--status-open);
 }
@@ -194,21 +218,17 @@ a {
   color: var(--status-reopened);
 }
 
-.badge--cleaned {
+.badge--cleaned,
+.badge--progress-good {
   background: var(--status-cleaned-tint);
   color: var(--status-cleaned);
-}
-
-.badge--alert {
-  background: var(--status-open-tint);
-  color: var(--status-open);
 }
 
 .notice {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-1);
-  padding: 12px var(--space-2);
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
   border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: var(--shadow-float);
@@ -219,50 +239,56 @@ a {
   color: var(--error);
 }
 
+/* Loading: a soft sweep instead of a blink. */
 .skeleton {
   display: block;
   border-radius: var(--radius-s);
   background: var(--tile);
-  animation: pulse 1.4s ease-in-out infinite;
+  animation: skeleton-breathe 1.4s var(--ease-out) infinite;
 }
 
-@keyframes pulse {
+@keyframes skeleton-breathe {
   50% {
-    opacity: 0.5;
+    background-color: var(--tile-hover);
   }
 }
 
 .segmented {
   display: flex;
-  padding: 2px;
-  border-radius: var(--radius-pill);
+  gap: var(--s-1);
+  padding: var(--s-1);
+  border-radius: var(--radius-m);
   background: var(--tile);
 }
 
 .segmented__option {
   flex: 1;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 var(--s-3);
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-s);
   background: transparent;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.segmented__option:hover {
+  color: var(--text);
 }
 
 .segmented__option[aria-pressed='true'] {
   background: var(--surface);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-1);
   color: var(--text);
 }
 
 .switch-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
   width: 100%;
-  min-height: 52px;
+  min-height: 56px;
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--divider);
@@ -273,33 +299,36 @@ a {
 
 .switch-row__label {
   flex: 1;
+  font-weight: 500;
 }
 
 .switch-row__meta {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
 }
 
 .switch-row__track {
   position: relative;
   flex: none;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 24px;
   border-radius: var(--radius-pill);
-  background: #bdc1c6;
-  transition: background 150ms;
+  background: var(--line-strong);
+  transition: background-color var(--dur-2) var(--ease-out);
 }
 
 .switch-row__track::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--surface);
-  transition: transform 150ms;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-spring) var(--spring-bouncy);
 }
 
 .switch-row[aria-checked='true'] .switch-row__track {
@@ -311,15 +340,17 @@ a {
 }
 
 .facts {
-  margin-top: var(--space-3);
+  margin-top: var(--s-6);
 }
 
-.facts__title {
-  margin-bottom: 4px;
+/* Section labels: small, quiet, sentence case. */
+.facts__title,
+.section-label {
+  margin-bottom: var(--s-1);
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 500;
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 600;
 }
 
 .facts__list {
@@ -329,8 +360,8 @@ a {
 .facts__row {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: 12px 0;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
   border-bottom: 1px solid var(--divider);
 }
 
@@ -340,14 +371,65 @@ a {
 
 .facts__row dd {
   margin: 0;
+  font-weight: 500;
   text-align: right;
+}
+
+/* Lists that arrive together come in one after another. */
+.stagger > * {
+  animation: rise var(--dur-3) var(--ease-out) both;
+}
+
+.stagger > :nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.stagger > :nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.stagger > :nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.stagger > :nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.stagger > :nth-child(6) {
+  animation-delay: 150ms;
+}
+
+.stagger > :nth-child(n + 7) {
+  animation-delay: 180ms;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

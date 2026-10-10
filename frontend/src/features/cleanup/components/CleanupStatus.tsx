@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { sitePath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { SiteFeature } from '../../../domain/Site';
 import { Button } from '../../../ui/Button';
 
@@ -16,7 +16,7 @@ const POLL_MS = 5_000;
 /** Polls cleanup_status; the site read before the claim may hold an old rejection, so only a later read counts. */
 export function CleanupStatus({ site, siteId, reload }: CleanupStatusProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const [beforeClaim] = useState(site);
   const fresh = site !== null && site !== beforeClaim;
   const status = fresh ? site.properties.cleanup_status : 'checking';
@@ -36,7 +36,7 @@ export function CleanupStatus({ site, siteId, reload }: CleanupStatusProps) {
         <span className={`badge ${key === 'accepted' ? 'badge--progress-good' : ''}`}>{t(`cleanup.status.${key}`)}</span>
       </p>
       <p className="sheet-text">{t(`cleanup.statusText.${key}`)}</p>
-      <Button onClick={() => navigate(sitePath(siteId))}>{t('cleanup.backToSite')}</Button>
+      <Button onClick={() => sheets.close(sitePath(siteId))}>{t('cleanup.backToSite')}</Button>
     </div>
   );
 }

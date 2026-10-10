@@ -17,6 +17,8 @@ import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
 import { MockApiClient } from '../src/services/MockApiClient';
 import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
+import { OnboardingPreference } from '../src/services/OnboardingPreference';
+import { ThemePreference } from '../src/services/ThemePreference';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 import { testSnapServices, type SnapTestOptions } from './snapFakes';
@@ -55,6 +57,8 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
     locator: new GeoLocator(undefined),
     sharer: new Sharer({ clipboard: { writeText: async () => undefined } as unknown as Clipboard }),
     snap: testSnapServices({ ...snap, auth }),
+    onboarding: new OnboardingPreference(store),
+    theme: new ThemePreference(store, null),
   });
 }
 

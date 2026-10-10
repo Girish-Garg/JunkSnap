@@ -4,6 +4,7 @@ import type { LetterBase } from '../../../domain/SiteActions';
 import { NativeBridge } from '../../../services/NativeBridge';
 import { Button } from '../../../ui/Button';
 import { useCopyLetter } from '../hooks/useCopyLetter';
+import { Icon } from '../../../ui/Icon';
 
 interface LetterActionsProps {
   readonly draft: LetterBase;
@@ -17,7 +18,10 @@ export function LetterActions({ draft, onReset }: LetterActionsProps) {
   const copy = useCopyLetter(draft, native);
   return (
     <div className="letter-actions">
-      <Button onClick={() => native.print()}>{t('letter.print')}</Button>
+      <Button onClick={() => native.print()}>
+        <Icon name="print" size={20} />
+        {t('letter.print')}
+      </Button>
       <Button variant="text" onClick={copy.copy}>
         {t(copy.label)}
       </Button>

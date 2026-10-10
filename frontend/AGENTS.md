@@ -36,7 +36,8 @@ npm run build
 - Capture is the in-app camera only (no gallery upload). Hash the original with SHA-256 on the phone, then upload with the presigned PUT and submit the report.
 - Scan records video (at most 60 s, 720p, 40 MB) and a GPS track from `watchPosition`, at least one fix per second, both timed from the start of recording; then it presigns, PUTs the video and posts a `scan_session` (decision 20261010-0203).
 - Edge mode runs only when the startup probe passes; otherwise use cloud mode. Scores from the phone are hints for live boxes and frame choice; the server always re-verifies.
-- UI style: minimal custom components with map-app patterns, no generated look; details in `frontend/DESIGN.md` (decision 20261010-0201).
+- UI style: playful on top of map-app patterns (cartoon logo, rounded headings, springy motion), custom components, no generated look; details in `frontend/DESIGN.md` (decision 20261010-1502, replacing the minimal look of 20261010-0201). Use only the tokens in `src/ui/tokens.css`.
+- Back button: a sheet that is not a route uses `useHistoryLayer`; route sheets open and close through `useSheetNavigation`, so Android back closes the topmost sheet.
 - Accounts (decision 20261010-0227): browsing needs no sign-in; Snap, Scan, votes, cleanups and letters do. Sign in with Cognito (`VITE_COGNITO_*`) and send the ID token as `Authorization: Bearer`. Never show or store another user's id, email or name.
 - Failed uploads wait in the IndexedDB offline queue and retry with backoff.
 - Letters: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. No server-side PDF library (they mangle Devanagari). Nothing is filed automatically; the resident files.

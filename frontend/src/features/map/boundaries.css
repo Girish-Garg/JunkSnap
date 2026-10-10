@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--space-1);
+  gap: var(--s-2);
 }
 
 .boundary-switcher {
@@ -13,57 +13,95 @@
 .boundary-switcher__panel {
   position: absolute;
   right: 0;
-  bottom: calc(100% + var(--space-1));
+  bottom: calc(100% + var(--s-2));
   display: grid;
-  gap: var(--space-1);
+  gap: var(--s-2);
   width: min(320px, calc(100vw - 2 * var(--edge)));
-  padding: 12px var(--space-2);
-  border-radius: var(--radius-m);
+  padding: var(--s-4);
+  border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: var(--shadow-float);
+  transform-origin: bottom right;
+  animation: pop-in var(--dur-3) var(--spring);
 }
 
 .boundary-switcher__title {
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
 }
 
 .boundary-switcher__note {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
 }
 
 .boundary-switcher__link {
   display: inline-flex;
   align-items: center;
   min-height: 40px;
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--accent-ink);
+  font-weight: 700;
   text-decoration: none;
 }
 
-.boundary-legend {
+/* The legend sits behind a "Legend" chip at the map's lower left (LegendToggle); open, it rises above the chip. */
+.legend-toggle {
   position: absolute;
-  bottom: calc(var(--edge) + 28px);
+  bottom: calc(var(--s-6) + var(--s-2));
   left: var(--edge);
   z-index: 2;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.legend-toggle__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(100vw - 2 * var(--edge) - 64px);
+}
+
+/* Always visible, open or folded: scores are never shown on thin evidence. */
+.legend-toggle__caveat {
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+}
+
+.legend-toggle--open .legend-toggle__chip {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.boundary-legend {
   display: grid;
-  gap: 4px;
+  animation: pop-in var(--dur-3) var(--spring);
+  transform-origin: bottom left;
+  gap: var(--s-1);
   max-width: min(240px, calc(100vw - 2 * var(--edge) - 64px));
-  padding: var(--space-1) 12px;
-  border-radius: var(--radius-s);
+  padding: var(--s-3);
+  border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
 }
 
 .boundary-legend__title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px var(--space-1);
+  gap: var(--s-1) var(--s-2);
   color: var(--text);
   font-weight: 500;
 }
@@ -75,7 +113,7 @@
 .boundary-legend__ramp {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--s-2);
 }
 
 .boundary-legend__swatches {
@@ -94,20 +132,22 @@
   border-top: 2px dashed var(--text-secondary);
 }
 
-.map-page--card .boundary-legend {
+.map-page--card .legend-toggle {
   display: none;
 }
 
-@media (max-width: 767px) {
-  .map-page--sheet .boundary-legend,
-  .map-area:has(.boundary-switcher__panel) .boundary-legend {
+@media (max-width: 1023px) {
+  .map-page--sheet .legend-toggle,
+  .map-area:has(.boundary-switcher__panel) .legend-toggle {
     display: none;
   }
 }
 
-@media (min-width: 768px) {
-  /* Clear of the 400 px side panel. */
-  .map-page--sheet .boundary-legend {
-    left: calc(400px + var(--edge));
+/* Desktop: the map starts after the side panel, so the legend does too. */
+@media (min-width: 1024px) {
+  .legend-toggle {
+    /* Clear of MapLibre's credit button in the corner. */
+    bottom: calc(var(--edge) + var(--s-6));
+    left: calc(var(--panel-width) + var(--edge));
   }
 }

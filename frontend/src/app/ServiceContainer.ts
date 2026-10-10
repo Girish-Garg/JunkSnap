@@ -14,6 +14,8 @@ import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockAreaApi } from '../services/MockAreaApi';
 import { MockAuthService } from '../services/MockAuthService';
+import { OnboardingPreference } from '../services/OnboardingPreference';
+import { ThemePreference } from '../services/ThemePreference';
 import { Sharer, type ShareApi } from '../services/Sharer';
 import { UnavailableAuthService } from '../services/UnavailableAuthService';
 import { siteFixtureLoaders } from '../services/siteFixtures';
@@ -41,6 +43,8 @@ const AUTH_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, store: KeyValu
 export interface BrowserApis extends SnapBrowserApis {
   readonly store: KeyValueStore;
   readonly share: ShareApi;
+  /** The element that carries data-theme; absent in tests. */
+  readonly root?: HTMLElement;
 }
 
 export interface Services {
@@ -54,6 +58,8 @@ export interface Services {
   readonly locator: GeoLocator;
   readonly sharer: Sharer;
   readonly snap: SnapServices;
+  readonly onboarding: OnboardingPreference;
+  readonly theme: ThemePreference;
 }
 
 /** Composition root: the only place that builds services. */
@@ -68,6 +74,8 @@ export class ServiceContainer implements Services {
   readonly locator: GeoLocator;
   readonly sharer: Sharer;
   readonly snap: SnapServices;
+  readonly onboarding: OnboardingPreference;
+  readonly theme: ThemePreference;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -80,6 +88,8 @@ export class ServiceContainer implements Services {
     this.locator = services.locator;
     this.sharer = services.sharer;
     this.snap = services.snap;
+    this.onboarding = services.onboarding;
+    this.theme = services.theme;
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
@@ -95,6 +105,8 @@ export class ServiceContainer implements Services {
       locator: new GeoLocator(browser.geolocation),
       sharer: new Sharer(browser.share),
       snap: SnapServiceFactory.build(config, browser, auth),
+      onboarding: new OnboardingPreference(browser.store),
+      theme: new ThemePreference(browser.store, browser.root ?? null),
     });
   }
 }

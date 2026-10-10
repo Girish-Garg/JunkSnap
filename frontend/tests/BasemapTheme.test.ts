@@ -18,8 +18,8 @@ describe('BasemapTheme', () => {
   const themed = new Map(BasemapTheme.apply(STYLE).layers.map((layer) => [layer.id, layer]));
 
   it('recolours land and water to the calm palette', () => {
-    expect(themed.get('background')).toMatchObject({ paint: { 'background-color': '#f4f4f2' } });
-    expect(themed.get('water')).toMatchObject({ paint: { 'fill-color': '#cfe3f3' } });
+    expect(themed.get('background')).toMatchObject({ paint: { 'background-color': '#f3ede2' } });
+    expect(themed.get('water')).toMatchObject({ paint: { 'fill-color': '#bfe2ee' } });
   });
 
   it('hides landuse fills and road shields', () => {
@@ -28,6 +28,6 @@ describe('BasemapTheme', () => {
   });
 
   it('turns labels grey with a white halo', () => {
-    expect(themed.get('label_city')).toMatchObject({ paint: { 'text-color': '#5f6368', 'text-halo-color': '#ffffff' } });
+    expect(themed.get('label_city')).toMatchObject({ paint: { 'text-color': '#6b5f4f', 'text-halo-color': '#fffaf1' } });
   });
 });

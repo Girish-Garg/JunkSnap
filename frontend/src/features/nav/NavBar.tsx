@@ -1,37 +1,33 @@
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router';
-import { Icon } from '../../ui/Icon';
+import { useLocation } from 'react-router';
+import { useSheetNavigation } from '../../app/useSheetNavigation';
+import { Logo } from '../../ui/Logo';
 import { useAuthFlow } from '../auth/hooks/useAuthFlow';
 import { NAV_ITEMS, NavItems, type NavItem } from './NavItems';
+import { NavTab } from './NavTab';
 import './nav.css';
 
-/** Material 3 navigation bar on phones; a navigation rail on desktop (nav.css). */
+/** A bottom bar with Report raised in the centre on phones; the head of the side panel on desktop (nav.css). */
 export function NavBar() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { pathname } = useLocation();
+  const sheets = useSheetNavigation();
   const { requireAuth } = useAuthFlow();
   const selected = NavItems.selected(pathname);
+  // Tabs replace each other, so back from any tab returns to the map and back from the map leaves.
   const go = (item: NavItem) => {
-    const open = () => navigate(item.path);
+    if (item.path === '/') return sheets.home();
+    const open = () => (pathname === '/' ? sheets.open(item.path) : sheets.swap(item.path));
     if (item.needsAccount) requireAuth(open);
     else open();
   };
   return (
     <nav className="nav-bar" aria-label={t('nav.label')}>
+      <div className="nav-bar__brand">
+        <Logo />
+      </div>
       {NAV_ITEMS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className={`nav-bar__item nav-bar__item--${item.id}`}
-          aria-current={item.id === selected ? 'page' : undefined}
-          onClick={() => go(item)}
-        >
-          <span className="nav-bar__indicator">
-            <Icon name={item.icon} size={24} />
-          </span>
-          <span className="nav-bar__label">{t(`nav.${item.id}`)}</span>
-        </button>
+        <NavTab key={item.id} item={item} current={item.id === selected} label={t(`nav.${item.id}`)} onPick={go} />
       ))}
     </nav>
   );

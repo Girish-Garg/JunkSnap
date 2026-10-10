@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { sitePath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
@@ -21,8 +22,8 @@ export function LetterRoute() {
   const { t } = useTranslation();
   const { config } = useServices();
   const { siteId = '' } = useParams();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate(sitePath(siteId)), [navigate, siteId]);
+  const sheets = useSheetNavigation();
+  const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useLetter(siteId);
   const { draft } = flow;
   const evidence = (text: LetterText) => draft?.evidence && <LetterEvidence evidence={draft.evidence} text={text} language={draft.language} />;

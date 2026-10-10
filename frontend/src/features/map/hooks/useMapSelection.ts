@@ -1,13 +1,14 @@
 import { useCallback, useState } from 'react';
-import { useMatch, useNavigate } from 'react-router';
+import { useMatch } from 'react-router';
 import { SITE_PATH, sitePath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { Place } from '../../../domain/PlaceSearch';
 import type { SiteFeature } from '../../../domain/Site';
 import type { CameraRequest } from '../CameraRequest';
 
 /** Which site is previewed or open, and where the camera should go. */
 export function useMapSelection(loaded: readonly SiteFeature[]) {
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const openId = useMatch(SITE_PATH)?.params.siteId ?? null;
   const [preview, setPreview] = useState<SiteFeature | null>(null);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
@@ -20,9 +21,12 @@ export function useMapSelection(loaded: readonly SiteFeature[]) {
     (site: SiteFeature) => {
       setPreview(null);
       showSite(site);
-      navigate(sitePath(site.properties.site_id));
+      // Another site replaces the open one, so back still returns to the map in one step.
+      const path = sitePath(site.properties.site_id);
+      if (openId) sheets.swap(path);
+      else sheets.open(path);
     },
-    [navigate, showSite],
+    [sheets, showSite, openId],
   );
   const showPlace = useCallback((place: Place) => {
     setPreview(place.sites.length === 1 ? (place.sites[0] ?? null) : null);

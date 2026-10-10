@@ -37,6 +37,7 @@ describe('Ward legend on the map', () => {
     const button = await screen.findByRole('button', { name: 'Map areas' });
     button.click();
     (await screen.findByRole('button', { name: 'Wards' })).click();
+    (await screen.findByRole('button', { name: 'Legend' })).click();
     const legend = await screen.findByRole('region', { name: 'Map colours' });
     expect(
       within(legend).getByText('Approximate ward areas from official ward lists, unreviewed (34 of 100 wards)'),

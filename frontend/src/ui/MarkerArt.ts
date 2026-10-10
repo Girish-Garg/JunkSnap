@@ -40,7 +40,7 @@ export class MarkerArt {
     const scale = (radius * 1.1) / 24;
     const offset = 16 - 12 * scale;
     const disc = hollow
-      ? `<circle cx="16" cy="16" r="${radius}" fill="#fff" stroke="${colour}" stroke-width="2.5" stroke-dasharray="4 3"/>`
+      ? `<circle cx="16" cy="16" r="${radius}" fill="#fffdf8" stroke="${colour}" stroke-width="2.5" stroke-dasharray="4 3"/>`
       : `<circle cx="16" cy="16" r="${radius}" fill="${colour}" stroke="#fff" stroke-width="2"/>`;
     const art = hollow ? glyph.replaceAll('#fff', colour) : glyph;
     return (

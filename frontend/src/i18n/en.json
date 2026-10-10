@@ -221,7 +221,8 @@
     "title": "Account",
     "close": "Close account",
     "signedInAs": "Signed in as {{email}}",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "howItWorks": "How JunkSnap works"
   },
   "auth": {
     "close": "Close",
@@ -381,7 +382,8 @@
     "crawl": {
       "collecting": "We're collecting official ward data for this area. Scores appear after enough verified reports and once ward data is in.",
       "expected": "Expected by {{date}}"
-    }
+    },
+    "noneTitle": "No areas on the map yet"
   },
   "activity": {
     "title": "Activity",
@@ -395,7 +397,8 @@
     "noPhoto": "Blurred photo not ready yet",
     "photoAlt": "Blurred photo of your report",
     "videos": "Videos",
-    "photos": "Photos"
+    "photos": "Photos",
+    "emptyTitle": "Nothing sent yet"
   },
   "queue": {
     "waiting_one": "{{count}} report waiting to send",
@@ -593,7 +596,9 @@
     "wardsApprox": "Approximate ward areas from official ward lists, unreviewed",
     "wardsApproxCounted": "Approximate ward areas from official ward lists, unreviewed ({{counts}})",
     "wardsOf": "{{mapped}} of {{wards}} wards",
-    "wardsMapped": "{{mapped}} wards"
+    "wardsMapped": "{{mapped}} wards",
+    "legendChip": "Legend",
+    "caveat": "Scores show after 10 verified reports"
   },
   "ranking": {
     "open": "City ranking",
@@ -648,5 +653,74 @@
     "taken": "Taken {{date}}",
     "reported": "Reported {{date}}",
     "blurred": "Faces and number plates are blurred."
+  },
+  "desktop": {
+    "scan": "Scan a street",
+    "report": "Report",
+    "close": "Close",
+    "reportTitle": "Report from your phone",
+    "reportText": "Snapping needs your phone's camera and GPS. Point your phone at this code to open JunkSnap there, then tap Report.",
+    "scanTitle": "Scan from your phone",
+    "scanText": "A scan is a short video of a street, recorded on your phone as you walk. Point your phone at this code to open JunkSnap there.",
+    "qrLabel": "QR code that opens JunkSnap on your phone",
+    "steps": "Works in any phone browser. No app store needed."
+  },
+  "panel": {
+    "title": "In view",
+    "text": "Reports on the map right now. Pick one to see its photos, place and letter.",
+    "emptyTitle": "All clear here",
+    "emptyText": "No reports in this part of the map. Move the map or zoom out."
+  },
+  "onboarding": {
+    "label": "How JunkSnap works",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "done": "Explore the map",
+    "signIn": "Sign in to report",
+    "step": "Card {{n}} of {{total}}",
+    "why": {
+      "title": "Waste piles up for three reasons",
+      "text": "Sometimes collection misses a street. Sometimes there is nowhere legal to put waste. And sometimes it gets left on an empty plot. JunkSnap measures all three, so the fix fits the cause."
+    },
+    "how": {
+      "title": "From your photo to the map",
+      "steps": [
+        "Snap a photo or scan a street with the in-app camera.",
+        "Faces and number plates are blurred before anyone sees it.",
+        "Our models check that it really is waste.",
+        "It joins a site on the map, with its ward, MLA seat and MP seat.",
+        "Neighbours nearby confirm it."
+      ]
+    },
+    "chain": {
+      "title": "Who looks after a site",
+      "text": "Every site shows the offices responsible for it. Offices only, never a person's name.",
+      "you": "Your report",
+      "youText": "It starts here",
+      "body": "Local body (Municipal Corporation)",
+      "bodyText": "Collects and clears the waste",
+      "councillor": "Ward councillor",
+      "councillorText": "Follows up for the ward",
+      "mla": "MLA",
+      "mlaText": "Takes it up for the assembly seat",
+      "mp": "MP",
+      "mpText": "Takes it up for the Lok Sabha seat",
+      "letter": "JunkSnap drafts a letter that quotes the rules word for word. You send it yourself."
+    },
+    "start": {
+      "title": "Fair scores, open to everyone",
+      "scores": "Every area score shows its counts, and appears only after 10 verified reports. Jodhpur is the pilot city, so its data goes deepest.",
+      "text": "Anyone can explore the map and the areas. To snap, scan, confirm or draft a letter, sign in first."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
   }
 }

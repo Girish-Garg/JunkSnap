@@ -17,7 +17,7 @@ describe('unverified pins', () => {
   it('draw a dashed outline in the type colour instead of a filled disc', () => {
     const hollow = MarkerArt.svg('waste_dump', 64, false, true);
     expect(hollow).toContain('stroke-dasharray');
-    expect(hollow).toContain('fill="#fff" stroke="#c5221f"');
+    expect(hollow).toContain('fill="#fffdf8" stroke="#c5221f"');
     expect(MarkerArt.svg('waste_dump', 64)).not.toContain('stroke-dasharray');
   });
 });

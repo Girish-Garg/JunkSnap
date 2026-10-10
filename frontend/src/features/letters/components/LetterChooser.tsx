@@ -3,6 +3,7 @@ import type { LetterLanguage } from '../../../domain/SiteActions';
 import { Button } from '../../../ui/Button';
 import { Segmented } from '../../../ui/Segmented';
 import type { LetterRequestFlow } from '../hooks/useLetterRequest';
+import { LogoLoader } from '../../../ui/LogoLoader';
 
 const LANGUAGES: readonly { readonly value: LetterLanguage; readonly label: string }[] = [
   { value: 'en', label: 'English' },
@@ -24,7 +25,7 @@ export function LetterChooser({ flow }: { readonly flow: LetterRequestFlow }) {
       <Button onClick={flow.request} disabled={flow.busy}>
         {t(flow.busy ? 'letter.drafting' : 'letter.draft')}
       </Button>
-      {flow.busy && <p className="form__note">{t('letter.wait')}</p>}
+      {flow.busy && <LogoLoader text={t('letter.wait')} />}
     </div>
   );
 }

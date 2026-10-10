@@ -4,6 +4,7 @@ import { MAP_MODES, type MapMode } from '../../../domain/MapMode';
 import type { SiteFeature } from '../../../domain/Site';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import { Segmented } from '../../../ui/Segmented';
+import { useHistoryLayer } from '../../../ui/useHistoryLayer';
 import type { MapPageState } from '../hooks/useMapPage';
 import { FilterTypeRows } from './FilterTypeRows';
 
@@ -18,9 +19,11 @@ interface FiltersSheetProps {
 export function FiltersSheet({ filters, sites, onClose }: FiltersSheetProps) {
   const { t } = useTranslation();
   const { config } = useServices();
+  // Its own history entry: back closes the sheet rather than leaving the map.
+  const dismiss = useHistoryLayer('filters', true, onClose);
   const modes = MAP_MODES.map((mode) => ({ value: mode, label: t(`filters.mode.${mode}`) }));
   return (
-    <BottomSheet labelledBy={TITLE_ID} closeLabel={t('filters.close')} resizeLabel={t('sheet.resize')} onClose={onClose}>
+    <BottomSheet labelledBy={TITLE_ID} closeLabel={t('filters.close')} resizeLabel={t('sheet.resize')} onClose={() => dismiss()}>
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('filters.title')}
       </h2>

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { RANKING_PATH } from '../../../app/paths';
+import { SheetHistory } from '../../../app/SheetHistory';
 import { BOUNDARY_KINDS, type BoundaryKind } from '../../../domain/AreaListing';
 import { Segmented, type SegmentOption } from '../../../ui/Segmented';
 import type { BoundaryLayerState } from '../hooks/useBoundaryLayer';
@@ -30,7 +31,7 @@ export function BoundaryPanel({ boundary }: BoundaryPanelProps) {
         onChange={(value) => boundary.choose(value === OFF ? null : value)}
       />
       {!kinds.includes('ward') && <p className="boundary-switcher__note">{t('boundaries.noWards')}</p>}
-      <Link className="boundary-switcher__link" to={RANKING_PATH}>
+      <Link className="boundary-switcher__link" to={RANKING_PATH} state={SheetHistory.above(0)}>
         {t('ranking.open')}
       </Link>
     </div>

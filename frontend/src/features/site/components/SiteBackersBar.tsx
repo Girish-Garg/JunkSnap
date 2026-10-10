@@ -13,7 +13,7 @@ export function SiteBackersBar({ backers }: SiteBackersBarProps) {
   const done = count >= needed;
   const label = done ? t('backers.done', { count }) : t('backers.label', { count, needed });
   return (
-    <section className="backers" aria-label={label}>
+    <section className={done ? 'backers backers--done' : 'backers'} aria-label={label}>
       <div className="backers__head">
         <span className="backers__label">{label}</span>
         <span className="backers__detail">{t('backers.detail', { photos, votes })}</span>

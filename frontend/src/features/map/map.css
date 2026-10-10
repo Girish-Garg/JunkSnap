@@ -1,9 +1,15 @@
+/*
+  App layout. Phones: the map fills everything above the bottom bar; search and Filters float on top.
+  Desktop (1024 px and up): a side panel on the left (logo, tabs, search, then the open sheet or the list of
+  reports in view) and the map on the right with Scan and Report at its top right.
+*/
 .app {
   position: fixed;
   inset: 0;
 }
 
 .map-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -15,70 +21,107 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: #f4f4f2;
+  background: var(--map-bg);
 }
 
 .map-canvas {
   position: absolute;
   inset: 0;
+  animation: fade-in var(--dur-4) var(--ease-out);
 }
 
 .search-area {
   position: absolute;
-  top: calc(var(--space-1) + env(safe-area-inset-top));
+  top: calc(var(--s-3) + env(safe-area-inset-top));
   right: var(--edge);
   left: var(--edge);
   z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-1);
+  gap: var(--s-2);
+  pointer-events: none;
+}
+
+.search-area > * {
+  pointer-events: auto;
 }
 
 .searchbar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--s-3);
   width: 100%;
-  height: 48px;
-  padding: 0 4px 0 var(--edge);
-  border-radius: 24px;
+  height: var(--target);
+  padding: 0 var(--s-1) 0 var(--s-3);
+  border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: var(--shadow-float);
+  transition: box-shadow var(--dur-2) var(--ease-out);
 }
 
-.searchbar__icon {
+.searchbar:focus-within {
+  box-shadow: var(--shadow-float), 0 0 0 2px var(--accent);
+}
+
+/*
+  Phones carry the 28 px logo mark in the search field; desktop shows it in the panel head, so the field shows a
+  magnifier. The left padding and the gap to the text are both --s-3, and mark and text share one centre line.
+*/
+.searchbar__lead {
+  display: flex;
   flex: none;
-  margin-right: 8px;
+  align-items: center;
+  height: 28px;
   color: var(--text-secondary);
+}
+
+.searchbar__lead .icon {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .searchbar__lead .logo {
+    display: none;
+  }
+
+  .searchbar__lead .icon {
+    display: block;
+  }
 }
 
 .searchbar__input {
   flex: 1;
   min-width: 0;
   height: 40px;
+  padding: 0;
+  line-height: 40px;
   border: 0;
   background: transparent;
   font-size: 16px;
-  outline-offset: -2px;
+  outline: none;
 }
 
 .searchbar__input::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
 }
 
 .search-results {
   width: 100%;
+  max-height: 50vh;
   margin: 0;
-  padding: var(--space-1) 0;
+  padding: var(--s-2) 0;
+  overflow-y: auto;
   border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   list-style: none;
+  animation: pop-in var(--dur-3) var(--spring);
+  transform-origin: top center;
 }
 
 .search-results--empty {
-  padding: 12px var(--space-2);
+  padding: var(--s-3) var(--s-4);
   color: var(--text-secondary);
 }
 
@@ -87,7 +130,7 @@
   flex-direction: column;
   width: 100%;
   min-height: var(--target);
-  padding: 6px var(--space-2);
+  padding: var(--s-2) var(--s-4);
   border: 0;
   background: transparent;
   text-align: left;
@@ -100,44 +143,60 @@
 
 .search-results__meta {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
 }
 
 .lang-toggle {
   display: flex;
   flex: none;
+  gap: 2px;
   padding: 2px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-m);
   background: var(--tile);
 }
 
 .lang-toggle__option {
-  min-width: var(--target);
-  height: 32px;
-  padding: 0 8px;
+  position: relative;
+  min-width: 40px;
+  height: 36px;
+  padding: 0 var(--s-2);
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-s);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--text-small);
+  font-weight: 700;
   cursor: pointer;
+}
+
+.lang-toggle__option::before {
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
 }
 
 .lang-toggle__option[aria-pressed='true'] {
   background: var(--surface);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-1);
   color: var(--text);
 }
 
 /* The status toast: one slim line, never a card. */
 .map-status .notice {
   max-width: 100%;
-  padding: 6px 14px;
+  padding: var(--s-2) var(--s-4);
   border-radius: var(--radius-pill);
-  font-size: 13px;
-  line-height: 18px;
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  animation: pop-in var(--dur-3) var(--spring);
 }
 
 .map-status .notice span {
@@ -147,40 +206,74 @@
 }
 
 .filters__label {
-  margin: var(--space-3) 0 var(--space-1);
+  margin: var(--s-6) 0 var(--s-2);
 }
 
 .map-controls {
   position: absolute;
   right: var(--edge);
-  bottom: var(--edge);
+  bottom: calc(var(--s-6) + var(--s-2));
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
 }
 
 .user-dot {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 6px rgb(11 110 99 / 0.2);
+  box-shadow: 0 0 0 0 rgb(11 122 115 / 0.4);
+  animation: user-ping 2.4s var(--ease-out) infinite;
+}
+
+@keyframes user-ping {
+  70% {
+    box-shadow: 0 0 0 14px rgb(11 122 115 / 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(11 122 115 / 0);
+  }
 }
 
 .maplibregl-ctrl-attrib {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 11px;
 }
 
+/* MapLibre's credit control follows the theme; its "i" is a dark image, so it is inverted on dark. */
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .maplibregl-ctrl-attrib-button {
+    filter: invert(1);
+  }
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
 .map-page--card .map-controls {
-  bottom: calc(104px + 2 * var(--edge));
+  bottom: calc(112px + var(--s-6) + var(--s-2));
 }
 
 /* The sign-in sheet covers everything but the search field. */
 .app > .sheet {
-  z-index: 7;
+  z-index: 10;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .map-page--sheet .map-controls,
   .map-page--sheet .preview-card,
   .map-page--sheet .search-area .pill,
@@ -191,20 +284,65 @@
   }
 }
 
-@media (min-width: 768px) {
-  .map-page {
-    flex-direction: row;
+@media (min-width: 1024px) {
+  /* The panel is drawn behind the nav head, search and sheets, which all sit in its column. */
+  .map-area::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 3;
+    width: var(--panel-width);
+    border-right: 1px solid var(--divider);
+    background: var(--surface);
+  }
+
+  .map-canvas {
+    left: var(--panel-width);
   }
 
   .search-area {
-    top: var(--edge);
+    top: 120px;
     right: auto;
-    width: 368px;
+    left: 0;
+    z-index: 9;
+    width: var(--panel-width);
+    padding: 0 var(--edge);
   }
 
-  /* The auth sheet sits beside the navigation rail. */
+  .searchbar {
+    background: var(--tile);
+    box-shadow: none;
+  }
+
+  .searchbar .lang-toggle {
+    background: transparent;
+  }
+
+  .search-area .pill {
+    box-shadow: var(--shadow-1);
+  }
+
+  /* The toast leaves the panel and floats at the top of the map. */
+  .search-area .map-status {
+    position: absolute;
+    top: 0;
+    left: calc(var(--panel-width) + var(--edge));
+    width: max-content;
+    max-width: 480px;
+  }
+
+  .map-controls {
+    bottom: var(--edge);
+  }
+
+  .map-page--card .map-controls {
+    bottom: var(--edge);
+  }
+
   .app > .sheet {
-    left: 80px;
+    top: 0;
+    left: 0;
+    padding-top: 0;
   }
 }
 
@@ -214,7 +352,7 @@
   inset: 0;
   overflow-y: auto;
   /* Clears the Filters pill; search and locate are hidden in list mode. */
-  padding: 72px var(--edge) var(--space-3);
+  padding: 72px var(--edge) var(--s-6);
   background: var(--page);
 }
 
@@ -225,16 +363,16 @@
 }
 
 .site-list .map-status {
-  margin-top: var(--space-2);
+  margin-top: var(--s-4);
 }
 
 .site-list__notice {
   display: flex;
-  gap: var(--space-1);
-  padding: 12px var(--space-2);
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
   border-radius: var(--radius-m);
   background: var(--surface);
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-1);
 }
 
 .site-list__hint {
@@ -242,36 +380,13 @@
 }
 
 .site-list__items {
-  margin: var(--space-2) 0 0;
+  margin: var(--s-4) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.site-list__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: var(--space-1) 0;
-  border: 0;
-  border-bottom: 1px solid var(--divider);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-}
-
-.site-list__text {
-  display: flex;
-  flex-direction: column;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.site-list__text strong {
-  color: var(--text);
-  font-size: 16px;
-  line-height: 22px;
-  font-weight: 500;
+@media (min-width: 1024px) {
+  .site-list {
+    left: var(--panel-width);
+  }
 }

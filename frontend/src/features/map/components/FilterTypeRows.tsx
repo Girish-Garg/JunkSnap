@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { REPORT_TYPES } from '../../../domain/ReportType';
 import type { SiteFeature } from '../../../domain/Site';
 import { SITE_STATES, SiteFilter } from '../../../domain/SiteFilter';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
+import { TypeIcon } from '../../../ui/TypeIcon';
 import { SwitchRow } from '../../../ui/SwitchRow';
 
 interface FilterTypeRowsProps {
@@ -25,7 +25,7 @@ export function FilterTypeRows({ filter, onChange, sites }: FilterTypeRowsProps)
           meta={t('search.siteCount', { count: counts[type] })}
           checked={filter.shows(type)}
           onToggle={() => onChange(filter.toggleType(type))}
-          leading={<MarkerGlyph type={type} size={24} />}
+          leading={<TypeIcon type={type} size={24} />}
         />
       ))}
       {SITE_STATES.map((state) => (

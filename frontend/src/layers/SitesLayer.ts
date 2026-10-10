@@ -36,8 +36,8 @@ export default class SitesLayer implements MapLayer {
         'icon-image': ['concat', 'pin-', ['case', UNVERIFIED, 'unverified-', ''], ['get', 'report_type']],
         'icon-allow-overlap': true,
         'text-field': ['get', 'backers_badge'],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': 11,
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 12,
         'text-offset': [0, 1.5],
         'text-allow-overlap': true,
         'text-optional': true,
@@ -45,9 +45,9 @@ export default class SitesLayer implements MapLayer {
       paint: {
         'icon-opacity': opacity,
         'text-opacity': opacity,
-        'text-color': '#3c4043',
-        'text-halo-color': '#ffffff',
-        'text-halo-width': 1.5,
+        'text-color': '#221c15',
+        'text-halo-color': '#ffc23d',
+        'text-halo-width': 3,
       },
     };
   }

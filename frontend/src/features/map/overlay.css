@@ -1,0 +1,197 @@
+/* Map extras: the selected pin's ring, desktop Scan and Report, the phone dialog and the desktop panel list. */
+
+/* The selected pin's ring: drops in with a bounce, then breathes. */
+.pin-pulse {
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+}
+
+.pin-pulse::before,
+.pin-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+}
+
+/* A landing splash once, then a slow breath outward. The pin's own ring is drawn by the map. */
+.pin-pulse::before {
+  opacity: 0;
+  animation: pin-land var(--dur-4) var(--ease-out);
+}
+
+.pin-pulse::after {
+  opacity: 0;
+  animation: pin-breathe 2s var(--ease-out) var(--dur-4) infinite;
+}
+
+@keyframes pin-land {
+  0% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.3);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(0) scale(0.7);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes pin-breathe {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/* Desktop: Scan and Report at the map's top right. */
+.desktop-actions {
+  position: absolute;
+  top: var(--edge);
+  right: var(--edge);
+  z-index: 6;
+  display: flex;
+  gap: var(--s-3);
+}
+
+.desktop-actions .button--secondary {
+  border-color: transparent;
+  box-shadow: var(--shadow-float);
+}
+
+.desktop-actions .button--sun {
+  animation: report-nudge 7s var(--ease-out) 2s infinite;
+}
+
+.desktop-actions .button--sun:active {
+  animation: none;
+}
+
+/* The "use your phone" dialog. */
+.dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: var(--s-6);
+  background: var(--scrim);
+  animation: fade-in var(--dur-2) var(--ease-out);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  width: min(440px, 100%);
+  padding: var(--s-8) var(--s-8) var(--s-6);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  text-align: center;
+  animation: dialog-in var(--dur-spring) var(--spring);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+}
+
+.dialog__close {
+  position: absolute;
+  top: var(--s-3);
+  right: var(--s-3);
+}
+
+.dialog__badge {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--s-2);
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-m);
+  background: var(--sun);
+  box-shadow: var(--shadow-sticker);
+  color: var(--on-sun);
+  animation: chip-hop var(--dur-spring) var(--spring-bouncy) 120ms both;
+}
+
+.dialog__qr {
+  display: grid;
+  place-items: center;
+  width: 216px;
+  height: 216px;
+  margin-top: var(--s-4);
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-l);
+  background: #ffffff;
+}
+
+.dialog__qr-wait {
+  width: 184px;
+  height: 184px;
+}
+
+.dialog__url {
+  margin-top: var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 700;
+}
+
+/* Desktop panel with nothing open: the reports in view. */
+.panel-home {
+  position: absolute;
+  top: 228px;
+  bottom: 0;
+  left: 0;
+  z-index: 4;
+  width: var(--panel-width);
+  padding: var(--s-5) var(--edge) var(--s-8);
+  overflow-y: auto;
+  border-top: 1px solid var(--divider);
+  animation: fade-in var(--dur-3) var(--ease-out);
+}
+
+.panel-home__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: 800;
+}
+
+.panel-home__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 2px var(--s-2) 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: var(--text-lead);
+}
+
+.panel-home .site-rows {
+  margin: var(--s-3) calc(-1 * var(--s-2)) 0;
+}

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
 import { useGpsFix } from '../hooks/useGpsFix';
@@ -23,8 +23,8 @@ const TITLES: Readonly<Record<SnapPhase['kind'], string>> = {
 /** Photo or video, then the item's progress. GPS runs until the capture is saved. */
 export function SnapRoute() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate('/'), [navigate]);
+  const sheets = useSheetNavigation();
+  const close = useCallback(() => sheets.close('/'), [sheets]);
   const flow = useSnapFlow();
   const { phase } = flow;
   const gps = useGpsFix(phase.kind === 'camera' || phase.kind === 'review');

@@ -3,6 +3,7 @@ import { NavBar } from '../../nav/NavBar';
 import { useMapFallback } from '../hooks/useMapFallback';
 import { useMapPage } from '../hooks/useMapPage';
 import '../map.css';
+import '../overlay.css';
 import type { MapContext } from '../useMapContext';
 import { FiltersSheet } from './FiltersSheet';
 import { MapOverlay } from './MapOverlay';
