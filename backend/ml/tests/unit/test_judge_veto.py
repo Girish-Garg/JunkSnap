@@ -26,6 +26,7 @@ from ml.domain.vetoes import DetectorsDenyJudgeUnsure, VetoEvidence
 from ml.ports.signal import Signal
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
+from ml.services.judge_decides_combiner import JudgeDecidesCombiner
 from ml.services.meta_combiner import MetaLearnerCombiner
 from ml.services.provider_factory import ProviderFactory
 from ml.services.provider_router import ProviderRouter
@@ -35,8 +36,10 @@ from ml.services.vision_judge import VisionJudge
 NOVA_LITE = "apac.amazon.nova-lite-v1:0"
 SCHEMAS = Path(__file__).resolve().parents[4] / "contracts" / "schemas"
 SCHEMA = json.loads((SCHEMAS / "verification_result.schema.json").read_text("utf-8"))
-# A low community bar keeps weak detector scores unsure, so the judge runs.
-ASKS_THE_JUDGE = FixedWeightCombiner(Thresholds(0.85, 0.01))
+# The judge always runs, as for an untrained type; default thresholds.
+ASKS_THE_JUDGE = JudgeDecidesCombiner(FixedWeightCombiner(Thresholds()), "tests ask the judge")
+# A low community bar turns weak scores into community_check when the judge cannot answer.
+LOW_BAR = JudgeDecidesCombiner(FixedWeightCombiner(Thresholds(0.85, 0.1)), "low bar")
 INDOOR_ROOM = (
     '{"report_type": "not_waste", "context": null, "burning": false, "readable_brands": [], '
     '"rationale": "The photo shows an indoor scene with furniture and household items, '
@@ -129,14 +132,25 @@ def test_not_waste_vetoes_every_claimed_type(claim: Claim) -> None:
     assert result.outcome.decision == "rejected"
 
 
-def test_every_detector_no_and_an_unsure_judge_is_rejected() -> None:
+def test_every_detector_no_and_a_judge_under_the_community_bar_is_rejected() -> None:
     signals: list[Signal] = [FakeSignal("yolo", 0.0), FakeSignal("embedding_classifier", 0.1)]
-    result = verify(signals, [judged("waste_dump", "roadside", 0.6)], ASKS_THE_JUDGE)
+    result = verify(signals, [judged("waste_dump", "roadside", 0.4)], ASKS_THE_JUDGE)
 
     assert result.outcome.decision == "rejected"
     veto = result.outcome.veto
     assert veto is not None and veto.reason == "detectors_veto:no_waste"
     assert [s.name for s in veto.sources] == ["yolo", "embedding_classifier", "vision_judge"]
+
+
+@pytest.mark.parametrize("support", [0.5, 0.6, 0.84])
+def test_every_detector_no_and_a_judge_from_the_community_bar_goes_to_community_check(
+    support: float,
+) -> None:
+    signals: list[Signal] = [FakeSignal("yolo", 0.0), FakeSignal("embedding_classifier", 0.1)]
+    result = verify(signals, [judged("waste_dump", "roadside", support)], ASKS_THE_JUDGE)
+
+    assert result.outcome.veto is None
+    assert result.outcome.decision == "community_check"
 
 
 def test_every_detector_no_but_a_sure_judge_keeps_the_combiner_decision() -> None:
@@ -148,7 +162,7 @@ def test_every_detector_no_but_a_sure_judge_keeps_the_combiner_decision() -> Non
 
 def test_every_detector_no_and_no_judge_answer_is_rejected() -> None:
     signals: list[Signal] = [FakeSignal("yolo", 0.1), FakeSignal("embedding_classifier", 0.15)]
-    result = verify(signals, [provider_error()], ASKS_THE_JUDGE)
+    result = verify(signals, [provider_error()], LOW_BAR)
 
     assert result.judge is None
     assert result.outcome.decision == "rejected"
@@ -158,7 +172,7 @@ def test_every_detector_no_and_no_judge_answer_is_rejected() -> None:
 
 def test_a_detector_that_sees_waste_blocks_the_detector_veto() -> None:
     signals: list[Signal] = [FakeSignal("yolo", 0.0), FakeSignal("embedding_classifier", 0.4)]
-    result = verify(signals, [judged("waste_dump", "roadside", 0.6)], ASKS_THE_JUDGE)
+    result = verify(signals, [judged("waste_dump", "roadside", 0.4)], ASKS_THE_JUDGE)
 
     assert result.outcome.veto is None
 

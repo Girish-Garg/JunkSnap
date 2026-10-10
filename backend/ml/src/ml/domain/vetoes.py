@@ -47,7 +47,7 @@ class JudgeDenies(VetoRule):
 
 
 class DetectorsDenyJudgeUnsure(VetoRule):
-    """Every detector saw no waste and the judge did not confirm it (or could not run)."""
+    """Every detector saw no waste; the judge is under community_check_min or could not run."""
 
     def __init__(self, no_waste_max: float = LOW_SUPPORT) -> None:
         self._max = no_waste_max
@@ -57,7 +57,7 @@ class DetectorsDenyJudgeUnsure(VetoRule):
         if not detectors or any(s.score >= self._max for s in detectors):
             return None
         judge = evidence.judge()
-        if judge is not None and judge.score >= evidence.thresholds.auto_verify_min:
+        if judge is not None and judge.score >= evidence.thresholds.community_check_min:
             return None
         sources = detectors if judge is None else (*detectors, judge)
         return Veto("detectors_veto:no_waste", sources)
