@@ -75,6 +75,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--signals", default="rekognition_labels,yolo,embedding_classifier")
     parser.add_argument("--yolo", type=Path, help="local YOLO ONNX file")
     parser.add_argument("--heads", type=Path, help="local embedding heads JSON")
+    parser.add_argument("--embedder", type=Path, help="local SigLIP ONNX file")
     parser.add_argument("--judge", default=None, help="Bedrock model id for the judge")
     parser.add_argument(
         "--public-dataset-photos", action="store_true",
@@ -85,7 +86,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("only openly licensed dataset photos; pass --public-dataset-photos to vouch")
     JsonLogging({"service": "ml-score-cli"}, level=logging.WARNING).install()
     photos, files = CaseFile.read(args.cases)
-    options = ScoreOptions(tuple(s for s in args.signals.split(",") if s), args.yolo, args.heads)
+    signals = tuple(s for s in args.signals.split(",") if s)
+    options = ScoreOptions(signals, args.yolo, args.heads, args.embedder)
     graph = ScoreGraph(options)
     scorer = CaseScorer(LocalBlurredImageStore(files), PillowImageFitter(), graph.signals())
     return ScoreRun(scorer, graph.judge(args.judge), graph.cost()).run(photos, args.out)

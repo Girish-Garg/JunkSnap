@@ -10,6 +10,8 @@ import boto3
 from botocore.config import Config
 
 from ml.adapters.bedrock_converse import BedrockProviderBuilder
+from ml.adapters.onnx_siglip import MODEL_ID as SIGLIP
+from ml.adapters.onnx_siglip import OnnxSiglipEmbedder
 from ml.adapters.onnx_yolo import OnnxYoloDetector
 from ml.adapters.rekognition_labels import RekognitionLabelDetector
 from ml.adapters.titan_embedder import TitanImageEmbedder
@@ -18,6 +20,7 @@ from ml.domain.label_insights import LabelInsights
 from ml.domain.linear import EmbeddingHeads
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
+from ml.ports.image_embedder import ImageEmbedder
 from ml.ports.signal import Signal
 from ml.services.case_scorer import UsageCost
 from ml.services.embedding_signal import EmbeddingSignal
@@ -39,6 +42,7 @@ class ScoreOptions:
     signals: tuple[str, ...]
     yolo: Path | None
     heads: Path | None
+    embedder: Path | None  # the SigLIP ONNX file, when the heads were trained on SigLIP
 
 
 class ScoreGraph:
@@ -85,8 +89,14 @@ class ScoreGraph:
     def _embedding(self) -> Signal:
         path = self._required(self._options.heads, "--heads")
         heads = EmbeddingHeads.from_json(json.loads(path.read_text(encoding="utf-8")))
+        return EmbeddingSignal(self._embedder(heads.embedder), heads)
+
+    def _embedder(self, model: str) -> ImageEmbedder:
+        if model == SIGLIP:
+            onnx = self._required(self._options.embedder, "--embedder")
+            return OnnxSiglipEmbedder(onnx, onnx.stem)
         client = self._session.client("bedrock-runtime", config=OFFLINE_CONFIG)
-        return EmbeddingSignal(TitanImageEmbedder(client), heads)
+        return TitanImageEmbedder(client)
 
     @staticmethod
     def _required(path: Path | None, flag: str) -> Path:
