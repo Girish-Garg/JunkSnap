@@ -16,6 +16,9 @@ import { MockAreaApi } from '../services/MockAreaApi';
 import { MockAuthService } from '../services/MockAuthService';
 import { OnboardingPreference } from '../services/OnboardingPreference';
 import { ThemePreference } from '../services/ThemePreference';
+import { CapabilityProbe, type DeviceCapabilities } from '../services/CapabilityProbe';
+import { EdgeHints, type DetectorFactory } from '../services/EdgeHints';
+import { EdgeHintsPreference } from '../services/EdgeHintsPreference';
 import { Sharer, type ShareApi } from '../services/Sharer';
 import { UnavailableAuthService } from '../services/UnavailableAuthService';
 import { siteFixtureLoaders } from '../services/siteFixtures';
@@ -45,7 +48,18 @@ export interface BrowserApis extends SnapBrowserApis {
   readonly share: ShareApi;
   /** The element that carries data-theme; absent in tests. */
   readonly root?: HTMLElement;
+  /** What the startup probe reads and how to build the detector; absent means cloud mode. */
+  readonly edge?: EdgeEnvironment;
 }
+
+export interface EdgeEnvironment {
+  readonly capabilities: DeviceCapabilities;
+  readonly detector: DetectorFactory;
+}
+
+const NO_DETECTOR: DetectorFactory = () => {
+  throw new Error('No on-device detector in this environment');
+};
 
 export interface Services {
   readonly config: AppConfig;
@@ -60,6 +74,7 @@ export interface Services {
   readonly snap: SnapServices;
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
+  readonly edge: EdgeHints;
 }
 
 /** Composition root: the only place that builds services. */
@@ -76,6 +91,7 @@ export class ServiceContainer implements Services {
   readonly snap: SnapServices;
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
+  readonly edge: EdgeHints;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -90,6 +106,7 @@ export class ServiceContainer implements Services {
     this.snap = services.snap;
     this.onboarding = services.onboarding;
     this.theme = services.theme;
+    this.edge = services.edge;
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
@@ -107,6 +124,13 @@ export class ServiceContainer implements Services {
       snap: SnapServiceFactory.build(config, browser, auth),
       onboarding: new OnboardingPreference(browser.store),
       theme: new ThemePreference(browser.store, browser.root ?? null),
+      edge: ServiceContainer.#edge(browser),
     });
+  }
+
+  // The startup probe runs here, once; it only reads what the browser offers and downloads nothing.
+  static #edge(browser: BrowserApis): EdgeHints {
+    const probe = new CapabilityProbe(browser.edge?.capabilities ?? CapabilityProbe.NONE);
+    return new EdgeHints(probe, new EdgeHintsPreference(browser.store), browser.edge?.detector ?? NO_DETECTOR);
   }
 }

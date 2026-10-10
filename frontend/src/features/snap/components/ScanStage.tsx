@@ -4,6 +4,7 @@ import type { GpsState } from '../hooks/useGpsFix';
 import { useScanStage } from '../hooks/useScanStage';
 import type { SnapFlow } from '../hooks/useSnapFlow';
 import { CameraHelp } from './CameraHelp';
+import { EdgeOverlay } from './EdgeOverlay';
 import { ContextPicker } from './ContextPicker';
 import { GpsChip } from './GpsChip';
 import { RecordControls } from './RecordControls';
@@ -24,7 +25,8 @@ export function ScanStage({ flow, gps }: ScanStageProps) {
   return (
     <div className="snap-camera">
       <div className="viewfinder viewfinder--video">
-        <video ref={video}className="viewfinder__video" playsInline muted aria-hidden="true" />
+        <video ref={video} className="viewfinder__video" playsInline muted aria-hidden="true" />
+        <EdgeOverlay state={stage.hints.state} view={stage.hints.view} />
         <GpsChip gps={gps} />
       </div>
       {stage.failed ? (

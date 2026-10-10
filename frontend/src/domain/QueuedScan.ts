@@ -67,9 +67,10 @@ export class QueuedScan implements QueueItem<QueuedScan, QueuedScanData> {
   toSession(deviceToken: string): ScanSession {
     const scanId = this.data.upload?.scan_id;
     if (!scanId) throw new JunkSnapError(`Scan ${this.id} has no scan id yet`);
-    const { report_type, context, started_at, ended_at, duration_ms, content_type, video_sha256, gps_track } = this.data.draft;
+    const { report_type, context, started_at, ended_at, duration_ms, content_type, video_sha256, gps_track, hints } = this.data.draft;
     const video_key = `scans/${scanId}.${VIDEO_EXTENSIONS[content_type]}`;
-    return { scan_id: scanId, device_token: deviceToken, report_type, context, started_at, ended_at, duration_ms, video_key, video_sha256, gps_track };
+    const session = { scan_id: scanId, device_token: deviceToken, report_type, context, started_at, ended_at, duration_ms, video_key, video_sha256, gps_track };
+    return hints ? { ...session, hints } : session;
   }
 
   presigned(upload: ScanPresignResponse, now: Date): QueuedScan {

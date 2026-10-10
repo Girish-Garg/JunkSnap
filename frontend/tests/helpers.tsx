@@ -18,6 +18,9 @@ import { MockApiClient } from '../src/services/MockApiClient';
 import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
 import { OnboardingPreference } from '../src/services/OnboardingPreference';
+import { CapabilityProbe } from '../src/services/CapabilityProbe';
+import { EdgeHints } from '../src/services/EdgeHints';
+import { EdgeHintsPreference } from '../src/services/EdgeHintsPreference';
 import { ThemePreference } from '../src/services/ThemePreference';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
@@ -59,6 +62,9 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
     snap: testSnapServices({ ...snap, auth }),
     onboarding: new OnboardingPreference(store),
     theme: new ThemePreference(store, null),
+    edge: new EdgeHints(new CapabilityProbe(CapabilityProbe.NONE), new EdgeHintsPreference(store), () => {
+      throw new Error('cloud mode in tests');
+    }),
   });
 }
 

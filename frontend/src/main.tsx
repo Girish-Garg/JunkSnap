@@ -12,7 +12,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { AppConfig } from './app/AppConfig';
+import { browserDetectorFactory } from './app/BrowserEdgeDetector';
 import { ServiceContainer } from './app/ServiceContainer';
+import { CapabilityProbe } from './services/CapabilityProbe';
 import { BrowserStore } from './services/BrowserStore';
 import { QueueTriggers } from './services/QueueTriggers';
 
@@ -28,6 +30,7 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   crypto: window.crypto,
   locks: navigator.locks,
   mediaRecorder: typeof MediaRecorder === 'undefined' ? undefined : MediaRecorder,
+  edge: { capabilities: CapabilityProbe.read(globalThis), detector: browserDetectorFactory },
 });
 // Saved photos and videos start sending as soon as the app opens; the sign-in (if any) is read first.
 void services.auth.restore().finally(() => {

@@ -721,6 +721,20 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
+    },
+    "edgeHints": "On-device hints",
+    "edgeHintsNote": "Boxes in the camera from a small model on this phone. Only hints: the server checks every photo again."
+  },
+  "edge": {
+    "loading": "Getting hints ready",
+    "spotted": "Waste spotted",
+    "pointAt": "Point at the waste",
+    "class": {
+      "waste_pile": "Pile",
+      "bag": "Bag",
+      "bin": "Bin",
+      "burning": "Burning",
+      "waste_item": "Waste"
     }
   }
 }
