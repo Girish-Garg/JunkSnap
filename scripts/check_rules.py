@@ -61,6 +61,7 @@ class Vocabulary:
                 "enum"
             ]
             for pair in site["allOf"]
+            if "context" in pair["then"].get("properties", {})
         }
 
 
