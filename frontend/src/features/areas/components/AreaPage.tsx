@@ -32,7 +32,7 @@ export function AreaPage({ scores }: AreaPageProps) {
         {scores.pilot && <span className="badge">{t('site.pilot')}</span>}
       </p>
       <DistrictCrawl districtId={districtId} />
-      <AreaLetterButton kind={scores.area.kind} areaId={scores.area.id} />
+      <AreaLetterButton kind={scores.area.kind} areaId={scores.area.id} ready={area.letterReady()} />
       <AreaScoreList scores={area.scores()} />
       <AreaDiagnosis items={area.diagnosis()} />
       <FactList title={t('areas.counts')} facts={area.counts()} />

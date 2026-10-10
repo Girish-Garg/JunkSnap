@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useServices } from '../../../app/useServices';
 import type { ReportDraft } from '../../../domain/ReportUpload';
+import { useCaptureMode } from './useCaptureMode';
 import { usePhotoCapture, type CapturedPhoto } from './usePhotoCapture';
 
 export type SnapPhase =
@@ -9,17 +10,17 @@ export type SnapPhase =
   | { readonly kind: 'sent'; readonly id: string }
   | { readonly kind: 'scanSent'; readonly id: string; readonly cameraStopped?: boolean };
 
-export type CaptureMode = 'photo' | 'video' | 'nobin';
+export type { CaptureMode } from './useCaptureMode';
 
 export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note'>;
 
 const CAMERA: SnapPhase = { kind: 'camera' };
 
-/** Camera (photo or video), then review, then the saved item's progress; "again" goes back to the camera. */
+/** Camera (photo or video), then review, then the saved item's progress; retake keeps the asked-for type, "again" starts fresh. */
 export function useSnapFlow() {
   const { snap } = useServices();
   const [phase, setPhase] = useState<SnapPhase>(CAMERA);
-  const [mode, setMode] = useState<CaptureMode>('photo');
+  const { mode, setMode, presetType, photoFor, clearPreset } = useCaptureMode();
   const [saveFailed, setSaveFailed] = useState(false);
   const capture = usePhotoCapture((photo) => setPhase({ kind: 'review', photo }));
   const send = async (photo: CapturedPhoto, choice: ReportChoice) => {
@@ -33,7 +34,11 @@ export function useSnapFlow() {
     }
   };
   const scanSaved = (id: string, cameraStopped = false) => setPhase({ kind: 'scanSent', id, cameraStopped });
-  return { phase, mode, setMode, capture, saveFailed, send, scanSaved, restart: () => setPhase(CAMERA) };
+  const restart = () => {
+    clearPreset();
+    setPhase(CAMERA);
+  };
+  return { phase, mode, setMode, presetType, photoFor, capture, saveFailed, send, scanSaved, retake: () => setPhase(CAMERA), restart };
 }
 
 export type SnapFlow = ReturnType<typeof useSnapFlow>;

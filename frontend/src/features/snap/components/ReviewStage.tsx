@@ -19,7 +19,7 @@ interface ReviewStageProps {
 /** Shows the place frozen at the shutter. The reporter's own photo appears only here; later screens show the blurred copy. */
 export function ReviewStage({ photo, flow }: ReviewStageProps) {
   const { t } = useTranslation();
-  const report = useReportChoice();
+  const report = useReportChoice(flow.presetType, photo.gps);
   const preview = usePhotoPreview(photo.bytes);
   const [sending, setSending] = useState(false);
   const send = () => {
@@ -28,6 +28,7 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
     void flow.send(photo, report.choice).finally(() => setSending(false));
   };
   const note = t('snap.noteHint', { left: report.noteLeft });
+  const notice = report.gpsTooVague ? t('nobin.photoTooVague', { metres: Math.round(photo.gps.accuracy_m) }) : null;
   return (
     <div className="snap-review">
       <div className="snap-review__top">
@@ -37,7 +38,7 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
       <TypePicker value={report.type} onChange={report.chooseType} />
       <ContextPicker options={report.contexts} value={report.context} onChange={report.setContext} />
       <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={note} />
-      <SendActions canSend={report.choice !== null && !sending} saveFailed={flow.saveFailed} onSend={send} onRetake={flow.restart} />
+      <SendActions canSend={report.choice !== null && !sending} saveFailed={flow.saveFailed} notice={notice} onSend={send} onRetake={flow.retake} />
     </div>
   );
 }

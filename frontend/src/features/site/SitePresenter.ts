@@ -1,5 +1,6 @@
 import type { SiteProperties } from '../../domain/Site';
 import { UlidTime } from '../../domain/UlidTime';
+import { SiteClosure, type ClosedReason } from './SiteClosure';
 
 export interface BadgeView {
   readonly key: string;
@@ -52,5 +53,20 @@ export class SitePresenter {
   /** An unverified site needs people to back it; a verified one is ready for a letter. */
   primaryAction(): PrimaryAction {
     return this.#site.verification === 'unverified' ? 'confirm' : 'letter';
+  }
+
+  /** Why the site takes no votes, photos or letters any more; null while it is on the map. */
+  closedReason(): ClosedReason | null {
+    return SiteClosure.reasonOf(this.#site);
+  }
+
+  /** The api drafts a letter only for a verified site (10 people; decision 20261010-1530) that is still on the map. */
+  letterReady(): boolean {
+    return this.#site.verification === 'verified' && this.closedReason() === null;
+  }
+
+  /** "n of 10 people confirmed" means nothing once a site is off the map, unless it was verified first. */
+  showsBackers(): boolean {
+    return this.closedReason() === null || this.#site.verification === 'verified';
   }
 }

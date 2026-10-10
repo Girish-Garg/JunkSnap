@@ -18,7 +18,7 @@ export class FakeSiteActionsApi implements SiteActionsApi {
 
   async vote(siteId: string, request: VoteRequest): Promise<VoteResult> {
     this.#record('vote', siteId, request);
-    return { site_id: siteId, votes: { confirm: 3, reject: 1 }, backers: { count: 10, needed: 10, photo_people: 7, vote_people: 3 }, verification: 'verified' };
+    return { site_id: siteId, votes: { confirm: 3, reject: 1, cleaned: 2 }, backers: { count: 10, needed: 10, photo_people: 7, vote_people: 3 }, verification: 'verified' };
   }
 
   async cleanup(siteId: string, request: CleanupRequest): Promise<CleanupAccepted> {

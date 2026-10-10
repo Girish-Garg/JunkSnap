@@ -7,6 +7,7 @@ import { FrameCounter } from '../../../services/FrameCounter';
 import { DocumentVisibility } from '../../../services/PageVisibility';
 import { WINDOW_TIMER } from '../../../services/Timer';
 import { EdgeOverlayView, EMPTY_OVERLAY, type OverlayView } from '../EdgeOverlayView';
+import { SpottedStreak } from '../SpottedStreak';
 import { useEdgeHintsSetting } from './useEdgeHintsSetting';
 
 export type EdgeState = 'off' | 'loading' | 'live';
@@ -44,8 +45,10 @@ function edgeState(active: boolean, ready: EdgeReady | null | undefined): EdgeSt
   return ready === undefined ? 'loading' : 'live';
 }
 
-function overlayFor(frame: FrameDetections, element: HTMLVideoElement): OverlayView {
-  return EdgeOverlayView.from(frame, { width: element.videoWidth, height: element.videoHeight }, { width: element.clientWidth, height: element.clientHeight });
+// "Waste spotted" needs the streak: one frame with a waste box is not enough.
+function overlayFor(frame: FrameDetections, element: HTMLVideoElement, streak: SpottedStreak): OverlayView {
+  const view = EdgeOverlayView.from(frame, { width: element.videoWidth, height: element.videoHeight }, { width: element.clientWidth, height: element.clientHeight });
+  return { ...view, spotted: streak.next(view.spotted) };
 }
 
 /**
@@ -64,8 +67,9 @@ export function useEdgeHints(video: RefObject<HTMLVideoElement | null>, live: bo
   }, [onFrame]);
   useEffect(() => {
     if (!active) return undefined;
+    const streak = new SpottedStreak();
     const show = (frame: FrameDetections) => {
-      if (video.current) setView(overlayFor(frame, video.current));
+      if (video.current) setView(overlayFor(frame, video.current, streak));
       listener.current?.(frame);
     };
     const stop = runHints({ edge, video, onReady: setReady, onFrame: show });
