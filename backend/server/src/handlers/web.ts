@@ -9,6 +9,8 @@ import {
 } from "fastify";
 import { JsonLoggerFactory } from "../adapters/JsonLoggerFactory.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
+import { CACHEABLE_ROUTES } from "./cacheableRoutes.js";
+import { ConditionalGets } from "./ConditionalGets.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
 import { ErrorHandlerInstaller } from "./ErrorHandlerInstaller.js";
 import { HttpErrorMapper } from "./HttpErrorMapper.js";
@@ -17,6 +19,9 @@ import { ROUTE_BUILDERS } from "./routes.js";
 const HOST = "0.0.0.0";
 const PORT = 8000;
 const STOP_SIGNALS = ["SIGTERM", "SIGINT"] as const;
+// DELETE is for withdrawing a report (decision 20261010-1700); the plugin allows only GET, HEAD and POST by default.
+// The app reads ETag to send If-None-Match, which needs a preflight; browsers keep the preflight for maxAge seconds.
+const CORS = { methods: ["GET", "HEAD", "POST", "DELETE"], exposedHeaders: ["ETag"], maxAge: 600 };
 
 export async function createApp(
   settings: CoreSettings,
@@ -30,11 +35,11 @@ export async function createApp(
     genReqId: () => randomUUID(),
     requestIdHeader: "x-request-id",
   });
-  // DELETE is for withdrawing a report (decision 20261010-1700); the plugin allows only GET, HEAD and POST by default.
-  await app.register(cors, { origin, methods: ["GET", "HEAD", "POST", "DELETE"] });
+  await app.register(cors, { origin, ...CORS });
   app.addHook("onRequest", async (request, reply) => {
     reply.header("x-request-id", request.id);
   });
+  new ConditionalGets(CACHEABLE_ROUTES).install(app);
   new ErrorHandlerInstaller(new HttpErrorMapper()).install(app);
   app.get("/healthz", { logLevel: "silent" }, async () => ({ ok: true }));
   for (const route of routes) {
