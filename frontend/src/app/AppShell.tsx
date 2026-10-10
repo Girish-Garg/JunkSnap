@@ -8,6 +8,7 @@ import { RejectionToast } from '../features/snap/components/RejectionToast';
 import { AppRoutes } from './AppRoutes';
 import { WELCOME_PATH } from './paths';
 import { SheetHistory } from './SheetHistory';
+import { useAppLinks } from './useAppLinks';
 import { useServices } from './useServices';
 
 export function AppShell() {
@@ -17,6 +18,7 @@ export function AppShell() {
   const { pathname } = useLocation();
   const [session] = useState(() => new SplashSession(() => window.sessionStorage));
   const [splash, setSplash] = useState(() => session.due());
+  useAppLinks();
   useEffect(() => {
     // Screen readers and the :lang(hi) font rule read this.
     document.documentElement.lang = i18n.language;

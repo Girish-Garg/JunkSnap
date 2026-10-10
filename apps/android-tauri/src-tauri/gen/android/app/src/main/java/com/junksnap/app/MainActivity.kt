@@ -16,16 +16,27 @@ import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : TauriActivity() {
   private val asker = PermissionAsker(this)
+  private val links = AppLinks(::isAppPage)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     keepWebViewInsideSystemBars(findViewById(android.R.id.content))
+    // JunkSnap: a link that started the app (cold start); not again when Android restores it.
+    if (savedInstanceState == null) links.receive(intent)
+  }
+
+  // JunkSnap: a link that opened the app while it was already running (launchMode singleTask).
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    links.receive(intent)
   }
 
   // JunkSnap: the Android WebView ignores window.print(), and once camera or location is
   // denied with "don't ask again" only the app's settings page can allow it again.
   override fun onWebViewCreate(webView: WebView) {
+    links.attach(webView)
     webView.addJavascriptInterface(AppBridge(webView), "JunkSnapAndroid")
     // wry sets its WebChromeClient right after this call; wrap it once it is there so camera and
     // location prompts are asked one at a time (PermissionChromeClient). Needs API 26.
@@ -78,12 +89,21 @@ class MainActivity : TauriActivity() {
       startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, details))
     }
 
+    /** The page listens for links that open the app (AppLinks); one that came before is handed over now. */
+    @JavascriptInterface
+    fun linkReady() = onAppPage { links.ready() }
+
     private fun onAppPage(action: () -> Unit) {
       webView.post {
-        val page = Uri.parse(webView.url ?: "")
-        if (page.scheme == "https" && page.host == APP_HOST) action()
+        if (isAppPage(webView)) action()
       }
     }
+  }
+
+  /** The WebView shows the app's own page (https://tauri.localhost), not another site. Main thread. */
+  private fun isAppPage(webView: WebView): Boolean {
+    val page = Uri.parse(webView.url ?: "")
+    return page.scheme == "https" && page.host == APP_HOST
   }
 
   private companion object {

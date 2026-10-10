@@ -33,6 +33,42 @@
                 <!-- AndroidTV support -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- JunkSnap: links that open a screen (AppLinks.kt; the page maps them in AppLinkRoutes.ts):
+                 junksnap://sites/{id}[/letter], junksnap://areas/{kind}/{id}[/letter] and
+                 junksnap://activity/reports/{id}. The api's share pages open these through an intent:// URL. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="junksnap" />
+                <data android:host="sites" />
+                <data android:host="areas" />
+                <data android:host="activity" />
+            </intent-filter>
+            <!-- JunkSnap: https links. Share links on the demo api (CloudFront) and page links on the demo
+                 web app (Amplify). Android verifies each host through its /.well-known/assetlinks.json
+                 (docs/android.md). Until a host verifies, Android 11 and older offer "Open with JunkSnap",
+                 and Android 12+ opens the links in the browser unless they are allowed under the app's
+                 "Open by default" settings. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="d2s7tf4ua41hzf.cloudfront.net" />
+                <data android:pathPrefix="/share/" />
+                <data android:pathPrefix="/sites/" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="demo.d3iec0rb3f75jm.amplifyapp.com" />
+                <data android:pathPrefix="/sites/" />
+                <data android:pathPrefix="/areas/" />
+                <data android:pathPrefix="/activity/reports/" />
+            </intent-filter>
         </activity>
 
         <provider
