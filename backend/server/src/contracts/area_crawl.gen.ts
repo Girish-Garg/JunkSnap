@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * Where the ward crawl of a district stands, from GET /areas/district/{id}/crawl (public, no token). A district with no row in the crawls table is not_started. The worker queues a district when it settles the district's first verified report (CRAWL_ACTIVATE_AFTER); the hourly crawler CronJob runs queued and due districts. no_sources means the repo has no official source list for the district yet. Times are ISO 8601 UTC ending in Z.
+ * Where the ward crawl of a district stands, from GET /areas/district/{id}/crawl (public, no token). A district with no row in the crawls table is not_started. The worker queues a district when it merges the district's first model-passed photo into a site (CRAWL_ACTIVATE_AFTER, decision 20261010-1530); the hourly crawler CronJob runs queued and due districts. no_sources means the repo has no official source list for the district yet. Times are ISO 8601 UTC ending in Z.
  */
 export interface AreaCrawl {
   district_id: string;
@@ -33,7 +33,7 @@ export const areaCrawlSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/area_crawl.schema.json",
   "title": "area_crawl",
-  "description": "Where the ward crawl of a district stands, from GET /areas/district/{id}/crawl (public, no token). A district with no row in the crawls table is not_started. The worker queues a district when it settles the district's first verified report (CRAWL_ACTIVATE_AFTER); the hourly crawler CronJob runs queued and due districts. no_sources means the repo has no official source list for the district yet. Times are ISO 8601 UTC ending in Z.",
+  "description": "Where the ward crawl of a district stands, from GET /areas/district/{id}/crawl (public, no token). A district with no row in the crawls table is not_started. The worker queues a district when it merges the district's first model-passed photo into a site (CRAWL_ACTIVATE_AFTER, decision 20261010-1530); the hourly crawler CronJob runs queued and due districts. no_sources means the repo has no official source list for the district yet. Times are ISO 8601 UTC ending in Z.",
   "type": "object",
   "additionalProperties": false,
   "required": [

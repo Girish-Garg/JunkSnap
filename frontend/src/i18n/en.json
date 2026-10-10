@@ -615,5 +615,16 @@
     "detail": "{{photos}} by photo, {{votes}} by vote",
     "done": "Verified by {{count}} people",
     "badge": "{{count}}/{{needed}}"
+  },
+  "viewer": {
+    "label": "Photo {{n}} of {{total}}",
+    "count": "{{n}} / {{total}}",
+    "open": "Open photo",
+    "close": "Close photo",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "taken": "Taken {{date}}",
+    "reported": "Reported {{date}}",
+    "blurred": "Faces and number plates are blurred."
   }
 }
