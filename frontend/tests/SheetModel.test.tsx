@@ -67,16 +67,16 @@ describe('opening a sheet replaces the map-level sheets under it', () => {
 });
 
 describe('the preview card', () => {
-  it('has a history entry, so back closes it, and Details leaves none behind', async () => {
+  it('has a history entry, so back closes it, and View site leaves none behind', async () => {
     const user = userEvent.setup();
     await loadMap();
     act(() => seen.last?.onPick('site_jdh_1'));
-    expect(await screen.findByRole('button', { name: 'Details' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View site' })).toBeInTheDocument();
     await waitFor(() => expect(layers()).toBe(1));
     act(() => window.history.back());
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'View site' })).not.toBeInTheDocument());
     act(() => seen.last?.onPick('site_jdh_1'));
-    await user.click(await screen.findByRole('button', { name: 'Details' }));
+    await user.click(await screen.findByRole('button', { name: 'View site' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
     expect(layers()).toBe(0);
   });

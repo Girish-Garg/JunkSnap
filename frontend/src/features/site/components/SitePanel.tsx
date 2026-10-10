@@ -11,10 +11,8 @@ import { SiteExpiryNote } from './SiteExpiryNote';
 import { SiteReporters } from './SiteReporters';
 import { SiteHistoryFacts } from './SiteHistoryFacts';
 import { SiteLocationFacts } from './SiteLocationFacts';
-import { SiteLocationLine } from './SiteLocationLine';
 import { SiteOpenActions } from './SiteOpenActions';
 import { SitePanelHeader } from './SitePanelHeader';
-import { SitePhotoStrip } from './SitePhotoStrip';
 
 export const SITE_TITLE_ID = 'site-panel-title';
 
@@ -25,9 +23,9 @@ interface SitePanelProps {
   readonly onChanged?: () => void;
 }
 
-// Order is progressive disclosure: peek shows the header, half adds the next four, full adds the rest.
-// A site off the map (removed, cleaned, rejected, expired) shows why instead of votes, actions and notes;
-// an open one shows the clearing progress and its expiry first (decision 20261010-1855).
+// Order is progressive disclosure: the header (photos, title, status, ward and seats), the backers, the actions in
+// one row, then one card per section. A site off the map (removed, cleaned, rejected, expired) shows why instead
+// of votes, actions and notes; an open one shows the clearing progress and its expiry first (decision 20261010-1855).
 export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
   const details = site.properties;
   const presenter = useSitePresenter(details);
@@ -46,8 +44,6 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
           <SiteOpenActions site={site} presenter={presenter} onChanged={changed} />
         </>
       )}
-      <SitePhotoStrip photos={presenter.photos()} />
-      <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
       <SiteReporters site={details} />
       {!closed && <SiteNotes siteId={details.site_id} community={details.community} onChanged={changed} />}

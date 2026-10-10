@@ -12,7 +12,8 @@ export type SnapPhase =
 
 export type { CaptureMode } from './useCaptureMode';
 
-export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note' | 'target'>;
+/** me_too_site_id is set only by "Add a photo" on a site (SitePhotoPreset). */
+export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note' | 'target' | 'me_too_site_id'>;
 
 const CAMERA: SnapPhase = { kind: 'camera' };
 
