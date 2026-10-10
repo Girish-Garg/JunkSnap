@@ -10,7 +10,10 @@ export interface ReportStatusView {
   readonly site_id: string | null;
   /** Public blurred copy; null until moderation has made it. */
   readonly blurred_url: string | null;
+  /** The row's last change: the item's freshness token in Activity. */
   readonly updated_at: string;
+  /** When the api took the report; GET /me/reports always sends it. */
+  readonly received_at?: string;
   /** The report_upload as sent; mock statuses may leave it out. */
   readonly report?: UploadEvidence | null;
   /** Null until moderation ran; mock statuses may leave it out. */

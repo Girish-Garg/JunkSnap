@@ -1,3 +1,5 @@
+import { RelativeTime } from './RelativeTime';
+
 // Both locales group digits the Indian way (1,00,000).
 const LOCALE_TAGS: Readonly<Record<string, string>> = { en: 'en-IN', hi: 'hi-IN' };
 
@@ -6,6 +8,7 @@ export class LocaleFormatter {
   readonly #metres: Intl.NumberFormat;
   readonly #kilometres: Intl.NumberFormat;
   readonly #dates: Intl.DateTimeFormat;
+  readonly #relative: RelativeTime;
 
   constructor(language: string) {
     const locale = LOCALE_TAGS[language] ?? 'en-IN';
@@ -17,6 +20,7 @@ export class LocaleFormatter {
       timeStyle: 'short',
       timeZone: 'Asia/Kolkata',
     });
+    this.#relative = new RelativeTime(locale);
   }
 
   distance(metres: number): string {
@@ -30,5 +34,10 @@ export class LocaleFormatter {
 
   dateTime(isoTimestamp: string): string {
     return this.#dates.format(new Date(isoTimestamp));
+  }
+
+  /** "2 min ago" against nowMs; a short date once it is a week old. */
+  ago(isoTimestamp: string, nowMs: number): string {
+    return this.#relative.format(isoTimestamp, nowMs);
   }
 }

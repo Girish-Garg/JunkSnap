@@ -1,3 +1,6 @@
+import { AccountKey } from '../services/AccountKey';
+import { ActivityFreshness } from '../services/ActivityFreshness';
+import { ActivitySync } from '../services/ActivitySync';
 import type { AreaLetterApi } from '../services/AreaLetterApi';
 import { AreaLetterService } from '../services/AreaLetterService';
 import { areaFixtureLoaders } from '../services/areaFixtures';
@@ -10,6 +13,7 @@ import { CameraCapture } from '../services/CameraCapture';
 import { CompassHeading } from '../services/CompassHeading';
 import type { Clock } from '../services/Clock';
 import { DeviceIdentity } from '../services/DeviceIdentity';
+import { DismissedReports } from '../services/DismissedReports';
 import { GpsWatcher } from '../services/GpsWatcher';
 import { HttpReportApi } from '../services/HttpReportApi';
 import { HttpScanApi } from '../services/HttpScanApi';
@@ -96,6 +100,7 @@ interface ActionParts {
   readonly queue: ReportQueue;
   readonly scans: ScanQueue;
   readonly random: () => Uint8Array;
+  readonly dismissed: DismissedReports;
 }
 
 interface QueueParts {
@@ -108,7 +113,8 @@ interface QueueParts {
 export class SnapServiceFactory {
   static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService): SnapServices {
     const db = new JunkSnapDb();
-    const device = new DeviceIdentity(new IndexedDbMetaStore(db), () => browser.crypto.getRandomValues(new Uint8Array(16)));
+    const meta = new IndexedDbMetaStore(db);
+    const device = new DeviceIdentity(meta, () => browser.crypto.getRandomValues(new Uint8Array(16)));
     const identity: RequestIdentity = { idToken: (force) => auth.idToken(force), deviceToken: () => device.token() };
     const apis = API_BUILDERS[config.apiMode](config, identity);
     const clock = new SystemClock();
@@ -117,9 +123,12 @@ export class SnapServiceFactory {
     const recorder = new VideoRecorder(browser.mediaRecorder, clock);
     const hasher = new PhotoHasher(browser.crypto.subtle);
     const gps = new GpsWatcher(browser.geolocation, clock);
+    const dismissed = new DismissedReports(meta);
+    const account = new AccountKey(auth, browser.crypto.subtle);
     return {
       queue,
       tracker: new ReportTracker(apis.reports, queue),
+      activity: new ActivitySync({ api: apis.reports, queue, freshness: new ActivityFreshness(meta, clock), dismissed, account, clock }),
       scans,
       scanTracker: new ScanTracker(apis.scans, scans),
       recorder,
@@ -129,19 +138,19 @@ export class SnapServiceFactory {
       hasher,
       gps,
       compass: new CompassHeading(browser.orientation ?? null),
-      ...SnapServiceFactory.#actions({ apis, identity, gps, queue, scans, random: () => browser.crypto.getRandomValues(new Uint8Array(16)) }),
+      ...SnapServiceFactory.#actions({ apis, identity, gps, queue, scans, dismissed, random: () => browser.crypto.getRandomValues(new Uint8Array(16)) }),
     };
   }
 
   // Site actions, Activity deletes and area letters share the sign-in gate and the device token.
   static #actions(parts: ActionParts): Pick<SnapServices, 'siteActions' | 'areaLetters' | 'noBin' | 'remover'> {
-    const { apis, identity, gps, queue, scans, random } = parts;
+    const { apis, identity, gps, queue, scans, random, dismissed } = parts;
     const siteActions = new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps });
     return {
       siteActions,
       areaLetters: new AreaLetterService(apis.areaLetters, identity),
       noBin: new NoBinReporter(apis.reports, identity, random),
-      remover: new ActivityRemover({ reports: queue, scans, statuses: apis.reports, sites: siteActions }),
+      remover: new ActivityRemover({ reports: queue, scans, statuses: apis.reports, sites: siteActions, dismissed }),
     };
   }
 

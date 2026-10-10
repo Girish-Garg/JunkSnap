@@ -466,8 +466,8 @@
   },
   "activity": {
     "title": "Activity",
-    "text": "Reports from this phone.",
-    "empty": "Nothing yet. Reports you send will show here with their status.",
+    "text": "Your reports and what happened to each.",
+    "empty": "Spot waste on your street? Snap it, and you can follow it here.",
     "close": "Close activity",
     "loading": "Loading your reports",
     "retry": "Try again",
@@ -476,7 +476,8 @@
     "photoAlt": "Blurred photo of your report",
     "videos": "Videos",
     "photos": "Photos",
-    "emptyTitle": "Nothing sent yet"
+    "emptyTitle": "Nothing sent yet",
+    "firstPhoto": "Take your first photo"
   },
   "queue": {
     "waiting_one": "{{count}} report waiting to send",

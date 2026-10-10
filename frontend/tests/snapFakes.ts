@@ -1,4 +1,8 @@
+import { AccountKey } from '../src/services/AccountKey';
+import { ActivityFreshness } from '../src/services/ActivityFreshness';
 import { ActivityRemover, type ActivityRemoverPorts } from '../src/services/ActivityRemover';
+import { ActivitySync, type ActivitySyncPorts } from '../src/services/ActivitySync';
+import { DismissedReports } from '../src/services/DismissedReports';
 import type { SnapServices } from '../src/app/SnapServices';
 import type { AreaLetterApi } from '../src/services/AreaLetterApi';
 import { AreaLetterService } from '../src/services/AreaLetterService';
@@ -176,6 +180,8 @@ export interface SnapTestOptions {
   readonly clock?: FakeClock;
   readonly siteApi?: SiteActionsApi;
   readonly areaLetterApi?: AreaLetterApi;
+  /** The phone's small values (Activity's list token and deleted ids); fresh by default. */
+  readonly meta?: MetaStore;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
@@ -185,27 +191,35 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   const api = options.api ?? new MockReportApi(sampleSiteLoader, 0);
   const store = options.store ?? new MemoryReportStore();
   const queue = new ReportQueue({ store, sender: new ReportSender(api, identity, clock), clock, lock: new QueueLock(undefined) });
-  const media = options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices());
   const scanApi = options.scanApi ?? new MockScanApi(0);
   const scans = new ScanQueue({ store: new MemoryItemStore<QueuedScanData>(), sender: new ScanSender(scanApi, identity, clock), clock, lock: new QueueLock(undefined) });
   const recorder = new VideoRecorder(fakeRecorderFactory, clock);
   const hasher = new PhotoHasher(crypto.subtle);
   const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation(), clock);
+  const { activity, dismissed } = testActivity(options, { api, queue, clock });
   return {
     queue,
     tracker: new ReportTracker(api, queue),
+    activity,
     scans,
     scanTracker: new ScanTracker(scanApi, scans),
     recorder,
     scanCapture: new ScanCapture({ recorder, gps, hasher, queue: scans, clock }),
-    camera: new CameraCapture(media),
+    camera: new CameraCapture(options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices())),
     encoder: new FakeEncoder(),
     hasher,
     gps,
-    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api }),
+    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
+}
+
+function testActivity(options: SnapTestOptions, ports: Pick<ActivitySyncPorts, 'api' | 'queue' | 'clock'>) {
+  const meta = options.meta ?? new MemoryMetaStore();
+  const dismissed = new DismissedReports(meta);
+  const account = new AccountKey(options.auth, crypto.subtle);
+  return { activity: new ActivitySync({ ...ports, freshness: new ActivityFreshness(meta, ports.clock), dismissed, account }), dismissed };
 }
 
 function testActions(siteActions: SiteActionService, ports: Omit<ActivityRemoverPorts, 'sites'>): Pick<SnapServices, 'siteActions' | 'remover'> {
