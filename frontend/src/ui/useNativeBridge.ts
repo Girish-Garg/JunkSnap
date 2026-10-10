@@ -10,3 +10,8 @@ export function useNativeBridge(): NativeBridge {
 export function useInAppKey(key: string, appKey: string): string {
   return useNativeBridge().canOpenAppSettings() ? appKey : key;
 }
+
+/** Text about the browser (its settings, its hardware acceleration) has an app version for inside the Android app. */
+export function useAppTextKey(key: string, appKey: string): string {
+  return useNativeBridge().inApp() ? appKey : key;
+}

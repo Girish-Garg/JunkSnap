@@ -10,9 +10,14 @@ export interface RankingRowView {
   readonly name: string;
   /** "41/100" style text, or null while every score is withheld. */
   readonly score: string | null;
-  /** What the score is and how many reports it rests on, or "not enough reports (n of 10)". */
+  /** What the score is, or why there is none: "not enough reports (n of 10)" already holds the count. */
   readonly note: string;
-  readonly reports: string;
+  /** The verified report count, or null when the note already gives it. */
+  readonly reports: string | null;
+  /** The note, then the count when the note does not already give it: the row's one line under the name. */
+  readonly meta: string;
+  /** Pilot-city data (Jodhpur), flagged beside the score as on the area page. */
+  readonly pilot: boolean;
 }
 
 /** Row texts for the city ranking: a score always beside its count; a withheld score never shows. */
@@ -28,14 +33,18 @@ export class RankingPresenter {
   row({ rank, standing }: RankedArea): RankingRowView {
     const n = this.#format.number(standing.reports);
     const score = standing.score;
+    const note = this.#note(standing);
+    const reports = this.#tooFew(standing) ? null : this.#t('ranking.reports', { n });
     return {
       key: `${standing.row.area.kind}/${standing.id}`,
       id: standing.id,
       rank: rank === null ? null : this.#format.number(rank),
       name: standing.name,
       score: score === null ? null : this.#format.number(score),
-      note: this.#note(standing),
-      reports: this.#t('ranking.reports', { n }),
+      note,
+      reports,
+      meta: reports ? `${note} · ${reports}` : note,
+      pilot: standing.row.pilot,
     };
   }
 
@@ -43,7 +52,11 @@ export class RankingPresenter {
     if (standing.scored) return this.#t('ranking.meanOf', { k: this.#format.number(standing.shown.length) });
     const n = this.#format.number(standing.reports);
     // Enough reports but nothing measurable yet (no_data), versus too few reports.
-    if (standing.reports >= standing.minReports) return this.#t('ranking.noData', { n });
+    if (!this.#tooFew(standing)) return this.#t('ranking.noData', { n });
     return this.#t('ranking.notEnough', { n, min: this.#format.number(standing.minReports) });
+  }
+
+  #tooFew(standing: RankedArea['standing']): boolean {
+    return !standing.scored && standing.reports < standing.minReports;
   }
 }

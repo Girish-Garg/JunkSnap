@@ -17,8 +17,8 @@
     "label": "Search wards, seats and places",
     "placeholder": "Search Jodhpur",
     "clear": "Clear search",
-    "results": "Places on the map",
-    "noResults": "No match in the sites on screen. Try a ward or locality.",
+    "results": "Places",
+    "noResults": "No ward, seat or place by that name.",
     "siteCount_one": "{{count}} site",
     "siteCount_other": "{{count}} sites"
   },
@@ -62,7 +62,9 @@
     "attribution": "Map credits",
     "fallback": "This browser can't draw the map. Showing a list instead.",
     "fallbackHint": "To see the map, turn on hardware acceleration in your browser settings.",
-    "listLabel": "Sites nearby"
+    "listLabel": "Sites nearby",
+    "fallbackApp": "This phone can't draw the map here. Showing a list instead.",
+    "fallbackHintApp": "To see the map, update Android System WebView in the Play Store, then reopen JunkSnap."
   },
   "notice": {
     "offline": "Offline. Showing what was loaded.",
@@ -73,7 +75,9 @@
     "filteredEmpty": "No sites match. Turn a filter off.",
     "zoomIn": "Only the middle of this wide view is loaded. Zoom in to see every site here.",
     "capped": "Showing the newest 500 sites here. Zoom in to see them all.",
-    "empty": "No reports here yet."
+    "empty": "No reports here yet.",
+    "offScreen": "No reports in this view.",
+    "showNearest": "Show the nearest report"
   },
   "sheet": {
     "resize": "Show more or less"
@@ -331,9 +335,8 @@
     "closeArea": "Close area",
     "intro": "Scores for wards, seats and districts. A score shows only after 10 verified reports.",
     "search": "Find an area",
-    "none": "No areas on the map yet. Move the map to a place with reports.",
-    "noMatch": "No area on the map matches that name.",
-    "sitesOnMap": "Sites on the map: {{n}}",
+    "none": "Wards and seats show here once someone reports a site in them.",
+    "noMatch": "No reported area matches that name.",
     "all": "All areas",
     "loading": "Loading area",
     "loadFailed": "Could not load this area.",
@@ -419,7 +422,10 @@
       "collecting": "We're collecting official ward data for this area. Scores appear after enough verified reports and once ward data is in.",
       "expected": "Expected by {{date}}"
     },
-    "noneTitle": "No areas on the map yet"
+    "noneTitle": "No reported areas yet",
+    "rowCounts": "Sites: {{sites}} · verified reports: {{verified}}",
+    "listLoading": "Loading areas",
+    "listFailed": "Could not load the areas."
   },
   "activity": {
     "title": "Activity",
@@ -669,17 +675,20 @@
       "assembly": "Assembly",
       "loksabha": "Lok Sabha"
     },
-    "legend": "Map colours",
-    "tooltipScore": "{{name}}: score {{n}} of 100",
+    "legend": "Map legend",
+    "tooltipScore": "{{name}}: score {{n}} of 100, from {{reports}} verified reports",
     "tooltipReports_one": "{{name}}: {{n}} verified report, no score yet",
     "tooltipReports_other": "{{name}}: {{n}} verified reports, no score yet",
     "tooltipNone": "{{name}}: no verified reports yet",
-    "keyScore": "Marker: score out of 100",
+    "keyScore": "Marker: score out of 100, then its verified reports",
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
     "legendChip": "Legend",
     "caveat": "Scores show after 10 verified reports",
-    "outdated": "Dashed outline: seat boundary out of date"
+    "outdated": "Dashed outline: seat boundary out of date",
+    "tooltipScorePilot": "{{name}}: score {{n}} of 100, from {{reports}} verified reports. Pilot city",
+    "keyPilot": "Flag: pilot city data",
+    "countLine": "Seats with verified reports are shaded grey by how many."
   },
   "ranking": {
     "open": "City ranking",
@@ -696,7 +705,7 @@
     "rank": "Rank {{n}}",
     "unranked": "Not ranked",
     "meanOf": "Mean of {{k}} shown scores",
-    "notEnough": "Not enough reports ({{n}} of {{min}})",
+    "notEnough": "Not enough verified reports ({{n}} of {{min}})",
     "noData": "Can't be measured here yet",
     "reports": "{{n}} verified reports",
     "loading": "Loading ranking",
@@ -805,7 +814,8 @@
       "dark": "Dark"
     },
     "edgeHints": "On-device hints",
-    "edgeHintsNote": "Boxes in the camera from a small model on this phone. Only hints: the server checks every photo again."
+    "edgeHintsNote": "Boxes in the camera from a small model on this phone. Only hints: the server checks every photo again.",
+    "language": "Language"
   },
   "edge": {
     "loading": "Getting hints ready",
@@ -905,5 +915,10 @@
       "failed": "Could not delete it. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
+  },
+  "legend": {
+    "pin": "Pin: one reported site; colour and icon show the type",
+    "unverified": "Dashed pin: not verified yet; 1/10 counts the people backing it",
+    "stack": "Stacked pin: several sites at one spot"
   }
 }
