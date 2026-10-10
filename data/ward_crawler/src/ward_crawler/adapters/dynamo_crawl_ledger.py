@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 
-from ward_crawler.domain.crawl_row import QUEUED, RUNNING, CrawlFinish, CrawlRow
+from ward_crawler.domain.crawl_row import DONE, QUEUED, RUNNING, CrawlFinish, CrawlRow
 from ward_crawler.domain.errors import StoreError
 from ward_crawler.domain.utils import utc_z
 from ward_crawler.ports.crawl_ledger import CrawlLedger
@@ -45,7 +45,7 @@ class DynamoCrawlLedger(CrawlLedger):
             self._update(
                 district_id,
                 "SET #status = :queued, queued_at = if_not_exists(queued_at, :now), "
-                "next_due_at = :now, expected_by = :expected",
+                "next_due_at = :now, expected_by = :expected REMOVE verified_report_ids",
                 values,
                 "attribute_not_exists(#status) OR #status <> :running",
                 extra={":running": RUNNING},
@@ -69,17 +69,19 @@ class DynamoCrawlLedger(CrawlLedger):
         return True
 
     def finish(self, district_id: str, finish: CrawlFinish) -> None:
-        fields = {
+        """A failed crawl keeps the last done crawl's wards, results and output key."""
+        fields: dict[str, Any] = {
             "status": finish.status,
             "last_crawled_at": utc_z(finish.finished_at),
             "next_due_at": utc_z(finish.next_due_at),
             "expected_by": utc_z(finish.expected_by) if finish.expected_by else None,
-            "city": finish.city,
-            "wards_found": finish.wards_found,
-            "wards_key": finish.wards_key,
-            "results": [asdict(result) for result in finish.results],
             "error": finish.error,
         }
+        if finish.status == DONE:
+            fields["city"] = finish.city
+            fields["wards_found"] = finish.wards_found
+            fields["wards_key"] = finish.wards_key
+            fields["results"] = [asdict(result) for result in finish.results]
         names = {f"#{name}": name for name in fields}
         values = {f":{name}": value for name, value in fields.items()}
         assignments = ", ".join(f"#{name} = :{name}" for name in fields)

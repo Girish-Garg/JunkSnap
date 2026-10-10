@@ -3,10 +3,12 @@ import { readWardFile } from "./readWardFile.js";
 
 interface Dated {
   readonly file: WardFile;
+  readonly reviewed: number;
   readonly generatedAt: number;
 }
 
-// Per city, the file whose top-level generated_at is newest; a tie or an unreadable date keeps the earlier source, so pass the image's files first.
+// Per city, the file with more reviewed records (crawl output is always unreviewed), then the newest generated_at;
+// a tie or an unreadable date keeps the earlier source, so pass the image's files first.
 export class NewestWardFiles implements WardFileSource {
   readonly #sources: readonly WardFileSource[];
 
@@ -25,7 +27,9 @@ export class NewestWardFiles implements WardFileSource {
 
   static #keepNewer(newest: Map<string, Dated>, candidate: Dated): void {
     const kept = newest.get(candidate.file.city);
-    if (kept === undefined || candidate.generatedAt > kept.generatedAt) {
+    const better = kept === undefined || candidate.reviewed > kept.reviewed
+      || (candidate.reviewed === kept.reviewed && candidate.generatedAt > kept.generatedAt);
+    if (better) {
       newest.set(candidate.file.city, candidate);
     }
   }
@@ -36,9 +40,17 @@ export class NewestWardFiles implements WardFileSource {
       const body = await readWardFile(file.path);
       const value: unknown = typeof body === "object" && body !== null ? Reflect.get(body, "generated_at") : undefined;
       const time = typeof value === "string" ? Date.parse(value) : Number.NaN;
-      return { file, generatedAt: Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time };
+      return { file, reviewed: NewestWardFiles.#reviewed(body), generatedAt: Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time };
     } catch {
-      return { file, generatedAt: Number.NEGATIVE_INFINITY };
+      return { file, reviewed: 0, generatedAt: Number.NEGATIVE_INFINITY };
     }
+  }
+
+  static #reviewed(body: unknown): number {
+    const records: unknown = typeof body === "object" && body !== null ? Reflect.get(body, "records") : undefined;
+    if (!Array.isArray(records)) {
+      return 0;
+    }
+    return records.filter((record: unknown) => typeof record === "object" && record !== null && Reflect.get(record, "review_status") === "reviewed").length;
   }
 }

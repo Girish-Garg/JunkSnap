@@ -32,7 +32,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `ward_scores` | `scores` CronJob, with area `insights`; worker creates the first zero-count row | api, frontend area page |
 | `area_list` | api (`GET /areas/{kind}`): ranked `ward_scores` rows within a district or local body | frontend city ranking |
 | `letter_draft` | api | frontend letter preview |
-| `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location), scores (area, population, disposal points); each reads the newer of the two files per city |
+| `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location; read at worker start), scores (area, population, disposal points; read every run); per city each keeps the file with more `reviewed` records, then the newer `generated_at` |
 | `area_crawl` | api, from the `crawls` row (`not_started` without one) | frontend area pages and Areas list (the crawl banner) |
 
 `data/wards/<city>.json` also holds `map_layers`: city-wide OpenStreetMap layers (`disposal`, `school`, `hospital`, `water`, `drain`), each `{kind, count, source_url, fetched_at, page_sha256, features: [{ref, coords}]}`, where `ref` is `osm:<type>/<id>` and `coords` are `[lat, lon]` pairs (one for a place, the vertices for a line or area). The worker finds `site.insights.near` in these layers, so it works where a site has no ward. The city file and its layers have no schema yet (W1, issue 9).
@@ -253,7 +253,7 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `crawl/urls/{sha256(url)[:24]}.json` | the newest page for a URL: `{url, sha256, fetched_at, checked_at, etag, last_modified}`, for conditional refetches; `crawler` only |
 | same | `crawl/extractions/{key}.json` | one model extraction per page chunk: `{key, prompt_version, models, source_url, page_sha256, chunk_sha256, model: {provider, model, version}, wards, created_at}`; `key` is SHA-256 of the prompt version, the model chain, the request and the chunk, so a changed prompt or page misses; `crawler` only |
 | same | `crawl/layers/{kind}-{sha256(bbox)[:16]}.json` | the last OpenStreetMap layer fetched for a city box (same shape as a `map_layers` entry), reused for `CRAWL_INTERVAL_DAYS` and when Overpass is busy; `crawler` only |
-| same | `crawl/wards/{city}.json` | the crawl output, same shape as `data/wards/<city>.json`; `crawler` writes, `worker` and `scores` read |
+| same | `crawl/wards/{city}.json` | the crawl output, same shape as `data/wards/<city>.json`, always `unreviewed`; `crawler` writes; `worker` (at start) and `scores` (every run) read it, keeping per city the file with more reviewed records, then the newer one |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
 
@@ -279,6 +279,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `CRAWLS_TABLE` | api (read), worker (queue a district), crawler | `junksnap-<stage>-crawls` |
 | `CRAWL_ACTIVATE_AFTER` | worker | verified reports in a district before it is queued for a crawl; default `1` |
 | `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
+| `CRAWL_SOURCES_DIR`, `CRAWL_SCHEMA` | crawler | optional: the `sources/` folder and the `ward_record` schema file; the image sets both |
 | `CRAWL_MODELS` | crawler | optional JSON list of Bedrock extraction models in order, `[{"model_id", "version", "usd_per_million_in", "usd_per_million_out"}]`; the CronJob uses Nova Pro, then Nova Lite |
 | `PUBLIC_BUCKET` | worker, ml (reads `media/` only) | `junksnap-<stage>-public-<account_id>` |
 | `PUBLIC_BASE_URL` | api, worker | CloudFront base URL, no trailing slash |
