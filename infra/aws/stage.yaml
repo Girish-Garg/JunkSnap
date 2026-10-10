@@ -227,6 +227,17 @@ Resources:
         - { AttributeName: area_kind, KeyType: HASH }
         - { AttributeName: area_id, KeyType: RANGE }
 
+  # One row per district: the worker queues it, the crawler CronJob runs it (contracts README).
+  CrawlsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-crawls
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: district_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: district_id, KeyType: HASH }
+
   # ---------- SQS ----------
   ReportsDeadLetterQueue:
     Type: AWS::SQS::Queue
@@ -369,6 +380,11 @@ Resources:
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
                   dynamodb:DescribeTable]
                 Resource: !GetAtt ScoresTable.Arn
+              # GET /areas/district/{id}/crawl reads one row.
+              - Sid: ReadCrawls
+                Effect: Allow
+                Action: dynamodb:GetItem
+                Resource: !GetAtt CrawlsTable.Arn
               # Letters fall back from Bedrock to OpenAI, then OpenRouter (contracts README).
               - Sid: LetterFallbackKeys
                 Effect: Allow
@@ -470,6 +486,22 @@ Resources:
                 Effect: Allow
                 Action: sqs:SendMessage
                 Resource: !GetAtt ReportsQueue.Arn
+              # A district's first verified report queues its ward crawl (conditional updates only).
+              - Sid: QueueCrawls
+                Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !GetAtt CrawlsTable.Arn
+              # The newest crawled ward files (crawl/wards/), falling back to the image data/wards.
+              - Sid: ListCrawledWards
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt OriginalsBucket.Arn
+                Condition:
+                  StringLike: { s3:prefix: ["crawl/wards/*"] }
+              - Sid: ReadCrawledWards
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${OriginalsBucket.Arn}/crawl/wards/*"
 
   MlRole:
     Type: AWS::IAM::Role
@@ -549,6 +581,67 @@ Resources:
                 Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem,
                   dynamodb:BatchWriteItem, dynamodb:DescribeTable]
                 Resource: !GetAtt ScoresTable.Arn
+              # The newest crawled ward files (crawl/wards/), falling back to the image data/wards.
+              - Sid: ListCrawledWards
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt OriginalsBucket.Arn
+                Condition:
+                  StringLike: { s3:prefix: ["crawl/wards/*"] }
+              - Sid: ReadCrawledWards
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${OriginalsBucket.Arn}/crawl/wards/*"
+              - Sid: CrawledWardsKey
+                Effect: Allow
+                Action: kms:Decrypt
+                Resource: !GetAtt DataKey.Arn
+
+  # The ward crawler CronJob: crawl/ in the private bucket, the crawls table, Nova Pro and Lite.
+  CrawlerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub junksnap-${Stage}-crawler
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: pods.eks.amazonaws.com }
+            Action: [sts:AssumeRole, sts:TagSession]
+            Condition:
+              StringEquals: { aws:SourceAccount: !Ref AWS::AccountId }
+      Policies:
+        - PolicyName: crawler
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: CrawlCache
+                Effect: Allow
+                Action: [s3:GetObject, s3:PutObject]
+                Resource: !Sub "${OriginalsBucket.Arn}/crawl/*"
+              # Lets a missing key read as 404 rather than 403, so the cache can tell a miss.
+              - Sid: ListCrawlCache
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt OriginalsBucket.Arn
+                Condition:
+                  StringLike: { s3:prefix: ["crawl/*"] }
+              - Sid: CrawlCacheKey
+                Effect: Allow
+                Action: [kms:Decrypt, kms:GenerateDataKey]
+                Resource: !GetAtt DataKey.Arn
+              - Sid: CrawlsTable
+                Effect: Allow
+                Action: [dynamodb:Scan, dynamodb:GetItem, dynamodb:UpdateItem]
+                Resource: !GetAtt CrawlsTable.Arn
+              - Sid: ExtractWithNova
+                Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/apac.amazon.nova-pro-v1:0"
+                  - !Sub "arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/apac.amazon.nova-lite-v1:0"
+                  - "arn:aws:bedrock:*::foundation-model/amazon.nova-pro-v1:0"
+                  - "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0"
 
   ApiPodIdentity:
     Type: AWS::EKS::PodIdentityAssociation
@@ -581,6 +674,14 @@ Resources:
       Namespace: !Sub junksnap-${Stage}
       ServiceAccount: scores
       RoleArn: !GetAtt ScoresRole.Arn
+
+  CrawlerPodIdentity:
+    Type: AWS::EKS::PodIdentityAssociation
+    Properties:
+      ClusterName: !Ref ClusterName
+      Namespace: !Sub junksnap-${Stage}
+      ServiceAccount: crawler
+      RoleArn: !GetAtt CrawlerRole.Arn
 
   # ---------- CloudFront: /media/* from the public bucket, everything else to the ALB ----------
   MediaOriginAccessControl:
@@ -668,6 +769,8 @@ Outputs:
     Value: !Ref DevicesTable
   ScoresTableName:
     Value: !Ref ScoresTable
+  CrawlsTableName:
+    Value: !Ref CrawlsTable
   ReportsQueueUrl:
     Value: !Ref ReportsQueue
   ReportsDeadLetterQueueUrl:
@@ -684,6 +787,8 @@ Outputs:
     Value: !GetAtt MlRole.Arn
   ScoresRoleArn:
     Value: !GetAtt ScoresRole.Arn
+  CrawlerRoleArn:
+    Value: !GetAtt CrawlerRole.Arn
   UserPoolId:
     Value: !Ref UserPool
   UserPoolClientId:

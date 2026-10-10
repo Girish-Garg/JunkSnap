@@ -1,0 +1,43 @@
+# crawler: Python ward crawler image; hourly, crawls queued and due districts from the crawls table.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: crawler
+spec:
+  schedule: "17 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      # A first crawl of a city reads every page chunk with a model; later runs hit the cache.
+      activeDeadlineSeconds: 7200
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: crawler
+        spec:
+          serviceAccountName: crawler
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: crawler
+              image: junksnap-crawler
+              command: [python, -m, ward_crawler.handlers.job]
+              envFrom:
+                - configMapRef:
+                    name: junksnap-config
+              resources:
+                requests: { cpu: 100m, memory: 512Mi }
+                limits: { cpu: "1", memory: 1Gi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ALL]
