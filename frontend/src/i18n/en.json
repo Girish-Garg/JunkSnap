@@ -608,5 +608,15 @@
     "loadFailed": "Could not load the ranking.",
     "empty": "No areas of this type have reports in this city yet.",
     "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
+  },
+  "viewer": {
+    "label": "Photo {{n}} of {{total}}",
+    "count": "{{n}} / {{total}}",
+    "open": "Open photo",
+    "close": "Close photo",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "taken": "Taken {{date}}",
+    "blurred": "Faces and number plates are blurred."
   }
 }

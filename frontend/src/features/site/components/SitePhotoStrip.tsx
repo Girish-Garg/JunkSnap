@@ -1,22 +1,38 @@
 import { useTranslation } from 'react-i18next';
+import { PhotoViewer } from '../../../ui/PhotoViewer';
+import { usePhotoViewer } from '../../../ui/usePhotoViewer';
+import type { ViewerPhoto } from '../../../ui/ViewerPhoto';
 import type { PhotoView } from '../SitePresenter';
+import { useStripIndex } from '../hooks/useStripIndex';
 import { SitePhoto } from './SitePhoto';
 
 interface SitePhotoStripProps {
   readonly photos: readonly PhotoView[];
 }
 
+/** Every blurred photo of the site in a swipeable strip; tapping one opens the full-screen viewer. */
 export function SitePhotoStrip({ photos }: SitePhotoStripProps) {
   const { t } = useTranslation();
+  const viewer = usePhotoViewer();
+  const strip = useStripIndex(photos.length);
+  const shown: readonly ViewerPhoto[] = photos.map((photo) => ({ url: photo.url, alt: t(photo.altKey, photo.altParams), takenAt: photo.takenAt }));
   return (
     <figure className="photo-strip">
-      <ul className="photo-strip__list" aria-label={t('site.photos')}>
-        {photos.length === 0 && <SitePhoto url={null} alt="" />}
-        {photos.map((photo) => (
-          <SitePhoto key={photo.url} url={photo.url} alt={t(photo.altKey, photo.altParams)} />
-        ))}
-      </ul>
+      <div className="photo-strip__frame">
+        <ul className="photo-strip__list photo-strip__list--swipe" aria-label={t('site.photos')} onScroll={strip.onScroll}>
+          {photos.length === 0 && <SitePhoto url={null} alt="" />}
+          {shown.map((photo, index) => (
+            <SitePhoto key={photo.url} url={photo.url} alt={photo.alt} onOpen={() => viewer.open(shown, index)} />
+          ))}
+        </ul>
+        {photos.length > 1 && (
+          <span className="photo-strip__count" aria-hidden="true">
+            {t('viewer.count', { n: strip.index + 1, total: photos.length })}
+          </span>
+        )}
+      </div>
       <figcaption>{t('site.photoNote')}</figcaption>
+      <PhotoViewer viewer={viewer} />
     </figure>
   );
 }

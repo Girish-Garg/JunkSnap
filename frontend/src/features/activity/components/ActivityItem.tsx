@@ -6,14 +6,27 @@ import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
 import { ActivityActions } from './ActivityActions';
 
-export function ActivityItem({ report }: { readonly report: QueuedReport }) {
+interface ActivityItemProps {
+  readonly report: QueuedReport;
+  /** Opens the viewer on this report's blurred copy; only offered once that copy exists. */
+  readonly onOpen: () => void;
+}
+
+export function ActivityItem({ report, onOpen }: ActivityItemProps) {
   const { t } = useTranslation();
   const format = useFormatter();
   const { draft, status } = report.data;
   const blurred = status?.blurred_url ?? null;
+  const thumb = <ReportThumb key={blurred ?? 'none'} url={blurred} />;
   return (
     <li className="report-row">
-      <ReportThumb key={blurred ?? 'none'} url={blurred} />
+      {blurred ? (
+        <button type="button" className="photo-open photo-open--thumb" title={t('viewer.open')} onClick={onOpen}>
+          {thumb}
+        </button>
+      ) : (
+        thumb
+      )}
       <div className="report-row__body">
         <p className="report-row__title">
           <MarkerGlyph type={draft.report_type} size={16} />
