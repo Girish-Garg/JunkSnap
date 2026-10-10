@@ -38,13 +38,16 @@ def test_bench_counts_unanswered_photos_as_wrong() -> None:
         bench_row("qr4change", True, {"report_type": "waste_dump", "burning": False,
                                       "latency_ms": 2000}),
         bench_row("qr4change", False, None),
+        bench_row("qr4change", False, {"report_type": "no_bin", "burning": False,
+                                       "latency_ms": 3000}),
         bench_row("dfire", None, {"report_type": "not_waste", "burning": True,
                                   "latency_ms": 4000}),
     ]
     row = JudgeBench().summarise("nova", rows)
-    assert (row.answered, row.type_accuracy, row.burning_accuracy) == (2, 0.5, 1.0)
+    assert (row.answered, row.burning_accuracy) == (3, 1.0)
+    assert row.type_accuracy == pytest.approx(2 / 3)
     assert row.usd_per_thousand == pytest.approx(2.0)
-    assert "| nova | 3 | 2 |" in row.row()
+    assert "| nova | 4 | 3 |" in row.row()
 
 
 def test_benchmark_sample_is_capped_evenly_and_skips_the_holdout() -> None:

@@ -26,7 +26,7 @@ class BenchRow:
     @staticmethod
     def header() -> str:
         return (
-            "| model | photos | answered | waste or not (accuracy) | burning (accuracy) "
+            "| model | photos | answered | waste_dump claim (accuracy) | burning (accuracy) "
             "| median latency | p90 latency | USD per 1,000 photos |\n" + "|---" * 8 + "|"
         )
 
@@ -69,7 +69,8 @@ class JudgeBench:
     @staticmethod
     def _type_right(row: Mapping[str, Any]) -> bool:
         judge: Any = row.get("judge")
-        return bool(judge) and (judge["report_type"] != "not_waste") == row["truth"]["waste"]
+        # The claim tested is waste_dump; another report type does not confirm it.
+        return bool(judge) and (judge["report_type"] == "waste_dump") == row["truth"]["waste"]
 
     @staticmethod
     def _burning_right(row: Mapping[str, Any]) -> bool:
