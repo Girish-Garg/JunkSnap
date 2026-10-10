@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LetterDraft } from '../../../domain/SiteActions';
+import type { LetterBase } from '../../../domain/SiteActions';
 import { NativeBridge } from '../../../services/NativeBridge';
 import { Button } from '../../../ui/Button';
 import { useCopyLetter } from '../hooks/useCopyLetter';
 
 interface LetterActionsProps {
-  readonly draft: LetterDraft;
+  readonly draft: LetterBase;
   readonly onReset: () => void;
 }
 

@@ -8,6 +8,7 @@ import { useAreaPresenters } from '../hooks/useAreaPresenters';
 import { AREA_TITLE_ID } from './areaIds';
 import { AreaDiagnosis } from './AreaDiagnosis';
 import { AreaInsights } from './AreaInsights';
+import { AreaLetterButton } from './AreaLetterButton';
 import { AreaScoreList } from './AreaScoreList';
 import { AreaSites } from './AreaSites';
 import { DistrictCrawl } from './DistrictCrawl';
@@ -34,6 +35,7 @@ export function AreaPage({ scores }: AreaPageProps) {
         {scores.pilot && <span className="badge">{t('site.pilot')}</span>}
       </p>
       <DistrictCrawl districtId={districtId} />
+      <AreaLetterButton kind={scores.area.kind} areaId={scores.area.id} />
       <AreaScoreList scores={area.scores()} />
       <AreaDiagnosis items={area.diagnosis()} />
       <FactList title={t('areas.counts')} facts={area.counts()} />

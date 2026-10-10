@@ -61,7 +61,7 @@ export interface LetterDraft {
   readonly letter_id: string;
   readonly site_id: string;
   readonly channel: string;
-  readonly to: { readonly office: string; readonly body: string };
+  readonly to: LetterAddressee;
   readonly cc: readonly LetterCc[];
   readonly subject: string;
   readonly body: string;
@@ -97,3 +97,15 @@ export interface LetterEvidence {
   readonly nearest_bin: { readonly distance_m: number; readonly ref: string; readonly source_url: string } | null;
   readonly no_bin_within_3km: boolean | null;
 }
+
+/** An office the letter is addressed to, never a person. */
+export interface LetterAddressee {
+  readonly office: string;
+  readonly body: string;
+}
+
+/** What every letter view needs, for a site letter (one addressee) or an area letter (every office responsible). */
+export type LetterBase = Omit<LetterDraft, 'site_id' | 'evidence' | 'to' | 'channel' | 'filing_url'> & {
+  readonly to: LetterAddressee | readonly LetterAddressee[];
+  readonly filing_url?: string | null;
+};

@@ -1,13 +1,15 @@
-import type { LetterDraft } from '../../../domain/SiteActions';
+import type { LetterBase } from '../../../domain/SiteActions';
 import type { LetterText } from '../LetterText';
 
 /** To, Cc for attention and subject: offices and seats only, never a person. */
-export function LetterAddress({ draft, text }: { readonly draft: LetterDraft; readonly text: LetterText }) {
+export function LetterAddress({ draft, text }: { readonly draft: LetterBase; readonly text: LetterText }) {
   return (
     <dl className="letter__address">
       <div>
         <dt>{text.label('to')}</dt>
-        <dd>{text.to()}</dd>
+        {text.to().map((line) => (
+          <dd key={line}>{line}</dd>
+        ))}
       </div>
       {draft.cc.length > 0 && (
         <div>

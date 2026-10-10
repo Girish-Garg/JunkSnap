@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useServices } from '../../../app/useServices';
-import type { LetterDraft } from '../../../domain/SiteActions';
+import type { LetterBase } from '../../../domain/SiteActions';
 import type { NativeBridge } from '../../../services/NativeBridge';
 import { LetterText } from '../LetterText';
 
@@ -16,7 +16,7 @@ function labelKey(state: CopyState, shares: boolean): string {
  * Copies the letter as plain text; inside the Android app it opens the share sheet instead and
  * copies only if that fails. Clipboard access can be refused, and then the resident copies by hand.
  */
-export function useCopyLetter(draft: LetterDraft, native: NativeBridge) {
+export function useCopyLetter(draft: LetterBase, native: NativeBridge) {
   const { t } = useTranslation();
   const { sharer } = useServices();
   const [state, setState] = useState<CopyState>('idle');

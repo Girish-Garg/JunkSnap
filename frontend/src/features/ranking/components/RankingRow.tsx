@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { areaPath } from '../../../app/paths';
 import type { BoundaryKind } from '../../../domain/AreaListing';
+import { AreaLetterButton } from '../../areas/components/AreaLetterButton';
 import type { RankingRowView } from '../RankingPresenter';
 
 interface RankingRowProps {
@@ -35,6 +36,7 @@ export function RankingRow({ kind, row }: RankingRowProps) {
           )}
         </span>
       </Link>
+      <AreaLetterButton kind={kind} areaId={row.id} short />
     </li>
   );
 }

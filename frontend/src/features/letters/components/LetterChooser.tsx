@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { LetterLanguage } from '../../../domain/SiteActions';
 import { Button } from '../../../ui/Button';
 import { Segmented } from '../../../ui/Segmented';
-import type { LetterFlow } from '../hooks/useLetter';
+import type { LetterRequestFlow } from '../hooks/useLetterRequest';
 
 const LANGUAGES: readonly { readonly value: LetterLanguage; readonly label: string }[] = [
   { value: 'en', label: 'English' },
@@ -10,7 +10,7 @@ const LANGUAGES: readonly { readonly value: LetterLanguage; readonly label: stri
 ];
 
 /** Before drafting: the letter's language and what happens next. */
-export function LetterChooser({ flow }: { readonly flow: LetterFlow }) {
+export function LetterChooser({ flow }: { readonly flow: LetterRequestFlow }) {
   const { t } = useTranslation();
   return (
     <div className="form">
