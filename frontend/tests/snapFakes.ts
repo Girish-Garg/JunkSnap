@@ -20,7 +20,11 @@ import { ScanCapture } from '../src/services/ScanCapture';
 import { ScanQueue } from '../src/services/ScanQueue';
 import { ScanSender } from '../src/services/ScanSender';
 import { ScanTracker } from '../src/services/ScanTracker';
-import { sampleSiteLoader } from '../src/services/siteFixtures';
+import { sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../src/services/siteFixtures';
+import { MockApiClient } from '../src/services/MockApiClient';
+import { MockSiteActionsApi } from '../src/services/MockSiteActionsApi';
+import { SiteActionService, type SiteActionPorts } from '../src/services/SiteActionService';
+import type { SiteActionsApi } from '../src/services/SiteActionsApi';
 import { MockScanApi } from '../src/services/MockScanApi';
 import { VideoRecorder } from '../src/services/VideoRecorder';
 import type { QueueItemData } from '../src/domain/QueueItem';
@@ -107,6 +111,12 @@ export class FakeGeolocation {
         return 1;
       },
       clearWatch: () => undefined,
+      getCurrentPosition: (onFix: PositionCallback, onError: PositionErrorCallback) => {
+        const first = this.#first;
+        if (!first) return onError({ code: 2, message: 'no fix' } as GeolocationPositionError);
+        const coords = { latitude: first.lat, longitude: first.lon, accuracy: first.accuracy_m } as GeolocationCoordinates;
+        onFix({ coords, timestamp: Date.now() } as GeolocationPosition);
+      },
     } as unknown as Geolocation;
   }
 
@@ -156,6 +166,7 @@ export interface SnapTestOptions {
   /** null leaves the page without a camera API. */
   readonly mediaDevices?: MediaDevices | null;
   readonly clock?: FakeClock;
+  readonly siteApi?: SiteActionsApi;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
@@ -182,5 +193,12 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     encoder: new FakeEncoder(),
     hasher,
     gps,
+    siteActions: testSiteActions(options.siteApi, { uploads: api, identity, gps }),
   };
+}
+
+function testSiteActions(siteApi: SiteActionsApi | undefined, ports: Omit<SiteActionPorts, 'api'>): SiteActionService {
+  const sites = new MockApiClient(siteFixtureLoaders);
+  const api = siteApi ?? new MockSiteActionsApi({ site: (id) => sites.getSite(id), letter: sampleLetterLoader }, 0);
+  return new SiteActionService({ ...ports, api });
 }

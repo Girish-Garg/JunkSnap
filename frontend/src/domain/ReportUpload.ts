@@ -27,7 +27,7 @@ export interface ReportUpload extends ReportDraft {
 }
 
 export interface PresignRequest {
-  readonly purpose: 'report';
+  readonly purpose: 'report' | 'cleanup';
   readonly content_type: 'image/jpeg';
   readonly sha256: string;
   readonly device_token: string;

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
@@ -47,9 +47,10 @@ describe('SitePanel photos, location and brands', () => {
     expect(factValue('Lok Sabha seat (MP)')).toHaveTextContent('Boundary out of date');
   });
 
-  it('says in visible text which actions are not built yet', async () => {
+  it('says in visible text that Me too is not built yet', async () => {
     await renderApp(<SitePanel site={testSite()} userLocation={null} />);
-    expect(screen.getByText('Coming soon: Confirm, Me too, Cleaned and Letter.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Me too' }));
+    expect(screen.getByText('Me too is coming soon.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Letter' })).toHaveClass('action-row__button--primary');
   });
 });

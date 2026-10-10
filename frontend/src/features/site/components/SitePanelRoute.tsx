@@ -12,7 +12,7 @@ export function SitePanelRoute() {
   const { siteId = '' } = useParams();
   const navigate = useNavigate();
   const { userLocation, showSite } = useMapContext();
-  const { site, failed } = useSite(siteId);
+  const { site, failed, reload } = useSite(siteId);
   const close = useCallback(() => navigate('/'), [navigate]);
   useEffect(() => {
     // A shared link may point outside the loaded area: move the map to the site.
@@ -26,7 +26,7 @@ export function SitePanelRoute() {
       onClose={close}
       focusKey={site?.properties.site_id ?? failed}
     >
-      {site ? <SitePanel site={site} userLocation={userLocation} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
+      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={reload} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
     </BottomSheet>
   );
 }

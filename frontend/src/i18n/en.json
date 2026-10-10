@@ -108,7 +108,6 @@
     "letter": "Letter",
     "share": "Share",
     "copied": "Copied",
-    "soon": "Coming soon: Confirm, Me too, Cleaned and Letter.",
     "soonOne": "{{action}} is coming soon."
   },
   "site": {
@@ -351,6 +350,86 @@
       "processing": "Cutting frames",
       "done": "Done",
       "failed": "This video could not be used"
+    }
+  },
+  "vote": {
+    "title": "Is this a waste site?",
+    "text": "Neighbours confirm reports. Your vote counts when you are within 1 km of the site.",
+    "yes": "Yes, it's waste",
+    "no": "No",
+    "thanks": "Thanks. Votes now: {{yes}} yes, {{no}} no.",
+    "errors": {
+      "own_site": "You reported this site, so your vote is not counted here.",
+      "too_far": "Votes count only within 1 km of the site. Go closer and try again.",
+      "location": "Your location is needed to vote. Allow location in the browser settings.",
+      "rate_limited": "Too many tries. Wait a little and try again.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The vote did not go through. Try again."
+    }
+  },
+  "cleanup": {
+    "title": "Report cleaned",
+    "sentTitle": "Cleanup photo sent",
+    "close": "Close cleanup",
+    "text": "Take a photo of the cleared place from where the waste was. It must be within 50 m of the site.",
+    "photoAlt": "Your photo of the cleared place",
+    "send": "Send cleanup photo",
+    "sending": "Sending",
+    "backToSite": "Back to the site",
+    "status": {
+      "checking": "Being checked",
+      "accepted": "Cleared",
+      "rejected": "Not accepted"
+    },
+    "statusText": {
+      "checking": "The photo is blurred and checked like any report. The site shows as cleared once it passes.",
+      "accepted": "The site is now marked cleared. It reopens if someone reports waste here again.",
+      "rejected": "The photo did not show a cleared site, or it was taken too far away."
+    },
+    "errors": {
+      "cleanup_pending": "A cleanup photo for this site is already being checked.",
+      "already_cleaned": "This site is already marked cleared.",
+      "rate_limited": "Too many tries. Wait a little and try again.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The photo did not go through. Try again."
+    }
+  },
+  "letter": {
+    "title": "Draft letter",
+    "close": "Close letter",
+    "noAutoSend": "Draft for you to file. JunkSnap never sends or files anything.",
+    "sample": "Sample mode: this is the sample letter, with placeholder quotes.",
+    "intro": "JunkSnap drafts a letter to the local body, with copies to the elected offices for this place, and quotes the rules word for word.",
+    "language": "Letter language",
+    "draft": "Draft letter",
+    "drafting": "Drafting",
+    "wait": "This can take up to a minute.",
+    "print": "Print or save as PDF",
+    "copy": "Copy text",
+    "copied": "Copied",
+    "openPortal": "Open the filing portal",
+    "another": "Draft again",
+    "to": "To",
+    "ccLabel": "Copy",
+    "subject": "Subject",
+    "citations": "Rules quoted",
+    "clause": "clause",
+    "hash": "SHA-256 of the official text",
+    "verified": "{{verified}} of {{total}} quotes verified word for word",
+    "templateFallback": "Template letter: the drafted wording did not pass the quote check, so the standard letter with the same verified quotes is used.",
+    "residentFiles": "This letter is filed by a resident. JunkSnap does not send or file it.",
+    "cc": {
+      "councillor": "Ward councillor, {{seat}} (for attention)",
+      "mla": "MLA, {{seat}} assembly seat (for attention)",
+      "mp": "MP, {{seat}} Lok Sabha seat (for attention)"
+    },
+    "errors": {
+      "not_verified": "Letters open once the site is verified.",
+      "no_local_body": "No local body is known for this place yet, so there is no one to address.",
+      "rate_limited": "You can draft 5 letters an hour. Try again later.",
+      "not_found": "This site was not found.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The letter could not be drafted. Try again."
     }
   }
 }
