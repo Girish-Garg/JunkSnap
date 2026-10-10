@@ -38,5 +38,8 @@ export class SiteVerifiedError extends InvalidTransitionError {
 // Every report on the site was withdrawn; it is kept for the audit trail but takes nothing new.
 export class SiteRemovedError extends NotFoundError {}
 
+// Decision 20261010-1855: 90 days without a report, vote or cleanup photo; kept for the audit trail but takes nothing new.
+export class SiteExpiredError extends NotFoundError {}
+
 // Another writer saved the site first; the caller reloads and tries again.
 export class StaleSiteError extends JunkSnapError {}

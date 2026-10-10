@@ -19,8 +19,12 @@ export type SiteContext =
   | 'overflowing'
   | 'damaged';
 
-/** removed: every report on an unverified site was withdrawn (decision 20261010-1700). GET /sites?bbox leaves out cleaned and removed sites. */
-export type SiteStatus = 'open' | 'cleaned' | 'reopened' | 'removed';
+/**
+ * removed: every report on an unverified site was withdrawn (decision 20261010-1700).
+ * expired: no report, vote or after-photo for 90 days (decision 20261010-1855).
+ * GET /sites?bbox leaves out cleaned, removed and expired sites.
+ */
+export type SiteStatus = 'open' | 'cleaned' | 'reopened' | 'removed' | 'expired';
 
 /** Decision 20261010-1530: unverified until 10 people back it. GET /sites?bbox leaves out rejected sites. */
 export type SiteVerification = 'unverified' | 'verified' | 'rejected';
@@ -33,8 +37,15 @@ export interface SiteBackers {
   readonly vote_people: number;
 }
 
-/** Resets to none when the site reopens. */
-export type CleanupStatus = 'none' | 'checking' | 'accepted' | 'rejected';
+/** pending_confirmation: the after-photo passed but fewer than 3 people say cleared (decision 20261010-1855). Resets to none when the site reopens. */
+export type CleanupStatus = 'none' | 'checking' | 'pending_confirmation' | 'accepted' | 'rejected';
+
+/** People saying cleared since the newest photo, by after-photo or cleared vote, each once; needed is at least 3. */
+export interface SiteClearance {
+  readonly count: number;
+  readonly needed: number;
+  readonly still_there: number;
+}
 
 export interface AreaRef {
   readonly id: string;
@@ -110,6 +121,10 @@ export interface SiteProperties {
   readonly first_reported_at: string;
   readonly last_reported_at: string;
   readonly cleaned_at: string | null;
+  /** Progress towards cleaned; absent before the first cleared word (decision 20261010-1855). */
+  readonly clearance?: SiteClearance;
+  /** 90 days after the last report, vote or after-photo; absent on older rows. */
+  readonly expires_at?: string;
   /** What set the last cleaned status; absent on older rows. */
   readonly cleaned_by?: 'after_photo' | 'votes' | null;
   /** Why a removed site left the map, and when; absent on older rows. */

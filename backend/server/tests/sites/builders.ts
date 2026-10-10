@@ -7,9 +7,13 @@ import type {
   VerificationResult,
 } from "../../src/contracts/index.gen.js";
 import type { MergeableReport, MergeEvidence } from "../../src/domain/sites/MergeableReport.js";
+import type { Site } from "../../src/domain/sites/Site.js";
+import type { AfterPhoto } from "../../src/domain/sites/SiteCleanup.js";
+import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { UNMEASURED, type BinMeasure } from "../../src/domain/bins/KnownBin.js";
+import { expiryOf } from "../../src/domain/SiteExpiry.js";
 import type {
   NearPlace,
   ReportContext,
@@ -36,6 +40,11 @@ export function fixture<T>(name: string): T {
 
 export function siteFixture(sample: string): SiteFeature {
   return fixture<SiteFeature>(`site.${sample}.json`);
+}
+
+// The Feature the api shows for a stored site: a row without expires_at shows 90 days after its last report.
+export function shown(feature: SiteFeature): SiteFeature {
+  return { ...feature, properties: { ...feature.properties, expires_at: expiryOf(feature.properties) } };
 }
 
 export function northOf(metres: number): number {
@@ -132,4 +141,24 @@ export function evidence(options: EvidenceOptions = {}): PhotoEvidence {
 
 export function report(options: EvidenceOptions = {}): MergeableReport {
   return new MergeableReportFactory(new PublicMedia(BASE_URL)).create(evidence(options));
+}
+
+export const NO_VOTES = VoteTally.of([]);
+
+// One person's after-photo that the models passed (decision 20261010-1855).
+export function afterPhoto(person: string, at: string, cleanupId = `cln_${person}`): AfterPhoto {
+  return { cleanupId, photoUrl: `${BASE_URL}/media/cleanups/${cleanupId}.jpg`, person, at };
+}
+
+// Sends and accepts one person's after-photo at the given time.
+export function acceptPhoto(site: Site, photo: AfterPhoto, votes: VoteTally = NO_VOTES): void {
+  site.startCleanup(photo.cleanupId, new Date(photo.at));
+  site.acceptCleanup(photo, votes);
+}
+
+// Three different people's after-photos: the quorum that clears a site; the last photo is cln_cleaner-3.
+export function clearByPhotos(site: Site, at: string): void {
+  for (const person of ["cleaner-1", "cleaner-2", "cleaner-3"]) {
+    acceptPhoto(site, afterPhoto(person, at));
+  }
 }

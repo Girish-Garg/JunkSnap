@@ -93,10 +93,10 @@ describe("SiteServiceFactory", () => {
 
   it("builds a cleanup service wired to the cleanups and sites tables", async () => {
     const site = Site.found(report());
-    site.startCleanup("cln_jdh_3c");
+    site.startCleanup("cln_jdh_3c", new Date("2026-10-10T06:00:00Z"));
     const siteItem = new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toItem(site);
     const record = { cleanup_id: "cln_jdh_3c", site_id: "site_jdh_1", upload_id: "upl_jdh_3c", device_token: DEVICE_B };
-    const stored = { ...record, sha256: "c".repeat(64), gps: { lat: 1, lon: 1, accuracy_m: 1 }, captured_at: "t", received_at: "t", status: "checking" };
+    const stored = { ...record, sha256: "c".repeat(64), gps: { lat: 1, lon: 1, accuracy_m: 1 }, captured_at: "t", received_at: "2026-10-10T06:00:00.000Z", status: "checking" };
     const { dynamo, built } = factory((command) => {
       if (command.name !== "GetCommand") {
         return {};
@@ -111,9 +111,11 @@ describe("SiteServiceFactory", () => {
     expect(dynamo.sent.map(tableOf)).toEqual([
       "GetCommand junksnap-dev-cleanups",
       "GetCommand junksnap-dev-sites",
+      "QueryCommand junksnap-dev-votes",
       "PutCommand junksnap-dev-sites",
       "UpdateCommand junksnap-dev-cleanups",
     ]);
-    expect(dynamo.sent[2]?.input.Item).toMatchObject({ status: "cleaned", cleanup_status: "accepted" });
+    // One after-photo is one person's word (decision 20261010-1855): the site waits for two more.
+    expect(dynamo.sent[3]?.input.Item).toMatchObject({ status: "open", cleanup_status: "pending_confirmation", clearance: { count: 1, needed: 3 } });
   });
 });

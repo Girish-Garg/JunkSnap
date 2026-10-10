@@ -2,9 +2,10 @@ import type { AreaRef } from "./AreaKey.js";
 import type { GeoPoint } from "./GeoPoint.js";
 import type { BrandSighting, CompositionEstimate, PlaceKind, SiteInsights } from "./SiteInsights.js";
 import { DAY_MS, istParts } from "./scoreUtils.js";
+import { isLapsedAt } from "./SiteExpiry.js";
 
 export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] as const;
-export const SITE_STATUSES = ["open", "cleaned", "reopened", "removed"] as const;
+export const SITE_STATUSES = ["open", "cleaned", "reopened", "removed", "expired"] as const;
 export const VERIFICATIONS = ["unverified", "verified", "rejected"] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -22,6 +23,8 @@ export interface AreaSiteProps {
   readonly verifiedCount: number;
   readonly firstReportedAt: string;
   readonly cleanedAt: string | null;
+  // Decision 20261010-1855: site.expires_at, or 90 days after last_reported_at on older rows.
+  readonly expiresAt: string;
   readonly pilot: boolean;
   readonly burning: boolean;
   readonly point: GeoPoint;
@@ -66,9 +69,20 @@ export class AreaSite {
     return new AreaSite({ ...this.#props, reportTimes });
   }
 
-  // Rejected and removed (every report withdrawn, decision 20261010-1700) sites never count.
+  // Rejected, removed (every report withdrawn, decision 20261010-1700) and expired (decision 20261010-1855) sites never count.
   isCounted(): boolean {
-    return this.#props.verification !== "rejected" && this.#props.status !== "removed";
+    const { verification, status } = this.#props;
+    return verification !== "rejected" && status !== "removed" && status !== "expired";
+  }
+
+  // An open or reopened site past its expiry that the CronJob should mark expired.
+  isLapsedAt(now: Date): boolean {
+    const { status, verification, expiresAt } = this.#props;
+    return status !== "expired" && isLapsedAt(status, verification, expiresAt, now);
+  }
+
+  expired(): AreaSite {
+    return new AreaSite({ ...this.#props, status: "expired" });
   }
 
   isVerified(): boolean {

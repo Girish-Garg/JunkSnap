@@ -2,6 +2,7 @@ import type { BBox } from './BBox';
 import { REPORT_TYPES, type ReportType } from './ReportType';
 import type { SiteFeature } from './Site';
 import { SITE_STATES, type SiteFilter, type SiteState } from './SiteFilter';
+import { SiteListing } from './SiteListing';
 
 const zeros = <K extends string>(keys: readonly K[]): Record<K, number> =>
   Object.fromEntries(keys.map((key) => [key, 0])) as Record<K, number>;
@@ -24,7 +25,8 @@ export class ViewCounts {
     const states = zeros(SITE_STATES);
     for (const { properties, geometry } of sites) {
       const state = properties.verification;
-      if (state === 'rejected' || !view.contains(geometry.coordinates)) continue;
+      // Only sites the map shows count: never rejected, removed, cleaned or expired (decision 20261010-1855).
+      if (state === 'rejected' || !SiteListing.onMap(properties) || !view.contains(geometry.coordinates)) continue;
       if (filter.showsState(state)) types[properties.report_type] += 1;
       if (filter.shows(properties.report_type)) states[state] += 1;
     }

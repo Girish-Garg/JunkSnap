@@ -102,6 +102,7 @@ export class FakeSiteRepository implements SiteRepository {
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,
+      cleanupPeople: [],
       withdrawnReports: [],
     };
     this.#states.set(feature.properties.site_id, { feature, internals: { ...base, version: 1, ...internals } });

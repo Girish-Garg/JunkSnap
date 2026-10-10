@@ -2,6 +2,7 @@ import type { BoundingBox } from "../../domain/sites/BoundingBox.js";
 import type { Site } from "../../domain/sites/Site.js";
 import { SiteNotFoundError } from "../../domain/sites/SiteErrors.js";
 import type { SiteFeature } from "../../domain/sites/SiteTypes.js";
+import type { Clock } from "../../ports/sites/Clock.js";
 import type { GeoCells } from "../../ports/sites/GeoCells.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
 
@@ -10,18 +11,21 @@ const MAX_SITES = 500;
 export class SiteFinder {
   readonly #sites: SiteRepository;
   readonly #cells: GeoCells;
+  readonly #clock: Clock;
 
-  constructor(sites: SiteRepository, cells: GeoCells) {
+  constructor(sites: SiteRepository, cells: GeoCells, clock: Clock) {
     this.#sites = sites;
     this.#cells = cells;
+    this.#clock = clock;
   }
 
-  // Newest first, at most 500, rejected sites left out (contracts/README.md).
+  // Newest first, at most 500; rejected, removed, cleaned and expired sites left out (contracts/README.md).
   async inBox(box: BoundingBox): Promise<SiteFeature[]> {
     const cells = this.#cells.covering(box);
     const perCell = await Promise.all(cells.map((cell) => this.#sites.inCell(cell)));
     return perCell
       .flat()
+      .map((site) => this.#current(site))
       .filter((site) => site.isListed() && box.contains(site.point))
       .sort(SiteFinder.#newestFirst)
       .slice(0, MAX_SITES)
@@ -33,7 +37,13 @@ export class SiteFinder {
     if (site === null) {
       throw new SiteNotFoundError(`No site ${siteId}`);
     }
-    return site.toFeature();
+    return this.#current(site).toFeature();
+  }
+
+  // Decision 20261010-1855: a lapsed site reads as expired before the scores CronJob marks the row.
+  #current(site: Site): Site {
+    site.expireIfLapsed(this.#clock.now());
+    return site;
   }
 
   static #newestFirst(a: Site, b: Site): number {

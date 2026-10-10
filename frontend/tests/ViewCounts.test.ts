@@ -37,4 +37,13 @@ describe('ViewCounts.of', () => {
     expect(elsewhere.types.waste_dump).toBe(1);
     expect(elsewhere.states).toEqual({ verified: 1, unverified: 0 });
   });
+
+  it('leaves out expired, cleaned and removed sites, which are off the map', () => {
+    const off = (['expired', 'cleaned', 'removed'] as const).map((status, n) =>
+      testSite({ site_id: `off_${n}`, report_type: 'waste_dump', verification: 'verified', status, coordinates: IN_VIEW }),
+    );
+    const counts = ViewCounts.of([...sites, ...off], VIEW, new SiteFilter());
+    expect(counts.types.waste_dump).toBe(2);
+    expect(counts.states).toEqual({ verified: 1, unverified: 2 });
+  });
 });

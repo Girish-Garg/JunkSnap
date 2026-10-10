@@ -58,6 +58,7 @@ export class SiteTemplate {
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,
+      cleanupPeople: [],
       withdrawnReports: [],
       version: 0,
     };

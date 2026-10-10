@@ -7,6 +7,7 @@ import { AreaLetterEvidence } from "../../domain/letters/AreaLetterEvidence.js";
 import { NotVerifiedError } from "../../domain/letters/errors.js";
 import type { Rule } from "../../domain/letters/Rule.js";
 import { Situation } from "../../domain/letters/Situation.js";
+import { isLapsed } from "../../domain/SiteExpiry.js";
 import type { Citation, Language, Requester } from "../../domain/letters/types.js";
 import type { Logger } from "../../ports/Logger.js";
 import type { AreaLetterBrief } from "../../ports/letters/AreaLetterWriter.js";
@@ -93,7 +94,10 @@ export class AreaLetterService {
     if (batch.unreadable > 0) {
       this.#parts.logger.warn({ area: request.area.toString(), unreadable: batch.unreadable }, "skipped sites that break the site contract");
     }
-    const sites = new AreaIssueSites(request.area, request.issue, batch.sites);
+    // Decision 20261010-1855: expired sites leave area letters, even before the CronJob marks them.
+    const now = this.#parts.stamp.now();
+    const current = batch.sites.filter((stored) => !isLapsed(stored.site.properties, now));
+    const sites = new AreaIssueSites(request.area, request.issue, current);
     if (!sites.hasSites()) {
       throw new AreaNotFoundError(`No reported sites in ${request.area.kind} ${request.area.id} yet`);
     }

@@ -12,7 +12,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, northOf, siteFixture } from "./builders.js";
-import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FixedClock, RecordingLogger } from "./fakes.js";
+import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, RecordingLogger } from "./fakes.js";
 
 function fail(): never {
   throw new Error("no stored internals");
@@ -22,6 +22,7 @@ function setup() {
   const sites = new FakeSiteRepository();
   const merger = new SiteMerger({
     sites,
+    votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(new FakeEmbeddings()),
     reports: new FakeReportStatus(),

@@ -11,6 +11,7 @@ import type { AreaFacts, SkippedRecord } from "../../src/ports/AreaFacts.js";
 import type { AreaReportReader } from "../../src/ports/AreaReportReader.js";
 import type { AreaSiteReader, SiteRead, UnreadableSite } from "../../src/ports/AreaSiteReader.js";
 import type { ScoreRepository } from "../../src/ports/ScoreRepository.js";
+import type { SiteExpirer } from "../../src/ports/SiteExpirer.js";
 import { AreaGrouper } from "../../src/services/AreaGrouper.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { ScoresJob } from "../../src/services/ScoresJob.js";
@@ -63,6 +64,20 @@ class FakeFacts implements AreaFacts {
   }
 }
 
+// Records the sites the job marks expired; a site in `refreshed` had a vote meanwhile, so the write is refused.
+class FakeExpirer implements SiteExpirer {
+  readonly expired: string[] = [];
+  readonly refreshed = new Set<string>();
+
+  async expire(siteId: string): Promise<boolean> {
+    if (this.refreshed.has(siteId)) {
+      return false;
+    }
+    this.expired.push(siteId);
+    return true;
+  }
+}
+
 // Validates like the Dynamo repository, so every row the job writes passes ward_scores, insights included.
 class InMemoryScores implements ScoreRepository {
   readonly rows = new Map<string, WardScores>();
@@ -81,7 +96,7 @@ class InMemoryScores implements ScoreRepository {
 function setup(sites: AreaSite[]) {
   const sink = new LogSink();
   const logger = new JsonLoggerFactory(sink).create({ service: "scores", stage: "dev" });
-  const ports = { sites: new FakeSites(sites), reports: new FakeReports(), facts: new FakeFacts(), scores: new InMemoryScores() };
+  const ports = { sites: new FakeSites(sites), reports: new FakeReports(), facts: new FakeFacts(), scores: new InMemoryScores(), expirer: new FakeExpirer() };
   return { ...ports, sink, job: new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger) };
 }
 
@@ -189,5 +204,42 @@ describe("runScores", () => {
 
   it("refuses to start without the table names", async () => {
     await expect(runScores(entryContext(new LogSink()))).rejects.toThrow(/SITES_TABLE/);
+  });
+});
+
+// Decision 20261010-1855: NOW is 2026-10-20, so a site last active 89 days ago stays and one 91 days ago expires.
+describe("ScoresJob site expiry", () => {
+  const daysBefore = (days: number) => new Date(NOW.getTime() - days * 86_400_000).toISOString();
+
+  it("marks a site with no activity for 91 days expired and leaves it out of the scores", async () => {
+    const { job, scores, expirer } = setup([
+      site({ siteId: "site_fresh", expiresAt: "2027-01-08T00:00:00Z", verifiedCount: 6 }),
+      site({ siteId: "site_old", expiresAt: daysBefore(1), verifiedCount: 5 }),
+      site({ siteId: "site_89", expiresAt: daysBefore(-1), verifiedCount: 1 }),
+    ]);
+    await job.run(NOW);
+    expect(expirer.expired).toEqual(["site_old"]);
+    expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts).toMatchObject({ verified_reports: 7, sites: 2, open_sites: 2 });
+  });
+
+  it("never expires a cleaned site, so it still counts as cleared", async () => {
+    const { job, scores, expirer } = setup([site({ status: "cleaned", cleanedAt: "2026-10-12T00:00:00Z", expiresAt: daysBefore(1) })]);
+    await job.run(NOW);
+    expect(expirer.expired).toEqual([]);
+    expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts).toMatchObject({ sites: 1, cleaned_sites: 1 });
+  });
+
+  it("keeps a site that a vote refreshed between the read and the write", async () => {
+    const { job, scores, expirer } = setup([site({ siteId: "site_voted", expiresAt: daysBefore(1) })]);
+    expirer.refreshed.add("site_voted");
+    await job.run(NOW);
+    expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts).toMatchObject({ sites: 1, open_sites: 1 });
+  });
+
+  it("skips a site the CronJob already marked, and never counts it", async () => {
+    const { job, scores, expirer } = setup([site({ status: "expired", expiresAt: daysBefore(5) })]);
+    await job.run(NOW);
+    expect(expirer.expired).toEqual([]);
+    expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts).toMatchObject({ sites: 0, verified_reports: 0 });
   });
 });

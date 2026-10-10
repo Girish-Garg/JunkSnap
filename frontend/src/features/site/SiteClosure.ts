@@ -1,4 +1,5 @@
 import type { SiteProperties } from '../../domain/Site';
+import { SiteLifecycle } from '../../domain/SiteLifecycle';
 
 /** Why a site takes no more votes, photos or letters; the key under site.closed.* in the i18n files. */
 export type ClosedReason =
@@ -12,10 +13,7 @@ export type ClosedReason =
   | 'binNow'
   | 'other';
 
-// Statuses that still take votes, cleanups and letters; every other status is off the active map.
-const ACTIVE: ReadonlySet<string> = new Set(['open', 'reopened']);
-
-// Off-map statuses with their own reason. expired is ready for the site TTL (#117); it is not in the contract yet.
+// Off-map statuses with their own reason; expired is the 90-day site expiry (decision 20261010-1855).
 const BY_STATUS: ReadonlyMap<string, ClosedReason> = new Map([
   ['removed', 'removed'],
   ['expired', 'expired'],
@@ -28,7 +26,7 @@ const BY_STATUS: ReadonlyMap<string, ClosedReason> = new Map([
 export class SiteClosure {
   static reasonOf(site: SiteProperties): ClosedReason | null {
     if (site.verification === 'rejected') return site.report_type === 'no_bin' ? 'rejectedNoBin' : 'rejected';
-    if (ACTIVE.has(site.status)) return null;
+    if (new SiteLifecycle(site).isActive()) return null;
     if (site.status === 'cleaned') return SiteClosure.#cleaned(site);
     return BY_STATUS.get(site.status) ?? 'other';
   }

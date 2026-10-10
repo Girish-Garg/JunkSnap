@@ -38,7 +38,7 @@ import {
   verification,
 } from "../reportFakes.js";
 import { northOf, siteFixture } from "../sites/builders.js";
-import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FixedClock as SiteClock } from "../sites/fakes.js";
+import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock as SiteClock } from "../sites/fakes.js";
 
 const USER = "7d4e2a91-6c35-4b8f-9e10-3a5c8b2f6d47";
 const SCAN = "scn_jdh_6";
@@ -87,6 +87,7 @@ function pipeline(verifier: MlVerifyClient): ReportPipeline {
   const journal = new Journal();
   const merger = new SiteMerger({
     sites,
+    votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(embeddings),
     reports: new FakeReportStatus(),

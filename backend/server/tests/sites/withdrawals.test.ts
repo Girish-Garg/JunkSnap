@@ -12,7 +12,8 @@ import { Site } from "../../src/domain/sites/Site.js";
 import { SiteRemovedError, SiteVerifiedError } from "../../src/domain/sites/SiteErrors.js";
 import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
-import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_A, DEVICE_B, DEVICE_C, northOf, report, siteFixture, userOf } from "./builders.js";
+import { afterPhoto, BASE_LAT, BASE_LON, BASE_URL, DEVICE_A, DEVICE_B, DEVICE_C, NO_VOTES, northOf, report, siteFixture, userOf } from "./builders.js";
+import { FixedClock } from "./fakes.js";
 import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
 
 const SITE = "site_jdh_1";
@@ -48,8 +49,8 @@ describe("withdrawing the only report", () => {
     expect(stored).toMatchObject({ status: "removed", removed_reason: "withdrawn", removed_at: "2026-10-10T06:00:00.000Z", report_count: 1 });
     expect(rig.sites.internals(SITE)).toMatchObject({ reports: [], withdrawnReports: ["rpt_jdh_1"] });
     expect(rig.withdrawer.withdrawn.get("rpt_jdh_1")).toBe("2026-10-10T06:00:00.000Z");
-    expect(await new SiteFinder(rig.sites, new NgeohashCells()).inBox(AROUND)).toEqual([]);
-    expect((await new SiteFinder(rig.sites, new NgeohashCells()).byId(SITE)).properties.photo_urls).toEqual([]);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toEqual([]);
+    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.photo_urls).toEqual([]);
     expect(stored.photo_urls).toEqual([`${BASE_URL}/media/reports/rpt_jdh_1.jpg`]);
   });
 
@@ -70,9 +71,10 @@ describe("withdrawing the only report", () => {
     const site = await rig.sites.get(SITE);
     expect(site?.accepts(neighbour())).toBe(false);
     expect(site?.holds("rpt_jdh_1")).toBe(true);
-    expect(() => site?.admitVoter({ deviceToken: DEVICE_C, userId: null }, new GeoPoint(BASE_LAT, BASE_LON))).toThrow(SiteRemovedError);
-    expect(() => site?.startCleanup("cln_x")).toThrow(SiteRemovedError);
-    expect(() => site?.acceptCleanup("cln_x", `${BASE_URL}/media/cleanups/cln_x.jpg`, LATER)).toThrow(SiteRemovedError);
+    const at = new Date(LATER);
+    expect(() => site?.admitVoter({ deviceToken: DEVICE_C, userId: null }, new GeoPoint(BASE_LAT, BASE_LON), "confirm", at)).toThrow(SiteRemovedError);
+    expect(() => site?.startCleanup("cln_x", at)).toThrow(SiteRemovedError);
+    expect(() => site?.acceptCleanup(afterPhoto("cleaner-1", LATER, "cln_x"), NO_VOTES)).toThrow(SiteRemovedError);
   });
 });
 
@@ -99,7 +101,7 @@ describe("withdrawing when other people back the site", () => {
       reporterIds: [userOf(DEVICE_B)],
       withdrawnReports: ["rpt_jdh_1"],
     });
-    expect(await new SiteFinder(rig.sites, new NgeohashCells()).inBox(AROUND)).toHaveLength(1);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toHaveLength(1);
   });
 
   it("re-centres a no-bin zone on the reports that stay", async () => {

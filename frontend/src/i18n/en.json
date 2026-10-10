@@ -118,7 +118,8 @@
     "open": "Open",
     "cleaned": "Cleared",
     "reopened": "Reopened",
-    "removed": "Withdrawn"
+    "removed": "Withdrawn",
+    "expired": "Expired"
   },
   "verification": {
     "verified": "Verified",
@@ -181,6 +182,7 @@
     "noWardLine": "Ward: not mapped yet; letters go to the city-wide body",
     "noWardShort": "Not mapped yet",
     "noWardLineShort": "Ward: not mapped yet",
+    "reportedCleaned": "Reported cleaned · {{count}} of {{needed}} confirmed",
     "binTitle": "Bins nearby",
     "closed": {
       "title": "No longer on the map",
@@ -190,7 +192,7 @@
       "rejectedNoBin": "Neighbours said there is a bin within 1 km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",
       "cleaned": "It was cleared, so it left the map. If the waste is back, report it with a new photo.",
       "cleanedByVotes": "Neighbours said it's cleared now, so it left the map. If the waste is back, report it with a new photo.",
-      "cleanedByPhoto": "A cleanup photo showed it cleared, so it left the map. If the waste is back, report it with a new photo.",
+      "cleanedByPhoto": "Three people said it's cleared, at least one with a cleanup photo, so it left the map. If the waste is back, report it with a new photo.",
       "binNow": "A bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
       "other": "This site is no longer on the map, so it takes no more votes or letters."
     }
@@ -583,7 +585,7 @@
       "failed": "The vote did not go through. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more.",
       "already_cleaned": "This site is already marked cleared.",
-      "not_found": "This site was withdrawn by its reporter, so it takes no more votes."
+      "not_found": "This site was withdrawn by its reporter or expired after 90 days without activity, so it takes no more votes."
     },
     "noBin": {
       "title": "Is there no dustbin within 1 km?",
@@ -606,12 +608,14 @@
     "status": {
       "checking": "Being checked",
       "accepted": "Cleared",
-      "rejected": "Not accepted"
+      "rejected": "Not accepted",
+      "pending_confirmation": "Counted"
     },
     "statusText": {
-      "checking": "The photo is blurred and checked like any report. The site shows as cleared once it passes.",
+      "checking": "The photo is blurred and checked like any report. Once it passes it counts as one person saying the site is cleared; 3 people clear it.",
       "accepted": "The site is now marked cleared. It reopens if someone reports waste here again.",
-      "rejected": "The photo did not show a cleared site, or it was taken too far away."
+      "rejected": "The photo did not show a cleared site, or it was taken too far away.",
+      "pending_confirmation": "Your photo counts as one person saying it is cleared. The site leaves the map once 3 different people say so."
     },
     "errors": {
       "cleanup_pending": "A cleanup photo for this site is already being checked.",
@@ -619,7 +623,8 @@
       "rate_limited": "Too many tries. Wait a little and try again.",
       "offline": "No connection. Try again when you are online.",
       "failed": "The photo did not go through. Try again.",
-      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+      "sign_in": "Your sign-in has expired. Sign in again and try once more.",
+      "not_found": "This site was withdrawn or expired after 90 days without activity, so it takes no cleanup photo."
     }
   },
   "letter": {
@@ -951,6 +956,18 @@
       "failed": "Could not delete it. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
+  },
+  "clearance": {
+    "title": "Reported cleaned",
+    "progress": "{{count}} of {{needed}} people say it's cleared",
+    "text": "The site leaves the map once {{needed}} different people say it is cleared. Have you seen it?",
+    "cleared": "It's cleared now",
+    "stillThere": "Still there"
+  },
+  "expiry": {
+    "left_one": "Expires in {{count}} day unless someone confirms it",
+    "left_other": "Expires in {{count}} days unless someone confirms it",
+    "today": "Expires today unless someone confirms it"
   },
   "feedback": {
     "title": "What we checked",

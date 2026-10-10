@@ -85,8 +85,8 @@ export class AreaLetterEvidence {
 
   static #site(site: Site["properties"]): WorstSite {
     const { site_id, report_type, context, status, report_count, verified_count } = site;
-    if (status === "removed") {
-      throw new InternalDataError(`${site_id} was removed and is never a worst site`);
+    if (status === "removed" || status === "expired") {
+      throw new InternalDataError(`${site_id} was ${status} and is never a worst site`);
     }
     return {
       site_id,

@@ -599,6 +599,11 @@ Resources:
                 Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem,
                   dynamodb:BatchWriteItem, dynamodb:DescribeTable]
                 Resource: !GetAtt ScoresTable.Arn
+              # Decision 20261010-1855: each run marks lapsed sites expired (one conditional update, no delete).
+              - Sid: ExpireSites
+                Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !GetAtt SitesTable.Arn
               # The newest crawled ward files (crawl/wards/), falling back to the image data/wards.
               - Sid: ListCrawledWards
                 Effect: Allow

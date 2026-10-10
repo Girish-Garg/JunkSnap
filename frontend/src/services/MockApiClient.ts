@@ -13,7 +13,7 @@ export class MockApiClient implements ApiClient {
     this.#loaders = loaders;
   }
 
-  /** Mirrors the API: rejected, removed and cleaned sites left out, newest first. */
+  /** Mirrors the API: rejected, removed, cleaned and expired sites left out, newest first. */
   async listSites(bbox: BBox): Promise<readonly SiteFeature[]> {
     const sites = await this.#allSites();
     return sites.filter(
