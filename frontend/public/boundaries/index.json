@@ -3,30 +3,42 @@
     "assembly": {
       "features": 200,
       "bytes": 344886,
-      "label_bytes": 25881,
+      "label_bytes": 26295,
       "tolerance_deg": 0.008,
       "sources": [
         "rajasthan_assembly.geojson"
-      ]
+      ],
+      "fine": {
+        "bytes": 618055,
+        "tolerance_deg": 0.0
+      }
     },
     "loksabha": {
       "features": 543,
       "bytes": 504462,
-      "label_bytes": 69902,
+      "label_bytes": 71231,
       "tolerance_deg": 0.024,
       "sources": [
         "india_loksabha.geojson"
-      ]
+      ],
+      "fine": {
+        "bytes": 684476,
+        "tolerance_deg": 0.0
+      }
     },
     "wards": {
       "features": 46,
       "bytes": 25399,
-      "label_bytes": 5907,
+      "label_bytes": 6228,
       "tolerance_deg": 0.0005,
       "sources": [
         "jaipur_wards.geojson",
         "jodhpur_wards.geojson"
       ],
+      "fine": {
+        "bytes": 58411,
+        "tolerance_deg": 0.0
+      },
       "attribution": "Approximate, unreviewed wards from the 2025 ward-formation orders (Rajasthan Gazette); places \u00a9 OpenStreetMap contributors (ODbL) and ECI polling stations (CC0 as declared by the ramSeraph/indian_facilities copy)",
       "coverage": [
         {
@@ -42,6 +54,20 @@
           "wards": 150
         }
       ]
+    },
+    "areas": {
+      "features": 718,
+      "bytes": 811455,
+      "label_bytes": 107146,
+      "tolerance_deg": 0.024,
+      "sources": [
+        "rajasthan_assembly.geojson",
+        "india_loksabha.geojson"
+      ],
+      "fine": {
+        "bytes": 1084624,
+        "tolerance_deg": 0.024
+      }
     }
   }
 }

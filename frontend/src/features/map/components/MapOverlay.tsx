@@ -29,12 +29,12 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
       {selection.preview && (
         <SitePreviewCard site={selection.preview} userLocation={page.location.position} onDetails={selection.openDetails} />
       )}
-      {!listMode && page.boundary.kind && (
+      {!listMode && page.boundary.view && (
         <LegendToggle>
-          <BoundaryLegend kind={page.boundary.kind} wardCoverage={page.boundary.wardCoverage} />
+          <BoundaryLegend />
         </LegendToggle>
       )}
-      {!listMode && <MapControls onLocate={page.location.locate} boundary={page.boundary} />}
+      {!listMode && <MapControls onLocate={page.location.locate} />}
       {desktop && <DesktopActions />}
     </>
   );
