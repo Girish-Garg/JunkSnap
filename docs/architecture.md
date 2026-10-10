@@ -136,7 +136,7 @@ The models report what the waste is, not only whether it exists (decision 202610
 - Composition, size and hazards come from YOLO's material classes and the embedding classifier first, Rekognition labels (Fire, Smoke) for burning. The judge only fills a gap the other models leave, and is then named as the source.
 - Nearby places: during the location step the worker measures the distance from the site to the `school`, `hospital`, `water` and `drain` features in the crawler's city-wide OpenStreetMap layers (`map_layers` in `data/wards/<city>.json`), so it works where the site has no ward.
 - Area insights: the `scores` CronJob counts verified reports and their sites in the data window. Shares and patterns follow the 10-verified-report guardrail; plain counts always show.
-- Insight models are evaluated only on the held-out field photos (decision 20261010-0200), like the verifier.
+- Insight models, like the verifier, are trained and evaluated on openly licensed public data only, on its fixed test split (decision 20261010-1245; `docs/ml/eval.md`). Field photos are not used for training or a holdout.
 
 ## 7. Model-agnostic LLM layer
 
@@ -180,7 +180,7 @@ City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sa
 - No photos of people dumping, and no names of individuals in any text.
 - Only blurred images go to any model on Bedrock, OpenAI or OpenRouter. A scan video never goes to a model. Personal text (the note) goes to Bedrock only.
 - `ml` reads only `media/` in the public bucket and writes only `embeddings/` in the private one.
-- Training and evaluation run offline and read only blurred copies: public datasets and `datasets/field/`, which holds the blurred field-audit copies, never originals. No pod can read `datasets/`.
+- Training and evaluation run offline on openly licensed public datasets only (decision 20261010-1245); field-audit photos are never copied into `datasets/`. No pod can read `datasets/`.
 - Accounts live in Cognito. Tables and logs hold only the opaque `user_id`, never a user's name or email; tokens are never logged.
 - Per-device tokens, rate limits, perceptual-hash duplicate checks, an India geofence and fresh timestamps.
 - Secrets live in Secrets Manager; nothing secret in the repo.
