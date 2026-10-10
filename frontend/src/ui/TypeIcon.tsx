@@ -4,6 +4,7 @@ import type { CartoonIconProps } from './icons/CartoonSvg';
 import { ConstructionIcon } from './icons/ConstructionIcon';
 import { DumpIcon } from './icons/DumpIcon';
 import { NoBinIcon } from './icons/NoBinIcon';
+import { OverflowingBinIcon } from './icons/OverflowingBinIcon';
 import { WaterIcon } from './icons/WaterIcon';
 
 const ICONS: Readonly<Record<ReportType, ComponentType<CartoonIconProps>>> = {
@@ -11,6 +12,7 @@ const ICONS: Readonly<Record<ReportType, ComponentType<CartoonIconProps>>> = {
   no_bin: NoBinIcon,
   contaminated_water: WaterIcon,
   open_construction: ConstructionIcon,
+  overflowing_bin: OverflowingBinIcon,
 };
 
 interface TypeIconProps {

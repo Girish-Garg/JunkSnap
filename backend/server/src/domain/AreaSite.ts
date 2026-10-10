@@ -3,7 +3,7 @@ import type { GeoPoint } from "./GeoPoint.js";
 import type { BrandSighting, CompositionEstimate, PlaceKind, SiteInsights } from "./SiteInsights.js";
 import { DAY_MS, istParts } from "./scoreUtils.js";
 
-export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction"] as const;
+export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] as const;
 export const SITE_STATUSES = ["open", "cleaned", "reopened"] as const;
 export const VERIFICATIONS = ["unverified", "verified", "rejected"] as const;
 

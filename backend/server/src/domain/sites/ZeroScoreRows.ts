@@ -48,6 +48,7 @@ export class ZeroScoreRows {
         cleared_within_7_days_pct: null,
         redumped_pct: null,
         no_bin_response_pct: null,
+        bin_service_pct: null,
         new_dumps_per_km2_month: null,
         share_vacant_plot_drain_roadside_pct: null,
         median_distance_to_disposal_m: null,

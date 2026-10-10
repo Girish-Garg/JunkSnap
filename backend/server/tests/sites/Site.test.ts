@@ -103,6 +103,14 @@ describe("Site.merge", () => {
     expect(site.accepts(report({ id: "jdh_2", reportType: "no_bin", context: "no_pickup" }))).toBe(false);
   });
 
+  it("merges overflowing or broken bins like any other type: same type within 40 m", () => {
+    const bin = { reportType: "overflowing_bin", context: "overflowing" } as const;
+    const site = Site.found(report(bin));
+    expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(39), context: "damaged" }))).toBe(true);
+    expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(41) }))).toBe(false);
+    expect(site.accepts(report({ id: "jdh_2" }))).toBe(false);
+  });
+
   it("counts reports, photos (newest first, at most 6) and time span", () => {
     const site = Site.found(report({ decision: "community_check" }));
     for (let n = 2; n <= 8; n += 1) {

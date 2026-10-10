@@ -13,6 +13,8 @@ export interface DiagnosisInput {
   readonly medianDaysToClear: number | null;
   readonly clearedWithin7DaysPct: number | null;
   readonly redumpedPct: number | null;
+  // Share of overflowing or broken bins serviced (scores-v3); a poor share is slow city response too.
+  readonly binServicePct: number | null;
 }
 
 // A missing input never triggers a diagnosis.
@@ -31,7 +33,8 @@ export class Diagnoser {
   #clearing(input: DiagnosisInput): Diagnosis[] {
     const found: Diagnosis[] = [];
     const slow = (input.medianDaysToClear ?? 0) > SLOW_DAYS;
-    if (slow || Diagnoser.#below(input.clearedWithin7DaysPct, POOR)) {
+    const unserviced = Diagnoser.#below(input.binServicePct, POOR);
+    if (slow || unserviced || Diagnoser.#below(input.clearedWithin7DaysPct, POOR)) {
       found.push("city_response");
     }
     if ((input.redumpedPct ?? 0) >= REPEAT_PCT) {

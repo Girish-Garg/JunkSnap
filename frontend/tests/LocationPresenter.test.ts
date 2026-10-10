@@ -18,6 +18,14 @@ describe('LocationPresenter', () => {
     expect(presenter.facts().map((fact) => fact.value)).toContain('site.noAssembly');
   });
 
+  it('says letters go to the city-wide body only when the site has a local body', () => {
+    const withBody = presenterFor({ location: { ward: null } });
+    expect(withBody.facts().find((fact) => fact.label === 'site.ward')?.value).toBe('site.noWard');
+    const withoutBody = presenterFor({ location: { ward: null, local_body: null } });
+    expect(withoutBody.line()).toMatch(/^site\.noWardLineShort · /);
+    expect(withoutBody.facts().find((fact) => fact.label === 'site.ward')?.value).toBe('site.noWardShort');
+  });
+
   it('leaves out an MP seat whose boundary is outdated', () => {
     const presenter = presenterFor({ location: { loksabha_seat: { id: 's03-pc-4', name: 'Guwahati', status: 'outdated' } } });
     expect(presenter.line()).toBe('Ward 37 · site.mla(Sardarpura)');

@@ -76,7 +76,8 @@
     "waste_dump": "Waste dump",
     "no_bin": "No bin or pickup",
     "contaminated_water": "Contaminated water",
-    "open_construction": "Open construction"
+    "open_construction": "Open construction",
+    "overflowing_bin": "Overflowing or broken bin"
   },
   "context": {
     "vacant_plot": "Vacant plot",
@@ -90,7 +91,9 @@
     "foam": "Foam",
     "choked_drain": "Choked drain",
     "uncovered_debris": "Uncovered debris",
-    "dusty_site": "Dusty site"
+    "dusty_site": "Dusty site",
+    "overflowing": "Overflowing",
+    "damaged": "Broken, burnt or no lid"
   },
   "status": {
     "open": "Open",
@@ -154,7 +157,9 @@
       "notMapped": "Bins not mapped here yet",
       "mappedNear": "A mapped bin is {{distance}} away (OpenStreetMap)"
     },
-    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body"
+    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body",
+    "noWardShort": "Not mapped yet",
+    "noWardLineShort": "Ward: not mapped yet"
   },
   "snap": {
     "title": "Report a waste site",
@@ -603,7 +608,8 @@
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
     "legendChip": "Legend",
-    "caveat": "Scores show after 10 verified reports"
+    "caveat": "Scores show after 10 verified reports",
+    "outdated": "Dashed outline: seat boundary out of date"
   },
   "ranking": {
     "open": "City ranking",
@@ -645,6 +651,7 @@
       "no_bin": "No bin",
       "contaminated_water": "Contaminated water",
       "open_construction": "Open construction",
+      "overflowing_bin": "Overflowing or broken bins",
       "all": "All issues"
     }
   },

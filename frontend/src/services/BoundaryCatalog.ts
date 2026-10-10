@@ -27,8 +27,8 @@ interface Manifest {
   readonly layers?: Readonly<Record<string, LayerEntry | undefined>>;
 }
 
-// Written by scripts/simplify_boundaries.py into public/boundaries/. The other layer files there
-// (assembly, loksabha, wards) stay for other uses; the map draws only this one.
+// Written by scripts/simplify_boundaries.py into public/boundaries/, which ships only the areas
+// layer (areas.geojson, areas_labels.geojson, areas_fine.geojson) and index.json.
 const AREAS = 'areas';
 const NONE: AreasIndex = { available: false, fine: false, attribution: null };
 

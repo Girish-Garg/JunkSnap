@@ -9,7 +9,8 @@ export type ReportUpload = {
    * From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent.
    */
   upload_id: string;
-  report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+  report_type:
+    "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
   /**
    * Allowed values depend on report_type; see allOf.
    */
@@ -25,7 +26,9 @@ export type ReportUpload = {
     | "foam"
     | "choked_drain"
     | "uncovered_debris"
-    | "dusty_site";
+    | "dusty_site"
+    | "overflowing"
+    | "damaged";
   /**
    * snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203).
    */
@@ -115,7 +118,8 @@ export const reportUploadSchema = {
         "waste_dump",
         "no_bin",
         "contaminated_water",
-        "open_construction"
+        "open_construction",
+        "overflowing_bin"
       ]
     },
     "context": {
@@ -131,7 +135,9 @@ export const reportUploadSchema = {
         "foam",
         "choked_drain",
         "uncovered_debris",
-        "dusty_site"
+        "dusty_site",
+        "overflowing",
+        "damaged"
       ],
       "description": "Allowed values depend on report_type; see allOf."
     },
@@ -366,6 +372,25 @@ export const reportUploadSchema = {
             "enum": [
               "uncovered_debris",
               "dusty_site"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "overflowing_bin"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "context": {
+            "enum": [
+              "overflowing",
+              "damaged"
             ]
           }
         }

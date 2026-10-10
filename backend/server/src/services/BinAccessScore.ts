@@ -13,9 +13,10 @@ export interface BinAccessMeasure {
 
 // scores-v3 bin access (decision 20261010-1630): the share of the area's verified sites that are verified no-bin zones
 // (10 people each), and the measured distance to known bins. no_bin_within_3km_pct stays a shown measure only.
+// overflowing_bin sites stand at a bin, so they would make an area look well served: never measured (decision 20261010-1645).
 export class BinAccessScore {
   measure(sites: AreaSites): BinAccessMeasure {
-    const verified = sites.verified();
+    const verified = sites.verified().filter((site) => !site.isType("overflowing_bin"));
     const measured = verified.filter((site) => site.binMeasured());
     const noBinWithin3kmPct = percent(measured.filter((site) => site.noBinNearby()).length, measured.length);
     const zoneSharePct = percent(verified.filter((site) => site.isType("no_bin")).length, verified.length);

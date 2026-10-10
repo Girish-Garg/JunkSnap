@@ -4,7 +4,7 @@ import type { ReportType } from './ReportType';
 import type { SiteStatus } from './Site';
 import type { LetterAddressee, LetterCc, LetterCitation, LetterEvidence, LetterLanguage } from './SiteActions';
 
-export const AREA_ISSUES = ['waste_dump', 'no_bin', 'contaminated_water', 'open_construction', 'all'] as const;
+export const AREA_ISSUES = ['waste_dump', 'no_bin', 'contaminated_water', 'open_construction', 'overflowing_bin', 'all'] as const;
 
 /** One report type, or every type at once. */
 export type AreaIssue = ReportType | 'all';

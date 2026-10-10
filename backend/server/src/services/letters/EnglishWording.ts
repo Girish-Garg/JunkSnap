@@ -18,6 +18,8 @@ const WHAT: Readonly<Record<SiteContext, string>> = {
   choked_drain: "a choked drain",
   uncovered_debris: "uncovered construction debris",
   dusty_site: "a dusty construction site",
+  overflowing: "an overflowing waste bin with waste spilling around it",
+  damaged: "a broken, burnt or uncovered waste bin",
 };
 
 const REQUEST: Readonly<Record<ReportType, string>> = {
@@ -25,6 +27,7 @@ const REQUEST: Readonly<Record<ReportType, string>> = {
   no_bin: "We request that waste bins be placed here and that regular collection be arranged.",
   contaminated_water: "We request that the water and drains here be cleaned and the source of contamination be checked.",
   open_construction: "We request that the debris be covered or removed and that dust control measures be enforced.",
+  overflowing_bin: "Please empty the bin regularly and repair or replace it.",
 };
 
 const OFFICE: Readonly<Record<CcLine["office"], string>> = {

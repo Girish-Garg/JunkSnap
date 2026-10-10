@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AreaMarkers } from '../src/features/map/AreaMarkers';
 import { AreaMarkerSource } from '../src/features/map/AreaMarkerSource';
-import { BadgeArt } from '../src/features/map/BadgeArt';
+import { BADGE_PALETTES, BadgeArt } from '../src/features/map/BadgeArt';
 import { BADGE_GLYPHS } from '../src/features/map/BadgeIcons';
 import { MarkerTooltip } from '../src/features/map/MarkerTooltip';
 import type { LabelPoints } from '../src/services/BoundaryCatalog';
@@ -105,8 +105,31 @@ describe('BadgeArt glyphs', () => {
       expect(drawn.length).toBeGreaterThan(100);
       for (const [dx, dy] of drawn) {
         const i = ((upper[1] + dy) * badge.width + 10 + dx) * 4;
-        expect([...badge.data.slice(i, i + 4)]).toEqual([95, 99, 104, 255]);
+        expect([...badge.data.slice(i, i + 4)]).toEqual([...BADGE_PALETTES.light.glyph, 255]);
       }
     }
+  });
+});
+
+describe('BadgeArt dark theme', () => {
+  const pixel = (badge: ReturnType<typeof BadgeArt.create>, x: number, y: number) => {
+    const i = (y * badge.width + x) * 4;
+    return [...badge.data.slice(i, i + 4)];
+  };
+
+  it('draws a dark tile with light glyphs, same size and stretch zones as the light badge', () => {
+    for (const kind of ['plain', 'score', 'count'] as const) {
+      const light = BadgeArt.create(kind);
+      const dark = BadgeArt.create(kind, true);
+      expect([dark.width, dark.height, dark.options]).toEqual([light.width, light.height, light.options]);
+      const right = dark.width - 18;
+      const middle = Math.floor(dark.height / 2);
+      expect(pixel(dark, right, middle)).toEqual([...BADGE_PALETTES.dark.fill, 255]);
+      expect(pixel(light, right, middle)).toEqual([...BADGE_PALETTES.light.fill, 255]);
+    }
+    const score = BadgeArt.create('score', true);
+    const top = (score.height - 24) / 2;
+    // Bar 3 of the score glyph covers x 16-21 at the glyph's row 20.
+    expect(pixel(score, 10 + 18, top + 20)).toEqual([...BADGE_PALETTES.dark.glyph, 255]);
   });
 });

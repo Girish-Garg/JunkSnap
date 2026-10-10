@@ -127,6 +127,8 @@ The judge (prompt `judge_v0`) on a fixed sample: the 184 QR4Change test photos (
 
 Claude Sonnet 4.6 and Haiku 4.5 were not run: Bedrock refuses them for this account until the Anthropic use-case form is submitted, so the judge order now tries Nova Lite before Nova Pro. Nova Pro's misses: 7 clean photos called a dump, and 10 dump photos called `no_bin`, `contaminated_water` or clean, or left unanswered. On this sample Nova Lite is both the most accurate and the cheapest, so `backend/ml` now tries it before Nova Pro (`settings/llm.py`; decision 20261010-0133 still lists the order).
 
+The `judge_v0` prompt text changed after this eval: it added the `overflowing_bin` type and dropped "a full or overflowing bin that was not emptied" from `no_bin` (decision 20261010-1645). The judge numbers above, and the meta-learner fitted on the judge's answers, describe the earlier prompt; they have not been re-run.
+
 ## Gaps and what would change these numbers
 
 - Public data only: no Jodhpur photo is trained on or evaluated, and QR4Change's clean photos include street scenes from outside India, so real-world accuracy in Jodhpur is not measured here.

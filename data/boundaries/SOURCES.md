@@ -37,7 +37,7 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 ## Wards: jodhpur_wards.geojson and jaipur_wards.geojson (approximate, unreviewed)
 
-**Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The web map layer (`frontend/public/boundaries/index.json`, `wards`) carries the same credit.
+**Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The wards are not on the web map: `frontend/public/boundaries` ships only the combined seats layer.
 
 **Display only until reviewed:** the map shows these wards (labelled unreviewed), but location lookups, scores and letters must not use them until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
 
@@ -110,7 +110,7 @@ Each feature is a GeoJSON Polygon or MultiPolygon in WGS 84, with these properti
 
 ## Web copies: frontend/public/boundaries
 
-`uv run scripts/simplify_boundaries.py` writes the map layers the web app draws: `assembly`, `loksabha` and, once any `*_wards.geojson` file is here, `wards` (each `<layer>.geojson` plus `<layer>_labels.geojson` and an `index.json` the app reads to know which layers exist). Each layer is simplified as one coverage, so neighbours keep shared edges, at the smallest tolerance that fits its byte budget; coordinates are rounded to 4 decimals (about 11 m). Only display properties are kept (`id`, `name`, plus `pc_id`, `status`, or the ward fields). Marker points (`<layer>_labels.geojson`) are each area's pole of inaccessibility (polylabel) on the original shape, so they always fall inside the area. `<layer>_fine.geojson` keeps the original edges (5 decimals) for zooms past 12 when it fits its budget; for Lok Sabha only the Rajasthan seats get fine edges. They are for drawing only: location lookups use the full files above. Rerun the script whenever a boundary file here changes. Same sources and licences as the files they come from.
+`uv run scripts/simplify_boundaries.py` writes the one layer the web map draws, `areas`: assembly seats in Rajasthan and Lok Sabha seats everywhere else (`areas.geojson`, `areas_labels.geojson`, `areas_fine.geojson` and an `index.json`; each feature carries its `kind`). Each source layer is first simplified as one coverage, so neighbours keep shared edges, at the smallest tolerance that fits its byte budget; coordinates are rounded to 4 decimals (about 11 m). Where the two layers meet on the Rajasthan border, the outside Lok Sabha seats are cut back from the assembly seats and the slivers between them are given to the bordering outside seat. Only display properties are kept. Marker points are each area's pole of inaccessibility (polylabel) on the original shape, so they always fall inside the area. `areas_fine.geojson` keeps the original Rajasthan assembly edges (5 decimals) for zooms past 12. Ward files are not drawn and not copied. These copies are for drawing only: location lookups use the full files above. Rerun the script whenever a boundary file here changes. Same sources and licences as the files they come from.
 
 ## india_outline.geojson
 

@@ -7,4 +7,5 @@ export const REPORT_CONTEXTS: Readonly<Record<ReportType, readonly SiteContext[]
   no_bin: ['no_bin', 'no_pickup'],
   contaminated_water: ['stagnant', 'sewage', 'foam', 'choked_drain'],
   open_construction: ['uncovered_debris', 'dusty_site'],
+  overflowing_bin: ['overflowing', 'damaged'],
 };

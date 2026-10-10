@@ -60,9 +60,9 @@
           "additionalProperties": false,
           "required": ["report_type", "context", "burning", "readable_brands", "rationale"],
           "properties": {
-            "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "not_waste"] },
+            "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin", "not_waste"] },
             "context": {
-              "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", null]
+              "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged", null]
             },
             "burning": { "type": "boolean" },
             "readable_brands": { "type": "array", "items": { "type": "string" }, "description": "Brand text the judge could read. A hint for the brand step only." },

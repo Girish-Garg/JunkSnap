@@ -13,6 +13,7 @@ REPORT_CONTEXTS: Mapping[str, frozenset[str]] = MappingProxyType(
         "no_bin": frozenset({"no_bin", "no_pickup"}),
         "contaminated_water": frozenset({"stagnant", "sewage", "foam", "choked_drain"}),
         "open_construction": frozenset({"uncovered_debris", "dusty_site"}),
+        "overflowing_bin": frozenset({"overflowing", "damaged"}),
     }
 )
 NOT_WASTE = "not_waste"
