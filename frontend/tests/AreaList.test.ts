@@ -78,29 +78,49 @@ describe('HttpAreaApi.list', () => {
 });
 
 describe('BoundaryCatalog', () => {
-  it('offers only the kinds the boundary index lists, wards once their file exists', async () => {
-    const index = (layers: object) => async () => Response.json({ layers });
-    expect(await new BoundaryCatalog('/b', index({ assembly: {}, loksabha: {} })).index()).toEqual({
-      kinds: ['assembly', 'loksabha'],
-      wardCoverage: [],
+  const index = (layers: object) => async () => Response.json({ layers });
+
+  it('reads the areas layer from the index: present, fine edges and credit', async () => {
+    const layers = { areas: { fine: { bytes: 1 }, attribution: 'Seats' }, wards: {} };
+    expect(await new BoundaryCatalog('/b', index(layers)).index()).toEqual({
+      available: true,
+      fine: true,
+      attribution: 'Seats',
     });
-    const coverage = [{ body: 'jodhpur-mc', town: 'Jodhpur', mapped: 34, wards: 100 }];
-    expect(await new BoundaryCatalog('/b', index({ wards: { coverage }, assembly: {} })).index()).toEqual({
-      kinds: ['ward', 'assembly'],
-      wardCoverage: coverage,
+    expect(await new BoundaryCatalog('/b', index({ areas: {} })).index()).toEqual({
+      available: true,
+      fine: false,
+      attribution: null,
     });
   });
 
-  it('offers nothing when the index cannot be read', async () => {
+  it('draws nothing without an areas layer or a readable index', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const empty = { kinds: [], wardCoverage: [] };
-    expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).index()).toEqual(empty);
-    expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).index()).toEqual(empty);
+    const none = { available: false, fine: false, attribution: null };
+    expect(await new BoundaryCatalog('/b', index({ assembly: {}, wards: {} })).index()).toEqual(none);
+    expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).index()).toEqual(none);
+    expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).index()).toEqual(none);
+  });
+});
+
+describe('BoundaryCatalog files', () => {
+  it('names the areas files', () => {
+    const catalog = new BoundaryCatalog('https://app.example.test/boundaries');
+    expect(catalog.polygonsUrl()).toBe('https://app.example.test/boundaries/areas.geojson');
+    expect(catalog.fineUrl()).toBe('https://app.example.test/boundaries/areas_fine.geojson');
+    expect(catalog.labelsUrl()).toBe('https://app.example.test/boundaries/areas_labels.geojson');
   });
 
-  it('names the simplified files', () => {
-    const catalog = new BoundaryCatalog('https://app.example.test/boundaries');
-    expect(catalog.polygonsUrl('ward')).toBe('https://app.example.test/boundaries/wards.geojson');
-    expect(catalog.labelsUrl('loksabha')).toBe('https://app.example.test/boundaries/loksabha_labels.geojson');
+  it('loads the marker points, and fails loudly when they are missing', async () => {
+    const points = { type: 'FeatureCollection', features: [] };
+    const calls: string[] = [];
+    const ok = new BoundaryCatalog('/b/', async (input) => {
+      calls.push(String(input));
+      return Response.json(points);
+    });
+    expect(await ok.labels()).toEqual(points);
+    expect(calls).toEqual(['/b/areas_labels.geojson']);
+    const missing = new BoundaryCatalog('/b/', async () => new Response('', { status: 404 }));
+    await expect(missing.labels()).rejects.toThrow('404');
   });
 });

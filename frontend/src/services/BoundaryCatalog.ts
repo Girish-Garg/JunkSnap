@@ -1,29 +1,38 @@
-import { BOUNDARY_KINDS, type BoundaryKind } from '../domain/AreaListing';
+import type { FeatureCollection, Point } from 'geojson';
 
 type Fetch = typeof fetch;
 
-/** How many of a local body's wards the ward layer maps; `wards` is null when the count is unknown. */
-export interface WardCoverage {
-  readonly town: string;
-  readonly mapped: number;
-  readonly wards: number | null;
+/** The map's areas layer: whether it exists, has an original-edge file for close zooms, and its credit. */
+export interface AreasIndex {
+  readonly available: boolean;
+  readonly fine: boolean;
+  readonly attribution: string | null;
 }
 
-/** Which boundary kinds have a file, and how complete the ward layer is. */
-export interface BoundaryIndex {
-  readonly kinds: readonly BoundaryKind[];
-  readonly wardCoverage: readonly WardCoverage[];
+/** The kind of seat an area of the map is; assembly where seats exist, Lok Sabha elsewhere. */
+export type MapAreaKind = 'assembly' | 'loksabha';
+
+/** One marker point per area (its pole of inaccessibility), with the area id, name and kind. */
+export type LabelPoints = FeatureCollection<
+  Point,
+  { readonly id: string; readonly name: string; readonly kind: MapAreaKind }
+>;
+
+interface LayerEntry {
+  readonly fine?: unknown;
+  readonly attribution?: string;
 }
 
 interface Manifest {
-  readonly layers?: Readonly<Record<string, { readonly coverage?: readonly WardCoverage[] } | undefined>>;
+  readonly layers?: Readonly<Record<string, LayerEntry | undefined>>;
 }
 
-// File names written by scripts/simplify_boundaries.py into public/boundaries/.
-const FILES: Readonly<Record<BoundaryKind, string>> = { ward: 'wards', assembly: 'assembly', loksabha: 'loksabha' };
-const EMPTY: BoundaryIndex = { kinds: [], wardCoverage: [] };
+// Written by scripts/simplify_boundaries.py into public/boundaries/. The other layer files there
+// (assembly, loksabha, wards) stay for other uses; the map draws only this one.
+const AREAS = 'areas';
+const NONE: AreasIndex = { available: false, fine: false, attribution: null };
 
-/** The simplified boundary files served with the app; wards appear once the crawler's files are simplified. */
+/** The boundary files served with the app. */
 export class BoundaryCatalog {
   readonly #baseUrl: string;
   readonly #fetch: Fetch;
@@ -38,25 +47,37 @@ export class BoundaryCatalog {
     return new URL(`${import.meta.env.BASE_URL}boundaries/`, globalThis.location.href).href;
   }
 
-  /** Kinds with a file, in BOUNDARY_KINDS order, and ward coverage; nothing when the index cannot be read. */
-  async index(): Promise<BoundaryIndex> {
+  /** What the index says about the areas layer; nothing when it cannot be read. */
+  async index(): Promise<AreasIndex> {
     try {
       const response = await this.#fetch(`${this.#baseUrl}index.json`);
-      if (!response.ok) return EMPTY;
-      const layers = ((await response.json()) as Manifest).layers ?? {};
-      const kinds = BOUNDARY_KINDS.filter((kind) => layers[FILES[kind]] !== undefined);
-      return { kinds, wardCoverage: layers[FILES.ward]?.coverage ?? [] };
+      if (!response.ok) return NONE;
+      const entry = ((await response.json()) as Manifest).layers?.[AREAS];
+      if (!entry) return NONE;
+      return { available: true, fine: entry.fine !== undefined, attribution: entry.attribution ?? null };
     } catch (error) {
       console.error('Could not read the boundary index', error);
-      return EMPTY;
+      return NONE;
     }
   }
 
-  polygonsUrl(kind: BoundaryKind): string {
-    return `${this.#baseUrl}${FILES[kind]}.geojson`;
+  /** The marker points; the map joins each area's value onto them. */
+  async labels(): Promise<LabelPoints> {
+    const response = await this.#fetch(this.labelsUrl());
+    if (!response.ok) throw new Error(`Could not load the area markers: ${response.status}`);
+    return (await response.json()) as LabelPoints;
   }
 
-  labelsUrl(kind: BoundaryKind): string {
-    return `${this.#baseUrl}${FILES[kind]}_labels.geojson`;
+  polygonsUrl(): string {
+    return `${this.#baseUrl}${AREAS}.geojson`;
+  }
+
+  /** Original edges for close zooms, when the index lists them. */
+  fineUrl(): string {
+    return `${this.#baseUrl}${AREAS}_fine.geojson`;
+  }
+
+  labelsUrl(): string {
+    return `${this.#baseUrl}${AREAS}_labels.geojson`;
   }
 }
