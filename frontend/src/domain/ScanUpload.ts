@@ -36,10 +36,15 @@ export interface ScanHints {
   readonly detections: readonly ScanHintDetection[];
 }
 
+/** auto (contracts v1.10): the models name the type (an area scout) or only the place, frame by frame. */
+export const AUTO = 'auto';
+export type ScanType = ReportType | typeof AUTO;
+export type ScanPlace = SiteContext | typeof AUTO;
+
 /** One finished recording, before it has a scan_id. */
 export interface ScanDraft {
-  readonly report_type: ReportType;
-  readonly context: SiteContext;
+  readonly report_type: ScanType;
+  readonly context: ScanPlace;
   readonly started_at: string;
   readonly ended_at: string;
   readonly duration_ms: number;
@@ -70,8 +75,8 @@ export interface ScanPresignResponse {
 export interface ScanSession {
   readonly scan_id: string;
   readonly device_token: string;
-  readonly report_type: ReportType;
-  readonly context: SiteContext;
+  readonly report_type: ScanType;
+  readonly context: ScanPlace;
   readonly started_at: string;
   readonly ended_at: string;
   readonly duration_ms: number;
@@ -94,6 +99,28 @@ export interface ScanFrames {
   readonly dropped_no_fix: number;
 }
 
+/** added: in a verified site; waiting: on the map, waiting for neighbours; skipped: a repeat view or a photo moderation stopped. */
+export type FrameResult = 'checking' | 'added' | 'waiting' | 'not_waste' | 'skipped' | 'hidden' | 'failed' | 'withdrawn';
+
+/** One frame of a scan and what became of it. */
+export interface FrameFinding {
+  readonly report_id: string;
+  readonly t_ms: number;
+  readonly result: FrameResult;
+  readonly report_type: ReportType;
+  readonly site_id: string | null;
+  /** The public blurred copy; null when moderation stopped the frame. */
+  readonly blurred_url: string | null;
+}
+
+/** GET /scans/{id} found: only frames the models passed count, and each site once. */
+export interface ScanFound {
+  readonly sites: number;
+  readonly by_type: Readonly<Partial<Record<ReportType, number>>>;
+  readonly checking: number;
+  readonly frames: readonly FrameFinding[];
+}
+
 /** GET /scans/{id}, the fields the app reads. */
 export interface ScanStatusView {
   readonly scan_id: string;
@@ -101,5 +128,7 @@ export interface ScanStatusView {
   readonly reason: string | null;
   readonly frames: ScanFrames | null;
   readonly report_ids: readonly string[];
+  /** Null until the worker is done cutting frames; absent from an older api. */
+  readonly found?: ScanFound | null;
   readonly updated_at: string;
 }

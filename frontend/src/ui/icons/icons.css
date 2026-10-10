@@ -71,6 +71,11 @@
   --type-colour: var(--type-overflowing);
 }
 
+/* The area scout chip: the glass finds waste of any type, so it takes the accent. */
+.type-icon--auto {
+  --type-colour: var(--accent);
+}
+
 /* In dark mode the outline lightens so the icon still reads on charcoal. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .type-icon {

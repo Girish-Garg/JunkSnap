@@ -21,6 +21,7 @@ class Purpose(ABC):
     media_folder: str
     requires_judge: bool
     reports_insights: bool
+    accepts_auto_claims: bool = True  # scan frames whose type or place the judge names
 
     @abstractmethod
     def support(self, waste_score: float) -> float:
@@ -70,9 +71,9 @@ class ReportPurpose(Purpose):
         return ""
 
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
-        if verdict.report_type == claim.report_type:
+        if claim.matches(verdict.report_type):
             return verdict.confidence
-        if verdict.report_type == NOT_WASTE:
+        if claim.denies(verdict.report_type):
             return 1.0 - verdict.confidence
         return OTHER_TYPE_SUPPORT
 
@@ -106,6 +107,7 @@ class CleanupPurpose(Purpose):
     media_folder = "media/cleanups/"
     requires_judge = True
     reports_insights = False  # the contract keeps insights null for cleanups
+    accepts_auto_claims = False  # a cleanup checks a known site
 
     def support(self, waste_score: float) -> float:
         return 1.0 - waste_score

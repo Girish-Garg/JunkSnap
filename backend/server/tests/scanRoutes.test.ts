@@ -12,7 +12,9 @@ import { ScanSessionRules } from "../src/services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../src/services/ScanUploadPresigner.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
-import { FakeScanQueue, FakeScanRepository, FakeUploadSigner, NOW, sampleSession, USER_ID } from "./scanFakes.js";
+import { ScanFindings } from "../src/domain/scout/ScanFindings.js";
+import { PublicMedia } from "../src/domain/sites/PublicMedia.js";
+import { FakeFrameOutcomeReader, FakeScanQueue, FakeScanRepository, FakeUploadSigner, NOW, sampleSession, USER_ID } from "./scanFakes.js";
 
 const DEVICE = "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63";
 const OTHER_USER = "5b0e2c4d-7a91-4f3e-8c6d-2e1f0a9b8c7d";
@@ -35,6 +37,7 @@ let app: FastifyInstance;
 let scans: FakeScanRepository;
 let queue: FakeScanQueue;
 let signer: FakeUploadSigner;
+let outcomes: FakeFrameOutcomeReader;
 
 beforeEach(async () => {
   scans = new FakeScanRepository();
@@ -42,7 +45,9 @@ beforeEach(async () => {
   signer = new FakeUploadSigner();
   const now = (): Date => NOW;
   const presigner = new ScanUploadPresigner(signer, { ttlSeconds: 300, now, newScanId: () => "scn_01k7abc" });
-  const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), now });
+  outcomes = new FakeFrameOutcomeReader();
+  const findings = new ScanFindings(new PublicMedia("https://cdn.example"));
+  const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), outcomes, findings, now });
   const guard = new RouteGuard(new FakeAuthenticator());
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
@@ -130,6 +135,15 @@ describe("POST /scans", () => {
     expect(queue.messages).toEqual([{ kind: "scan", scan_id: "scn_jpr_1" }]);
   });
 
+  it.each([
+    ["an area scout", { report_type: "auto", context: "auto" }],
+    ["a picked type with an automatic place", { report_type: "overflowing_bin", context: "auto" }],
+  ])("accepts %s (contracts v1.10)", async (_case, change) => {
+    const response = await post("/scans", { ...sampleSession(), ...change });
+    expect(response.statusCode).toBe(202);
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject(change);
+  });
+
   it("takes user_id from the verified token, never from the body", async () => {
     await post("/scans", sampleSession({ user_id: "chosen-by-the-phone" }));
     expect(scans.rows.get("scn_jpr_1")?.user_id).toBe(USER_ID);
@@ -161,6 +175,8 @@ describe("POST /scans", () => {
     ["an empty gps_track", { gps_track: [] }, "gps_track"],
     ["a fix without accuracy", { gps_track: [{ t_ms: 0, lat: 26.85, lon: 75.81 }] }, "accuracy_m"],
     ["a context that does not fit the type", { context: "sewage" }, "context"],
+    ["an area scout with a picked place", { report_type: "auto", context: "vacant_plot" }, "context"],
+    ["a no-bin scan with an automatic place", { report_type: "no_bin", context: "auto" }, "context"],
     ["a video over 60 s", { duration_ms: 60_001 }, "duration_ms"],
     ["fixes out of order", { gps_track: [...sampleSession().gps_track].reverse() }, "t_ms must increase"],
     ["too few fixes", { gps_track: sampleSession().gps_track.slice(0, 3) }, "at least 8 fixes"],
@@ -187,9 +203,41 @@ describe("GET /scans/{id}", () => {
       reason: null,
       frames,
       report_ids: ["rpt_a"],
+      found: { sites: 0, by_type: {}, checking: 0, frames: [] },
       received_at: NOW.toISOString(),
       updated_at: "2026-10-10T04:02:52Z",
     });
+  });
+
+  it("has no found summary until the worker is done cutting frames", async () => {
+    await post("/scans", sampleSession());
+    expect((await get("scn_jpr_1")).json()).toMatchObject({ status: "queued", found: null });
+  });
+
+  it("counts sites the passed frames landed in, by type, and shows every frame's result", async () => {
+    await post("/scans", sampleSession());
+    const media = (id: string) => ({ outcome: "passed", blurred_key: `media/reports/${id}.jpg` });
+    const rows = [
+      { report_id: "rpt_a", status: "unverified", report_type: "waste_dump", site_id: "site_1", scan: { t_ms: 0 }, moderation_result: media("rpt_a") },
+      { report_id: "rpt_b", status: "unverified", report_type: "waste_dump", site_id: "site_1", scan: { t_ms: 1000 }, moderation_result: media("rpt_b") },
+      { report_id: "rpt_c", status: "verified", report_type: "overflowing_bin", site_id: "site_2", scan: { t_ms: 2000 }, moderation_result: media("rpt_c") },
+      { report_id: "rpt_d", status: "rejected", report_type: "waste_dump", scan: { t_ms: 3000 }, moderation_result: media("rpt_d") },
+      { report_id: "rpt_e", status: "rejected", report_type: "waste_dump", scan: { t_ms: 4000 }, moderation_result: { outcome: "rejected", blurred_key: null } },
+      { report_id: "rpt_f", status: "processing", report_type: "waste_dump", scan: { t_ms: 5000 } },
+      { report_id: "rpt_g", status: "withdrawn", report_type: "waste_dump", site_id: "site_3", scan: { t_ms: 6000 }, moderation_result: media("rpt_g") },
+    ];
+    rows.forEach((row) => outcomes.rows.set(row.report_id, row));
+    const ids = rows.map((row) => row.report_id);
+    await scans.update("scn_jpr_1", { status: "done", reason: null, report_ids: ids, updated_at: "2026-10-10T04:02:52Z" });
+    const found = (await get("scn_jpr_1")).json().found;
+    expect(found).toMatchObject({ sites: 2, by_type: { waste_dump: 1, overflowing_bin: 1 }, checking: 1 });
+    const results = found.frames.map((frame: { result: string }) => frame.result);
+    expect(results).toEqual(["waiting", "waiting", "added", "not_waste", "skipped", "checking", "withdrawn"]);
+    expect(found.frames[0]).toEqual({
+      report_id: "rpt_a", t_ms: 0, result: "waiting", report_type: "waste_dump", site_id: "site_1",
+      blurred_url: "https://cdn.example/media/reports/rpt_a.jpg",
+    });
+    expect(found.frames[4].blurred_url).toBeNull();
   });
 
   it.each([
@@ -212,6 +260,7 @@ describe("buildScanRoutes", () => {
     REPORTS_QUEUE_URL: "https://sqs.ap-south-1.amazonaws.com/1/junksnap-dev-reports",
     SCANS_TABLE: "junksnap-dev-scans",
     REPORTS_TABLE: "junksnap-dev-reports",
+    PUBLIC_BASE_URL: "https://d111111abcdef8.cloudfront.net",
   };
   const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1" };
 

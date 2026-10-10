@@ -1,5 +1,5 @@
-import type { AcceptedScan, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatus, ScanStatusView } from '../domain/ScanUpload';
-import { VIDEO_EXTENSIONS } from '../domain/ScanUpload';
+import type { AcceptedScan, ScanFound, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatus, ScanStatusView } from '../domain/ScanUpload';
+import { AUTO, VIDEO_EXTENSIONS } from '../domain/ScanUpload';
 import { isoSeconds } from '../domain/utils';
 import type { ScanApi } from './ScanApi';
 
@@ -45,7 +45,18 @@ export class MockScanApi implements ScanApi {
     if (status !== 'done') return { scan_id: scanId, status, reason: null, frames: null, report_ids: [], updated_at };
     const sampled = Math.max(1, Math.floor((this.#sessions.get(scanId)?.duration_ms ?? 1000) / 1000));
     const report_ids = Array.from({ length: sampled }, (_, i) => `rpt_${scanId.slice(4)}_${i}`);
-    return { scan_id: scanId, status, reason: null, frames: { sampled, kept: sampled, dropped_no_fix: 0 }, report_ids, updated_at };
+    const found = MockScanApi.#found(report_ids, this.#sessions.get(scanId)?.report_type);
+    return { scan_id: scanId, status, reason: null, frames: { sampled, kept: sampled, dropped_no_fix: 0 }, report_ids, found, updated_at };
+  }
+
+  // Sample result: the first frame lands on the map waiting for neighbours; the rest repeat its view.
+  static #found(reportIds: readonly string[], type: ScanSession['report_type'] = AUTO): ScanFound {
+    const reportType = type === AUTO ? 'waste_dump' : type;
+    const frames = reportIds.map((report_id, i) => ({
+      report_id, t_ms: i * 1000, result: i === 0 ? 'waiting' : 'skipped', report_type: reportType,
+      site_id: i === 0 ? 'site_sample_scan' : null, blurred_url: null,
+    }) as const);
+    return { sites: 1, by_type: { [reportType]: 1 }, checking: 0, frames };
   }
 
   #wait(): Promise<void> {

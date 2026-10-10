@@ -8,7 +8,7 @@ from ml.domain.purposes import Purpose
 from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
-from ml.services.judge_decides_combiner import JudgeDecidesCombiner
+from ml.services.judge_decides_combiner import AUTO_CLAIM_REASON, JudgeDecidesCombiner
 
 # Same rule as the fixed-weight combiner: scores this far apart strongly disagree.
 DISAGREEMENT_GAP = 0.5
@@ -35,7 +35,7 @@ class MetaLearnerCombiner(Combiner):
     def for_claim(self, claim: Claim) -> Combiner:
         """A type with no training rows goes to the judge, on the v0 fixed weights."""
         if self._model.covers(claim.report_type):
-            return self
+            return JudgeDecidesCombiner(self, AUTO_CLAIM_REASON) if claim.judge_required else self
         reason = f"meta-learner has no training rows for {claim.report_type}; judge decides"
         return JudgeDecidesCombiner(FixedWeightCombiner(self._thresholds), reason)
 

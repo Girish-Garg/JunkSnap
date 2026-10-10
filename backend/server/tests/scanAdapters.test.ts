@@ -8,6 +8,7 @@ import { NoSuchKey, S3Client } from "@aws-sdk/client-s3";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { afterEach, describe, expect, it } from "vitest";
+import { DynamoFrameOutcomeReader } from "../src/adapters/DynamoFrameOutcomeReader.js";
 import { DynamoFrameReportRepository } from "../src/adapters/DynamoFrameReportRepository.js";
 import { DynamoScanRepository } from "../src/adapters/DynamoScanRepository.js";
 import { FramecrcParser } from "../src/adapters/FramecrcParser.js";
@@ -154,6 +155,45 @@ describe("DynamoFrameReportRepository", () => {
       Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z", completed_steps: [], version: 1 },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
+  });
+});
+
+describe("DynamoFrameReportRepository scout rows", () => {
+  it("writes the table-only auto_claim and scan_spot attributes when a frame has them", async () => {
+    const dynamo = new FakeAwsClient().reply(() => ({}));
+    const reports = new DynamoFrameReportRepository(dynamo.as<DynamoDBDocumentClient>(), "junksnap-dev-reports");
+    const upload = { upload_id: "upl_b", report_type: "waste_dump", context: "other", capture_mode: "scan" } as ReportUpload;
+    await reports.createQueued({ report_id: "rpt_b", upload, received_at: "2026-10-10T04:03:00Z", auto_claim: "type", scan_spot: 0 });
+    expect(dynamo.inputs[0]).toMatchObject({ Item: { report_id: "rpt_b", auto_claim: "type", scan_spot: 0, report_type: "waste_dump" } });
+  });
+});
+
+describe("DynamoFrameOutcomeReader", () => {
+  const key = (id: string) => ({ report_id: id });
+
+  it("reads the frame rows in one batch, asking again for unprocessed keys", async () => {
+    const dynamo = new FakeAwsClient()
+      .reply(() => ({ Responses: { t: [{ report_id: "rpt_a", status: "queued" }] }, UnprocessedKeys: { t: { Keys: [key("rpt_b")] } } }))
+      .reply(() => ({ Responses: { t: [{ report_id: "rpt_b", status: "verified" }] } }));
+    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t");
+    expect(await reader.outcomes(["rpt_a", "rpt_b"])).toEqual([
+      { report_id: "rpt_a", status: "queued" },
+      { report_id: "rpt_b", status: "verified" },
+    ]);
+    expect(dynamo.inputs[0]).toMatchObject({ RequestItems: { t: { Keys: [key("rpt_a"), key("rpt_b")] } } });
+    expect(dynamo.inputs[1]).toMatchObject({ RequestItems: { t: { Keys: [key("rpt_b")] } } });
+  });
+
+  it("asks for nothing without report ids and fails when keys stay unprocessed or the call fails", async () => {
+    const stuck = () => ({ UnprocessedKeys: { t: { Keys: [key("rpt_a")] } } });
+    const dynamo = new FakeAwsClient().reply(stuck).reply(stuck).reply(stuck).reply(() => {
+      throw new Error("throttled");
+    });
+    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t");
+    expect(await reader.outcomes([])).toEqual([]);
+    await expect(reader.outcomes(["rpt_a"])).rejects.toThrow(ExternalServiceError);
+    await expect(reader.outcomes(["rpt_a"])).rejects.toThrow(ExternalServiceError);
+    expect(dynamo.inputs).toHaveLength(4);
   });
 });
 

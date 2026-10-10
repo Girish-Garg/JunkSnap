@@ -1,4 +1,4 @@
-import type { ReportUpload } from "../contracts/index.gen.js";
+import type { VerifyClaim } from "./scout/AutoClaim.js";
 
 export interface VerifyFeatures {
   readonly gps_accuracy_m: number;
@@ -11,7 +11,7 @@ export interface VerifyRequest {
   readonly report_id: string;
   readonly purpose: "report" | "cleanup";
   readonly blurred_key: string;
-  readonly report_type: ReportUpload["report_type"];
-  readonly context: ReportUpload["context"];
+  readonly report_type: VerifyClaim["report_type"];
+  readonly context: VerifyClaim["context"];
   readonly features: VerifyFeatures;
 }
