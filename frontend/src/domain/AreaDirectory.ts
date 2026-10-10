@@ -14,10 +14,14 @@ const MAX_DISTRICTS = 3;
 
 /** The Areas tab's list: every reported area of the pilot city and of the map's own districts, from GET /areas/{kind}. */
 export class AreaDirectory {
-  /** The district ids to list: the pilot city first, then the districts of the sites around the map. */
+  /**
+   * The district ids to list: the pilot city first, then the districts of the sites around the map in id order,
+   * so the same districts always make the same requests, whatever order the sites arrived in.
+   */
   static districts(pilotId: string, sites: readonly SiteFeature[]): readonly string[] {
-    const ids = new Set([pilotId, ...sites.map((site) => site.properties.location.district.id)]);
-    return [...ids].slice(0, MAX_DISTRICTS);
+    const others = new Set(sites.map((site) => site.properties.location.district.id));
+    others.delete(pilotId);
+    return [pilotId, ...[...others].sort()].slice(0, MAX_DISTRICTS);
   }
 
   /** Each area once, smallest kind first, then by name. */

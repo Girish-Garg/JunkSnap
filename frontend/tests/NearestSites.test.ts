@@ -46,6 +46,10 @@ describe('AreaDirectory', () => {
     const jaipur = testSite({ location: { district: { id: 'rajasthan-jaipur', name: 'Jaipur' } } });
     expect(AreaDirectory.districts('rajasthan-jodhpur', [])).toEqual(['rajasthan-jodhpur']);
     expect(AreaDirectory.districts('rajasthan-jodhpur', [jaipur, JUST_OFF])).toEqual(['rajasthan-jodhpur', 'rajasthan-jaipur']);
+    const ajmer = testSite({ location: { district: { id: 'rajasthan-ajmer', name: 'Ajmer' } } });
+    const sorted = ['rajasthan-jodhpur', 'rajasthan-ajmer', 'rajasthan-jaipur'];
+    expect(AreaDirectory.districts('rajasthan-jodhpur', [jaipur, ajmer, JUST_OFF])).toEqual(sorted);
+    expect(AreaDirectory.districts('rajasthan-jodhpur', [ajmer, JUST_OFF, jaipur])).toEqual(sorted);
   });
 
   it('turns area list rows into one entry per area with its counts, smallest kind first, and filters by name', () => {

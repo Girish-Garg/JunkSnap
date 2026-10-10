@@ -10,6 +10,7 @@ import type { AuthService } from '../services/AuthService';
 import { crawlFixtureLoaders } from '../services/crawlFixtures';
 import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
+import { CachedAreaApi } from '../services/CachedAreaApi';
 import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockAreaApi } from '../services/MockAreaApi';
@@ -114,7 +115,7 @@ export class ServiceContainer implements Services {
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config),
-      areas: AREA_BUILDERS[config.apiMode](config),
+      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config)),
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
