@@ -73,6 +73,13 @@
     "reports_one": "{{count}} report",
     "reports_other": "{{count}} reports"
   },
+  "stack": {
+    "title_one": "{{count}} site at this spot",
+    "title_other": "{{count}} sites at this spot",
+    "hint": "Different reports share this spot. Each one has its own page, count and letter.",
+    "close": "Close the list",
+    "label": "Sites at this spot"
+  },
   "reportType": {
     "waste_dump": "Waste dump",
     "no_bin": "No bin or pickup",

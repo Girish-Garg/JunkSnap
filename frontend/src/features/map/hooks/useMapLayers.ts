@@ -6,9 +6,10 @@ import { useBoundaryLayer } from './useBoundaryLayer';
 interface Selection {
   readonly preview: SiteFeature | null;
   readonly pick: (siteId: string | null) => void;
+  readonly pickStack: (siteIds: readonly string[]) => void;
 }
 
-/** What the map draws besides the sites: the view mode, the areas with their fill and markers, and area taps. */
+/** What the map draws besides the sites: the view mode, the areas with their fill and markers, area taps and stack taps. */
 export function useMapLayers(mode: MapMode, selection: Selection) {
   const boundary = useBoundaryLayer();
   const onPickArea = useAreaPick(selection.preview, () => selection.pick(null));
@@ -18,6 +19,7 @@ export function useMapLayers(mode: MapMode, selection: Selection) {
     areaColors: boundary.colors,
     areaMarkers: boundary.markers,
     onPickArea,
+    onPickStack: selection.pickStack,
   };
   return { boundary, layerBindings };
 }

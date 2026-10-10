@@ -34,7 +34,7 @@ export function useMapPage() {
     clamped: view?.clamped ?? false,
   });
   const filters = { filter, setFilter, mode, setMode, open: filtersOpen, setOpen: setFiltersOpen };
-  // Every route but the bare map opens a sheet.
-  const sheetOpen = pathname !== '/' || filtersOpen;
+  // Every route but the bare map opens a sheet, and so do Filters and the stack list.
+  const sheetOpen = pathname !== '/' || filtersOpen || selection.stack !== null;
   return { loaded: loaded.sites, sites, setView, selection, location, notice, sheetOpen, filters, boundary, layerBindings };
 }
