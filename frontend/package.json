@@ -19,6 +19,7 @@
     "i18next": "^26.4.2",
     "idb": "^8.0.4",
     "maplibre-gl": "^6.13.0",
+    "onnxruntime-web": "1.30.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-i18next": "^17.0.16",

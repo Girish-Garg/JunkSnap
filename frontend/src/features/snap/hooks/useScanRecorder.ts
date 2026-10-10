@@ -4,6 +4,7 @@ import { CaptureError, type CaptureProblem } from '../../../domain/CaptureError'
 import type { FirstFix } from '../../../services/ScanCapture';
 import type { ScanDraft } from '../../../domain/ScanUpload';
 import type { ActiveScan } from '../../../services/ScanCapture';
+import type { ScanHintLog } from '../../../services/ScanHintLog';
 
 export type RecorderPhase = 'idle' | 'recording' | 'saving';
 
@@ -15,13 +16,13 @@ export function useScanRecorder(video: RefObject<HTMLVideoElement | null>, onSav
   const [elapsedMs, setElapsedMs] = useState(0);
   const [problem, setProblem] = useState<CaptureProblem | null>(null);
   const fail = (error: unknown) => setProblem(error instanceof CaptureError ? error.problem : 'encode_failed');
-  const start = (choice: Pick<ScanDraft, 'report_type' | 'context'>, firstFix: FirstFix) => {
+  const start = (choice: Pick<ScanDraft, 'report_type' | 'context'>, firstFix: FirstFix, hints: ScanHintLog | null = null) => {
     const stream = video.current?.srcObject as MediaStream | null | undefined;
     if (!stream) return;
     setProblem(null);
     setElapsedMs(0);
     try {
-      const run = snap.scanCapture.start({ stream, firstFix, choice, onTick: setElapsedMs });
+      const run = snap.scanCapture.start({ stream, firstFix, choice, onTick: setElapsedMs, ...(hints ? { hints } : {}) });
       setActive(run);
       setPhase('recording');
       run.saved.then((scan) => onSaved(scan.id), fail).finally(() => setPhase('idle'));
