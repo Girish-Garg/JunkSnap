@@ -7,6 +7,7 @@ import { HttpAreaLetterApi } from '../services/HttpAreaLetterApi';
 import { MockAreaApi } from '../services/MockAreaApi';
 import { MockAreaLetterApi } from '../services/MockAreaLetterApi';
 import { CameraCapture } from '../services/CameraCapture';
+import { CompassHeading } from '../services/CompassHeading';
 import type { Clock } from '../services/Clock';
 import { DeviceIdentity } from '../services/DeviceIdentity';
 import { GpsWatcher } from '../services/GpsWatcher';
@@ -49,6 +50,8 @@ export interface SnapBrowserApis {
   readonly crypto: Crypto;
   readonly locks: LockManager | undefined;
   readonly mediaRecorder?: RecorderFactory;
+  /** Where device orientation events fire (window) for the compass heading. */
+  readonly orientation?: EventTarget;
 }
 
 interface Apis {
@@ -90,6 +93,13 @@ interface ActionParts {
   readonly random: () => Uint8Array;
 }
 
+interface QueueParts {
+  readonly db: JunkSnapDb;
+  readonly apis: Apis;
+  readonly identity: RequestIdentity;
+  readonly clock: Clock;
+}
+
 export class SnapServiceFactory {
   static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService): SnapServices {
     const db = new JunkSnapDb();
@@ -97,12 +107,7 @@ export class SnapServiceFactory {
     const identity: RequestIdentity = { idToken: (force) => auth.idToken(force), deviceToken: () => device.token() };
     const apis = API_BUILDERS[config.apiMode](config, identity);
     const clock = new SystemClock();
-    const queue = new ReportQueue({
-      store: new IndexedDbReportStore(db),
-      sender: new ReportSender(apis.reports, identity, clock),
-      clock,
-      lock: new QueueLock(browser.locks),
-    });
+    const queue = SnapServiceFactory.#reportQueue({ db, apis, identity, clock }, browser.locks);
     const scans = SnapServiceFactory.#scanQueue({ db, apis, identity, clock }, browser.locks);
     const recorder = new VideoRecorder(browser.mediaRecorder, clock);
     const hasher = new PhotoHasher(browser.crypto.subtle);
@@ -118,6 +123,7 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
+      compass: new CompassHeading(browser.orientation ?? null),
       ...SnapServiceFactory.#actions({ apis, identity, gps, queue, scans, random: () => browser.crypto.getRandomValues(new Uint8Array(16)) }),
     };
   }
@@ -134,7 +140,12 @@ export class SnapServiceFactory {
     };
   }
 
-  static #scanQueue(parts: { db: JunkSnapDb; apis: Apis; identity: RequestIdentity; clock: Clock }, locks: LockManager | undefined): ScanQueue {
+  static #reportQueue(parts: QueueParts, locks: LockManager | undefined): ReportQueue {
+    const sender = new ReportSender(parts.apis.reports, parts.identity, parts.clock);
+    return new ReportQueue({ store: new IndexedDbReportStore(parts.db), sender, clock: parts.clock, lock: new QueueLock(locks) });
+  }
+
+  static #scanQueue(parts: QueueParts, locks: LockManager | undefined): ScanQueue {
     const sender = new ScanSender(parts.apis.scans, parts.identity, parts.clock);
     const lock = new QueueLock(locks, 'junksnap-scan-queue');
     return new ScanQueue({ store: new IndexedDbScanStore(parts.db), sender, clock: parts.clock, lock });

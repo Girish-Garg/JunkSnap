@@ -30,6 +30,7 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   crypto: window.crypto,
   locks: navigator.locks,
   mediaRecorder: typeof MediaRecorder === 'undefined' ? undefined : MediaRecorder,
+  orientation: window,
   edge: { capabilities: CapabilityProbe.read(globalThis), detector: browserDetectorFactory },
 });
 // Saved photos and videos start sending as soon as the app opens; the sign-in (if any) is read first.

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { GeoPoint } from "../../domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../../domain/moderation/PerceptualHash.js";
 import type { PhotoSubmission } from "../../domain/moderation/PhotoSubmission.js";
+import { TARGET_MAX_M } from "../../domain/ReportPlacement.js";
 import type { HashIndex, IndexedPhoto } from "../../ports/moderation/HashIndex.js";
 import type { DynamoReader } from "./DynamoReader.js";
 
@@ -11,8 +12,9 @@ export interface HashTables {
   readonly sites: string;
 }
 
-// Reports merge into sites within 40 m, so a site that far beyond the radius can still hold a nearby report.
-const SITE_SPREAD_M = 40;
+// Reports merge into sites within 40 m of their spot, and a long-range spot is up to TARGET_MAX_M from where the
+// reporter stood (decision 20261011-0400), so a site that far beyond the radius can still hold a nearby photo.
+const SITE_SPREAD_M = 40 + TARGET_MAX_M;
 const GEOHASH_PRECISION = 4;
 const METRES_PER_DEGREE = 111_320;
 

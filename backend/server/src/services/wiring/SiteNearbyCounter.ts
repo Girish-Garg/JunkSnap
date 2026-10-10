@@ -1,6 +1,7 @@
 import type { ReportRecord } from "../../domain/ReportRecord.js";
 import { BoundingBox } from "../../domain/sites/BoundingBox.js";
 import { GeoPoint } from "../../domain/sites/GeoPoint.js";
+import { ReportPlacement } from "../../domain/ReportPlacement.js";
 import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
 
 // The photo-site merge radius; the ml nearby feature never counts no-bin zones.
@@ -17,7 +18,7 @@ export class SiteNearbyCounter implements NearbyVerifiedCounter {
   }
 
   async count(report: ReportRecord): Promise<number> {
-    const point = new GeoPoint(report.gps.lat, report.gps.lon);
+    const point = ReportPlacement.of(report).spot;
     const sites = await this.#finder.inBox(BoundingBox.around(point, MERGE_RADIUS_M));
     const near = sites.filter(({ geometry, properties }) => {
       const [lon, lat] = geometry.coordinates;
