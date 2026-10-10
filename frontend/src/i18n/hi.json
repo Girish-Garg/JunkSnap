@@ -79,6 +79,7 @@
     "resize": "ज़्यादा या कम दिखाएँ"
   },
   "preview": {
+    "close": "झलक बंद करें",
     "details": "विवरण",
     "reports_one": "{{count}} रिपोर्ट",
     "reports_other": "{{count}} रिपोर्ट"

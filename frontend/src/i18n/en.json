@@ -79,6 +79,7 @@
     "resize": "Show more or less"
   },
   "preview": {
+    "close": "Close preview",
     "details": "Details",
     "reports_one": "{{count}} report",
     "reports_other": "{{count}} reports"

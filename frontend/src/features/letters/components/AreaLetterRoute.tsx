@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useNavigate, useParams } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 import { AREAS_PATH, areaPath } from '../../../app/paths';
 import { useServices } from '../../../app/useServices';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { AreaKey } from '../../../domain/AreaKey';
 import type { AreaKind } from '../../../domain/AreaScores';
 import { BottomSheet } from '../../../ui/BottomSheet';
@@ -26,8 +27,9 @@ export function AreaLetterRoute() {
 function AreaLetterSheet({ kind, areaId }: { readonly kind: AreaKind; readonly areaId: string }) {
   const { t } = useTranslation();
   const { config } = useServices();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate(areaPath(kind, areaId)), [navigate, kind, areaId]);
+  const sheets = useSheetNavigation();
+  // Back to the area page under it; a shared link straight to the letter falls back to the area page.
+  const close = useCallback(() => sheets.close(areaPath(kind, areaId)), [sheets, kind, areaId]);
   const flow = useAreaLetter(kind, areaId);
   const { draft } = flow;
   const title = draft ? t('areaLetter.titleFor', { name: draft.area.name }) : t('areaLetter.title');

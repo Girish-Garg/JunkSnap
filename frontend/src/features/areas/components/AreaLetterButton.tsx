@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { areaLetterPath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { Button } from '../../../ui/Button';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 
@@ -16,11 +16,11 @@ interface AreaLetterButtonProps {
 /** "Draft a letter about this area": sign in first, then the area letter sheet. Off below 10 verified reports. */
 export function AreaLetterButton({ kind, areaId, ready, short = false }: AreaLetterButtonProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const { requireAuth } = useAuthFlow();
   return (
     <div className={short ? 'area-letter area-letter--short' : 'area-letter'}>
-      <Button variant={short ? 'text' : 'primary'} disabled={!ready} onClick={() => requireAuth(() => navigate(areaLetterPath(kind, areaId)))}>
+      <Button variant={short ? 'text' : 'primary'} disabled={!ready} onClick={() => requireAuth(() => sheets.open(areaLetterPath(kind, areaId)))}>
         {t(short ? 'areaLetter.short' : 'areaLetter.button')}
       </Button>
       {!ready && <p className="area-letter__locked">{t(short ? 'areaLetter.lockedShort' : 'areaLetter.locked')}</p>}

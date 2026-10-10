@@ -17,7 +17,7 @@ export function PhotoViewerStage({ photo, onOutcome }: PhotoViewerStageProps) {
     opacity: drag.y > 0 ? Math.max(0.4, 1 - drag.y / 400) : 1,
   };
   return (
-    <div className={`photo-viewer__stage${dragging ? ' photo-viewer__stage--dragging' : ''}`} data-testid="photo-stage" {...handlers}>
+    <div className={`photo-viewer__stage${dragging ? ' photo-viewer__stage--dragging' : ''}`} data-testid="photo-stage" data-own-drag="" {...handlers}>
       <img key={photo.url} className="photo-viewer__image" src={photo.url} alt={photo.alt} style={style} draggable={false} decoding="async" />
     </div>
   );

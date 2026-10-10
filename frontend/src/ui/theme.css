@@ -21,6 +21,8 @@ body {
   background: var(--page);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* Taps act at once: no double-tap zoom on buttons and sheets (the map handles its own gestures). */
+  touch-action: manipulation;
 }
 
 /* Devanagari needs room for matras above and below the line. */
@@ -262,6 +264,7 @@ a {
 }
 
 .segmented__option {
+  position: relative;
   flex: 1;
   min-height: 40px;
   padding: 0 var(--s-3);
@@ -271,6 +274,13 @@ a {
   color: var(--text-secondary);
   font-weight: 600;
   cursor: pointer;
+}
+
+/* 40 px to look at; the hit area reaches into the tile's padding for 48 px. */
+.segmented__option::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--s-1)) 0;
 }
 
 .segmented__option:hover {
@@ -373,6 +383,13 @@ a {
   margin: 0;
   font-weight: 500;
   text-align: right;
+}
+
+/* A link in a fact row (ward, seat) is tappable over the row's full height. */
+.facts__row dd a {
+  display: inline-block;
+  padding-block: var(--s-3);
+  margin-block: calc(-1 * var(--s-3));
 }
 
 /* Lists that arrive together come in one after another. */

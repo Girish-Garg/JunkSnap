@@ -10,5 +10,5 @@ export function TargetMapView(view: TargetMapState) {
   const [failed, setFailed] = useState(false);
   const container = useTargetMap(supported && !failed, view, () => setFailed(true));
   if (!supported || failed) return <p className="form__note">{t('longRange.noMap')}</p>;
-  return <div ref={container} className="target-map" role="application" aria-label={t('longRange.mapLabel')} />;
+  return <div ref={container} className="target-map" data-own-drag="" role="application" aria-label={t('longRange.mapLabel')} />;
 }

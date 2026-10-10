@@ -1,16 +1,25 @@
 import { useEffect, type RefObject } from 'react';
+import { LAYER_ATTRIBUTE, TopLayer } from './TopLayer';
 
-export const ESCAPE_LAYER = 'data-escape-layer';
+export const ESCAPE_LAYER = LAYER_ATTRIBUTE;
 
-/** Escape reaches only the topmost layer: the last [data-escape-layer] in the page, which also paints on top. */
+/**
+ * Escape, and a map tap on phones (TopLayer.dismiss), reach only the topmost layer: the last
+ * [data-escape-layer] in the page, which also paints on top and owns the top history entry.
+ */
 export function useEscapeKey(onEscape: () => void, layer: RefObject<HTMLElement | null>): void {
   useEffect(() => {
-    const handle = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      const layers = document.querySelectorAll(`[${ESCAPE_LAYER}]`);
-      if (layers[layers.length - 1] === layer.current) onEscape();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && TopLayer.is(layer.current)) onEscape();
     };
-    window.addEventListener('keydown', handle);
-    return () => window.removeEventListener('keydown', handle);
+    const handleDismiss = () => {
+      if (TopLayer.is(layer.current)) onEscape();
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener(TopLayer.event, handleDismiss);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener(TopLayer.event, handleDismiss);
+    };
   }, [onEscape, layer]);
 }
