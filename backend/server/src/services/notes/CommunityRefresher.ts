@@ -20,7 +20,14 @@ export interface RefresherParts {
 
 export class CommunityRefresher {
   readonly #parts: RefresherParts;
-  readonly #scheduled = new Set<string>();
+  // Sites with a run scheduled or in flight; set before the first await, so two notes never start two runs.
+  readonly #busy = new Set<string>();
+  // Sites whose run is reading notes now; a note that lands then may be missed, so it queues one more run.
+  readonly #running = new Set<string>();
+  // Sites that got a note while their run was in flight: exactly one more run follows, after the window.
+  readonly #again = new Set<string>();
+  // Epoch ms of the last run per site, kept even when it saved nothing, so failures are debounced too.
+  readonly #lastAttempt = new Map<string, number>();
 
   constructor(parts: RefresherParts) {
     this.#parts = parts;
@@ -28,19 +35,49 @@ export class CommunityRefresher {
 
   // Called when a note is accepted: analyze now, or once when the site's window ends.
   async noteAccepted(siteId: string): Promise<void> {
-    if (this.#scheduled.has(siteId)) {
+    if (this.#busy.has(siteId)) {
+      // A scheduled run has not read the notes yet, so it will include this one.
+      if (this.#running.has(siteId)) {
+        this.#again.add(siteId);
+      }
       return;
     }
-    const wait = await this.#waitMs(siteId);
-    if (wait <= 0) {
-      await this.refresh(siteId);
+    this.#busy.add(siteId);
+    await this.#cycle(siteId);
+  }
+
+  async #cycle(siteId: string): Promise<void> {
+    let wait: number;
+    try {
+      wait = await this.#waitMs(siteId);
+    } catch (error) {
+      this.#parts.logger.error({ error, site_id: siteId }, "community refresh could not read the site");
+      this.#busy.delete(siteId);
       return;
     }
-    this.#scheduled.add(siteId);
-    this.#parts.scheduler.after(wait, async () => {
-      this.#scheduled.delete(siteId);
+    if (wait > 0) {
+      this.#parts.scheduler.after(wait, () => this.#run(siteId));
+      return;
+    }
+    await this.#run(siteId);
+  }
+
+  // Never rejects: a failure is logged and the site is released, or kept busy for the queued run.
+  async #run(siteId: string): Promise<void> {
+    this.#lastAttempt.set(siteId, this.#parts.now().getTime());
+    this.#running.add(siteId);
+    try {
       await this.refresh(siteId);
-    });
+    } catch (error) {
+      this.#parts.logger.error({ error, site_id: siteId }, "community refresh failed");
+    } finally {
+      this.#running.delete(siteId);
+      if (this.#again.delete(siteId)) {
+        void this.#cycle(siteId);
+      } else {
+        this.#busy.delete(siteId);
+      }
+    }
   }
 
   async refresh(siteId: string): Promise<void> {
@@ -60,8 +97,9 @@ export class CommunityRefresher {
 
   async #waitMs(siteId: string): Promise<number> {
     const site = await this.#parts.sites.find(siteId);
-    const last = site?.properties.community?.updated_at;
-    return last === undefined ? 0 : Date.parse(last) + REFRESH_WINDOW_MS - this.#parts.now().getTime();
+    const saved = site?.properties.community?.updated_at;
+    const last = Math.max(saved === undefined ? 0 : Date.parse(saved), this.#lastAttempt.get(siteId) ?? 0);
+    return last === 0 ? 0 : last + REFRESH_WINDOW_MS - this.#parts.now().getTime();
   }
 
   // One person's several notes count once.

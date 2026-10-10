@@ -21,11 +21,20 @@ export interface NotesAdapters {
   readonly now: () => Date;
 }
 
-export const TIMER_SCHEDULER: Scheduler = {
-  after(ms, task) {
-    setTimeout(() => void task(), ms).unref();
-  },
-};
+// setTimeout for the debounce; a task that rejects is logged, never left as an unhandled rejection.
+export class TimerScheduler implements Scheduler {
+  readonly #logger: Logger;
+
+  constructor(logger: Logger) {
+    this.#logger = logger;
+  }
+
+  after(ms: number, task: () => Promise<void>): void {
+    setTimeout(() => {
+      task().catch((error: unknown) => this.#logger.error({ error }, "scheduled task failed"));
+    }, ms).unref();
+  }
+}
 
 export class NotesAssembly {
   readonly #notesPerHour: number;

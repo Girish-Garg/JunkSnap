@@ -388,7 +388,11 @@ Resources:
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
-                  - !GetAtt NotesTable.Arn
+              # POST /sites/{id}/notes writes one note and reads a site's notes; nothing else.
+              - Sid: Notes
+                Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:Query]
+                Resource: !GetAtt NotesTable.Arn
               - Sid: ReadScores
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,

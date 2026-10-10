@@ -154,7 +154,11 @@ export class RecordingLogger implements Logger {
     this.warnings.push(typeof first === "string" ? first : (message ?? ""));
   }
 
-  error(): void {}
+  readonly errors: string[] = [];
+
+  error(first: object | string, message?: string): void {
+    this.errors.push(typeof first === "string" ? first : (message ?? ""));
+  }
 }
 
 export interface ServiceParts {

@@ -112,6 +112,10 @@ describe("NoteAnalyzer", () => {
     ["a phone number", { ...GOOD_READING, summary_en: "2 residents say call 98765 43210 or 9876543210." }],
     ["no count of people", { ...GOOD_READING, summary_en: "Residents say it burns." }],
     ["a quote", { ...GOOD_READING, summary_en: '2 residents say "it burns every week".' }],
+    ["a count that is not at the start", { ...GOOD_READING, summary_en: "About 2 residents say it burns." }],
+    ["the wrong count", { ...GOOD_READING, summary_en: "3 residents say it burns." }],
+    ["a link", { ...GOOD_READING, summary_en: "2 residents say see www.example.in for photos." }],
+    ["a handle", { ...GOOD_READING, summary_hi: "2 निवासी कहते हैं @ward37 देखें।" }],
   ])("writes the summary from the signals when the model's has %s", async (_name, reply) => {
     const world = await analyse(reply);
     const community = world.community.saved.at(-1)?.community;

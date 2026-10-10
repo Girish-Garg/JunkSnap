@@ -27,6 +27,10 @@ const RECORDABLE_PROVIDER = "bedrock";
 const TEMPLATE = { provider: "junksnap", model: "community-template", version: "1" } as const;
 // Any digit run this long could be a phone, house or vehicle number copied from a note.
 const LONG_NUMBER = /\d{5,}/u;
+// A summary starts with how many people it rests on, as digits.
+const LEADING_COUNT = /^\d+/u;
+// Links and handles could carry contact details out of a note.
+const CONTACT = /https?:\/\/|www\.|@/iu;
 // Offices are allowed in a summary; only forbidden words and named people are checked.
 const ALL_OFFICES: readonly CcLine[] = (["councillor", "mla", "mp"] as const).map((office) => ({
   office,
@@ -90,11 +94,11 @@ export class NoteAnalyzer {
   }
 
   #problem(summary: string, people: number): string | null {
-    if (!summary.includes(String(people))) {
-      return "summary does not say how many people";
+    if (LEADING_COUNT.exec(summary.trim())?.[0] !== String(people)) {
+      return "summary does not start with how many people";
     }
-    if (LONG_NUMBER.test(summary) || /["“”]/u.test(summary)) {
-      return "summary repeats a number or a quote";
+    if (LONG_NUMBER.test(summary) || /["“”]/u.test(summary) || CONTACT.test(summary)) {
+      return "summary repeats a number, a quote, a link or a handle";
     }
     return this.#wording.problem(summary, ALL_OFFICES);
   }

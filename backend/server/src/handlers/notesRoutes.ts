@@ -10,7 +10,7 @@ import { LlmNoteModerator } from "../services/moderation/LlmNoteModerator.js";
 import { NotesSettings } from "../settings/NotesSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { NoteRouterBuilder } from "./moderation/NoteRouterBuilder.js";
-import { NotesAssembly, TIMER_SCHEDULER } from "./notes/NotesAssembly.js";
+import { NotesAssembly, TimerScheduler } from "./notes/NotesAssembly.js";
 import { NotesEndpoint } from "./notes/NotesEndpoint.js";
 import type { RouteBuilder } from "./RouteBuilder.js";
 
@@ -31,7 +31,7 @@ export const buildNotesRoutes: RouteBuilder = (context) => async (app) => {
     },
     moderator: new LlmNoteModerator(router),
     router,
-    scheduler: TIMER_SCHEDULER,
+    scheduler: new TimerScheduler(app.log),
     now: () => new Date(),
   });
   await app.register(new NotesEndpoint(service, guard).plugin());
