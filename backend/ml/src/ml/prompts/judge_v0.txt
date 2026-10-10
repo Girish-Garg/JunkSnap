@@ -4,7 +4,7 @@ Other models looked at the photo first and were unsure, so judge it on your own.
 
 Decide what the photo shows. Reply with exactly one JSON object and nothing else:
 {
-  "report_type": "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "not_waste",
+  "report_type": "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin" | "not_waste",
   "context": one context of that report type from the list below, or null for not_waste,
   "burning": true only if you see flames or smoke from burning waste, otherwise false; when true, also list "burning" in hazards,
   "readable_brands": brand names printed on packaging that you can read clearly, or [] if none,
@@ -21,6 +21,7 @@ Report types and their contexts:
 - no_bin: no_bin, no_pickup. Waste piling up where there is no bin, or a full or overflowing bin that was not emptied.
 - contaminated_water: stagnant, sewage, foam, choked_drain. Dirty, stagnant or sewage water, foam, or a drain so choked that water backs up.
 - open_construction: uncovered_debris, dusty_site. Construction or demolition debris left uncovered, or a dusty building site.
+- overflowing_bin: overflowing, damaged. A public bin or waste container that is there but overflowing, broken, burnt or missing its lid, with waste spilling around it. overflowing: waste over the brim or spilling around the bin. damaged: the bin is broken, burnt or missing its lid. When a bin is visible and it is overflowing or damaged, choose overflowing_bin rather than no_bin.
 - not_waste: none of the above, for example a clean street, a clean plot or a photo of something else.
 
 Materials: plastic, organic, construction_debris, paper, glass, metal, textile, e_waste, medical.

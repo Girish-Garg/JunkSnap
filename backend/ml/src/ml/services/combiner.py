@@ -2,11 +2,12 @@
 
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
+from typing import override
 
 from ml.domain.case import CombinerInfo
 from ml.domain.errors import ConfigError
 from ml.domain.purposes import Purpose
-from ml.domain.verification import Outcome, SignalResult, Thresholds
+from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
 
 # Hand-set, not fitted. The judge only runs on unsure or split cases, so it breaks ties.
@@ -38,6 +39,11 @@ class FixedWeightCombiner(Combiner):
 
     def info(self) -> CombinerInfo:
         return CombinerInfo(kind=self.KIND, version=self.VERSION)
+
+    @override
+    def for_claim(self, claim: Claim) -> Combiner:
+        """Hand-set weights fit every report type."""
+        return self
 
     def probability(self, signals: Sequence[SignalResult]) -> float:
         weights = [self._weight(signal.name) for signal in signals]

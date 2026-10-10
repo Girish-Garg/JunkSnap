@@ -18,11 +18,12 @@ from ml.domain.verification import REPORT_CONTEXTS, JudgeVerdict
 RATIONALE_MAX = 500
 
 ReportTypeName = Literal[
-    "waste_dump", "no_bin", "contaminated_water", "open_construction", "not_waste"
+    "waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin",
+    "not_waste",
 ]
 ContextName = Literal[
     "vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage",
-    "foam", "choked_drain", "uncovered_debris", "dusty_site",
+    "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged",
 ]
 MaterialName = Literal[
     "plastic", "organic", "construction_debris", "paper", "glass", "metal", "textile",

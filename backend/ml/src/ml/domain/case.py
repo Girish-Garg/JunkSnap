@@ -40,6 +40,7 @@ class VerificationCase:
 class CombinerInfo:
     kind: str
     version: str
+    reason: str | None = None  # why a fallback decides; logged, not part of the contract
 
 
 @dataclass(frozen=True)

@@ -49,6 +49,7 @@ _LOOSE_WASTE = frozenset(
 _WASTE = frozenset(
     {"garbage", "trash", "rubbish", "litter", "waste", "landfill", "dump", "junk", "scrap"}
 )
+_BINS = frozenset({"trash can", "garbage can", "dumpster", "bin", "waste container"})
 
 WASTE_KEYWORDS: Mapping[str, KeywordGroup] = MappingProxyType(
     {
@@ -71,5 +72,7 @@ WASTE_KEYWORDS: Mapping[str, KeywordGroup] = MappingProxyType(
             ),
             weak=frozenset({"soil", "dirt", "rock", "stone"}),
         ),
+        # Labels cannot tell a full bin from a tidy one, so a bin alone is only weak.
+        "overflowing_bin": KeywordGroup(strong=_WASTE, weak=_BINS | _LOOSE_WASTE),
     }
 )
