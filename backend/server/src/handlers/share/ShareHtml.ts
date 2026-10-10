@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ShareCard, ShareImage } from "../../domain/share/ShareCard.js";
+import type { ShareRedirect } from "./ShareRedirect.js";
+import { WebRedirect } from "./WebRedirect.js";
 
 const ENTITIES: Readonly<Record<string, string>> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
@@ -14,10 +16,10 @@ export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => ENTITIES[char] ?? char);
 }
 
-// Minimal HTML for crawlers (Open Graph and Twitter tags) that sends a person on to the app with one line of script.
+// Minimal HTML for crawlers (Open Graph and Twitter tags) that sends a person on to the app with one short script.
 export class ShareHtml {
-  render(card: ShareCard): SharePage {
-    const script = `location.replace(${ShareHtml.#jsString(card.appUrl)});`;
+  render(card: ShareCard, redirect: ShareRedirect = new WebRedirect(card.appUrl)): SharePage {
+    const script = redirect.script;
     const html = [
       "<!doctype html>",
       '<html lang="en">',
@@ -31,7 +33,7 @@ export class ShareHtml {
       "<body>",
       `<h1>${escapeHtml(card.title)}</h1>`,
       `<p>${escapeHtml(card.description)}</p>`,
-      `<p><a href="${escapeHtml(card.appUrl)}">Open in JunkSnap</a></p>`,
+      ...redirect.links.map((link) => `<p><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></p>`),
       "</body>",
       "</html>",
     ].join("\n");
@@ -68,10 +70,5 @@ export class ShareHtml {
       ["name", "twitter:image", image.url],
       ["name", "twitter:image:alt", image.alt],
     ];
-  }
-
-  // A JSON string literal that cannot close the script element.
-  static #jsString(text: string): string {
-    return JSON.stringify(text).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
   }
 }

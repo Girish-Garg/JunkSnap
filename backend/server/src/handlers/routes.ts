@@ -7,6 +7,7 @@ import type { RouteBuilder } from "./RouteBuilder.js";
 import { buildScanRoutes } from "./scanRoutes.js";
 import { buildShareRoutes } from "./shareRoutes.js";
 import { buildSitesRoutes } from "./sitesRoutes.js";
+import { buildWellKnownRoutes } from "./wellKnownRoutes.js";
 
 // A task adds handlers/<topic>Routes.ts, then one import and one entry here.
 export const ROUTE_BUILDERS: readonly RouteBuilder[] = [
@@ -19,4 +20,5 @@ export const ROUTE_BUILDERS: readonly RouteBuilder[] = [
   buildReportRoutes,
   buildScanRoutes,
   buildShareRoutes,
+  buildWellKnownRoutes,
 ];

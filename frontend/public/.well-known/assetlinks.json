@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.junksnap.app",
+      "sha256_cert_fingerprints": [
+        "B8:60:4A:F2:0A:0A:F9:1D:E4:A9:1B:BF:18:1E:27:01:FE:AB:E1:6C:44:01:87:EF:24:35:A5:FB:03:2D:A2:D8"
+      ]
+    }
+  }
+]
