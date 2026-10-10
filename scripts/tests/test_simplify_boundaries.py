@@ -13,6 +13,7 @@ from shapely.geometry import Point, shape
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import simplify_boundaries as sb  # noqa: E402
+from boundary_geometry import without_overlaps  # noqa: E402
 
 STEPS = 400
 
@@ -53,18 +54,13 @@ def seats(tmp: Path) -> None:
     (tmp / "rajasthan_assembly.geojson").write_text(collection([left, right]), encoding="utf-8")
 
 
-def wards(tmp: Path) -> None:
-    props = {
-        "id": "jodhpur-mc-w1",
-        "ward_no": 1,
-        "name": "Ward 1",
-        "zone": "North",
-        "confidence": 0.7,
-        "review_status": "unreviewed",
-        "offices": ["x"],
-    }
-    ward = (props, square(73.0, 73.1, True))
-    (tmp / "jodhpur_wards.geojson").write_text(collection([ward]), encoding="utf-8")
+def ship(spec: sb.LayerSpec, source: Path, out: Path) -> sb.LayerResult:
+    """Builds and writes one layer, as the tests inspect it."""
+    out.mkdir(parents=True, exist_ok=True)
+    result = sb.build_layer(spec, source)
+    assert result is not None
+    sb.write_layer(result, out)
+    return result
 
 
 def read(path: Path) -> list[dict[str, object]]:
@@ -79,23 +75,21 @@ def dirs(tmp_path: Path) -> tuple[Path, Path]:
     return source, out
 
 
-def test_keeps_only_listed_properties_and_writes_manifest(dirs: tuple[Path, Path]) -> None:
+def test_keeps_only_listed_properties_and_counts_them(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out, ship_all=True)
+    result = ship(sb.ASSEMBLY, source, out)
     features = read(out / "assembly.geojson")
     assert [f["properties"] for f in features] == [
         {"id": "s20-ac-1", "name": "West", "pc_id": "s20-pc-1"},
         {"id": "s20-ac-2", "name": "East", "pc_id": "s20-pc-1"},
     ]
-    manifest = json.loads((out / "index.json").read_text(encoding="utf-8"))
-    assert set(manifest["layers"]) == {"assembly"}
-    assert manifest["layers"]["assembly"]["features"] == 2
+    assert result.manifest()["features"] == 2
 
 
 def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
     spec = sb.LayerSpec("assembly", "rajasthan_assembly.geojson", ("id",), 2_000)
-    [result] = sb.run(source, out, (spec,), ship_all=True)
+    result = ship(spec, source, out)
     assert result.coarse.bytes <= 2_000
     left, right = (shape(f["geometry"]) for f in read(out / "assembly.geojson"))
     assert len(left.exterior.coords) < STEPS / 4
@@ -105,31 +99,16 @@ def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) ->
 
 def test_labels_fall_inside_their_area(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out, ship_all=True)
+    ship(sb.ASSEMBLY, source, out)
     polygons = {f["properties"]["id"]: shape(f["geometry"]) for f in read(out / "assembly.geojson")}
     for label in read(out / "assembly_labels.geojson"):
         point = Point(label["geometry"]["coordinates"])
         assert polygons[label["properties"]["id"]].buffer(1e-4).contains(point)
 
 
-def test_ward_files_are_picked_up_on_rerun_and_dropped_when_gone(dirs: tuple[Path, Path]) -> None:
-    source, out = dirs
-    sb.run(source, out, ship_all=True)
-    assert not (out / "wards.geojson").exists()
-    wards(source)
-    sb.run(source, out, ship_all=True)
-    [ward] = read(out / "wards.geojson")
-    assert ward["properties"]["review_status"] == "unreviewed"
-    assert "offices" not in ward["properties"]
-    (source / "jodhpur_wards.geojson").unlink()
-    sb.run(source, out, ship_all=True)
-    assert not (out / "wards.geojson").exists()
-    assert "wards" not in json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]
-
-
 def test_rounds_coordinates_to_four_places(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out, ship_all=True)
+    ship(sb.ASSEMBLY, source, out)
     ring = read(out / "assembly.geojson")[0]["geometry"]["coordinates"][0]
     assert all(round(value, 4) == value for point in ring for value in point)
 
@@ -141,6 +120,6 @@ def test_clipped_layers_have_no_overlaps_after_rounding() -> None:
         for i, disc in enumerate(discs)
     ]
 
-    first, second = (shape(f["geometry"]) for f in sb.without_overlaps(features))
+    first, second = (shape(f["geometry"]) for f in without_overlaps(features))
 
     assert first.intersection(second).area == 0

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from boundary_geometry import label_point, rounded_geometry, simplify, without_overlaps
+from boundary_geometry import label_point, rounded_geometry, simplify
 from combined_areas import combine, combine_points
 from shapely.geometry import shape
 
@@ -52,31 +52,17 @@ class LayerSpec:
     fine_budget_bytes: int = 0
     fine_prefix: str = ""
     attribution: str = ""
-    clip_overlaps: bool = False
 
 
-WARDS_CREDIT = (
-    "Approximate, unreviewed wards from the 2025 ward-formation orders (Rajasthan Gazette); "
-    "places © OpenStreetMap contributors (ODbL) and ECI polling stations "
-    "(CC0 as declared by the ramSeraph/indian_facilities copy)"
+ASSEMBLY = LayerSpec(
+    "assembly", "rajasthan_assembly.geojson", ("id", "name", "pc_id"), 400_000, 800_000
 )
-
-LAYERS = (
-    LayerSpec("assembly", "rajasthan_assembly.geojson", ("id", "name", "pc_id"), 400_000, 800_000),
-    # Fine edges for Rajasthan only, where the seats are rebuilt from polling stations.
-    LayerSpec(
-        "loksabha", "india_loksabha.geojson", ("id", "name", "status"), 600_000, 900_000, "s20-"
-    ),
-    LayerSpec(
-        "wards",
-        "*_wards.geojson",
-        ("id", "ward_no", "name", "zone", "confidence", "review_status"),
-        400_000,
-        800_000,
-        attribution=WARDS_CREDIT,
-        clip_overlaps=True,
-    ),
+# Fine edges for Rajasthan only, where the seats are rebuilt from polling stations.
+LOKSABHA = LayerSpec(
+    "loksabha", "india_loksabha.geojson", ("id", "name", "status"), 600_000, 900_000, "s20-"
 )
+# Only what the combined areas layer needs; ward files are not on the web map.
+LAYERS = (ASSEMBLY, LOKSABHA)
 
 
 @dataclass(frozen=True)
@@ -144,16 +130,7 @@ def build_polygons(
                     "geometry": geometry,
                 }
             )
-    return without_overlaps(out, decimals) if spec.clip_overlaps else out
-
-
-def marker_name(properties: dict[str, Any]) -> str:
-    """The area's name; crawled wards often have none, so "Ward <n>", else the id."""
-    if properties.get("name"):
-        return str(properties["name"])
-    if properties.get("ward_no") is not None:
-        return f"Ward {properties['ward_no']}"
-    return str(properties.get("id", ""))
+    return out
 
 
 def build_labels(features: list[Feature]) -> list[Feature]:
@@ -166,7 +143,7 @@ def build_labels(features: list[Feature]) -> list[Feature]:
                 "type": "Feature",
                 "properties": {
                     "id": feature["properties"].get("id"),
-                    "name": marker_name(feature["properties"]),
+                    "name": feature["properties"].get("name") or feature["properties"].get("id"),
                 },
                 "geometry": {
                     "type": "Point",
@@ -262,20 +239,16 @@ def write_layer(result: LayerResult, out_dir: Path) -> list[Path]:
 
 
 def run(
-    source_dir: Path,
-    out_dir: Path,
-    specs: tuple[LayerSpec, ...] = LAYERS,
-    ship_all: bool = False,
+    source_dir: Path, out_dir: Path, specs: tuple[LayerSpec, ...] = LAYERS
 ) -> list[LayerResult]:
-    """Builds the layers and writes the areas layer; `ship_all` writes every layer, for tests."""
+    """Builds the seat layers and writes the areas layer and index.json; removes any other file."""
     out_dir.mkdir(parents=True, exist_ok=True)
     results = [r for spec in specs if (r := build_layer(spec, source_dir)) is not None]
     areas = build_areas(results)
-    shipped = ([*results] if ship_all else []) + ([areas] if areas else [])
-    written = {path for result in shipped for path in write_layer(result, out_dir)}
+    written = set(write_layer(areas, out_dir)) if areas else set()
     for stale in set(out_dir.glob("*.geojson")) - written:
         stale.unlink()
-    manifest = {"layers": {r.name: r.manifest() for r in shipped}}
+    manifest = {"layers": {areas.name: areas.manifest()} if areas else {}}
     write(out_dir / "index.json", json.dumps(manifest, indent=2) + "\n")
     return [*results, *([areas] if areas else [])]
 

@@ -37,7 +37,7 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 ## Wards: jodhpur_wards.geojson and jaipur_wards.geojson (approximate, unreviewed)
 
-**Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The web map layer (`frontend/public/boundaries/index.json`, `wards`) carries the same credit.
+**Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The wards are not on the web map: `frontend/public/boundaries` ships only the combined seats layer.
 
 **Display only until reviewed:** the map shows these wards (labelled unreviewed), but location lookups, scores and letters must not use them until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
 
