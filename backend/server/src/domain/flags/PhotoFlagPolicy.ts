@@ -8,6 +8,8 @@ export const PHOTO_FLAG_HIDE_EARLY = 5;
 export const PHOTO_FLAG_SURPLUS = 5;
 // Photo reports an hour, per user and per device.
 export const FLAGS_PER_HOUR = 10;
+// Like votes: only someone within this distance of the site may report its photos.
+export const FLAG_RADIUS_M = 1000;
 
 // Turns a photo's reports into its warned and hidden state; hidden is final.
 export class PhotoFlagPolicy {
@@ -23,5 +25,10 @@ export class PhotoFlagPolicy {
     const early = people >= PHOTO_FLAG_HIDE_EARLY && people - backers >= PHOTO_FLAG_SURPLUS;
     const hidden = wasHidden || people >= PHOTO_FLAG_HIDE || early;
     return { count: people, warned: hidden || people >= PHOTO_FLAG_WARN, hidden };
+  }
+
+  // A site goes only when its reporters outnumber every backer, the photo's reporter included, by the surplus.
+  removesSite(reporters: number, backers: number): boolean {
+    return reporters - backers >= PHOTO_FLAG_SURPLUS;
   }
 }

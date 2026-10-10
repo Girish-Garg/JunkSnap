@@ -41,6 +41,14 @@ describe('photo ids and warnings', () => {
     expect(photos.map((photo) => [photo.photoId, photo.warned])).toEqual([['rpt_test_1', false], ['rpt_test_2', true], [null, false]]);
   });
 
+  it('never uses a covered photo as the thumbnail of a card or list row', () => {
+    const covered = testSite({ photo_urls: PHOTOS, photo_flags: [{ photo_id: 'rpt_test_1', count: 3, warned: true, hidden: false }] });
+    expect(new SitePresenter(covered.properties).thumbnail()).toBe(PHOTOS[1]);
+    const allCovered = testSite({ photo_urls: PHOTOS.slice(0, 1), photo_flags: [{ photo_id: 'rpt_test_1', count: 3, warned: true, hidden: false }] });
+    expect(new SitePresenter(allCovered.properties).thumbnail()).toBeNull();
+    expect(new SitePresenter(testSite({ photo_urls: PHOTOS }).properties).thumbnail()).toBe(PHOTOS[0]);
+  });
+
   it('says why a site whose photos were reported left the map', () => {
     const site = testSite({ status: 'removed', verification: 'unverified', removed_reason: 'photos_reported' });
     expect(SiteClosure.reasonOf(site.properties)).toBe('photosReported');
@@ -82,7 +90,7 @@ describe('reporting a photo', () => {
     await user.click(screen.getByRole('button', { name: 'Send report' }));
     expect(await screen.findByText(/Thanks. Your report was counted./)).toBeInTheDocument();
     expect(api.calls.filter((call) => call.kind === 'flagPhoto')).toEqual([
-      { kind: 'flagPhoto', siteId: 'site_jdh_1', body: expect.objectContaining({ photoId: 'rpt_jdh_1', reason: 'unrelated', text: 'This is the next street' }) },
+      { kind: 'flagPhoto', siteId: 'site_jdh_1', body: expect.objectContaining({ photoId: 'rpt_jdh_1', reason: 'unrelated', text: 'This is the next street', gps: expect.objectContaining({ lat: expect.any(Number) }) }) },
     ]);
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Report this photo' })).toBeNull());
   });
@@ -98,6 +106,20 @@ describe('when a photo report cannot go through', () => {
     await user.click(await screen.findByRole('radio', { name: 'Duplicate' }));
     await user.click(screen.getByRole('button', { name: 'Send report' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('You took this photo, so a neighbour has to report it.');
+  });
+
+});
+
+describe('when a photo report comes from too far', () => {
+  it('says plainly when the resident is more than 1 km away', async () => {
+    const user = userEvent.setup();
+    const api = new FakeSiteActionsApi();
+    api.failNext('flagPhoto', 403, 'too_far');
+    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1', services: await services(true, api) });
+    await user.click(await screen.findByRole('button', { name: 'Report photo 1' }));
+    await user.click(await screen.findByRole('radio', { name: 'Duplicate' }));
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Photo reports count only within 1 km of the site.');
   });
 
   it('asks a signed-out resident to sign in before the report sheet opens', async () => {

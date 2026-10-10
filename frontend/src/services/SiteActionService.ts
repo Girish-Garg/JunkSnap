@@ -56,11 +56,12 @@ export class SiteActionService {
     return this.#signedIn.run(() => this.#ports.api.note(siteId, { text, language, device_token }));
   }
 
-  /** Reports one site photo; a blank description is left out (decision 20261011-0310-hem-photo-flags). */
+  /** Reports one site photo from within 1 km, like a vote; a blank description is left out (decision 20261011-0310-hem-photo-flags). */
   async flagPhoto(siteId: string, photoId: string, reason: PhotoFlagReason, text: string): Promise<PhotoFlagResult> {
+    const gps = await this.#ports.gps.current();
     const device_token = await this.#ports.identity.deviceToken();
     const described = text.trim() === '' ? {} : { text: text.trim() };
-    return this.#signedIn.run(() => this.#ports.api.flagPhoto(siteId, photoId, { reason, device_token, ...described }));
+    return this.#signedIn.run(() => this.#ports.api.flagPhoto(siteId, photoId, { reason, device_token, gps, ...described }));
   }
 
   /** Takes this user's reports off a site that is not verified yet. */

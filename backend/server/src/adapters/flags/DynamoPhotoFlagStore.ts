@@ -1,9 +1,7 @@
 import { PutCommand, QueryCommand, type DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { ExternalServiceError } from "../../domain/errors.js";
-import type { FlagAuthor, StoredPhotoFlag } from "../../domain/flags/PhotoFlag.js";
-import type { ShownNote } from "../../domain/notes/Community.js";
+import type { FlagAuthor, FlagText, StoredPhotoFlag } from "../../domain/flags/PhotoFlag.js";
 import type { PhotoFlagStore } from "../../ports/flags/PhotoFlagStore.js";
-import type { ReportNoteReader } from "../../ports/notes/NoteStore.js";
 
 // Notes sort as note_<ulid>; photo reports as flag#<photo>#<author hash>, so one person has one row per photo.
 const FLAG_PREFIX = "flag#";
@@ -14,7 +12,7 @@ type Client = Pick<DynamoDBDocumentClient, "send">;
 type Item = Record<string, unknown>;
 
 // Photo reports in the notes table (decision 20261011-0310-hem-photo-flags): hashes only, never a user id or device token.
-export class DynamoPhotoFlagStore implements PhotoFlagStore, ReportNoteReader {
+export class DynamoPhotoFlagStore implements PhotoFlagStore {
   readonly #client: Client;
   readonly #table: string;
 
@@ -45,8 +43,8 @@ export class DynamoPhotoFlagStore implements PhotoFlagStore, ReportNoteReader {
     return items.flatMap(DynamoPhotoFlagStore.#author);
   }
 
-  // Shown descriptions only, for note_analysis as photo reports; never shown or quoted.
-  async shownFor(siteId: string): Promise<ShownNote[]> {
+  // Every report with its shown description, so the reader can tell which photos several people reported.
+  async textsFor(siteId: string): Promise<FlagText[]> {
     const items = await this.#pages(siteId, FLAG_PREFIX, MAX_TEXT_PAGES);
     return items.flatMap(DynamoPhotoFlagStore.#text);
   }
@@ -80,10 +78,13 @@ export class DynamoPhotoFlagStore implements PhotoFlagStore, ReportNoteReader {
     return typeof authorHash === "string" && typeof deviceHash === "string" ? [{ authorHash, deviceHash }] : [];
   }
 
-  static #text(item: Item): ShownNote[] {
-    const { text, author_hash: authorHash, text_status: status } = item;
-    const shown = status === "shown" && typeof text === "string" && typeof authorHash === "string";
-    return shown ? [{ text, authorHash, source: "photo_report" }] : [];
+  static #text(item: Item): FlagText[] {
+    const { text, text_status: status, photo_id: photoId } = item;
+    const [author] = DynamoPhotoFlagStore.#author(item);
+    if (author === undefined || typeof photoId !== "string") {
+      return [];
+    }
+    return [{ photoId, author, text: status === "shown" && typeof text === "string" ? text : null }];
   }
 
   async #call<T>(send: () => Promise<T>, what: string): Promise<T> {

@@ -26,6 +26,13 @@ export interface FlagAuthor {
   readonly deviceHash: string;
 }
 
+// One stored report as the community analysis reads it: its photo, who, and the shown description if any.
+export interface FlagText {
+  readonly photoId: string;
+  readonly author: FlagAuthor;
+  readonly text: string | null;
+}
+
 // Decision 20261011-0310-hem-photo-flags: nobody reports their own photo.
 export class OwnPhotoError extends JunkSnapError {
   override readonly code: ErrorCode = "own_photo";

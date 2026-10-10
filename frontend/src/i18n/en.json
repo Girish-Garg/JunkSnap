@@ -1149,7 +1149,8 @@
       "offline": "No connection. Try again when you are online.",
       "failed": "The report did not go through. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more.",
-      "location": "The report did not go through. Try again."
+      "location": "Your location is needed to report a photo. Allow location in the browser settings.",
+      "too_far": "Photo reports count only within 1 km of the site. Go closer and try again."
     }
   }
 }

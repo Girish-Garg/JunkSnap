@@ -1,4 +1,5 @@
 // photo_flag.schema.json and site.photo_flags in contracts v1.15 (decision 20261011-0310-hem-photo-flags).
+import type { GpsFix } from './ReportUpload';
 import type { SiteStatus } from './Site';
 
 export const PHOTO_FLAG_TEXT_MAX = 200;
@@ -19,6 +20,8 @@ export interface PhotoFlagRequest {
   readonly reason: PhotoFlagReason;
   readonly text?: string;
   readonly device_token: string;
+  /** Like a vote: the api answers 403 too_far beyond 1 km of the site. */
+  readonly gps: GpsFix;
 }
 
 /** The api never says who reported the photo or repeats the description. */

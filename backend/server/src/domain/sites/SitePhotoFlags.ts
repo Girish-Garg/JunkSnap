@@ -1,5 +1,6 @@
 import type { FlagAuthor, PhotoFlagState } from "../flags/PhotoFlag.js";
 import { PhotoFlagPolicy } from "../flags/PhotoFlagPolicy.js";
+import { ReportedPhotoRemoval } from "./ReportedPhotoRemoval.js";
 import type { SiteProperties, SiteState } from "./SiteTypes.js";
 import { newestPhotos } from "./utils.js";
 
@@ -17,7 +18,7 @@ export interface PhotoFlagCount {
 }
 
 // Decision 20261011-0310-hem-photo-flags: records a photo's reports on the site; hidden photos leave photo_urls,
-// and an unverified site whose every remaining report is a hidden photo is removed (photos_reported).
+// and an unverified site whose every remaining report is a hidden photo may be removed (ReportedPhotoRemoval).
 export class SitePhotoFlags {
   readonly #state: SiteState;
   readonly #count: PhotoFlagCount;
@@ -41,8 +42,8 @@ export class SitePhotoFlags {
     const photoFlags: PhotoFlags = [...others, { photo_id: this.#count.photoId, ...photo }];
     const kept = feature.properties.photo_urls.filter((url) => !photo.hidden || url !== this.#count.photoUrl);
     const properties = { ...feature.properties, photo_flags: photoFlags, photo_urls: newestPhotos(kept) };
-    const removed = this.#removes(properties) ? this.#removal() : {};
-    return { ...this.#state, feature: { ...feature, properties: { ...properties, ...removed } } };
+    const flagged = { ...this.#state, feature: { ...feature, properties } };
+    return new ReportedPhotoRemoval(flagged).apply(this.#count.at);
   }
 
   // Backers other than the photo's reporter: the photo people and the yes voters.
@@ -51,17 +52,5 @@ export class SitePhotoFlags {
     const people = new Set([...reporterIds, ...yesVoters]);
     people.delete(this.#count.reporter);
     return people.size;
-  }
-
-  // Only an unverified site goes: a verified one rests on 10 people, a rejected or removed one is already off the map.
-  #removes(properties: SiteProperties): boolean {
-    const hidden = new Set((properties.photo_flags ?? []).filter((entry) => entry.hidden).map((entry) => entry.photo_id));
-    const { reports } = this.#state.internals;
-    const allHidden = reports.length > 0 && reports.every((report) => hidden.has(report.reportId));
-    return allHidden && properties.verification === "unverified" && properties.status !== "removed";
-  }
-
-  #removal(): Pick<SiteProperties, "status" | "removed_reason" | "removed_at"> {
-    return { status: "removed", removed_reason: "photos_reported", removed_at: this.#count.at };
   }
 }

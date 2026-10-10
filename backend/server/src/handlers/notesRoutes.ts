@@ -7,6 +7,7 @@ import { DynamoCommunityWriter } from "../adapters/notes/DynamoCommunityWriter.j
 import { DynamoNoteStore } from "../adapters/notes/DynamoNoteStore.js";
 import { DynamoReportNotes } from "../adapters/notes/DynamoReportNotes.js";
 import { LlmNoteModerator } from "../services/moderation/LlmNoteModerator.js";
+import { WarnedPhotoTexts } from "../services/flags/WarnedPhotoTexts.js";
 import { ScheduledCommunityRefresh } from "../services/notes/ScheduledCommunityRefresh.js";
 import { NotesSettings } from "../settings/NotesSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
@@ -32,7 +33,7 @@ export const buildNotesRoutes: RouteBuilder = (context) => async (app) => {
     sites: new DynamoSiteReader(client, settings.sitesTable),
     notes: new DynamoNoteStore(client, settings.notesTable),
     reportNotes: new DynamoReportNotes(client, settings.reportsTable),
-    photoReports: flags.store(),
+    photoReports: new WarnedPhotoTexts(flags.store()),
     writer: new DynamoCommunityWriter(client, settings.sitesTable),
     counters: {
       devices: new DynamoLetterCounter(client, { name: settings.devicesTable, keyName: "device_token", prefix: "note" }),

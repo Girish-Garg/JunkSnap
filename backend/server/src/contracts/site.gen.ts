@@ -67,7 +67,7 @@ export interface Site {
       still_there: number;
     };
     /**
-     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): enough people reported the photos of an unverified site that every report left on it is a hidden photo. Null otherwise. Not in required so older rows stay valid.
+     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid.
      */
     removed_reason?: "withdrawn" | "photos_reported" | null;
     /**
@@ -1215,7 +1215,7 @@ export const siteSchema = {
             "photos_reported",
             null
           ],
-          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): enough people reported the photos of an unverified site that every report left on it is a hidden photo. Null otherwise. Not in required so older rows stay valid."
+          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid."
         },
         "removed_at": {
           "type": [

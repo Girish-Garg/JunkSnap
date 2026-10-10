@@ -1,6 +1,7 @@
-import type { FlagAuthor, FlagReason, StoredPhotoFlag } from "../../src/domain/flags/PhotoFlag.js";
+import type { FlagAuthor, FlagReason, FlagText, StoredPhotoFlag } from "../../src/domain/flags/PhotoFlag.js";
 import type { NoteVerdict } from "../../src/domain/moderation/types.js";
 import { authorHash } from "../../src/domain/notes/AuthorHash.js";
+import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
 import type { MergeableReport } from "../../src/domain/sites/MergeableReport.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import type { CommunityTrigger, PhotoFlagStore } from "../../src/ports/flags/PhotoFlagStore.js";
@@ -9,7 +10,7 @@ import { PhotoFlagService, type FlagRequest } from "../../src/services/flags/Pho
 import { LetterRateLimiter } from "../../src/services/letters/LetterRateLimiter.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { memoryCounters } from "../letters/support.js";
-import { DEVICE_A, DEVICE_B, northOf, report } from "../sites/builders.js";
+import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report } from "../sites/builders.js";
 import { FakeSiteRepository, FixedClock } from "../sites/fakes.js";
 import { FakeSiteReports } from "../sites/withdrawalFakes.js";
 
@@ -29,6 +30,10 @@ export class MemoryFlags implements PhotoFlagStore {
 
   async authorsOf(siteId: string, photoId: string): Promise<FlagAuthor[]> {
     return [...this.rows.values()].filter((row) => row.siteId === siteId && row.photoId === photoId);
+  }
+
+  async textsFor(siteId: string): Promise<FlagText[]> {
+    return [...this.rows.values()].filter((row) => row.siteId === siteId).map((row) => ({ photoId: row.photoId, author: row, text: row.text }));
   }
 }
 
@@ -64,8 +69,8 @@ export interface FlagRig {
   readonly community: RecordingTrigger;
 }
 
-export function flagRig(limit = 10): FlagRig {
-  const parts = { sites: new FakeSiteRepository(), rows: new FakeSiteReports(), flags: new MemoryFlags() };
+export function flagRig(limit = 10, flags = new MemoryFlags()): FlagRig {
+  const parts = { sites: new FakeSiteRepository(), rows: new FakeSiteReports(), flags };
   const checks = { moderator: new FakeModerator(), community: new RecordingTrigger() };
   const limiter = new LetterRateLimiter(memoryCounters(), limit, "photo reports");
   const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry() });
@@ -90,6 +95,8 @@ interface FlagOptions {
   readonly photo?: string;
   readonly reason?: FlagReason;
   readonly text?: string | null;
+  // Where the resident stands; the site itself unless a test moves them.
+  readonly point?: GeoPoint;
 }
 
 export function request(person: { readonly userId: string; readonly deviceToken: string }, options: FlagOptions = {}): FlagRequest {
@@ -99,6 +106,7 @@ export function request(person: { readonly userId: string; readonly deviceToken:
     reason: options.reason ?? "unrelated",
     text: options.text ?? null,
     requester: person,
+    point: options.point ?? new GeoPoint(BASE_LAT, BASE_LON),
     authorHash: authorHash(person.userId),
     deviceHash: authorHash(person.deviceToken),
   };

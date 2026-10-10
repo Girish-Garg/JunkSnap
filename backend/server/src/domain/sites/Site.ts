@@ -11,6 +11,7 @@ import type { PhotoUrls, SiteFeature, SiteInternals, SiteProperties, SiteState, 
 import { SiteAddition } from "./SiteAddition.js";
 import { SiteCleanup, type AfterPhoto, type SiteParts } from "./SiteCleanup.js";
 import { SitePhotoFlags, type PhotoFlagCount } from "./SitePhotoFlags.js";
+import { ReportedPhotoRemoval } from "./ReportedPhotoRemoval.js";
 import { SiteTemplate } from "./SiteTemplate.js";
 import { SiteWithdrawal } from "./SiteWithdrawal.js";
 import { reportedBy } from "./utils.js";
@@ -163,6 +164,7 @@ export class Site {
     if (ids.length > 0) {
       this.#adopt(withdrawal.apply());
       this.#resettle();
+      this.#adopt(new ReportedPhotoRemoval(this.snapshot()).apply(request.at));
     }
     const { site_id, status, verification, backers } = this.#props;
     return { site_id, withdrawn_report_ids: ids, site_removed: status === "removed", status, verification, backers };

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validatePhotoFlag, type PhotoFlag } from "../../contracts/index.gen.js";
 import { InternalDataError, NotFoundError, ValidationError } from "../../domain/errors.js";
 import { authorHash } from "../../domain/notes/AuthorHash.js";
+import { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import type { PhotoFlagService } from "../../services/flags/PhotoFlagService.js";
 import type { UserGuard } from "../letters/LettersEndpoint.js";
 
@@ -15,6 +16,8 @@ const FlagBody = z.object({
   reason: z.enum(["unrelated", "person_or_property", "duplicate", "offensive"]),
   text: z.string().trim().max(MAX_TEXT).nullish(),
   device_token: z.uuid(),
+  // Like a vote, a photo report comes from within 1 km of the site.
+  gps: z.strictObject({ lat: z.number().min(-90).max(90), lon: z.number().min(-180).max(180), accuracy_m: z.number().min(0) }),
 });
 
 type FlagBody = z.output<typeof FlagBody>;
@@ -50,6 +53,7 @@ export class PhotoFlagsEndpoint {
           reason: input.reason,
           text: PhotoFlagsEndpoint.#text(input),
           requester: { deviceToken, userId: user.userId },
+          point: new GeoPoint(input.gps.lat, input.gps.lon),
           authorHash: authorHash(user.userId),
           deviceHash: authorHash(deviceToken),
         });

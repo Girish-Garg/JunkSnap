@@ -14,6 +14,6 @@ export interface SiteActionsApi {
   note(siteId: string, request: NoteRequest): Promise<SiteNote>;
   /** DELETE /sites/{id}/reports/mine. 404 not_found when the user has no report there, 409 site_verified, 429 rate_limited. */
   withdraw(siteId: string): Promise<WithdrawalResult>;
-  /** POST /sites/{id}/photos/{photo}/flags. 403 own_photo for the photo's reporter, 404 not_found, 429 rate_limited. */
+  /** POST /sites/{id}/photos/{photo}/flags. 403 own_photo for the photo's reporter, 403 too_far beyond 1 km, 404 not_found, 429 rate_limited. */
   flagPhoto(siteId: string, photoId: string, request: PhotoFlagRequest): Promise<PhotoFlagResult>;
 }

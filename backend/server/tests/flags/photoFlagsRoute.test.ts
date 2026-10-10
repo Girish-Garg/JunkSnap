@@ -12,7 +12,7 @@ import type { UserGuard } from "../../src/handlers/letters/LettersEndpoint.js";
 import { createApp } from "../../src/handlers/web.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
-import { DEVICE_A, userOf } from "../sites/builders.js";
+import { BASE_LAT, BASE_LON, DEVICE_A, userOf } from "../sites/builders.js";
 import { FIRST_PHOTO, flagger, flagRig, seeded, SITE } from "./flagFakes.js";
 
 const guard: UserGuard = {
@@ -26,7 +26,8 @@ const guard: UserGuard = {
 };
 
 const NEIGHBOUR = flagger(1);
-const body = { reason: "unrelated", text: "  Not this plot, this is the next street.  ", device_token: NEIGHBOUR.deviceToken };
+const GPS = { lat: BASE_LAT, lon: BASE_LON, accuracy_m: 8 };
+const body = { reason: "unrelated", text: "  Not this plot, this is the next street.  ", device_token: NEIGHBOUR.deviceToken, gps: GPS };
 
 let app: FastifyInstance | undefined;
 
@@ -64,13 +65,20 @@ describe("POST /sites/{id}/photos/{photo}/flags", () => {
   it.each([
     ["an unknown reason", { ...body, reason: "ugly" }],
     ["a description over 200 characters", { ...body, text: "x".repeat(201) }],
-    ["no device token", { reason: "duplicate" }],
+    ["no device token", { reason: "duplicate", gps: GPS }],
+    ["no location", { reason: "duplicate", device_token: NEIGHBOUR.deviceToken }],
   ])("returns 400 bad_request for %s", async (_name, payload) => {
     expect((await post(await server(), payload)).statusCode).toBe(400);
   });
 
   it("returns 404 for a malformed photo id", async () => {
     expect((await post(await server(), body, NEIGHBOUR.userId, "PHOTO-1")).statusCode).toBe(404);
+  });
+
+  it("returns 403 too_far from more than 1 km away", async () => {
+    const response = await post(await server(), { ...body, gps: { ...GPS, lat: BASE_LAT + 0.02 } });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: "too_far" });
   });
 
   it("returns 403 own_photo to the photo's reporter", async () => {
@@ -113,7 +121,12 @@ describe("photo report adapters", () => {
     const store = new DynamoPhotoFlagStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: items }) } as never, "notes");
     expect(await store.authorsOf(SITE, FIRST_PHOTO)).toEqual([{ authorHash: "a", deviceHash: "d1" }, { authorHash: "b", deviceHash: "d2" }]);
     expect(commands[0]?.input).toMatchObject({ ConsistentRead: true, ExpressionAttributeValues: { ":prefix": `flag#${FIRST_PHOTO}#` } });
-    expect(await store.shownFor(SITE)).toEqual([{ text: "wrong place", authorHash: "a", source: "photo_report" }]);
+    const withPhoto = items.map((item) => ({ ...item, photo_id: FIRST_PHOTO }));
+    const texts = new DynamoPhotoFlagStore({ send: async () => ({ $metadata: {}, Items: withPhoto }) } as never, "notes");
+    expect(await texts.textsFor(SITE)).toEqual([
+      { photoId: FIRST_PHOTO, author: { authorHash: "a", deviceHash: "d1" }, text: "wrong place" },
+      { photoId: FIRST_PHOTO, author: { authorHash: "b", deviceHash: "d2" }, text: null },
+    ]);
   });
 
   it("reads notes without the photo report rows", async () => {

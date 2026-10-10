@@ -5,7 +5,7 @@ import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 import { useMapContext } from '../../map/useMapContext';
 import { ActionProblem } from '../ActionProblem';
 
-const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_photo', 'rate_limited', 'not_found']);
+const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_photo', 'too_far', 'rate_limited', 'not_found']);
 
 export interface PhotoReportPlace {
   readonly siteId: string;

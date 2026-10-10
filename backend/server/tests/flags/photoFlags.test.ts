@@ -135,14 +135,16 @@ describe("removing a site whose only photo is hidden", () => {
   it("removes an unverified one-photo site with photos_reported and keeps the copy for the audit trail", async () => {
     const rig = flagRig();
     seeded(rig);
-    await flagBy(rig, 1, 4);
-    expect(validateSite(rig.sites.feature(SITE)).properties.status).toBe("open");
-    await flagBy(rig, 5, 5);
+    // 5 reports hide the photo, but the site goes only when they exceed all 1 backer by 5.
+    await flagBy(rig, 1, 5);
+    expect(validateSite(rig.sites.feature(SITE)).properties).toMatchObject({ status: "open", photo_urls: [] });
+    expect(entry(rig)).toMatchObject({ count: 5, hidden: true });
+    await flagBy(rig, 6, 6);
     const stored = validateSite(rig.sites.feature(SITE)).properties;
     expect(stored).toMatchObject({ status: "removed", removed_reason: "photos_reported", removed_at: "2026-10-10T06:00:00Z", photo_urls: [] });
     expect(rig.sites.internals(SITE)?.reports.map((report) => report.reportId)).toEqual([FIRST_PHOTO]);
     expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.status).toBe("removed");
-    await expect(rig.service.flag(request(flagger(6)))).rejects.toThrow(NotFoundError);
+    await expect(rig.service.flag(request(flagger(7)))).rejects.toThrow(NotFoundError);
   });
 
   it("keeps a site that still has another photo", async () => {
@@ -182,7 +184,8 @@ describe("the description", () => {
     expect(rig.moderator.seen).toEqual(["This is a different street, not this plot."]);
     expect(answer).toMatchObject({ text_status: "shown", moderation: { result: "clean", provider: "bedrock" } });
     expect([...rig.flags.rows.values()][0]).toMatchObject({ textStatus: "shown", text: "This is a different street, not this plot." });
-    expect(rig.community.sites).toEqual([SITE]);
+    // One person's description is not a signal yet: the photo is not warned.
+    expect(rig.community.sites).toEqual([]);
     expect(JSON.stringify(answer)).not.toContain("different street");
   });
 

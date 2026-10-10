@@ -3,7 +3,9 @@ import { NotFoundError } from "../../domain/errors.js";
 import { OwnPhotoError, type FlagReason, type StoredPhotoFlag } from "../../domain/flags/PhotoFlag.js";
 import type { Requester } from "../../domain/letters/types.js";
 import type { Site } from "../../domain/sites/Site.js";
-import { SiteNotFoundError } from "../../domain/sites/SiteErrors.js";
+import { FLAG_RADIUS_M, PHOTO_FLAG_WARN } from "../../domain/flags/PhotoFlagPolicy.js";
+import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
+import { SiteNotFoundError, TooFarError } from "../../domain/sites/SiteErrors.js";
 import type { PhotoFlagCount } from "../../domain/sites/SitePhotoFlags.js";
 import type { SiteReportRef } from "../../domain/sites/Withdrawal.js";
 import { personOf } from "../../domain/sites/utils.js";
@@ -22,6 +24,8 @@ export interface FlagRequest {
   // Trimmed; null without a description.
   readonly text: string | null;
   readonly requester: Requester;
+  // Where the resident is now; like votes, photo reports need to come from within 1 km.
+  readonly point: GeoPoint;
   // One-way hashes of the user id and device token; only these are stored.
   readonly authorHash: string;
   readonly deviceHash: string;
@@ -64,15 +68,21 @@ export class PhotoFlagService {
     await this.#deps.flags.put(stored);
     const count = { photoId: request.photoId, photoUrl: photo.url, reporter: photo.reporter, at: stored.createdAt };
     const site = await this.#deps.retry.run(() => this.#record(request.siteId, count, now));
-    if (stored.textStatus === "shown") {
-      this.#deps.community.textAccepted(request.siteId);
-    }
+    this.#tellCommunity(stored, site.photo);
     const { siteId, photoId, reason, textStatus, moderation, createdAt } = stored;
     const result = { site_id: siteId, photo_id: photoId, reason, text_status: textStatus, moderation, created_at: createdAt };
     return { ...result, photo: site.photo, site_status: site.status };
   }
 
-  // The photo must be one of the site's counted reports with a public copy; its own reporter cannot report it.
+  // Descriptions count as signals only once several people reported the photo: on a new one, or when it is first warned.
+  #tellCommunity(stored: StoredPhotoFlag, photo: PhotoFlag["photo"]): void {
+    if (photo.warned && (stored.textStatus === "shown" || photo.count === PHOTO_FLAG_WARN)) {
+      this.#deps.community.textAccepted(stored.siteId);
+    }
+  }
+
+  // The photo must be one of the site's counted reports with a public copy; its own reporter cannot report it, and
+  // like a voter the resident must be within 1 km of the site.
   async #photo(request: FlagRequest, now: Date): Promise<FlaggedPhoto> {
     const site = await this.#load(request.siteId, now);
     const rows = await this.#deps.rows.forSite(request.siteId);
@@ -83,6 +93,9 @@ export class PhotoFlagService {
     }
     if (PhotoFlagService.#ownedBy(row, request.requester)) {
       throw new OwnPhotoError("You took this photo, so a neighbour has to report it");
+    }
+    if (site.point.distanceTo(request.point) > FLAG_RADIUS_M) {
+      throw new TooFarError("You need to be within 1 km of the site to report its photos");
     }
     return { url, reporter: personOf(row) };
   }
