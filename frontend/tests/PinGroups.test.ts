@@ -71,6 +71,18 @@ describe('PinGroups.of counts and looks', () => {
   });
 });
 
+describe('PinGroups.of and the active map', () => {
+  it('leaves removed, cleared and rejected sites out of every pin and stack', () => {
+    const open = testSite({ site_id: 'site_open', coordinates: SPOT });
+    const removed = testSite({ site_id: 'site_removed', coordinates: SPOT, status: 'removed', ...UNVERIFIED });
+    const cleaned = testSite({ site_id: 'site_cleaned', coordinates: SPOT, status: 'cleaned' });
+    const rejected = testSite({ site_id: 'site_rejected', coordinates: SPOT, verification: 'rejected' });
+    const result = new PinGroups().of([open, removed, cleaned, rejected], 16);
+    expect(result).toHaveLength(1);
+    expect(ids(result[0]?.sites ?? [])).toEqual(['site_open']);
+  });
+});
+
 describe('PinGroups distances', () => {
   it('measures ground metres and screen pixels at a zoom', () => {
     expect(PinGroups.metresBetween(SPOT, FIVE_METRES_EAST)).toBeCloseTo(5, 0);

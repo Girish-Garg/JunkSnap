@@ -6,6 +6,7 @@ import { useOnline } from '../../../ui/useOnline';
 import { MapNotice } from '../MapNotice';
 import type { MapView } from '../SiteMap';
 import { useLocate } from './useLocate';
+import { useMapFlash } from './useMapFlash';
 import { useMapLayers } from './useMapLayers';
 import { useMapSelection } from './useMapSelection';
 import { useSites } from './useSites';
@@ -23,6 +24,7 @@ export function useMapPage() {
   const sites = useMemo(() => filter.apply(loaded.sites), [filter, loaded.sites]);
   const selection = useMapSelection(loaded.sites);
   const location = useLocate();
+  const flash = useMapFlash();
   const { boundary, layerBindings } = useMapLayers(mode, selection);
   const notice = MapNotice.pick({
     online: useOnline(),
@@ -32,9 +34,11 @@ export function useMapPage() {
     loadedCount: loaded.sites.length,
     shownCount: sites.length,
     clamped: view?.clamped ?? false,
+    flash: flash.key,
   });
   const filters = { filter, setFilter, mode, setMode, open: filtersOpen, setOpen: setFiltersOpen };
   // Every route but the bare map opens a sheet, and so do Filters and the stack list.
   const sheetOpen = pathname !== '/' || filtersOpen || selection.stack !== null;
-  return { loaded: loaded.sites, sites, setView, selection, location, notice, sheetOpen, filters, boundary, layerBindings };
+  const refresh = { refreshSites: loaded.refresh, announce: flash.announce };
+  return { loaded: loaded.sites, sites, setView, selection, location, notice, sheetOpen, filters, boundary, layerBindings, ...refresh };
 }

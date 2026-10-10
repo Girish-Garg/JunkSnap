@@ -18,9 +18,11 @@ const Gps = z.strictObject({
 const IgnoredUserId = z.unknown().optional();
 const SiteParams = z.object({ id: z.string() });
 const BboxQuery = z.object({ bbox: z.string() });
+// Every app call carries X-Device-Token; withdrawals count against it as well as the user.
+const DeviceHeader = z.object({ "x-device-token": z.string().regex(DEVICE_TOKEN) });
 const VoteBody = z.strictObject({
   device_token: z.string().regex(DEVICE_TOKEN),
-  vote: z.enum(["confirm", "reject"]),
+  vote: z.enum(["confirm", "reject", "cleaned"]),
   gps: Gps,
   user_id: IgnoredUserId,
 });
@@ -55,6 +57,10 @@ export class SiteRequests {
   cleanup(body: unknown): CleanupRequest {
     const { upload_id, device_token, sha256, gps, captured_at } = SiteRequests.#parse(CleanupBody, body, "cleanup");
     return { upload_id, device_token, sha256, gps, captured_at };
+  }
+
+  deviceToken(headers: unknown): string {
+    return SiteRequests.#parse(DeviceHeader, headers, "X-Device-Token")["x-device-token"];
   }
 
   static #parse<S extends z.ZodType>(schema: S, value: unknown, what: string): z.output<S> {

@@ -1,5 +1,5 @@
 import type { NoteRequest, SiteNote } from '../domain/Community';
-import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
+import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 
 /** POST /sites/{id}/votes, /cleanup and /letters. All need sign-in; failures reject with ApiError. */
 export interface SiteActionsApi {
@@ -11,4 +11,6 @@ export interface SiteActionsApi {
   letter(siteId: string, request: LetterRequest): Promise<LetterDraft>;
   /** 201 site_note; hidden when moderation removed it. 429 rate_limited after 10 an hour. */
   note(siteId: string, request: NoteRequest): Promise<SiteNote>;
+  /** DELETE /sites/{id}/reports/mine. 404 not_found when the user has no report there, 409 site_verified, 429 rate_limited. */
+  withdraw(siteId: string): Promise<WithdrawalResult>;
 }

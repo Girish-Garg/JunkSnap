@@ -38,9 +38,11 @@ export class DynamoReportNotes implements ReportNoteReader {
       TableName: this.#table,
       IndexName: BY_SITE_INDEX,
       KeyConditionExpression: "site_id = :site",
-      FilterExpression: "attribute_exists(note)",
-      ProjectionExpression: "note, moderation_result, user_id, device_token",
-      ExpressionAttributeValues: { ":site": siteId },
+      // A withdrawn report's note leaves with it (decision 20261010-1700).
+      FilterExpression: "attribute_exists(note) AND (attribute_not_exists(#status) OR #status <> :withdrawn)",
+      ProjectionExpression: "note, moderation_result, user_id, device_token, #status",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: { ":site": siteId, ":withdrawn": "withdrawn" },
       ExclusiveStartKey: startKey,
     });
     try {
@@ -53,7 +55,7 @@ export class DynamoReportNotes implements ReportNoteReader {
   static #shown(item: Record<string, unknown>): ShownNote[] {
     const moderation = item.moderation_result as { note_moderation?: { result?: unknown } | null } | undefined;
     const person = typeof item.user_id === "string" ? item.user_id : item.device_token;
-    const clean = moderation?.note_moderation?.result === "clean";
+    const clean = moderation?.note_moderation?.result === "clean" && item.status !== "withdrawn";
     return clean && typeof item.note === "string" && typeof person === "string" ? [{ text: item.note, authorHash: authorHash(person) }] : [];
   }
 }

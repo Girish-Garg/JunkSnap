@@ -55,6 +55,11 @@ class VerificationResult:
     embedding_key: str | None = None
     insights: Insights = field(default_factory=Insights)
 
+    def _combiner_version(self) -> str:
+        """A veto has no field of its own, so the version records it with the models behind it."""
+        veto = self.outcome.veto
+        return self.combiner.version if veto is None else f"{self.combiner.version}+{veto.label()}"
+
     def to_contract(self) -> dict[str, object]:
         return {
             "report_id": self.case.report_id,
@@ -67,7 +72,7 @@ class VerificationResult:
             "features": self.case.features.to_contract(),
             "judge": None if self.judge is None else self.judge.to_contract(),
             "disagreement": self.outcome.disagreement,
-            "combiner": {"kind": self.combiner.kind, "version": self.combiner.version},
+            "combiner": {"kind": self.combiner.kind, "version": self._combiner_version()},
             "embedding_key": self.embedding_key,
             "insights": self.insights.to_contract() if self.case.purpose.reports_insights else None,
             "decided_at": self.decided_at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),

@@ -19,8 +19,8 @@ export interface CounterTable {
   readonly name: string;
   // devices rows use device_token, users rows use user_id.
   readonly keyName: string;
-  // Attribute prefix: letter (letter_window_start, letter_count) or note.
-  readonly prefix?: "letter" | "note";
+  // Attribute prefix: letter (letter_window_start, letter_count), note or withdraw.
+  readonly prefix?: "letter" | "note" | "withdraw";
 }
 
 interface Window {

@@ -30,5 +30,13 @@ export class SiteRejectedError extends InvalidTransitionError {
   override readonly code: ErrorCode = "site_rejected";
 }
 
+// Decision 20261010-1700: a verified site rests on 10 people, so its reports can no longer be withdrawn.
+export class SiteVerifiedError extends InvalidTransitionError {
+  override readonly code: ErrorCode = "site_verified";
+}
+
+// Every report on the site was withdrawn; it is kept for the audit trail but takes nothing new.
+export class SiteRemovedError extends NotFoundError {}
+
 // Another writer saved the site first; the caller reloads and tries again.
 export class StaleSiteError extends JunkSnapError {}

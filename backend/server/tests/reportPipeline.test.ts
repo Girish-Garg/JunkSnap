@@ -139,6 +139,20 @@ describe("ReportPipeline", () => {
     expect(reports.stored("rpt_jdh_1")).toMatchObject({ status: "rejected", completed_steps: ["moderate", "verify"] });
   });
 
+  it("never merges a photo the judge vetoed as not waste, and the status says rejected (issue 103)", async () => {
+    const judge = { report_type: "not_waste" as const, context: null, burning: false, readable_brands: [], rationale: "An indoor room." };
+    const combiner = { kind: "meta_learner" as const, version: "meta-v1+judge_veto:not_waste by bedrock/apac.amazon.nova-lite-v1:0@v1" };
+    const vetoed = { ...verification(), decision: "rejected" as const, disagreement: true, probability: 0.62, judge, combiner };
+    const { pipeline, merger } = wire({ verified: vetoed, merge: { siteId: "site_jdh_1", verification: "unverified" } });
+    await pipeline.handle(delivery());
+    expect(journal.calls).not.toContain("merge");
+    expect(merger?.merged).toEqual([]);
+    const report = Report.fromRecord(reports.stored("rpt_jdh_1"));
+    const view = report.statusView("https://cdn.example");
+    expect(view).toMatchObject({ status: "rejected", site_id: null });
+    expect(view.verification).toMatchObject({ decision: "rejected", judge: { report_type: "not_waste" } });
+  });
+
   it("stops after moderation rejects the photo", async () => {
     const rejected = { ...moderation(), outcome: "rejected" as const, reasons: ["unsafe_image" as const] };
     await wire({ moderated: rejected }).pipeline.handle(delivery());

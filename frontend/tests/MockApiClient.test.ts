@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BBox } from '../src/domain/BBox';
+import { SiteListing } from '../src/domain/SiteListing';
 import { MockApiClient } from '../src/services/MockApiClient';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 
@@ -8,12 +9,14 @@ const AROUND_JODHPUR = BBox.around([73.02, 26.27], 1);
 const api = new MockApiClient(siteFixtureLoaders);
 
 describe('MockApiClient.listSites returns the fixtures', () => {
-  it('returns every site fixture in contracts/fixtures', async () => {
+  it('returns every site fixture in contracts/fixtures that is on the map', async () => {
     const sites = await api.listSites(ALL_INDIA);
     const ids = sites.map((site) => site.properties.site_id);
-    expect(Object.keys(siteFixtureLoaders).length).toBeGreaterThan(0);
-    expect(sites).toHaveLength(Object.keys(siteFixtureLoaders).length);
+    const all = await Promise.all(Object.values(siteFixtureLoaders).map((load) => load()));
+    expect(all.length).toBeGreaterThan(0);
+    expect(sites).toHaveLength(all.filter((site) => SiteListing.onMap(site.properties)).length);
     expect(ids).toEqual(expect.arrayContaining(['site_jdh_1', 'site_jdh_2', 'site_jdh_3']));
+    expect(ids).not.toContain('site_jdh_5');
   });
 
   it('returns fixture sites as GeoJSON point features', async () => {
@@ -31,6 +34,14 @@ describe('MockApiClient.listSites follows the API rules', () => {
     const rejected = { ...site, properties: { ...site.properties, verification: 'rejected' as const } };
     const withRejected = new MockApiClient({ ok: () => api.getSite('site_jdh_2'), rejected: async () => rejected });
     const ids = (await withRejected.listSites(ALL_INDIA)).map((found) => found.properties.site_id);
+    expect(ids).toEqual(['site_jdh_2']);
+  });
+
+  it('leaves out removed and cleaned sites (decision 20261010-1700)', async () => {
+    const site = await api.getSite('site_jdh_1');
+    const cleaned = { ...site, properties: { ...site.properties, site_id: 'site_c', status: 'cleaned' as const } };
+    const withHidden = new MockApiClient({ ok: () => api.getSite('site_jdh_2'), removed: () => api.getSite('site_jdh_5'), cleaned: async () => cleaned });
+    const ids = (await withHidden.listSites(ALL_INDIA)).map((found) => found.properties.site_id);
     expect(ids).toEqual(['site_jdh_2']);
   });
 

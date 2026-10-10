@@ -5,7 +5,7 @@ import type { VoteChoice, VoteResult } from '../../../domain/SiteActions';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 
 // Error codes with their own plain message; anything else says the vote did not go through.
-const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_site', 'too_far', 'rate_limited', 'site_rejected']);
+const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_site', 'too_far', 'rate_limited', 'site_rejected', 'already_cleaned', 'not_found']);
 
 const problemOf = (error: unknown) => ActionProblem.of(error, KNOWN_ERRORS);
 

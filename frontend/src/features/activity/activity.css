@@ -1,0 +1,17 @@
+/* Delete on an Activity row: the confirm step sits under the row's actions (decision 20261010-1700). Tokens only. */
+.activity-delete {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-m);
+  animation: pop-in var(--dur-3) var(--spring);
+}
+
+.activity-delete__text {
+  flex-basis: 100%;
+  color: var(--text-secondary);
+}

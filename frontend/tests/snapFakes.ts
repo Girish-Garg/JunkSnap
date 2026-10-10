@@ -1,3 +1,4 @@
+import { ActivityRemover, type ActivityRemoverPorts } from '../src/services/ActivityRemover';
 import type { SnapServices } from '../src/app/SnapServices';
 import type { AreaLetterApi } from '../src/services/AreaLetterApi';
 import { AreaLetterService } from '../src/services/AreaLetterService';
@@ -201,10 +202,14 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     encoder: new FakeEncoder(),
     hasher,
     gps,
-    siteActions: testSiteActions(options.siteApi, { uploads: api, identity, gps }),
+    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
+}
+
+function testActions(siteActions: SiteActionService, ports: Omit<ActivityRemoverPorts, 'sites'>): Pick<SnapServices, 'siteActions' | 'remover'> {
+  return { siteActions, remover: new ActivityRemover({ ...ports, sites: siteActions }) };
 }
 
 function testSiteActions(siteApi: SiteActionsApi | undefined, ports: Omit<SiteActionPorts, 'api'>): SiteActionService {

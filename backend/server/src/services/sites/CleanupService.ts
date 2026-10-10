@@ -34,8 +34,7 @@ export class CleanupService {
     if (record.status !== "checking") {
       return record.status;
     }
-    const acceptance = this.#acceptance(cleanupId, outcome);
-    await this.#deps.retry.run(() => this.#settleSite(record, acceptance));
+    const acceptance = await this.#deps.retry.run(() => this.#settleSite(record, this.#acceptance(cleanupId, outcome)));
     const status = acceptance === null ? "rejected" : "accepted";
     await this.#deps.cleanups.finish(cleanupId, { status, ...outcome });
     return status;
@@ -61,10 +60,14 @@ export class CleanupService {
     }
   }
 
-  async #settleSite(record: CleanupRecord, acceptance: Acceptance | null): Promise<void> {
+  // Returns the acceptance that stands; a site withdrawn meanwhile (decision 20261010-1700) rejects the cleanup.
+  async #settleSite(record: CleanupRecord, acceptance: Acceptance | null): Promise<Acceptance | null> {
     const site = await this.#deps.sites.get(record.site_id);
+    if (site?.isRemoved() === true) {
+      return null;
+    }
     if (site === null || !site.awaitsCleanup(record.cleanup_id)) {
-      return;
+      return acceptance;
     }
     if (acceptance === null) {
       site.rejectCleanup(record.cleanup_id);
@@ -72,5 +75,6 @@ export class CleanupService {
       site.acceptCleanup(record.cleanup_id, acceptance.photoUrl, acceptance.cleanedAt);
     }
     await this.#deps.sites.save(site);
+    return acceptance;
   }
 }

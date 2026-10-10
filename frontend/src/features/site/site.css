@@ -387,3 +387,38 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+
+/* Withdraw my report: only for this phone's reporter while the site is unverified (decision 20261010-1700). Tokens only. */
+.withdraw-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+}
+
+.withdraw-box__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
+}
+
+.withdraw-box__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  animation: pop-in var(--dur-3) var(--spring);
+}
+
+.withdraw-box__text {
+  color: var(--text-secondary);
+}
+
+.withdraw-box__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}

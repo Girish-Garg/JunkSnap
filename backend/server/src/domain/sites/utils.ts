@@ -1,4 +1,4 @@
-import type { PhotoUrls, SiteBrand, Voter } from "./SiteTypes.js";
+import type { PhotoUrls, SiteBrand, SiteInternals, Voter } from "./SiteTypes.js";
 
 const MAX_PHOTOS = 6;
 
@@ -27,6 +27,12 @@ export function earlierTime(a: string, b: string): string {
 
 export function laterTime(a: string, b: string): string {
   return Date.parse(b) > Date.parse(a) ? b : a;
+}
+
+// Same user, or same device for a guest from before accounts (the own_site rule).
+export function reportedBy(site: Pick<SiteInternals, "reporterDevices" | "reporterUsers">, voter: Voter): boolean {
+  const sameUser = voter.userId !== null && site.reporterUsers.includes(voter.userId);
+  return sameUser || site.reporterDevices.includes(voter.deviceToken);
 }
 
 // A person is a user id, else a device token (decision 20261010-1530).

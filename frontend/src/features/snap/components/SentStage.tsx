@@ -6,6 +6,7 @@ import { Celebration } from '../../../ui/Celebration';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 import { useReportProgress } from '../hooks/useReportProgress';
 import { ReportProgress } from '../ReportProgress';
+import { RejectionNotice } from './RejectionNotice';
 import { ProgressBadge } from './ProgressBadge';
 import { ProgressSteps } from './ProgressSteps';
 import { ReportThumb } from './ReportThumb';
@@ -25,11 +26,12 @@ export function SentStage({ id, onAgain }: SentStageProps) {
   const blurred = report.data.status?.blurred_url ?? null;
   return (
     <div className="snap-sent">
-      {report.data.problem === null && report.data.stage !== 'failed' && <Celebration />}
+      {ReportProgress.celebrates(report) && <Celebration />}
       <ProgressSteps done={ReportProgress.stepsDone(report)} />
       <p className="snap-sent__status" role="status">
         <ProgressBadge report={report} />
       </p>
+      <RejectionNotice report={report} />
       {report.data.problem === 'sign_in' && (
         <Button variant="text" onClick={() => auth.go('signIn')}>
           {t('snap.signIn')}

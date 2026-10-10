@@ -11,7 +11,8 @@ export type PhotoUrls = SiteProperties["photo_urls"];
 export type SiteInsights = NonNullable<SiteProperties["insights"]>;
 export type NearPlace = SiteInsights["near"][number];
 export type ReportInsights = NonNullable<VerificationResult["insights"]>;
-export type VoteChoice = "confirm" | "reject";
+// cleaned: the person says the waste is gone (decision 20261010-1700).
+export type VoteChoice = "confirm" | "reject" | "cleaned";
 
 // userId is null for a guest from before accounts.
 export interface Voter {
@@ -53,6 +54,8 @@ export interface SiteInternals {
   readonly meTooCount: number;
   readonly embeddingKey: string | null;
   readonly pendingCleanupId: string | null;
+  // Reports their reporter withdrew (decision 20261010-1700): kept for the audit trail, never counted.
+  readonly withdrawnReports: readonly string[];
   readonly version: number;
 }
 

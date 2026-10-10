@@ -40,6 +40,7 @@ const StoredExtras = z.object({
   me_too_count: z.int().min(0).default(0),
   embedding_key: z.string().nullable().default(null),
   pending_cleanup_id: z.string().nullable().default(null),
+  withdrawn_report_ids: z.array(z.string()).default([]),
   version: z.int().min(0).default(0),
 });
 
@@ -75,6 +76,7 @@ export class SiteItemMapper {
       me_too_count: internals.meTooCount,
       embedding_key: internals.embeddingKey,
       pending_cleanup_id: internals.pendingCleanupId,
+      withdrawn_report_ids: internals.withdrawnReports,
       version: internals.version + 1,
     };
   }
@@ -118,6 +120,7 @@ export class SiteItemMapper {
       meTooCount: extras.me_too_count,
       embeddingKey: extras.embedding_key,
       pendingCleanupId: extras.pending_cleanup_id,
+      withdrawnReports: extras.withdrawn_report_ids,
       version: extras.version,
     };
   }

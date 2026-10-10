@@ -1,5 +1,6 @@
 import { REPORT_TYPES, type ReportType } from '../../domain/ReportType';
 import type { LonLat, SiteFeature } from '../../domain/Site';
+import { SiteListing } from '../../domain/SiteListing';
 
 // MapLibre zoom 0 is one 512 px tile for the whole world.
 const WORLD_PX_AT_ZOOM_0 = 512;
@@ -39,8 +40,11 @@ export class PinGroups {
     this.#limits = limits;
   }
 
+  /** Rejected, removed and cleared sites are off the active map (SiteListing.onMap), so no pin or stack holds them. */
   of(sites: readonly SiteFeature[], zoom: number): readonly PinGroup[] {
-    let free = [...sites].sort((a, b) => a.properties.site_id.localeCompare(b.properties.site_id));
+    let free = sites
+      .filter((site) => SiteListing.onMap(site.properties))
+      .sort((a, b) => a.properties.site_id.localeCompare(b.properties.site_id));
     const groups: PinGroup[] = [];
     while (free.length > 0) {
       const seed = (free[0] as SiteFeature).geometry.coordinates;

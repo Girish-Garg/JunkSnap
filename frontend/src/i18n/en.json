@@ -106,7 +106,8 @@
   "status": {
     "open": "Open",
     "cleaned": "Cleared",
-    "reopened": "Reopened"
+    "reopened": "Reopened",
+    "removed": "Withdrawn"
   },
   "verification": {
     "verified": "Verified",
@@ -417,7 +418,6 @@
     "close": "Close activity",
     "loading": "Loading your reports",
     "retry": "Try again",
-    "remove": "Remove",
     "openSite": "Open site",
     "noPhoto": "Blurred photo not ready yet",
     "photoAlt": "Blurred photo of your report",
@@ -443,7 +443,15 @@
     "rejected": "Not accepted after checking",
     "needs_review": "Needs a manual check",
     "unverified": "Waiting for 10 people to confirm",
-    "community_check": "Waiting for a neighbour check"
+    "community_check": "Waiting for a neighbour check",
+    "not_waste": "Not a waste site",
+    "unconfirmed": "Waste not confirmed",
+    "withdrawn": "Withdrawn"
+  },
+  "rejection": {
+    "not_waste": "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.",
+    "unconfirmed": "Our checks couldn't confirm waste in this photo.",
+    "dismiss": "Dismiss"
   },
   "scan": {
     "record": "Start recording",
@@ -496,13 +504,17 @@
       "rate_limited": "Too many tries. Wait a little and try again.",
       "offline": "No connection. Try again when you are online.",
       "failed": "The vote did not go through. Try again.",
-      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+      "sign_in": "Your sign-in has expired. Sign in again and try once more.",
+      "already_cleaned": "This site is already marked cleared.",
+      "not_found": "This site was withdrawn by its reporter, so it takes no more votes."
     },
     "noBin": {
       "title": "Is there no dustbin within 1 km?",
       "text": "Neighbours confirm no-bin zones. Your answer counts when you are within 1 km.",
-      "yes": "I confirm there's no bin within 1 km"
-    }
+      "yes": "I confirm there's no bin within 1 km",
+      "cleaned": "There's a bin here now"
+    },
+    "cleaned": "It's cleared now"
   },
   "cleanup": {
     "title": "Report cleaned",
@@ -814,5 +826,42 @@
     "sent": "Thanks. Your report joins the no-bin zone here.",
     "signIn": "Sign in to report a missing bin.",
     "failed": "Could not send. Check your connection and try again."
+  },
+  "withdraw": {
+    "title": "Your report",
+    "action": "Withdraw my report",
+    "confirmText": "Withdraw your report from this site? If nobody else reported it, the site leaves the map. You cannot undo this.",
+    "confirm": "Yes, withdraw",
+    "busy": "Withdrawing",
+    "keep": "Keep my report",
+    "removed": "Report withdrawn. The site is off the map.",
+    "done": "Report withdrawn. Other people's reports stay.",
+    "errors": {
+      "site_verified": "Ten people have verified this site, so your report stays.",
+      "not_found": "There is no report of yours on this site any more.",
+      "rate_limited": "Too many withdrawals this hour. Try again later.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The withdrawal did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    }
+  },
+  "activityDelete": {
+    "action": "Delete",
+    "yes": "Yes, delete",
+    "busy": "Deleting",
+    "keep": "Cancel",
+    "confirm_withdraw": "This also withdraws your report from its site. If nobody else reported it, the site leaves the map. You cannot undo this.",
+    "confirm_verified": "This site is verified by neighbours, so it stays on the map. The report is only removed from this list.",
+    "confirm_local": "This removes it from this phone's list.",
+    "done": "Removed from Activity.",
+    "withdrawn": "Report withdrawn and removed from Activity.",
+    "siteRemoved": "Report withdrawn. The site is off the map.",
+    "verifiedKept": "Removed from Activity. This site is verified by neighbours, so it stays on the map.",
+    "errors": {
+      "rate_limited": "Too many withdrawals this hour. Try again later.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "Could not delete it. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    }
   }
 }

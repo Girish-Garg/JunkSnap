@@ -10,7 +10,13 @@ export function buildSitesRoutes(context: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const factory = SiteServiceFactory.fromEnv(context.core, context.env, app.log);
     const users = new GuardedSiteUsers(RouteGuard.fromEnv(context.env));
-    const deps = { finder: factory.finder(), votes: factory.voteService(), cleanups: factory.cleanupIntake(), users };
+    const deps = {
+      finder: factory.finder(),
+      votes: factory.voteService(),
+      cleanups: factory.cleanupIntake(),
+      withdrawals: factory.withdrawalService(),
+      users,
+    };
     await app.register(new SiteRoutes(deps).plugin());
   };
 }

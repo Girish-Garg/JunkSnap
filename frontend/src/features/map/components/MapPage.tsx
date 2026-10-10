@@ -2,9 +2,9 @@ import { Outlet } from 'react-router';
 import { NavBar } from '../../nav/NavBar';
 import { useMapFallback } from '../hooks/useMapFallback';
 import { useMapPage } from '../hooks/useMapPage';
+import { useMapPageContext } from '../hooks/useMapPageContext';
 import '../map.css';
 import '../overlay.css';
-import type { MapContext } from '../useMapContext';
 import { FiltersSheet } from './FiltersSheet';
 import { MapOverlay } from './MapOverlay';
 import { MapSurface } from './MapSurface';
@@ -13,7 +13,7 @@ export function MapPage() {
   const page = useMapPage();
   const { listMode, fail } = useMapFallback();
   const { selection, filters } = page;
-  const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite, sites: page.loaded };
+  const context = useMapPageContext(page);
   const classes = ['map-page', page.sheetOpen && 'map-page--sheet', selection.preview && 'map-page--card'];
   return (
     <main className={classes.filter(Boolean).join(' ')}>

@@ -1,10 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { SiteFeature } from '../../../domain/Site';
+import { SiteListing } from '../../../domain/SiteListing';
 
-/** One site previewed in the card, or the sites of a stack pin listed in the stack sheet; never both. */
-type Picked = { readonly site: SiteFeature } | { readonly stack: readonly SiteFeature[] } | null;
+/** One site previewed in the card, or the ids of a stack pin listed in the stack sheet; never both. */
+type Picked = { readonly site: SiteFeature } | { readonly stackIds: readonly string[] } | null;
 
-/** What the last tap on a pin picked, looked up among the loaded sites. */
+/**
+ * What the last tap on a pin picked. A stack is read from the loaded sites on every render, so a site that
+ * was withdrawn, removed or cleared (and so left the map) also leaves an open list; an emptied list closes.
+ */
 export function usePinPick(loaded: readonly SiteFeature[]) {
   const [picked, setPicked] = useState<Picked>(null);
   const preview = useCallback((site: SiteFeature | null) => setPicked(site ? { site } : null), []);
@@ -12,18 +16,12 @@ export function usePinPick(loaded: readonly SiteFeature[]) {
     (siteId: string | null) => preview(loaded.find((site) => site.properties.site_id === siteId) ?? null),
     [loaded, preview],
   );
-  const pickStack = useCallback(
-    (siteIds: readonly string[]) => {
-      const stack = loaded.filter((site) => siteIds.includes(site.properties.site_id));
-      setPicked(stack.length > 0 ? { stack } : null);
-    },
-    [loaded],
-  );
-  return {
-    preview: picked && 'site' in picked ? picked.site : null,
-    stack: picked && 'stack' in picked ? picked.stack : null,
-    setPreview: preview,
-    pick,
-    pickStack,
-  };
+  const pickStack = useCallback((stackIds: readonly string[]) => setPicked({ stackIds }), []);
+  const stackIds = picked && 'stackIds' in picked ? picked.stackIds : null;
+  const stack = useMemo(() => {
+    if (!stackIds) return null;
+    const sites = loaded.filter((site) => stackIds.includes(site.properties.site_id) && SiteListing.onMap(site.properties));
+    return sites.length > 0 ? sites : null;
+  }, [loaded, stackIds]);
+  return { preview: picked && 'site' in picked ? picked.site : null, stack, setPreview: preview, pick, pickStack };
 }

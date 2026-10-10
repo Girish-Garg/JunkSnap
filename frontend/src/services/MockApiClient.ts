@@ -1,6 +1,7 @@
 import { ApiError } from '../domain/ApiError';
 import type { BBox } from '../domain/BBox';
 import type { SiteFeature } from '../domain/Site';
+import { SiteListing } from '../domain/SiteListing';
 import type { ApiClient } from './ApiClient';
 import type { SiteFixtureLoaders } from './siteFixtures';
 
@@ -12,11 +13,11 @@ export class MockApiClient implements ApiClient {
     this.#loaders = loaders;
   }
 
-  /** Mirrors the API: rejected sites left out, newest first. */
+  /** Mirrors the API: rejected, removed and cleaned sites left out, newest first. */
   async listSites(bbox: BBox): Promise<readonly SiteFeature[]> {
     const sites = await this.#allSites();
     return sites.filter(
-      (site) => site.properties.verification !== 'rejected' && bbox.contains(site.geometry.coordinates),
+      (site) => SiteListing.onMap(site.properties) && bbox.contains(site.geometry.coordinates),
     );
   }
 
