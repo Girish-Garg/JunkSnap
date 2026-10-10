@@ -60,19 +60,26 @@ describe('AreaColouring on the real areas.geojson', () => {
 });
 
 describe('BoundaryCatalog.areaShapes', () => {
-  it('reads and colours the polygons once per index version and shares the result', async () => {
+  it('reads the versioned polygons and colours them once per index version, sharing the result', async () => {
     const grid: AreaPolygons = { type: 'FeatureCollection', features: [square('a', 0, 0), square('b', 1, 0)] };
+    const deploy = { version: 'v1' };
     const fetched: string[] = [];
+    const clock = { ms: 0, now: () => new Date(clock.ms) };
     const catalog = new BoundaryCatalog('/b/', async (input) => {
-      fetched.push(String(input));
-      return Response.json(grid);
-    });
-    const first = catalog.areaShapes('718-835239', TINT_COUNT);
-    expect(catalog.areaShapes('718-835239', TINT_COUNT)).toBe(first);
-    const shapes = await first;
+      const url = String(input);
+      fetched.push(url);
+      return Response.json(url.endsWith('index.json') ? { layers: { areas: { version: deploy.version } } } : grid);
+    }, BoundaryCatalog.caches(clock));
+    const shapes = await catalog.areaShapes(TINT_COUNT);
+    expect(await catalog.areaShapes(TINT_COUNT)).toBe(shapes);
     expect(shapes.tints.get('a')).not.toBe(shapes.tints.get('b'));
-    expect(catalog.areaShapes('720-900000', TINT_COUNT)).not.toBe(first);
-    expect(fetched).toEqual(['/b/areas.geojson']);
+    expect(fetched.filter((url) => url.includes('areas.geojson'))).toEqual(['/b/areas.geojson?v=v1']);
+    // A deploy with new boundaries: the index names v2 once its 10 minutes are up, and the colouring is redone.
+    deploy.version = 'v2';
+    clock.ms = 10 * 60 * 1000;
+    await catalog.index();
+    await expect.poll(() => catalog.areaShapes(TINT_COUNT)).not.toBe(shapes);
+    expect(fetched.filter((url) => url.includes('areas.geojson'))).toEqual(['/b/areas.geojson?v=v1', '/b/areas.geojson?v=v2']);
   });
 });
 

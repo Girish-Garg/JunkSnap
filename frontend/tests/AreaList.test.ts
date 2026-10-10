@@ -81,24 +81,22 @@ describe('BoundaryCatalog', () => {
   const index = (layers: object) => async () => Response.json({ layers });
 
   it('reads the areas layer from the index: present, fine edges and credit', async () => {
-    const layers = { areas: { features: 718, bytes: 835239, fine: { bytes: 1 }, attribution: 'Seats' }, wards: {} };
+    const layers = { areas: { fine: { bytes: 1 }, attribution: 'Seats' }, wards: {} };
     expect(await new BoundaryCatalog('/b', index(layers)).index()).toEqual({
       available: true,
       fine: true,
       attribution: 'Seats',
-      version: '718-835239',
     });
     expect(await new BoundaryCatalog('/b', index({ areas: {} })).index()).toEqual({
       available: true,
       fine: false,
       attribution: null,
-      version: '0-0',
     });
   });
 
   it('draws nothing without an areas layer or a readable index', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const none = { available: false, fine: false, attribution: null, version: '' };
+    const none = { available: false, fine: false, attribution: null };
     expect(await new BoundaryCatalog('/b', index({ assembly: {}, wards: {} })).index()).toEqual(none);
     expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).index()).toEqual(none);
     expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).index()).toEqual(none);
@@ -121,7 +119,7 @@ describe('BoundaryCatalog files', () => {
       return Response.json(points);
     });
     expect(await ok.labels()).toEqual(points);
-    expect(calls).toEqual(['/b/areas_labels.geojson']);
+    expect(calls).toEqual(['/b/index.json', '/b/areas_labels.geojson']);
     const missing = new BoundaryCatalog('/b/', async () => new Response('', { status: 404 }));
     await expect(missing.labels()).rejects.toThrow('404');
   });

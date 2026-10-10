@@ -9,7 +9,7 @@ import { useAreaShapes } from './useAreaShapes';
 
 export type BoundaryLayerState = ReturnType<typeof useBoundaryLayer>;
 
-const NO_INDEX: AreasIndex = { available: false, fine: false, attribution: null, version: '' };
+const NO_INDEX: AreasIndex = { available: false, fine: false, attribution: null };
 
 /** The map's one areas layer: whether it is drawn, how (fine edges, credit), its tints, score fills and markers. */
 export function useBoundaryLayer() {
@@ -25,8 +25,8 @@ export function useBoundaryLayer() {
     };
   }, [boundaries]);
   const rows = useAreaRows(index.available);
-  // Coloured once per index version, and only when the areas layer exists.
-  const { shapes, tints } = useAreaShapes(index.available ? index.version : null);
+  // Coloured once per index version (BoundaryCatalog), and only when the areas layer exists.
+  const { shapes, tints } = useAreaShapes(index.available);
   const colors = useMemo(() => ChoroplethScale.colors(rows), [rows]);
   const markers = useAreaMarkers(rows);
   const view = useMemo<BoundaryView | null>(

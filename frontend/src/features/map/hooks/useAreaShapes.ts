@@ -13,23 +13,23 @@ export interface AreaShapesState {
 const NONE: AreaShapesState = { shapes: null, tints: new Map() };
 
 /**
- * The map's area polygons and their neighbour tints, for one index version; null skips the read (no areas
- * layer). BoundaryCatalog reads and colours them once per version, so the map page is the only caller and
- * hands the tints on to its sheets (MapContext).
+ * The map's area polygons and their neighbour tints, read only when the areas layer exists (`enabled`).
+ * BoundaryCatalog reads and colours them once per index version, and the map page is the only caller: it hands
+ * the tints on to its sheets (MapContext).
  */
-export function useAreaShapes(version: string | null): AreaShapesState {
+export function useAreaShapes(enabled: boolean): AreaShapesState {
   const { boundaries } = useServices();
   const [state, setState] = useState<AreaShapesState>(NONE);
   useEffect(() => {
-    if (version === null) return undefined;
+    if (!enabled) return undefined;
     let current = true;
-    boundaries.areaShapes(version, TINT_COUNT).then(
+    boundaries.areaShapes(TINT_COUNT).then(
       (shapes) => current && setState({ shapes, tints: shapes.tints }),
       (error: unknown) => console.error('Could not read the area polygons', error),
     );
     return () => {
       current = false;
     };
-  }, [boundaries, version]);
-  return version === null ? NONE : state;
+  }, [boundaries, enabled]);
+  return enabled ? state : NONE;
 }

@@ -164,7 +164,18 @@
   border-top: 3px solid var(--accent);
 }
 
-/* The card after tapping an area: a swatch of its map tint (TintSwatch) where a pin's card shows the photo. */
+/* The card after tapping an area: a swatch of its map tint (TintSwatch) where a pin's card shows the photo.
+   It follows a finger down and a swipe closes it (useMapCard, --card-drag), like the pin card. */
+.preview-card.area-card {
+  touch-action: none;
+  transform: translateY(var(--card-drag, 0px));
+  transition: transform var(--dur-3) var(--spring);
+}
+
+.preview-card.area-card.is-dragging {
+  transition: none;
+}
+
 .area-card__lines {
   display: grid;
   margin-top: var(--s-1);
