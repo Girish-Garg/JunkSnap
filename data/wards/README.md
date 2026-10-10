@@ -8,6 +8,8 @@ uv run python -m ward_crawler.handlers.cli --city jodhpur --profile junksnap
 uv run python -m ward_crawler.handlers.cli --city jaipur --profile junksnap
 ```
 
+In the cluster, the hourly `crawler` CronJob (decision 20261010-1445-hem-ward-crawler-service) runs `python -m ward_crawler.handlers.job` for each district the worker queued in the `crawls` table, and writes `crawl/wards/<city>.json` to the private bucket; the worker and the scores job read whichever of that file and this folder's file is newer. Every fetched page and model extraction is cached under `crawl/` and reused while unchanged. Seed the S3 cache from a local `.cache/` and these files' map layers with `uv run python -m ward_crawler.handlers.seed_pages --bucket <originals> --layers-of jodhpur --profile junksnap`; run one district by hand with `uv run python -m ward_crawler.handlers.job --district rajasthan-jodhpur --table <crawls> --bucket <originals> --profile junksnap`.
+
 Every record matches `contracts/schemas/ward_record.schema.json` and stays `unreviewed` until a person checks it against the source.
 
 | File | Wards | Facts | Sources (fetched 10 Oct 2026) | Licence |

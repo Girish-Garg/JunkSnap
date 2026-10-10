@@ -252,7 +252,7 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `crawl/pages/{sha256}.json` and `crawl/pages/{sha256}.bin` | every page the crawler fetched: `{url, sha256, fetched_at, content_type, etag, last_modified, text}` and the raw bytes (`sha256` is of the bytes); `crawler` only |
 | same | `crawl/urls/{sha256(url)[:24]}.json` | the newest page for a URL: `{url, sha256, fetched_at, checked_at, etag, last_modified}`, for conditional refetches; `crawler` only |
 | same | `crawl/extractions/{key}.json` | one model extraction per page chunk: `{key, prompt_version, models, source_url, page_sha256, chunk_sha256, model: {provider, model, version}, wards, created_at}`; `key` is SHA-256 of the prompt version, the model chain, the request and the chunk, so a changed prompt or page misses; `crawler` only |
-| same | `crawl/layers/{city}/{kind}.json` | the last OpenStreetMap layer fetched for a city, reused for `CRAWL_INTERVAL_DAYS` and when Overpass is busy; `crawler` only |
+| same | `crawl/layers/{kind}-{sha256(bbox)[:16]}.json` | the last OpenStreetMap layer fetched for a city box (same shape as a `map_layers` entry), reused for `CRAWL_INTERVAL_DAYS` and when Overpass is busy; `crawler` only |
 | same | `crawl/wards/{city}.json` | the crawl output, same shape as `data/wards/<city>.json`; `crawler` writes, `worker` and `scores` read |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
