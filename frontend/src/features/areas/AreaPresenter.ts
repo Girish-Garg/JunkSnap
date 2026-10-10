@@ -1,4 +1,5 @@
 import type { AreaScores, Diagnosis, ScoreName, WithheldReason } from '../../domain/AreaScores';
+import { AreaStanding } from '../../domain/AreaStanding';
 import type { LocaleFormatter } from '../../i18n/LocaleFormatter';
 import type { Fact } from '../../ui/FactList';
 
@@ -31,6 +32,11 @@ export class AreaPresenter {
     this.#scores = scores;
     this.#t = translate;
     this.#format = format;
+  }
+
+  /** Whether the letter button is open: the area has the 10 verified reports the api asks for. */
+  letterReady(): boolean {
+    return new AreaStanding(this.#scores).letterReady;
   }
 
   kind(): string {

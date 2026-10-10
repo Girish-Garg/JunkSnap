@@ -38,7 +38,7 @@ export function RankingRow({ kind, row }: RankingRowProps) {
           )}
         </span>
       </Link>
-      <AreaLetterButton kind={kind} areaId={row.id} short />
+      <AreaLetterButton kind={kind} areaId={row.id} ready={row.letterReady} short />
     </li>
   );
 }

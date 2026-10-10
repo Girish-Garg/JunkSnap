@@ -1,8 +1,8 @@
 import { CoverFit, type ScreenBox } from '../../domain/CoverFit';
 import { WASTE_CLASSES, type EdgeClass, type FrameDetections } from '../../domain/EdgeModel';
 
-/** Boxes below this are not drawn; the live view should not flicker with guesses. */
-export const OVERLAY_MIN_SCORE = 0.35;
+/** Boxes below this are not drawn; the live view should not flicker with guesses (0.35 boxed plain walls). */
+export const OVERLAY_MIN_SCORE = 0.5;
 /** At most this many boxes, strongest first, so the viewfinder stays readable. */
 const MAX_BOXES = 8;
 
@@ -21,7 +21,7 @@ export interface OverlayBox {
 
 export interface OverlayView {
   readonly boxes: readonly OverlayBox[];
-  /** True when a waste box is on screen: "Waste spotted"; otherwise "Point at the waste". */
+  /** True when a waste box is on screen; the hint says "Waste spotted" only after SPOTTED_FRAMES such frames in a row. */
   readonly spotted: boolean;
   /** How long the model took on this frame, for the data attribute measurements read. */
   readonly inferenceMs: number | null;
