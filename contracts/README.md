@@ -234,10 +234,11 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | `junksnap-<stage>-originals-<account_id>` (private, SSE-KMS) | `reports/{upload_id}.jpg` | report originals, PUT by presigned URL; scan frames written by the worker |
 | same | `cleanups/{upload_id}.jpg` | cleanup after-photo originals |
 | same | `scans/{scan_id}.webm` or `.mp4` | scan videos, PUT by presigned URL; never public, never sent to a model |
-| same | `embeddings/{report_id or cleanup_id}.json` | image embeddings; `ml` may write only this prefix and reads nothing else in this bucket |
+| same | `embeddings/{report_id or cleanup_id}.json` | image embeddings; `ml` may write only this prefix and reads only this prefix and `models/` in this bucket |
 | same | `datasets/{dataset}/...` | openly licensed public training images (decision 20261010-0200); `field` is reserved; offline training only, no pod has access |
 | same | `datasets/field/{report_id}.jpg` | blurred copies of field-audit reports, copied from `media/reports/`, never originals; offline training and evaluation only, no pod has access |
 | same | `datasets/field/records.jsonl` | labels and boxes of the field copies, written by `backend/ml/training` `import-field`; offline training only, no pod has access |
+| same | `models/{name}/{sha256[:12]}-{file}` | trained model files (YOLO ONNX, SigLIP ONNX, embedding heads, meta-learner, phone model), written by `backend/ml/training` `learn publish`; `ml` reads them at start and checks the SHA-256 pinned in `backend/ml/src/ml/settings/models.json` |
 | same | `datasets/manifest.jsonl` | the dataset manifest (one line per image, with its split), written by `backend/ml/training` when it is over 5 MB; offline training only, no pod has access |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
@@ -260,7 +261,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `AWS_REGION` | api, worker, scores, ml | `ap-south-1` |
 | `REPORTS_TABLE`, `CLEANUPS_TABLE`, `SCANS_TABLE`, `SITES_TABLE`, `VOTES_TABLE`, `DEVICES_TABLE`, `USERS_TABLE`, `SCORES_TABLE` | api: all; worker: all; scores: reports, sites, scores; ml: none | `junksnap-<stage>-<table>` |
 | `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | api | the stage's user pool id and its app client id (no client secret); the api builds the issuer and JWKS URL from them and `AWS_REGION` |
-| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` only) | `junksnap-<stage>-originals-<account_id>` |
+| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` and reads `models/`) | `junksnap-<stage>-originals-<account_id>` |
 | `PUBLIC_BUCKET` | worker, ml (reads `media/` only) | `junksnap-<stage>-public-<account_id>` |
 | `PUBLIC_BASE_URL` | api, worker | CloudFront base URL, no trailing slash |
 | `REPORTS_QUEUE_URL` | api, worker | URL of `junksnap-<stage>-reports` |
@@ -275,6 +276,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |
 | `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID` | frontend | the same pool and app client as the api |
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
+| `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
 | `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |
 
 Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), which needs no place index, so there is no `PLACE_INDEX` variable; the worker's Pod Identity role gets that one action.
