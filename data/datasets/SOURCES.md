@@ -35,6 +35,8 @@ Tools: Ultralytics YOLO is AGPL-3.0. Training with it is fine in a public repo, 
 
 Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, construction debris and Indian dump piles with boxes. The field audit has to label these.
 
+Teacher boxes (A2, issue 50): `learn teacher` in `backend/ml/training` runs OWLv2 (`google/owlv2-large-patch14-ensemble`, Apache-2.0) on the QR4Change photos and writes machine-made `waste_pile` boxes (garbage photos only) and `bin` boxes to `datasets/qr4change/teacher_boxes.jsonl` in the private bucket, never into `records.jsonl`. `yolo-export` adds them as extra boxes; `docs/ml/eval.md` names them as teacher-made. TACO and garbage_od litter boxes map to the detector class `waste_item`.
+
 ## Class map and manifest
 
 - `class_map.json` maps every source class to a JunkSnap report type (`waste_dump`, `open_construction`, `contaminated_water`, `no_bin`, `not_waste`), materials (`plastic`, `organic`, `construction_debris`, `paper`, `glass`, `metal`, `textile`, `e_waste`, `medical`), hazards (`burning`, `medical_waste`, `e_waste`, `dead_animal`, `chemicals`) and a detector class (`waste_pile`, `bag`, `bin`, `burning`). Materials, hazards and the size classes `small`, `medium` and `large` are the `verification_result` contract's enums, and a test keeps them equal. When one image's labels give several report types, the order of `report_types` wins.
