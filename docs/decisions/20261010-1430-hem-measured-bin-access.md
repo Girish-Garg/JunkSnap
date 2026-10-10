@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 superseded_by:
 area: contracts
 by: hem

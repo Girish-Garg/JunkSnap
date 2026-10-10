@@ -50,7 +50,7 @@ export class LetterService {
     const citations = this.#verifiedCitations(rules);
     const now = stamp.now();
     await limiter.take(request.requester, now);
-    const brief: LetterBrief = { site, addressees, citations, language: request.language };
+    const brief: LetterBrief = { site, addressees, citations, language: request.language, binRadiusM: this.#parts.noBin.radiusM };
     const prose = await drafter.draft(brief, rules);
     return this.#letter(brief, citations, prose, now);
   }

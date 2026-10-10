@@ -44,7 +44,7 @@ export class LettersAssembly {
     const routing = await new RoutingRepository(files).load();
     const quotes = new QuoteVerifier(book);
     LettersAssembly.#audit(quotes);
-    const template = new TemplateLetter([new EnglishWording(), new HindiWording()]);
+    const template = new TemplateLetter([new EnglishWording(this.#bins.radiusM), new HindiWording(this.#bins.radiusM)]);
     return new LetterService({
       sites: adapters.sites,
       router: new LetterRouter(routing),
