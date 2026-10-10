@@ -4,6 +4,7 @@ export const REPORT_TYPES = [
   'no_bin',
   'contaminated_water',
   'open_construction',
+  'overflowing_bin',
 ] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];

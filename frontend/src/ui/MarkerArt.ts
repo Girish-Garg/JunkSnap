@@ -25,6 +25,12 @@ const GLYPHS: Readonly<Record<ReportType, Glyph>> = {
     colour: '#5d4037',
     glyph: '<path d="M10 4h4l4 14H6zM4 18h16v2.5H4z" fill="#fff" stroke="#fff" stroke-linejoin="round"/>',
   },
+  overflowing_bin: {
+    colour: '#7b3fa6',
+    glyph:
+      '<path d="M4.5 9.5h11M6 9.5l1 10.5h7l1-10.5M15.8 9.2l3-5.4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="9" cy="6.8" r="2" fill="#fff"/><circle cx="19" cy="18.4" r="1.8" fill="#fff"/>',
+  },
 };
 
 const SHADOW =

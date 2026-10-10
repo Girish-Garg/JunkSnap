@@ -75,7 +75,8 @@
     "waste_dump": "कचरे का ढेर",
     "no_bin": "कूड़ेदान या उठान नहीं",
     "contaminated_water": "दूषित पानी",
-    "open_construction": "खुला निर्माण"
+    "open_construction": "खुला निर्माण",
+    "overflowing_bin": "भरा या टूटा कूड़ेदान"
   },
   "context": {
     "vacant_plot": "खाली प्लॉट",
@@ -89,7 +90,9 @@
     "foam": "झाग",
     "choked_drain": "जाम नाली",
     "uncovered_debris": "खुला मलबा",
-    "dusty_site": "धूल भरी जगह"
+    "dusty_site": "धूल भरी जगह",
+    "overflowing": "भरा हुआ, कचरा बाहर फैला",
+    "damaged": "टूटा, जला या बिना ढक्कन"
   },
   "status": {
     "open": "खुला",
@@ -640,6 +643,7 @@
       "no_bin": "कूड़ेदान नहीं",
       "contaminated_water": "दूषित पानी",
       "open_construction": "खुला निर्माण",
+      "overflowing_bin": "भरे या टूटे कूड़ेदान",
       "all": "सभी समस्याएँ"
     }
   },

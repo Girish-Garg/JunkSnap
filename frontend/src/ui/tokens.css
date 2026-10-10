@@ -92,6 +92,8 @@
   --type-water-tint: #e1edfc;
   --type-construction: #5d4037;
   --type-construction-tint: #f1e6df;
+  --type-overflowing: #7b3fa6;
+  --type-overflowing-tint: #efe4f6;
 
   --status-open: #b3261e;
   --status-open-tint: #fde7e3;
@@ -139,6 +141,7 @@
     --type-nobin-tint: rgb(255 170 80 / 0.16);
     --type-water-tint: rgb(110 170 255 / 0.16);
     --type-construction-tint: rgb(200 160 140 / 0.16);
+    --type-overflowing-tint: rgb(190 140 230 / 0.16);
     --status-open: #ff8a80;
     --status-open-tint: rgb(255 138 128 / 0.15);
     --status-cleaned: #82d39b;
@@ -180,6 +183,7 @@
   --type-nobin-tint: rgb(255 170 80 / 0.16);
   --type-water-tint: rgb(110 170 255 / 0.16);
   --type-construction-tint: rgb(200 160 140 / 0.16);
+  --type-overflowing-tint: rgb(190 140 230 / 0.16);
   --status-open: #ff8a80;
   --status-open-tint: rgb(255 138 128 / 0.15);
   --status-cleaned: #82d39b;

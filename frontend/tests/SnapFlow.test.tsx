@@ -77,6 +77,21 @@ describe('Snap review and send', () => {
   });
 });
 
+describe('Snap report types', () => {
+  it('offers an overflowing or broken bin with its two contexts', async () => {
+    const user = userEvent.setup();
+    const api = verifiedApi();
+    await renderApp(<AppRoutes />, { route: '/snap', services: await signedIn({ api }) });
+    await shoot(user);
+    await user.click(await screen.findByRole('radio', { name: 'Overflowing or broken bin' }));
+    expect(screen.getByRole('radio', { name: 'Overflowing' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Broken, burnt or no lid' }));
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    await screen.findByText('Verified');
+    expect(api.bodies('submit')[0]).toMatchObject({ report_type: 'overflowing_bin', context: 'damaged' });
+  });
+});
+
 describe('Snap queue and Activity', () => {
   it('lists the sent report in Activity with its status and site link', async () => {
     const user = userEvent.setup();

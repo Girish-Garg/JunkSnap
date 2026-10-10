@@ -14,7 +14,9 @@ export type SiteContext =
   | 'foam'
   | 'choked_drain'
   | 'uncovered_debris'
-  | 'dusty_site';
+  | 'dusty_site'
+  | 'overflowing'
+  | 'damaged';
 
 export type SiteStatus = 'open' | 'cleaned' | 'reopened';
 

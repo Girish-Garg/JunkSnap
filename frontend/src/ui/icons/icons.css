@@ -67,6 +67,10 @@
   --type-colour: var(--type-construction);
 }
 
+.type-icon--overflowing_bin {
+  --type-colour: var(--type-overflowing);
+}
+
 /* In dark mode the outline lightens so the icon still reads on charcoal. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .type-icon {
