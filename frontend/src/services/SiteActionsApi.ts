@@ -1,3 +1,4 @@
+import type { NoteRequest, SiteNote } from '../domain/Community';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
 
 /** POST /sites/{id}/votes, /cleanup and /letters. All need sign-in; failures reject with ApiError. */
@@ -8,4 +9,6 @@ export interface SiteActionsApi {
   cleanup(siteId: string, request: CleanupRequest): Promise<CleanupAccepted>;
   /** Up to 60 s. 409 not_verified, 422 no_local_body, 429 rate_limited. */
   letter(siteId: string, request: LetterRequest): Promise<LetterDraft>;
+  /** 201 site_note; hidden when moderation removed it. 429 rate_limited after 10 an hour. */
+  note(siteId: string, request: NoteRequest): Promise<SiteNote>;
 }

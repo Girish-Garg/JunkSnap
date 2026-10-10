@@ -57,6 +57,7 @@
       "near": [{ "kind": "school", "distance_m": 83 }]
     },
     "nearest_bin": { "distance_m": 1840, "ref": "osm:node/100000006", "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnwr%5B%22amenity%22%3D%22waste_basket%22%5D%3Bout%20skel%20center%3B" },
-    "no_bin_within_3km": false
+    "no_bin_within_3km": false,
+    "residents": { "people": 4, "signals": { "duration_days": 90, "recurring": true, "burning": true, "smell": true, "blocked_drain": false, "animals": false, "near_school": true, "near_hospital": false, "access_issue": false } }
   }
 }

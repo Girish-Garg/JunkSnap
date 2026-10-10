@@ -227,6 +227,19 @@ Resources:
         - { AttributeName: area_kind, KeyType: HASH }
         - { AttributeName: area_id, KeyType: RANGE }
 
+  # Residents' notes on sites: author hash only, never the author (decision 20261010-1630).
+  NotesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub junksnap-${Stage}-notes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: site_id, AttributeType: S }
+        - { AttributeName: note_id, AttributeType: S }
+      KeySchema:
+        - { AttributeName: site_id, KeyType: HASH }
+        - { AttributeName: note_id, KeyType: RANGE }
+
   # One row per district: the worker queues it, the crawler CronJob runs it (contracts README).
   CrawlsTable:
     Type: AWS::DynamoDB::Table
@@ -375,6 +388,11 @@ Resources:
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
+              # POST /sites/{id}/notes writes one note and reads a site's notes; nothing else.
+              - Sid: Notes
+                Effect: Allow
+                Action: [dynamodb:PutItem, dynamodb:Query]
+                Resource: !GetAtt NotesTable.Arn
               - Sid: ReadScores
                 Effect: Allow
                 Action: [dynamodb:GetItem, dynamodb:BatchGetItem, dynamodb:Query,
@@ -771,6 +789,8 @@ Outputs:
     Value: !Ref ScoresTable
   CrawlsTableName:
     Value: !Ref CrawlsTable
+  NotesTableName:
+    Value: !Ref NotesTable
   ReportsQueueUrl:
     Value: !Ref ReportsQueue
   ReportsDeadLetterQueueUrl:

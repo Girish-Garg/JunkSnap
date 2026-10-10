@@ -162,6 +162,50 @@ export interface LetterDraft {
      * As site.insights.no_bin_within_3km, for waste_dump and no_bin sites; null otherwise.
      */
     no_bin_within_3km: boolean | null;
+    /**
+     * The "Residents report" line: the site's community signals and how many people they rest on. The letter paraphrases them and never quotes a note. Null when the site has no accepted notes; not in required so older drafts stay valid.
+     */
+    residents?: null | {
+      people: number;
+      /**
+       * What residents' notes say, as structured and neutral signals. Each is true only when at least one moderated note says so.
+       */
+      signals: {
+        /**
+         * How long residents say the problem has existed, in days (about 90 for about 3 months); null when no note says.
+         */
+        duration_days: number | null;
+        /**
+         * Cleared before and comes back; null when no note says either way.
+         */
+        recurring: boolean | null;
+        /**
+         * Burning or smoke.
+         */
+        burning: boolean;
+        smell: boolean;
+        /**
+         * A blocked drain or standing water.
+         */
+        blocked_drain: boolean;
+        /**
+         * Stray animals, rats, flies or mosquitoes.
+         */
+        animals: boolean;
+        /**
+         * A nearby school is mentioned.
+         */
+        near_school: boolean;
+        /**
+         * A nearby hospital or clinic is mentioned.
+         */
+        near_hospital: boolean;
+        /**
+         * The waste blocks a road, lane, footpath or entrance.
+         */
+        access_issue: boolean;
+      };
+    };
   };
 }
 
@@ -554,6 +598,88 @@ export const letterDraftSchema = {
             "null"
           ],
           "description": "As site.insights.no_bin_within_3km, for waste_dump and no_bin sites; null otherwise."
+        },
+        "residents": {
+          "description": "The \"Residents report\" line: the site's community signals and how many people they rest on. The letter paraphrases them and never quotes a note. Null when the site has no accepted notes; not in required so older drafts stay valid.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "people",
+                "signals"
+              ],
+              "properties": {
+                "people": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "signals": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "duration_days",
+                    "recurring",
+                    "burning",
+                    "smell",
+                    "blocked_drain",
+                    "animals",
+                    "near_school",
+                    "near_hospital",
+                    "access_issue"
+                  ],
+                  "description": "What residents' notes say, as structured and neutral signals. Each is true only when at least one moderated note says so.",
+                  "properties": {
+                    "duration_days": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "description": "How long residents say the problem has existed, in days (about 90 for about 3 months); null when no note says."
+                    },
+                    "recurring": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ],
+                      "description": "Cleared before and comes back; null when no note says either way."
+                    },
+                    "burning": {
+                      "type": "boolean",
+                      "description": "Burning or smoke."
+                    },
+                    "smell": {
+                      "type": "boolean"
+                    },
+                    "blocked_drain": {
+                      "type": "boolean",
+                      "description": "A blocked drain or standing water."
+                    },
+                    "animals": {
+                      "type": "boolean",
+                      "description": "Stray animals, rats, flies or mosquitoes."
+                    },
+                    "near_school": {
+                      "type": "boolean",
+                      "description": "A nearby school is mentioned."
+                    },
+                    "near_hospital": {
+                      "type": "boolean",
+                      "description": "A nearby hospital or clinic is mentioned."
+                    },
+                    "access_issue": {
+                      "type": "boolean",
+                      "description": "The waste blocks a road, lane, footpath or entrance."
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     }

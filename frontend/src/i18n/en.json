@@ -758,6 +758,43 @@
       "waste_item": "Waste"
     }
   },
+  "notes": {
+    "title": "Notes from residents",
+    "from": "From {{people}} people · {{notes}} notes",
+    "empty": "No notes yet. Know how long this has been here, or if it burns or blocks a drain? Add a note.",
+    "signalsLabel": "What residents mention",
+    "add": "Add a note",
+    "label": "Your note",
+    "left": "{{left}} characters left",
+    "language": "Note language",
+    "english": "English",
+    "hindi": "हिन्दी",
+    "privacy": "No names, phone numbers or house numbers. Notes are checked before anyone sees them, and your name is never shown.",
+    "send": "Add note",
+    "sending": "Sending…",
+    "shown": "Thanks. Your note is shown and joins the summary within 10 minutes.",
+    "hidden": "Your note was not shown: it may hold personal details or harsh words. Try again without them.",
+    "signals": {
+      "months": "Here about {{count}} months",
+      "weeks": "Here about {{count}} weeks",
+      "days": "Here about {{count}} days",
+      "recurring": "Comes back after clearing",
+      "burning": "Burning or smoke",
+      "smell": "Bad smell",
+      "blocked_drain": "Blocked drain or standing water",
+      "animals": "Stray animals or pests",
+      "near_school": "Near a school",
+      "near_hospital": "Near a hospital",
+      "access_issue": "Blocks a road or path"
+    },
+    "errors": {
+      "rate_limited": "At most 10 notes an hour. Try again later.",
+      "not_found": "This site is no longer on the map.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The note did not go through. Try again.",
+      "sign_in": "Sign in again to add a note."
+    }
+  },
   "nobin": {
     "title": "No dustbin within 1 km of here?",
     "text": "Report it from where you stand. 10 different people make it a verified no-bin zone.",

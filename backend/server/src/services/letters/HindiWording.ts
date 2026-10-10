@@ -1,4 +1,5 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
+import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
 import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
@@ -60,6 +61,10 @@ export class HindiWording implements TemplateWording {
     ];
     if (site.burning) {
       lines.push("इस स्थान पर कचरा जलता हुआ देखा गया है।");
+    }
+    const residents = site.evidence.residents;
+    if (residents !== null) {
+      lines.push(new CommunityPhrases("hi").report(residents.people, residents.signals));
     }
     const photos = photoUrls.length > 0 ? `\nधुंधली की गई तस्वीरें: ${photoUrls.join(" ")}` : "";
     return `${lines.join(" ")}${photos}`;

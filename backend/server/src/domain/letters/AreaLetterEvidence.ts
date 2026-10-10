@@ -1,5 +1,6 @@
 import type { AreaLetterDraft, Site, WardScores } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../errors.js";
+import { flagged, SIGNAL_FLAGS } from "../notes/Community.js";
 import type { AreaIssueSites, StoredAreaSite } from "./AreaIssueSites.js";
 import { LetterEvidence } from "./LetterEvidence.js";
 
@@ -31,6 +32,7 @@ export class AreaLetterEvidence {
       last_reported_at: AreaLetterEvidence.#edge(counted.map((site) => site.last_reported_at), 1),
       worst_sites: this.#worst(),
       scores: this.#measuredScores(),
+      residents: this.#residents(),
       bin_access: BIN_ISSUES.has(this.#sites.issue) ? this.#binAccess() : null,
     };
   }
@@ -54,6 +56,23 @@ export class AreaLetterEvidence {
       const value = row.scores[name].value;
       return value === null ? [] : [{ name, value, verified_reports: reports }];
     });
+  }
+
+  // Per site, so one person's notes on two sites count on each; never a note's own words.
+  #residents(): Evidence["residents"] {
+    const communities = this.#sites
+      .verified()
+      .flatMap((stored) => (stored.site.properties.community?.people ?? 0) > 0 ? [stored.site.properties.community] : [])
+      .filter((community) => community !== undefined && community !== null);
+    if (communities.length === 0) {
+      return null;
+    }
+    const mentions = SIGNAL_FLAGS.map((signal) => ({ signal, sites: communities.filter((c) => flagged(c.signals, signal)).length }));
+    return {
+      sites: communities.length,
+      people: communities.reduce((total, community) => total + community.people, 0),
+      mentions: mentions.filter((mention) => mention.sites > 0),
+    };
   }
 
   #binAccess(): NonNullable<Evidence["bin_access"]> {

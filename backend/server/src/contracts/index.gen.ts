@@ -9,6 +9,7 @@ import { validateModerationResult } from "./moderation_result.gen.js";
 import { validateReportUpload } from "./report_upload.gen.js";
 import { validateScanSession } from "./scan_session.gen.js";
 import { validateSite } from "./site.gen.js";
+import { validateSiteNote } from "./site_note.gen.js";
 import { validateVerificationResult } from "./verification_result.gen.js";
 import { validateWardRecord } from "./ward_record.gen.js";
 import { validateWardScores } from "./ward_scores.gen.js";
@@ -23,6 +24,7 @@ export { type ModerationResult, moderationResultSchema, validateModerationResult
 export { type ReportUpload, reportUploadSchema, validateReportUpload } from "./report_upload.gen.js";
 export { type ScanSession, scanSessionSchema, validateScanSession } from "./scan_session.gen.js";
 export { type Site, siteSchema, validateSite } from "./site.gen.js";
+export { type SiteNote, siteNoteSchema, validateSiteNote } from "./site_note.gen.js";
 export { type VerificationResult, verificationResultSchema, validateVerificationResult } from "./verification_result.gen.js";
 export { type WardRecord, wardRecordSchema, validateWardRecord } from "./ward_record.gen.js";
 export { type WardScores, wardScoresSchema, validateWardScores } from "./ward_scores.gen.js";
@@ -38,6 +40,7 @@ export const CONTRACT_VALIDATORS = {
   report_upload: validateReportUpload,
   scan_session: validateScanSession,
   site: validateSite,
+  site_note: validateSiteNote,
   verification_result: validateVerificationResult,
   ward_record: validateWardRecord,
   ward_scores: validateWardScores,

@@ -44,3 +44,54 @@
   color: var(--accent-ink);
   font-weight: 600;
 }
+
+/* Notes from residents on the site sheet: summary, signal chips and the add-a-note form. Tokens only. */
+.site-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+}
+
+.site-notes__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
+}
+
+.site-notes__summary {
+  font-size: var(--text-body);
+}
+
+.site-notes__meta,
+.site-notes__privacy,
+.site-notes__result {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+}
+
+.site-notes__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-notes__chip {
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: var(--text-small);
+}
+
+.site-notes__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}

@@ -1,6 +1,7 @@
 import { buildAreaCrawlRoutes } from "./areaCrawlRoutes.js";
 import { buildAreaScoresRoutes } from "./areaScoresRoutes.js";
 import { buildLettersRoutes } from "./lettersRoutes.js";
+import { buildNotesRoutes } from "./notesRoutes.js";
 import { buildReportRoutes } from "./reportRoutes.js";
 import type { RouteBuilder } from "./RouteBuilder.js";
 import { buildScanRoutes } from "./scanRoutes.js";
@@ -13,6 +14,7 @@ export const ROUTE_BUILDERS: readonly RouteBuilder[] = [
   buildAreaScoresRoutes,
   buildAreaCrawlRoutes,
   buildLettersRoutes,
+  buildNotesRoutes,
   buildReportRoutes,
   buildScanRoutes,
 ];

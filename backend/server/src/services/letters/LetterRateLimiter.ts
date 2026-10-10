@@ -13,10 +13,12 @@ export interface LetterCounters {
 export class LetterRateLimiter {
   readonly #counters: LetterCounters;
   readonly #limit: number;
+  readonly #noun: string;
 
-  constructor(counters: LetterCounters, limit: number = LETTERS_PER_HOUR) {
+  constructor(counters: LetterCounters, limit: number = LETTERS_PER_HOUR, noun = "letters") {
     this.#counters = counters;
     this.#limit = limit;
+    this.#noun = noun;
   }
 
   // Reads only: refuses early, before any costly work, when a counter is already full.
@@ -51,6 +53,6 @@ export class LetterRateLimiter {
   }
 
   #refuse(): never {
-    throw new RateLimitedError(`At most ${this.#limit} letters an hour. Please try again later.`);
+    throw new RateLimitedError(`At most ${this.#limit} ${this.#noun} an hour. Please try again later.`);
   }
 }

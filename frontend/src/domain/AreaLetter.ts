@@ -1,3 +1,4 @@
+import type { SignalFlag } from './Community';
 // Mirrors contracts/schemas/area_letter_draft.schema.json (v1.6, decision 20261010-1600) and POST /areas/{kind}/{id}/letters.
 import type { AreaKind, ScoreName } from './AreaScores';
 import type { ReportType } from './ReportType';
@@ -49,6 +50,8 @@ export interface AreaLetterEvidence {
   readonly scores: readonly AreaLetterScore[];
   /** For waste_dump, no_bin and all; null for other issues. */
   readonly bin_access: { readonly sites_measured: number; readonly sites_without_bin_within_3km: number } | null;
+  /** v1.8: sites with residents' notes, the people behind them and how many sites mention each signal. */
+  readonly residents?: { readonly sites: number; readonly people: number; readonly mentions: readonly { readonly signal: SignalFlag; readonly sites: number }[] } | null;
 }
 
 /** The same letter as a site letter, about one issue in an area; `to` lists every office responsible. */

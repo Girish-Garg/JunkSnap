@@ -1,4 +1,5 @@
 import type { CleanupAccepted, LetterDraft, LetterLanguage, VoteChoice, VoteResult } from '../domain/SiteActions';
+import type { NoteLanguage, SiteNote } from '../domain/Community';
 import type { GpsFix } from '../domain/ReportUpload';
 import type { GpsWatcher } from './GpsWatcher';
 import type { ReportApi, RequestIdentity } from './ReportApi';
@@ -47,6 +48,11 @@ export class SiteActionService {
       const request = { upload_id: upload.upload_id, device_token, sha256: photo.sha256, gps: photo.gps, captured_at: photo.capturedAt };
       return this.#ports.api.cleanup(siteId, request);
     });
+  }
+
+  async note(siteId: string, text: string, language: NoteLanguage): Promise<SiteNote> {
+    const device_token = await this.#ports.identity.deviceToken();
+    return this.#signedIn.run(() => this.#ports.api.note(siteId, { text, language, device_token }));
   }
 
   async letter(siteId: string, language: LetterLanguage): Promise<LetterDraft> {

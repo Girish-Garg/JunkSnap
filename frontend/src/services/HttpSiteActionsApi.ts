@@ -1,3 +1,4 @@
+import type { NoteRequest, SiteNote } from '../domain/Community';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
 import { HttpTransport } from './HttpTransport';
 import type { RequestIdentity } from './ReportApi';
@@ -20,5 +21,9 @@ export class HttpSiteActionsApi implements SiteActionsApi {
 
   letter(siteId: string, request: LetterRequest): Promise<LetterDraft> {
     return this.#http.post<LetterDraft>(`/sites/${encodeURIComponent(siteId)}/letters`, request);
+  }
+
+  note(siteId: string, request: NoteRequest): Promise<SiteNote> {
+    return this.#http.post<SiteNote>(`/sites/${encodeURIComponent(siteId)}/notes`, request);
   }
 }

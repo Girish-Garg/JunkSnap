@@ -42,6 +42,7 @@ CONFIG_FROM_OUTPUTS = {
     "DEVICES_TABLE": "DevicesTableName",
     "SCORES_TABLE": "ScoresTableName",
     "CRAWLS_TABLE": "CrawlsTableName",
+    "NOTES_TABLE": "NotesTableName",
     "ORIGINALS_BUCKET": "OriginalsBucketName",
     "PUBLIC_BUCKET": "PublicBucketName",
     "PUBLIC_BASE_URL": "PublicBaseUrl",

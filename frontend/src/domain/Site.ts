@@ -1,3 +1,4 @@
+import type { SiteCommunity } from './Community';
 // Mirrors contracts/schemas/site.schema.json; change the contract first.
 import type { ReportType } from './ReportType';
 import type { SiteInsights } from './SiteInsights';
@@ -111,6 +112,8 @@ export interface SiteProperties {
   readonly reporters?: number;
   /** Optional in v1.1 so older producers stay valid; the worker always writes it. */
   readonly insights?: SiteInsights;
+  /** v1.8: what residents' moderated notes say; absent until the first note is accepted. */
+  readonly community?: SiteCommunity | null;
 }
 
 export type LonLat = readonly [lon: number, lat: number];
