@@ -39,7 +39,7 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 **Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The wards are not on the web map: `frontend/public/boundaries` ships only the combined seats layer.
 
-**Display only until reviewed:** the map shows these wards (labelled unreviewed), but location lookups, scores and letters must not use them until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
+**Data files only until reviewed:** these wards are built as unreviewed data files; they are not on the map and not used for location lookups, scores or letters until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
 
 Built 2026-10-10 by `data/ward_boundaries`. Run it with `uv run python -m ward_boundaries.handlers.cli --city <city> --profile junksnap`. Nobody has published an open map of the 2025 wards, so these polygons are **approximations**. Each one is built from the places that the official ward-formation text lists for the ward. Every ward is `review_status: unreviewed` and carries a `confidence` from 0 to 1. Wards that could not be placed are left out (listed below), never guessed.
 
