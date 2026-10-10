@@ -55,7 +55,7 @@ def test_embedding_signal_scores_waste_and_reads_composition() -> None:
 def test_embedding_signal_without_waste_and_on_other_claims() -> None:
     clean = EmbeddingSignal(FakeEmbedder((0.0, 1.0)), two_dim_heads()).measure(make_case())
     assert clean.score < 0.05 and clean.insights.hazards == ()
-    assert [s.material for s in clean.insights.composition] == ["paper"]
+    assert clean.insights.composition == ()
     water = make_case(claim=Claim("contaminated_water", "sewage"))
     neutral = EmbeddingSignal(FakeEmbedder((1.0, 0.0)), two_dim_heads()).measure(water)
     assert neutral.score == 0.5

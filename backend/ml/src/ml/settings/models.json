@@ -1,0 +1,29 @@
+{
+  "note": "Written by `learn publish`; the ml service downloads and checks these.",
+  "models": {
+    "embedder": {
+      "key": "models/embedder/f9e04b9c8c74-siglip2-base-224.onnx",
+      "sha256": "f9e04b9c8c74ac16937147c78d26234fffcb1c0a2b5823f1c87a8ed054795e5d",
+      "size_bytes": 371774964,
+      "version": "siglip2-base-224-fp32"
+    },
+    "heads": {
+      "key": "models/heads/1a517322c2da-heads-siglip.json",
+      "sha256": "1a517322c2da3a99ec54d60c3fca0a61ae965f00554ced1342b6209bc3f27fcc",
+      "size_bytes": 143766,
+      "version": "clf-1"
+    },
+    "meta": {
+      "key": "models/meta/390bd77732ce-meta-v1.json",
+      "sha256": "390bd77732ceeadc43a6c7d50becd0dffb726ba0fc9878e80da2d9550c302c42",
+      "size_bytes": 583,
+      "version": "meta-v1"
+    },
+    "yolo": {
+      "key": "models/yolo/e6d1e36abb41-best-640-fp32.onnx",
+      "sha256": "e6d1e36abb41ac10bafcf0500ab16e5b56f0cd2ec3959370cac94043148cb241",
+      "size_bytes": 38174034,
+      "version": "yolo26s-640-v1"
+    }
+  }
+}
