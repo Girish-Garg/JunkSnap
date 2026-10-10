@@ -6,16 +6,11 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import onnxruntime as ort  # type: ignore[import-untyped]
-from onnxruntime.capi.onnxruntime_pybind11_state import (  # type: ignore[import-untyped]
-    Fail,
-    InvalidArgument,
-    RuntimeException,
-)
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from ml.adapters.onnx_session import RUN_ERRORS, OnnxSessionLoader
 from ml.domain.detections import Detection, DetectionSet
-from ml.domain.errors import ExternalServiceError, InvalidImageError
+from ml.domain.errors import ConfigError, ExternalServiceError, InvalidImageError
 from ml.domain.images import BlurredImage
 from ml.ports.object_detector import ObjectDetector
 
@@ -43,8 +38,10 @@ class Letterbox:
 
 class OnnxYoloDetector(ObjectDetector):
     def __init__(self, model_path: Path, version: str) -> None:
-        self._session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        self._session = OnnxSessionLoader.open(model_path)
         meta = self._session.get_modelmeta().custom_metadata_map
+        if "names" not in meta:
+            raise ConfigError(f"{model_path.name} has no class names; export it with Ultralytics")
         self._names: dict[int, str] = ast.literal_eval(meta["names"])
         size = int(self._session.get_inputs()[0].shape[2])
         self._letterbox = Letterbox(size)
@@ -57,7 +54,7 @@ class OnnxYoloDetector(ObjectDetector):
         tensor, scale, left, top = self._letterbox.tensor(picture)
         try:
             rows = self._session.run(None, {self._input: tensor})[0][0]
-        except (Fail, InvalidArgument, RuntimeException) as error:
+        except RUN_ERRORS as error:
             raise ExternalServiceError(f"yolo onnx inference: {error}") from error
         frame = (scale, left, top, picture.width, picture.height)
         found = tuple(self._detection(row, frame) for row in rows if row[4] >= MIN_CONFIDENCE)

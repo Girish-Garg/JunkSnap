@@ -14,7 +14,7 @@ Read this first in every session. It holds the deadline, the human-only steps, e
 - Type passwords, API keys or tokens: AWS sign-in (`aws login --profile junksnap`), the OpenAI and OpenRouter keys (stored in Secrets Manager by the human), GitHub sign-in.
 - Billing and account settings: budget alarm, AWS plan upgrade, Bedrock model access.
 - Connect Amplify to GitHub (OAuth consent).
-- Take field-audit photos; label them in Label Studio.
+- Take field-audit photos as real reports through the app (not used for training).
 - Record and upload the YouTube video, publish the optional Builder Center blog, fill the submission form, ask organisers on Discord.
 
 Claude merges PRs itself once CI is green and the reviewer says SHIP: squash through the GitHub API, commit message ending in one alternating co-author line (proposed, 20261010-0135).
@@ -47,7 +47,7 @@ Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `d
 14. **Engineering:** strict OOP, layers and size limits (`docs/working.md`), the same in TypeScript and Python. Services run on Kubernetes: one EKS Auto Mode cluster `junksnap` in ap-south-1, namespaces `junksnap-dev` and `junksnap-demo` (proposed, 20261010-0130); workloads `api`, `worker` and the `scores` CronJob from image `junksnap-server`, and `ml` from image `junksnap-ml` (accepted, 20261010-0159). Per-stage CloudFormation stacks `junksnap-dev` and `junksnap-demo`, tags `project=junksnap`.
 15. **Process:** no lane guard and no roster; one person drives the build; every writing agent gets its own branch and worktree. Commit trailers rotate between Hemang and Girish, never an AI trailer (see AGENTS.md).
 16. **Language split** (accepted, 20261010-0159): only the ML side is Python, in `backend/ml` (service `ml`, cluster-internal `POST /internal/verify` only; training and dataset tooling in `backend/ml/training/`). Everything else is TypeScript 6.0.3 on Node 24 in one project, `backend/server`, one image running the workloads `api` (all public routes, letters included), `worker` and `scores`. TypeScript stays below 7 because typescript-eslint supports only `typescript <6.1`. Data tooling (ward crawler, rule checks) may stay Python. `backend/agent` becomes `backend/ml`; `backend/pipeline` is deleted once the TS server lands.
-17. **ML data** (accepted, 20261010-0200): openly licensed public waste datasets (licence checked per set; images in S3, never git) plus the Jodhpur field-audit photos. About 30% of field photos are held out and never trained on; results tables use only held-out photos.
+17. **ML data** (accepted, 20261010-1245, which supersedes 0200): openly licensed public waste datasets only (licence checked per set; images in S3, never git), split 80/10/10 with a fixed seed. Results tables use the public test split and name teacher-made boxes.
 18. **UI style** (accepted, 20261010-0201): minimal custom components; map-app patterns (full-bleed map, floating search bar, filter chips, draggable bottom sheet with peek, half and full and an action row, one camera button in the thumb zone); no gradients, glassmorphism, emoji or purple; Noto Sans and Noto Sans Devanagari; 48 px targets; WCAG AA. Details in `frontend/DESIGN.md`.
 19. **ML insights** (accepted, 20261010-0202): per report, composition by material, a size class (never tonnage) and hazards; per site, those merged plus schools, hospitals, water bodies and open drains within 100 m from OpenStreetMap; per area, composition, hazardous share, top brands, repeat spots, hour and day pattern, sites near schools or water. Only measured numbers, each with its source.
 20. **Scan video** (accepted, 20261010-0203): see decision 4. Routes `POST /scans/presign`, `POST /scans`, `GET /scans/{id}`; the video stays private and never goes to a model.
@@ -57,7 +57,7 @@ Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `d
 
 Done: T0 tooling (PR 6), C1 contracts v1 (PR 14), S1 Python skeletons (PR 15; `backend/pipeline` is now retired), the comment rule (PR 17), S2 server skeleton (PR 28: TypeScript 6.0.3, Fastify 5, entry files `web.ts`, `worker.ts`, `scores.ts`, generated contract types), C2 contracts v1.1 for insights, scans, accounts and ward records (issue 25).
 
-Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 need the field data (Saturday morning). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
+Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 train and evaluate on public data only (decision 1245). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
 
 **TypeScript, `backend/server`**
 - P1 intake and worker (issue 11): presign (regional S3 endpoint), `POST /reports`, `GET /reports/{id}`, the SQS consumer and `ReportPipeline` with `needs_review` on the last receive; calls `ml` at `ML_URL`.
@@ -74,9 +74,9 @@ Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their in
 **Python, `backend/ml` and data tooling**
 - M0 rename `backend/agent` to `backend/ml` (in flight in another PR).
 - A1 ml verify (issue 12): `POST /internal/verify`, the Python LLM layer for the judge, Rekognition signal, judge v0, fixed-weight combiner → `verification_result`; tests with stubs; a printed run on 10 real photos.
-- DS1 dataset (issue 26): openly licensed public waste datasets with licences checked, manifests in `data/datasets/`, images in S3 under `datasets/` (field photos only as the blurred copies in `datasets/field/`, never originals); Label Studio config for the field audit (report_type, context, burning, materials, hazards, brands); a fixed split with about 30% of field photos held out.
-- A2 YOLO, embeddings and meta-learner: embeddings and type classifier, YOLO, meta-learner, thresholds; evaluation table on held-out field photos (each model alone vs the stack, precision and recall); OpenRouter benchmark of 4–5 vision models with cost per 100 photos. Only measured numbers.
-- A5 insights (issue to create): composition, size class and hazards in `verification_result.insights`, each with its model; evaluated on held-out field photos.
+- DS1 dataset (issue 26): openly licensed public waste datasets with licences checked, manifests in `data/datasets/`, images in S3 under `datasets/`; a fixed 80/10/10 split of the public data (no field photos).
+- A2 YOLO, embeddings and meta-learner: embeddings and type classifier, YOLO, meta-learner, thresholds; evaluation table on the public test split (each model alone vs the stack, precision and recall; `docs/ml/eval.md`); OpenRouter benchmark of 4–5 vision models with cost per 100 photos. Only measured numbers.
+- A5 insights (issue to create): composition, size class and hazards in `verification_result.insights`, each with its model; evaluated on the public test split.
 - W1 ward-data crawler (issue 9, proposed 20261010-0137): offline Python job over official pages and OpenStreetMap → `data/wards/<city>.json` with `records` (each a `ward_record`, the contract shape taken from this task's branch) and `map_layers` (disposal, school, hospital, water, drain); source URL, `fetched_at` and page SHA-256 on every value; offices and seats only; reviewed before use. Jodhpur first. Feeds D2 and D4.
 
 **Infra**
@@ -90,11 +90,11 @@ Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their in
 - F5 judge-facing README (Sunday): pitch and persona, "try it in 2 minutes", architecture diagram, "Where AWS fits" table (service → file), safety model, measured results only, known limits, data sources and freshness, every AI tool used. `docs/video-script.md`: 3 minutes, AWS console visible.
 
 **Saturday 07:30–10:00: field data**
-- D0 labelling (with DS1): Label Studio in `data/labels/`; CSV export plus the fixed train / held-out split; photos never in git.
+- D0 labelling: dropped (decision 20261010-1245); field photos are not labelled for training.
 - Field audit: all three humans take 50+ real Jodhpur reports across 3–4 wards (dumps and no-bin spots); friends in other cities send a few each.
 
 **Saturday afternoon and Sunday**
-- A2 and A5 on the field data; F3 Scan.
+- A2 and A5 on the public data; F3 Scan.
 - Deploy `demo` (human's OK, clean `main`); connect Amplify (human).
 - Satellite history for Keru, if time allows.
 - Humans record, upload and submit.
@@ -107,7 +107,7 @@ For each task: create the issue with `gh`, then give one writing agent its own w
 
 - Every PR: CI green (contracts, frontend, server, python, limits), reviewer verdict SHIP, verify evidence in the PR body.
 - Integration checkpoints Saturday 10:00, 14:00 and 18:00: `uv run scripts/smoke.py` against `dev`, then the end-to-end path: Snap → moderated and blurred → verified → site on the map with ward/MLA/MP → letter with verifier N/N → area score (or "not enough reports"). The lead session notes results in `docs/status/hem.md`.
-- Model evaluation: the held-out table and benchmark from A2, and the insight table from A5, on held-out field photos only.
+- Model evaluation: the table and benchmark from A2, and the insight table from A5, on the public test split (`docs/ml/eval.md`).
 - Sunday: one full dry run of the video script on the deployed URL before recording.
 
 ## 8. Cut order if behind (paused)

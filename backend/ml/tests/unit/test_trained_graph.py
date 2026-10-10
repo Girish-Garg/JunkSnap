@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from ml.adapters.onnx_siglip import OnnxSiglipEmbedder
+from ml.adapters.onnx_yolo import OnnxYoloDetector
 from ml.adapters.s3_model_store import S3ModelStore
 from ml.domain.errors import ConfigError, ExternalServiceError
 from ml.domain.model_files import ModelPins, PinnedModel
@@ -68,3 +70,28 @@ def test_a_model_that_cannot_be_fetched_keeps_the_v0_graph_serving(
     assert "trained_models_failed" in caplog.text
     assert any(r.levelname == "ERROR" for r in caplog.records)
     assert verifier is not None
+
+
+def test_a_corrupt_model_file_is_a_config_error_and_keeps_v0(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    broken = tmp_path / "broken.onnx"
+    broken.write_bytes(b"not an onnx model")
+    with pytest.raises(ConfigError, match="cannot load model"):
+        OnnxYoloDetector(broken, "v")
+    with pytest.raises(ConfigError, match="cannot load model"):
+        OnnxSiglipEmbedder(broken, "v")
+    heads = dict(HEADS, embedder="google/siglip2-base-patch16-224")
+    files = {"heads": json.dumps(heads), "meta": json.dumps(META)}
+
+    def fetch(self: object, model: PinnedModel) -> Path:
+        if model.name not in files:
+            return broken
+        path = tmp_path / f"{model.name}.json"
+        path.write_text(files[model.name])
+        return path
+
+    monkeypatch.setattr(S3ModelStore, "fetch", fetch)
+    VerifierBuilder(CoreSettings(), LlmSettings(), ModelSettings(ORIGINALS_BUCKET="b")).verifier()
+    failed = [r for r in caplog.records if r.getMessage() == "trained_models_failed"]
+    assert failed and "cannot load model" in failed[0].fields["reason"]  # type: ignore[attr-defined]
