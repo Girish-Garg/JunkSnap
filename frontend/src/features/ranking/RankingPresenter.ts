@@ -13,6 +13,8 @@ export interface RankingRowView {
   /** What the score is and how many reports it rests on, or "not enough reports (n of 10)". */
   readonly note: string;
   readonly reports: string;
+  /** The area has the 10 verified reports a letter needs. */
+  readonly letterReady: boolean;
 }
 
 /** Row texts for the city ranking: a score always beside its count; a withheld score never shows. */
@@ -36,6 +38,7 @@ export class RankingPresenter {
       score: score === null ? null : this.#format.number(score),
       note: this.#note(standing),
       reports: this.#t('ranking.reports', { n }),
+      letterReady: standing.letterReady,
     };
   }
 

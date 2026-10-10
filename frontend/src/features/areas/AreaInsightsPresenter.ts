@@ -65,7 +65,9 @@ export class AreaInsightsPresenter {
     ];
   }
 
+  // The insights count only sites holding verified reports, so "0 of 0" next to "Sites: 1" says none is verified yet.
   #ofSites(part: number, whole: number, pct?: number): string {
+    if (whole === 0) return this.#t('areas.noVerifiedSites');
     const text = this.#t('areas.ofSites', { part: this.#format.number(part), whole: this.#format.number(whole) });
     return pct === undefined ? text : `${this.#percent(pct)} · ${text}`;
   }

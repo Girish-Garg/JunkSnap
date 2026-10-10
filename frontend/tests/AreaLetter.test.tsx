@@ -84,6 +84,16 @@ describe('area letter refusals', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Not enough verified reports yet (3 of 10) for this issue in this area.');
   });
 
+  it('gives the reason in Hindi in the Hindi app, with the counts the api sent', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn(), language: 'hi' });
+    await user.click(screen.getByRole('radio', { name: 'कूड़ेदान नहीं' }));
+    await user.click(screen.getByRole('button', { name: 'पत्र का मसौदा बनाएँ' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('इस इलाके में इस समस्या की अभी पर्याप्त सत्यापित रिपोर्ट नहीं (10 में से 3)।');
+    expect(alert).not.toHaveTextContent(/Not enough/);
+  });
+
   it('asks a signed-out resident to sign in first', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128' });

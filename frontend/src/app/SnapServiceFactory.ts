@@ -18,6 +18,7 @@ import { IndexedDbReportStore } from '../services/IndexedDbReportStore';
 import { IndexedDbScanStore } from '../services/IndexedDbScanStore';
 import { JunkSnapDb } from '../services/JunkSnapDb';
 import { MockReportApi } from '../services/MockReportApi';
+import { MockReportEvidence } from '../services/MockReportEvidence';
 import { MockScanApi } from '../services/MockScanApi';
 import { NoBinReporter } from '../services/NoBinReporter';
 import { ActivityRemover } from '../services/ActivityRemover';
@@ -25,6 +26,7 @@ import { PhotoEncoder } from '../services/PhotoEncoder';
 import { PhotoHasher } from '../services/PhotoHasher';
 import { QueueLock } from '../services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../services/ReportApi';
+import { reportEvidenceLoaders } from '../services/reportFixtures';
 import { ReportQueue } from '../services/ReportQueue';
 import { ReportSender } from '../services/ReportSender';
 import { ReportTracker } from '../services/ReportTracker';
@@ -70,12 +72,15 @@ const mockAreaLetters = () =>
   });
 
 const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: RequestIdentity) => Apis>> = {
-  mock: () => ({
-    reports: new MockReportApi(sampleSiteLoader),
-    scans: new MockScanApi(),
-    sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
-    areaLetters: mockAreaLetters(),
-  }),
+  mock: () => {
+    const evidence = new MockReportEvidence(reportEvidenceLoaders);
+    return {
+      reports: new MockReportApi(sampleSiteLoader, undefined, evidence),
+      scans: new MockScanApi(undefined, evidence),
+      sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
+      areaLetters: mockAreaLetters(),
+    };
+  },
   live: (config, identity) => ({
     reports: new HttpReportApi(config.requireApiUrl(), identity),
     scans: new HttpScanApi(config.requireApiUrl(), identity),

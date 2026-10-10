@@ -2,6 +2,7 @@ import type { ReportStatus, ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import type { SiteFeature } from '../domain/Site';
 import { isoSeconds } from '../domain/utils';
+import type { MockReportEvidence } from './MockReportEvidence';
 import type { ReportApi } from './ReportApi';
 
 // Each poll moves a sample report one step; the last step joins it to the jdh-1 sample site.
@@ -11,12 +12,15 @@ const STEPS: readonly ReportStatus[] = ['queued', 'processing', 'verified'];
 export class MockReportApi implements ReportApi {
   readonly #sampleSite: () => Promise<SiteFeature>;
   readonly #delayMs: number;
+  readonly #evidence: MockReportEvidence | null;
   readonly #polls = new Map<string, number>();
   #count = 0;
 
-  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = 400) {
+  /** evidence: the fixtures behind the "What we checked" view; null leaves statuses bare, as tests expect. */
+  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = 400, evidence: MockReportEvidence | null = null) {
     this.#sampleSite = sampleSite;
     this.#delayMs = delayMs;
+    this.#evidence = evidence;
   }
 
   async presign(request: PresignRequest): Promise<PresignResponse> {
@@ -39,13 +43,16 @@ export class MockReportApi implements ReportApi {
 
   async status(reportId: string): Promise<ReportStatusView> {
     await this.#wait();
+    const updated_at = isoSeconds(new Date());
+    const frame = await this.#evidence?.frame(reportId, updated_at);
+    if (frame) return frame;
     const poll = this.#polls.get(reportId) ?? 0;
     this.#polls.set(reportId, poll + 1);
     const status = STEPS[Math.min(poll, STEPS.length - 1)] ?? 'queued';
-    const updated_at = isoSeconds(new Date());
     if (status !== 'verified') return { report_id: reportId, status, site_id: null, blurred_url: null, updated_at };
     const site = (await this.#sampleSite()).properties;
-    return { report_id: reportId, status, site_id: site.site_id, blurred_url: site.photo_urls[0] ?? null, updated_at };
+    const view: ReportStatusView = { report_id: reportId, status, site_id: site.site_id, blurred_url: site.photo_urls[0] ?? null, updated_at };
+    return this.#evidence ? this.#evidence.snap(view) : view;
   }
 
   #wait(): Promise<void> {

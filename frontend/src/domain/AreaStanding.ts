@@ -30,6 +30,11 @@ export class AreaStanding {
     return this.row.min_verified_reports;
   }
 
+  /** The api drafts an area letter only from 10 verified reports (409 not_verified below; the issue may need more). */
+  get letterReady(): boolean {
+    return this.reports >= this.minReports;
+  }
+
   /** The scores the api shows; empty while every score is withheld. */
   get shown(): readonly ScoreName[] {
     if (this.reports < this.minReports) return [];

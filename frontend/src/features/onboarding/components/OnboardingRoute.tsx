@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
@@ -20,8 +20,11 @@ export function OnboardingRoute() {
   const sheets = useSheetNavigation();
   const [track, deck] = useCardDeck(CARD_COUNT);
   const layer = useRef<HTMLElement>(null);
-  const close = useCallback(() => sheets.close('/'), [sheets]);
-  useEffect(() => onboarding.markSeen(), [onboarding]);
+  // Seen only once the reader closes the cards (Explore, Skip, the close button or Escape), not when they open.
+  const close = useCallback(() => {
+    onboarding.markSeen();
+    sheets.close('/');
+  }, [onboarding, sheets]);
   useEscapeKey(close, layer);
   useInertOutside(layer);
   useSheetFocus(TITLE_ID, null);

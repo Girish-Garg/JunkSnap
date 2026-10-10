@@ -86,12 +86,14 @@ describe('close and back pop exactly one level', () => {
   it('returns from an area letter to its area, then to the list, never pushing a sheet again', async () => {
     const user = userEvent.setup();
     await loadMap('/areas', signedIn());
-    await user.click(await screen.findByRole('link', { name: /Sardarpura/ }));
-    expect(await screen.findByRole('heading', { level: 2, name: 'Sardarpura' })).toBeInTheDocument();
+    // The Jodhpur assembly seat has the 10 verified reports a letter needs (#120); its row comes first.
+    const [jodhpur] = await screen.findAllByRole('link', { name: /^Jodhpur/ });
+    await user.click(jodhpur as HTMLElement);
+    expect(await screen.findByRole('heading', { level: 2, name: 'Jodhpur' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Draft a letter about this area' }));
     expect(await screen.findByRole('heading', { level: 2, name: /Letter about/ })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Close letter' }));
-    expect(await screen.findByRole('heading', { level: 2, name: 'Sardarpura' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Jodhpur' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Close area' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Areas' })).toBeInTheDocument();
   });
