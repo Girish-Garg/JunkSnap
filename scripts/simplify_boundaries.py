@@ -26,6 +26,8 @@ from shapely.geometry.base import BaseGeometry
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIR = ROOT / "data" / "boundaries"
 OUT_DIR = ROOT / "frontend" / "public" / "boundaries"
+# Ward counts per local body, for the "34 of 100 wards" line in the map legend.
+LOCAL_BODIES = ROOT / "data" / "representatives" / "local_bodies.json"
 # Degrees; tried smallest first until the layer fits its budget.
 TOLERANCES = (0.0005, 0.001, 0.002, 0.004, 0.008, 0.016, 0.024, 0.032)
 DECIMALS = 4  # about 11 m
@@ -175,15 +177,33 @@ def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult
                        len(labels.encode("utf-8")), tolerance, tuple(p.name for p in paths))
 
 
+def ward_coverage(wards_path: Path, bodies_path: Path) -> list[dict[str, Any]]:
+    """Per local body: wards mapped (ids `<body>-w<n>`) against the body's ward count."""
+    ids = [f["properties"].get("id", "") for f in read_features([wards_path])]
+    bodies = json.loads(bodies_path.read_text(encoding="utf-8")) if bodies_path.exists() else []
+    coverage = []
+    for body in bodies:
+        mapped = sum(1 for ward_id in ids if str(ward_id).startswith(f"{body['id']}-w"))
+        if mapped:
+            town = (body.get("towns") or [body["name"]])[0]
+            wards = body.get("wards")
+            coverage.append({"body": body["id"], "town": town, "mapped": mapped, "wards": wards})
+    return coverage
+
+
 def run(
-    source_dir: Path, out_dir: Path, specs: tuple[LayerSpec, ...] = LAYERS
+    source_dir: Path, out_dir: Path, specs: tuple[LayerSpec, ...] = LAYERS,
+    bodies_path: Path = LOCAL_BODIES,
 ) -> list[LayerResult]:
     out_dir.mkdir(parents=True, exist_ok=True)
     results = [r for spec in specs if (r := write_layer(spec, source_dir, out_dir)) is not None]
     for stale in {s.name for s in specs} - {r.name for r in results}:
         for suffix in (".geojson", "_labels.geojson"):
             (out_dir / f"{stale}{suffix}").unlink(missing_ok=True)
-    manifest = {"layers": {r.name: r.manifest() for r in results}}
+    manifest: dict[str, Any] = {"layers": {r.name: r.manifest() for r in results}}
+    if "wards" in manifest["layers"]:
+        coverage = ward_coverage(out_dir / "wards.geojson", bodies_path)
+        manifest["layers"]["wards"]["coverage"] = coverage
     (out_dir / "index.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     return results
 

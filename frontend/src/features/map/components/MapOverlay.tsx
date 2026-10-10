@@ -25,7 +25,7 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
       {selection.preview && (
         <SitePreviewCard site={selection.preview} userLocation={page.location.position} onDetails={selection.openDetails} />
       )}
-      {!listMode && <BoundaryLegend kind={page.boundary.kind} />}
+      {!listMode && <BoundaryLegend kind={page.boundary.kind} wardCoverage={page.boundary.wardCoverage} />}
       {!listMode && <MapControls onLocate={page.location.locate} boundary={page.boundary} />}
     </>
   );
