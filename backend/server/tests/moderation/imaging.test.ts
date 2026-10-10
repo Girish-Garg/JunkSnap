@@ -115,7 +115,7 @@ describe("PrivacyBlur padding", () => {
     const ports = { faces: new FakeFinder("DetectFaces", null), plates, subjects: new FakeSubjectFinder() };
     const blur = new PrivacyBlur({ ...ports, blurrer: new SharpBlurrer(95), store: new FakeImageStore() });
     const upright = await testJpeg();
-    const blurred = await blur.blur({ upright, hash: PerceptualHash.fromHex("0000000000000000"), brightness: 0.5 });
+    const blurred = await blur.blur({ upright, hash: PerceptualHash.fromHex("0000000000000000"), brightness: 0.5, aspect: 256 / 192 });
     const before = await rgb(upright);
     const after = await rgb(blurred.jpeg);
     expect(meanDiff(before.data, after.data, before.width, (x, y) => x >= 66 && x < 72 && y >= 72 && y < 80)).toBeGreaterThan(30);

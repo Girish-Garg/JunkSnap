@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { describe, expect, it, vi } from "vitest";
 import { PublicReblur, type ObjectSource, type ReblurOptions } from "../../scripts/reblur/PublicReblur.js";
+import { parseReblurArgs } from "../../scripts/reblur/ReblurArgs.js";
+import { S3Objects } from "../../scripts/reblur/S3Objects.js";
 import { SharpBlurrer } from "../../src/adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../../src/adapters/moderation/SharpImageCodec.js";
 import { BLUR_POLICY } from "../../src/domain/moderation/BlurPlanner.js";
@@ -77,5 +80,42 @@ describe("PublicReblur", () => {
     objects.objects.set(`${BUCKETS.public}/${KEY}`, await testJpeg());
     expect(await reblur.one(KEY)).toMatchObject({ action: "reblurred", detail: expect.stringContaining("public copy") });
     expect(await reblur.one("media/reports/index.html")).toMatchObject({ action: "skipped" });
+  });
+});
+
+describe("PublicReblur.attempt", () => {
+  it("reports a key that throws as failed instead of stopping the run", async () => {
+    const { objects, reblur } = setUp();
+    vi.spyOn(objects, "read").mockRejectedValue(Object.assign(new Error("Access Denied"), { name: "AccessDenied" }));
+    expect(await reblur.attempt(KEY)).toEqual({ key: KEY, action: "failed", detail: "AccessDenied: Access Denied" });
+  });
+});
+
+describe("S3Objects", () => {
+  it("reads a missing copy's blur policy as none, and stamped metadata as the policy", async () => {
+    const client = new S3Client({ region: "ap-south-1" });
+    const send = vi.spyOn(client as unknown as { send: (command: object) => Promise<unknown> }, "send");
+    send.mockRejectedValueOnce(Object.assign(new Error("not found"), { name: "NotFound" }));
+    send.mockResolvedValueOnce({ Metadata: { "blur-policy": BLUR_POLICY } });
+    const objects = new S3Objects(client);
+    expect(await objects.blurPolicy(BUCKETS.public, KEY)).toBeNull();
+    expect(await objects.blurPolicy(BUCKETS.public, KEY)).toBe(BLUR_POLICY);
+    expect(send.mock.calls[1]?.[0]).toBeInstanceOf(HeadObjectCommand);
+  });
+});
+
+describe("parseReblurArgs", () => {
+  const dev = ["--originals-bucket", "junksnap-dev-originals-1", "--public-bucket", "junksnap-dev-public-1"];
+
+  it("reads the stage, buckets and flags", () => {
+    expect(parseReblurArgs(["dev", ...dev, "--dry-run"])).toEqual({ buckets: BUCKETS, options: { dryRun: true, force: false }, key: undefined });
+    expect(parseReblurArgs(["dev", ...dev, "--force", "--key", KEY])).toMatchObject({ options: { dryRun: false, force: true }, key: KEY });
+  });
+
+  it("refuses buckets of another stage, an unknown stage and missing buckets", () => {
+    expect(() => parseReblurArgs(["demo", ...dev])).toThrow(/usage/);
+    expect(() => parseReblurArgs(["prod", ...dev])).toThrow(/usage/);
+    expect(() => parseReblurArgs(["dev", "--originals-bucket", "junksnap-dev-originals-1", "--public-bucket", "junksnap-demo-public-1"])).toThrow(/usage/);
+    expect(() => parseReblurArgs(["dev"])).toThrow(/usage/);
   });
 });

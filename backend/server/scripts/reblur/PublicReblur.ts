@@ -24,7 +24,7 @@ export interface ReblurOptions {
   readonly force: boolean;
 }
 
-export type ReblurAction = "reblurred" | "would_reblur" | "current" | "skipped";
+export type ReblurAction = "reblurred" | "would_reblur" | "current" | "skipped" | "failed";
 
 export interface ReblurOutcome {
   readonly key: string;
@@ -41,6 +41,15 @@ export class PublicReblur {
   constructor(parts: ReblurParts, options: ReblurOptions) {
     this.#parts = parts;
     this.#options = options;
+  }
+
+  // Never throws: one bad key is reported as failed and the run goes on, so a rerun is never stuck on it.
+  async attempt(key: string): Promise<ReblurOutcome> {
+    try {
+      return await this.one(key);
+    } catch (error) {
+      return { key, action: "failed", detail: error instanceof Error ? `${error.name}: ${error.message}` : String(error) };
+    }
   }
 
   async one(key: string): Promise<ReblurOutcome> {

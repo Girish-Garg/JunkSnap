@@ -24,8 +24,15 @@ export class S3Objects {
 
   // The blur policy a public copy was written under; null for copies made before policies existed.
   async blurPolicy(bucket: string, key: string): Promise<string | null> {
-    const head = await this.#client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
-    return head.Metadata?.[BLUR_POLICY_METADATA] ?? null;
+    try {
+      const head = await this.#client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+      return head.Metadata?.[BLUR_POLICY_METADATA] ?? null;
+    } catch (error) {
+      if (error instanceof Error && error.name === "NotFound") {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async read(bucket: string, key: string): Promise<Uint8Array | null> {

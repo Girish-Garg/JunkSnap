@@ -75,7 +75,7 @@ const HASH = PerceptualHash.fromHex("0000000000000000");
 const person = (left: number, top: number, height: number, confidence = 95): Subject => ({ kind: "person", box: box(left, top, 0.1, height), confidence });
 const car = (left: number, top: number, confidence = 95): Subject => ({ kind: "vehicle", box: box(left, top, 0.3, 0.3), confidence });
 const bike = (left: number, top: number): Subject => ({ kind: "two_wheeler", box: box(left, top, 0.2, 0.4), confidence: 95 });
-const bright = { faces: [], textPlates: [], labelPlates: [], subjects: [], brightness: 0.6 };
+const bright = { faces: [], textPlates: [], labelPlates: [], subjects: [], brightness: 0.6, aspect: 1 };
 
 describe("BlurPlanner", () => {
   const planner = new BlurPlanner();
@@ -94,6 +94,23 @@ describe("BlurPlanner", () => {
     expect(zones[0]?.bottom).toBeCloseTo(0.8);
     expect(zones[1]?.top).toBeCloseTo(0.5);
     expect(zones[1]?.bottom).toBeCloseTo(0.8);
+  });
+
+  it("never lets a neighbour's face or another vehicle's plate stand in for a subject's own", () => {
+    // A rider and a pillion: the pillion's face sits low in the rider's tall box, the rider's own face is not found.
+    const riders = planner.plan({ ...bright, faces: [box(0.52, 0.42, 0.05, 0.06)], subjects: [person(0.5, 0.1, 0.6), person(0.5, 0.4, 0.5)] });
+    expect(riders.counts).toMatchObject({ faces: 1, heads: 1 });
+    expect(riders.regions[1]?.box).toEqual(box(0.5, 0.1, 0.1, 0.15));
+    // Another vehicle's plate seen high up inside a big Vehicle box does not cover that box's own plate zone.
+    const truck = { kind: "vehicle", box: box(0.1, 0.1, 0.3, 0.6), confidence: 90 } as const;
+    const plated = planner.plan({ ...bright, textPlates: [box(0.2, 0.19, 0.05, 0.02)], subjects: [truck] });
+    expect(plated.counts).toMatchObject({ plates: 1, plate_zones: 1 });
+  });
+
+  it("blurs a person who is bent over or crouching whole: the head may be anywhere in a wide box", () => {
+    const crouching = { kind: "person", box: box(0.1, 0.5, 0.2, 0.3), confidence: 95 } as const;
+    expect(planner.plan({ ...bright, aspect: 4 / 3, subjects: [crouching] }).counts).toMatchObject({ people: 1, heads: 0 });
+    expect(planner.plan({ ...bright, aspect: 4 / 3, subjects: [person(0.1, 0.1, 0.6)] }).counts).toMatchObject({ people: 0, heads: 1 });
   });
 
   it("blurs a car whole when it is unsure, and a person whole when the box is small", () => {
@@ -136,7 +153,7 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
   });
 
   it("uses head and plate zones on the same scene in daylight, and whole boxes for the unsure ones", async () => {
-    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6 };
+    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6, aspect: 256 / 192 };
     const record = (await privacyBlur("night_road", new RecordingBlurrer()).blur(photo)).record.toContract();
     expect(record.regions).toEqual({ faces: 0, plates: 0, heads: 1, plate_zones: 2, people: 1, vehicles: 1 });
     expect(record.low_light).toBe(false);
@@ -144,7 +161,7 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
 
   it("leaves the normal case as before: only the found face and plate are blurred, with the same evidence", async () => {
     const blurrer = new RecordingBlurrer();
-    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6 };
+    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6, aspect: 256 / 192 };
     const record = (await privacyBlur("daylight_road", blurrer).blur(photo)).record.toContract();
     expect(blurrer.regions).toEqual([
       { box: box(0.2, 0.18, 0.05, 0.07), padding: FACE_PADDING },
@@ -163,7 +180,7 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
 
   it("blurs nothing on a plain dump photo, and the record still fits the contract", async () => {
     const blurrer = new RecordingBlurrer();
-    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6 };
+    const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6, aspect: 256 / 192 };
     const blur = (await privacyBlur("dump_only", blurrer).blur(photo)).record.toContract();
     expect(blurrer.regions).toEqual([]);
     const result = JSON.parse(readFileSync(fileURLToPath(new URL("../../../../contracts/fixtures/moderation_result.jdh-1.json", import.meta.url)), "utf8")) as object;

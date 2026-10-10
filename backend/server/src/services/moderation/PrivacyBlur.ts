@@ -38,6 +38,7 @@ export class PrivacyBlur {
       labelPlates: foundSubjects.plates,
       subjects: foundSubjects.subjects,
       brightness: photo.brightness,
+      aspect: photo.aspect,
     });
     const record = new BlurRecord({ faces: foundFaces, plates: foundPlates, subjects: foundSubjects }, plan);
     return { jpeg: await blurrer.obscure(jpeg, plan.regions), record };

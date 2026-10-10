@@ -64,6 +64,8 @@ export class PhotoLoader {
     const grey = await this.#codec.grayscale(original, PerceptualHash.SIDE);
     // Always re-encoded, so an EXIF rotation can never put Rekognition's boxes and the blur in different frames.
     const upright = await this.#codec.uprightBelow(original, MAX_UPRIGHT_BYTES);
-    return { photo: { upright, hash: PerceptualHash.fromGrayscale(grey), brightness: meanBrightness(grey) } };
+    const shape = await this.#codec.describe(upright);
+    const aspect = shape.width / shape.height;
+    return { photo: { upright, hash: PerceptualHash.fromGrayscale(grey), brightness: meanBrightness(grey), aspect } };
   }
 }

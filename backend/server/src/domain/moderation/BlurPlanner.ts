@@ -19,6 +19,9 @@ const UNSURE_BELOW = 70;
 const SMALL_BELOW = 0.2;
 // The head is the top quarter of a standing person's box.
 const HEAD_SHARE = 0.25;
+// A person box wider than this share of its height (in pixels) is someone bent over, crouching or lying down,
+// whose head may be anywhere in the box, so it is blurred whole.
+const STANDING_MAX_WIDTH = 0.7;
 // Where a plate zone starts, as a share of the box height from its top. Front and back plates sit low on cars,
 // trucks, buses and autos, and about mid height on two-wheelers; the zone is full width for angled views.
 const PLATE_ZONE_FROM: Readonly<Record<Exclude<SubjectKind, "person">, number>> = { vehicle: 0.4, two_wheeler: 0.25 };
@@ -33,6 +36,8 @@ export interface BlurInput {
   readonly subjects: readonly Subject[];
   // Mean grey level of the photo, 0 to 1.
   readonly brightness: number;
+  // Image width over height, to read box shapes in pixels.
+  readonly aspect: number;
 }
 
 export interface BlurPlan {
@@ -56,7 +61,7 @@ export class BlurPlanner {
     const planned: Planned[] = [
       ...input.faces.map((box) => this.#planned("faces", box, FACE_PADDING)),
       ...plates.map((box) => this.#planned("plates", box, PLATE_PADDING)),
-      ...input.subjects.flatMap((subject) => this.#cover(subject, lowLight, subject.kind === "person" ? input.faces : plates)),
+      ...input.subjects.flatMap((subject) => this.#cover(subject, input, subject.kind === "person" ? input.faces : plates)),
     ];
     return { regions: planned.map((item) => item.region), counts: this.#count(planned), lowLight };
   }
@@ -66,18 +71,25 @@ export class BlurPlanner {
     return labelPlates.filter((box) => !textPlates.some((plate) => plate.intersectionArea(box) > 0));
   }
 
-  #cover(subject: Subject, lowLight: boolean, found: readonly Box[]): Planned[] {
+  // A face or plate counts only when its centre is in this subject's own head band or plate zone, so a
+  // neighbour's face or another vehicle's plate inside an overlapping box never stands in for it.
+  #cover(subject: Subject, input: BlurInput, found: readonly Box[]): Planned[] {
     const { kind, box } = subject;
-    if (lowLight || subject.confidence < UNSURE_BELOW || box.height < SMALL_BELOW) {
+    if (this.#wholly(subject, input)) {
       return [this.#planned(kind === "person" ? "people" : "vehicles", box, WHOLE_PADDING)];
     }
-    if (found.some((other) => box.holdsCentreOf(other))) {
+    const zone = kind === "person" ? box.band(0, HEAD_SHARE) : box.band(PLATE_ZONE_FROM[kind], 1);
+    if (found.some((other) => zone.holdsCentreOf(other))) {
       return [];
     }
-    if (kind === "person") {
-      return [this.#planned("heads", box.band(0, HEAD_SHARE), ZONE_PADDING)];
-    }
-    return [this.#planned("plate_zones", box.band(PLATE_ZONE_FROM[kind], 1), ZONE_PADDING)];
+    return [this.#planned(kind === "person" ? "heads" : "plate_zones", zone, ZONE_PADDING)];
+  }
+
+  // Dark photo, unsure detection, small box, or a person who is not upright.
+  #wholly(subject: Subject, input: BlurInput): boolean {
+    const { box } = subject;
+    const lying = subject.kind === "person" && box.width * input.aspect > box.height * STANDING_MAX_WIDTH;
+    return input.brightness < DARK_BELOW || subject.confidence < UNSURE_BELOW || box.height < SMALL_BELOW || lying;
   }
 
   #planned(kind: RegionKind, box: Box, padding: Padding): Planned {

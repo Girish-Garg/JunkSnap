@@ -6,6 +6,8 @@ export interface LoadedPhoto {
   readonly hash: PerceptualHash;
   // Mean grey level, 0 (black) to 1 (white).
   readonly brightness: number;
+  // Width over height of `upright`.
+  readonly aspect: number;
 }
 
 // Mean of 8-bit grey pixels, as a share of white; 0 for no pixels.
