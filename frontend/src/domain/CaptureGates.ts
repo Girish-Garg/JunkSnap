@@ -27,6 +27,8 @@ export interface SendFacts {
   readonly chosen: boolean;
   /** A no-bin photo's fix in metres when it is worse than 50 m, else null. */
   readonly vagueM: number | null;
+  /** A photo for a site taken farther than it can join from: the limit in metres, else null or absent. */
+  readonly tooFarLimitM?: number | null;
 }
 
 export interface NoBinFacts extends Omit<SessionFacts, 'cooling'> {
@@ -58,6 +60,7 @@ export const CAPTURE_GATES = {
   send: new ActionGate<SendFacts>([
     GateRules.busy(),
     (facts) => (facts.vagueM === null ? null : blocked('nobin.photoTooVague', { metres: Math.round(facts.vagueM) })),
+    (facts) => (facts.tooFarLimitM == null ? null : blocked('addPhoto.tooFar', { limit: facts.tooFarLimitM })),
     GateRules.when((facts) => !facts.chosen, 'gate.pickPlace'),
   ]),
   // A no-bin report without a photo goes straight to the api.

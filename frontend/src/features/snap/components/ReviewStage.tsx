@@ -26,7 +26,9 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
   const preview = usePhotoPreview(photo.bytes);
   // A no-bin report says "no dustbin near where I stand", so it never takes a long-range target.
   const longRange = report.type !== 'no_bin';
-  const { sendable, send } = useReviewSend(photo, flow, report, longRange ? place.target : null);
+  const target = longRange ? place.target : null;
+  const choice = report.choice && target ? { ...report.choice, target } : report.choice;
+  const { sendable, send } = useReviewSend(photo, flow, { choice, vagueM: report.gpsTooVague ? photo.gps.accuracy_m : null });
   const notice = report.gpsTooVague ? t('nobin.photoTooVague', { metres: Math.round(photo.gps.accuracy_m) }) : null;
   return (
     <div className="snap-review">

@@ -18,11 +18,12 @@ export interface FreshLocation {
 export function useFreshFix(mapLocation: LonLat | null): FreshLocation {
   const { locator } = useServices();
   const allowed = usePermissionState('geolocation') === 'granted';
-  const [fix, setFix] = useState<FreshFix | null>(null);
-  // The map's fix counts from when it arrived here; stamped on the next tick, off the render.
+  // The map's fix counts from when it arrived here: at once on the first render, later ones on the next tick.
+  const [fix, setFix] = useState<FreshFix | null>(() => (mapLocation ? new FreshFix(mapLocation, Date.now()) : null));
   useEffect(() => {
     if (!mapLocation) return undefined;
-    const timer = window.setTimeout(() => setFix(new FreshFix(mapLocation, Date.now())), 0);
+    const stamp = () => setFix((current) => (current?.at === mapLocation ? current : new FreshFix(mapLocation, Date.now())));
+    const timer = window.setTimeout(stamp, 0);
     return () => window.clearTimeout(timer);
   }, [mapLocation]);
   const relocate = useCallback(

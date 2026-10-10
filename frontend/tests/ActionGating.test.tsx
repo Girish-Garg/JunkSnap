@@ -74,7 +74,8 @@ describe('a vote that needs a connection or a session', () => {
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
     expect(await screen.findByText(/You're offline\. Photos wait on this phone/)).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }, { timeout: 3000 }));
-    expect(await screen.findByText("You're offline. Try again once you're connected.")).toBeInTheDocument();
+    // The toast says it, not a line under another button.
+    await waitFor(() => expect(document.querySelector('.app-toast')).toHaveTextContent("You're offline. Try again once you're connected."));
     expect(api.calls).toEqual([]);
   });
 

@@ -50,12 +50,16 @@ export class ChoroplethScale {
     return { basis: 'count', step, color: ChoroplethScale.#color(COUNT_STEPS, step) };
   }
 
-  /** Area id to fill colour, for the map's feature state. */
+  /**
+   * Area id to score colour, for the map's feature state: only areas that show a score (10+ verified reports).
+   * Every other area keeps its neighbour tint, so a report count is never read as a colour on the map; the
+   * marker carries the count.
+   */
   static colors(rows: readonly AreaScores[]): ReadonlyMap<string, string> {
     const colors = new Map<string, string>();
     for (const row of rows) {
       const fill = ChoroplethScale.fill(row);
-      if (fill) colors.set(row.area.id, fill.color);
+      if (fill?.basis === 'score') colors.set(row.area.id, fill.color);
     }
     return colors;
   }

@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import type { SiteActionFacts } from '../../../domain/SiteActionGates';
 import { SiteListing } from '../../../domain/SiteListing';
+import { SitePhotoPreset } from '../../../domain/SitePhotoPreset';
 import { metresBetween } from '../../../domain/utils';
 import { usePermissionState } from '../../../ui/usePermissionState';
 import { useQueue } from '../../snap/hooks/useQueue';
@@ -23,9 +24,10 @@ export function useSiteFacts(site: SiteFeature, mapLocation: LonLat | null): Sit
   const point = site.geometry.coordinates;
   const distanceM = fix ? metresBetween(fix.at, point) : null;
   const { properties } = site;
+  const addPhotoLimitM = useMemo(() => SitePhotoPreset.of(site).limitM(true), [site]);
   const facts = useMemo(
-    () => ({ ...session, site: properties, ownSite, distanceM, locationDenied }),
-    [session, properties, ownSite, distanceM, locationDenied],
+    () => ({ ...session, site: properties, ownSite, distanceM, locationDenied, addPhotoLimitM }),
+    [session, properties, ownSite, distanceM, locationDenied, addPhotoLimitM],
   );
   const remeasure = useCallback(() => relocate().then((fresh) => (fresh ? metresBetween(fresh.at, point) : null)), [relocate, point]);
   return { facts, remeasure };

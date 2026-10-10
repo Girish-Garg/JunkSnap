@@ -17,6 +17,8 @@ export interface SiteActionFacts extends SessionFacts {
   readonly distanceM: number | null;
   /** The browser said no to location, and a vote sends a fresh fix. */
   readonly locationDenied: boolean;
+  /** The farthest a photo can still join this site from, up high (SitePhotoPreset.limitM); Send checks the photo's own fix. */
+  readonly addPhotoLimitM: number;
 }
 
 export interface AreaLetterFacts extends SessionFacts {
@@ -26,17 +28,24 @@ export interface AreaLetterFacts extends SessionFacts {
 
 type Rule = AvailabilityRule<SiteActionFacts>;
 
-// A tap takes a fresh fix first and goes through when that one is in range (remedy relocate).
-const tooFar = (limitM: number, reason: string): Rule => (facts) =>
-  facts.distanceM !== null && facts.distanceM > limitM + DISTANCE_MARGIN_M ? blocked(reason, undefined, 'relocate') : null;
+type Limit = (facts: SiteActionFacts) => number;
+
+// A tap takes a fresh fix first and goes through when that one is in range (remedy relocate). The reason gets the
+// limit as {{limit}} for wording that names it.
+const tooFar = (limit: Limit, reason: string): Rule => (facts) => {
+  const limitM = limit(facts);
+  const far = facts.distanceM !== null && facts.distanceM > limitM + DISTANCE_MARGIN_M;
+  return far ? blocked(reason, { limit: limitM }, 'relocate') : null;
+};
+const within = (metres: number): Limit => () => metres;
 
 // A deep link can open a letter or cleanup sheet for a site that already left the map.
-const offMap: Rule = GateRules.when((facts) => !SiteListing.onMap(facts.site), 'gate.siteClosed');
+const offMap = (reason = 'gate.siteClosed'): Rule => GateRules.when((facts) => !SiteListing.onMap(facts.site), reason);
 
 const VOTE: readonly Rule[] = [
   GateRules.busy(),
   GateRules.when((facts) => facts.ownSite, 'vote.errors.own_site'),
-  tooFar(VOTE_RADIUS_M, 'vote.errors.too_far'),
+  tooFar(within(VOTE_RADIUS_M), 'vote.errors.too_far'),
   GateRules.when((facts) => facts.locationDenied, 'vote.errors.location'),
   GateRules.cooling('vote', 'vote.errors.rate_limited'),
   GateRules.offline(),
@@ -51,20 +60,27 @@ export const SITE_GATES = {
   vote: new ActionGate<SiteActionFacts>(VOTE),
   cleanup: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
-    offMap,
+    offMap(),
     GateRules.when((facts) => facts.site.cleanup_status === 'checking', 'cleanup.errors.cleanup_pending'),
-    tooFar(CLEANUP_RADIUS_M, 'gate.tooFarCleanup'),
+    tooFar(within(CLEANUP_RADIUS_M), 'gate.tooFarCleanup'),
     GateRules.cooling('cleanup', 'cleanup.errors.rate_limited'),
     GateRules.offline(),
     GateRules.signIn('gate.signIn.cleanup'),
   ]),
   letter: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
-    offMap,
+    offMap(),
     GateRules.when((facts) => facts.site.verification !== 'verified', 'actions.letterLocked'),
     GateRules.cooling('letter', 'letter.errors.rate_limited'),
     GateRules.offline(),
     GateRules.signIn('gate.signIn.letter'),
+  ]),
+  // Add a photo to this site (#132): opens Snap preset to the site; the photo's own fix is checked again on Send.
+  // No offline rule: Snap saves the photo on the phone and sends it later, so blocking offline would lose reports.
+  addPhoto: new ActionGate<SiteActionFacts>([
+    offMap('addPhoto.closed'),
+    tooFar((facts) => facts.addPhotoLimitM, 'addPhoto.tooFar'),
+    GateRules.signIn('addPhoto.signIn'),
   ]),
   withdraw: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
@@ -135,7 +151,7 @@ const ROUTE_SESSION: SessionFacts = { signedIn: true, online: true, cooling: new
 
 /** Whether a letter or cleanup sheet opened by link can be used at all: off the map, not verified, a photo checking. */
 export function decideSiteRoute(rule: ActionGate<SiteActionFacts>, site: SiteActionFacts['site']): Availability {
-  return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false });
+  return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false, addPhotoLimitM: 0 });
 }
 
 /** Whether an area letter sheet opened by link can draft at all: 10 verified reports. */

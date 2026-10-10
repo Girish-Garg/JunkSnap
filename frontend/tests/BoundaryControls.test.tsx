@@ -25,7 +25,9 @@ describe('Map areas', () => {
     await waitFor(() => expect(seen.last?.areaMarkers.size).toBeGreaterThan(0));
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
     const legend = await screen.findByRole('region', { name: 'Map legend' });
-    expect(within(legend).getByText(/Seats coloured by score/)).toBeInTheDocument();
+    expect(within(legend).getByText('Coloured areas are assembly seats (Lok Sabha seats outside Rajasthan); colours only tell neighbours apart.')).toBeInTheDocument();
+    expect(within(legend).getByText('Seats with 10+ verified reports are coloured by score instead.')).toBeInTheDocument();
+    expect(within(legend).getByText('Thick outline: the area you tapped, opened or are in')).toBeInTheDocument();
     expect(within(legend).getByText('Marker: score out of 100, then its verified reports')).toBeInTheDocument();
     expect(within(legend).getByText('Marker: number of verified reports')).toBeInTheDocument();
     expect(within(legend).getByText('Flag: pilot city data')).toBeInTheDocument();
@@ -33,8 +35,8 @@ describe('Map areas', () => {
     expect(within(legend).getByText('Dashed outline: seat boundary out of date')).toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
     expect(seen.last?.areas).toEqual({ fine: true });
-    // Sardarpura has 4 verified reports and every score withheld: a grey count fill, never a score colour.
-    expect(seen.last?.areaColors.get('s20-ac-127')).toBe('#c4c7c5');
+    // Sardarpura has 4 verified reports and every score withheld: never a score colour; it keeps its neighbour tint.
+    expect(seen.last?.areaColors.has('s20-ac-127')).toBe(false);
     // Markers follow the same rule: the shown score, else the report count.
     expect(seen.last?.areaMarkers.get('s20-ac-128')?.value).toBe('44');
     expect(seen.last?.areaMarkers.get('s20-ac-127')?.value).toBe('4');
@@ -82,7 +84,9 @@ describe('Map legend before any score', () => {
     expect(within(legend).getByText(/^Dashed pin: not verified yet; 1\/10/)).toBeInTheDocument();
     expect(within(legend).getByText('Stacked pin: several sites at one spot')).toBeInTheDocument();
     expect(within(legend).queryByText(/^Marker:/)).not.toBeInTheDocument();
-    expect(within(legend).queryByText(/Seats coloured by score/)).not.toBeInTheDocument();
+    expect(within(legend).queryByText(/coloured by score/)).not.toBeInTheDocument();
+    // The neighbour colours are on the map from the start, so their line is too.
+    expect(within(legend).getByText(/^Coloured areas are assembly seats/)).toBeInTheDocument();
     expect(within(legend).queryByText('Flag: pilot city data')).not.toBeInTheDocument();
   });
 });

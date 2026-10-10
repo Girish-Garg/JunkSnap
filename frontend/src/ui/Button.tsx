@@ -3,7 +3,9 @@ import './blocked.css';
 
 interface ButtonProps {
   readonly children: ReactNode;
-  readonly variant?: 'primary' | 'secondary' | 'sun' | 'text';
+  readonly variant?: 'primary' | 'secondary' | 'sun' | 'tonal' | 'text';
+  /** small: a compact 44 px row action, for cards. */
+  readonly size?: 'regular' | 'small';
   readonly type?: 'button' | 'submit';
   readonly onClick?: () => void;
   readonly disabled?: boolean;
@@ -11,9 +13,9 @@ interface ButtonProps {
   readonly blocked?: boolean;
 }
 
-export function Button({ children, variant = 'primary', type = 'button', onClick, disabled, blocked = false }: ButtonProps) {
+export function Button({ children, variant = 'primary', size = 'regular', type = 'button', onClick, disabled, blocked = false }: ButtonProps) {
   return (
-    <button type={type} className={`button button--${variant}`} onClick={onClick} disabled={disabled} aria-disabled={blocked || undefined}>
+    <button type={type} className={`button button--${variant} button--${size}`} onClick={onClick} disabled={disabled} aria-disabled={blocked || undefined}>
       {children}
     </button>
   );

@@ -67,18 +67,30 @@ describe('opening a sheet replaces the map-level sheets under it', () => {
 });
 
 describe('the preview card', () => {
-  it('has a history entry, so back closes it, and Details leaves none behind', async () => {
+  it('has a history entry, so back closes it, and View site leaves none behind', async () => {
     const user = userEvent.setup();
     await loadMap();
     act(() => seen.last?.onPick('site_jdh_1'));
-    expect(await screen.findByRole('button', { name: 'Details' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'View site' })).toBeInTheDocument();
     await waitFor(() => expect(layers()).toBe(1));
     act(() => window.history.back());
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'View site' })).not.toBeInTheDocument());
     act(() => seen.last?.onPick('site_jdh_1'));
-    await user.click(await screen.findByRole('button', { name: 'Details' }));
+    await user.click(await screen.findByRole('button', { name: 'View site' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
     expect(layers()).toBe(0);
+  });
+
+  it('publishes its height on the map page while it is up, so the map buttons clear it', async () => {
+    await loadMap();
+    const page = document.querySelector<HTMLElement>('.map-page');
+    expect(page?.style.getPropertyValue('--card-height')).toBe('');
+    act(() => seen.last?.onPick('site_jdh_1'));
+    await screen.findByRole('button', { name: 'View site' });
+    // jsdom lays nothing out, so the measured height is 0; a browser gives the card's real height.
+    await waitFor(() => expect(page?.style.getPropertyValue('--card-height')).toBe('0px'));
+    act(() => window.history.back());
+    await waitFor(() => expect(page?.style.getPropertyValue('--card-height')).toBe(''));
   });
 });
 
@@ -118,7 +130,7 @@ describe('a map tap with a sheet open (phones)', () => {
     act(() => seen.last?.onPick(null));
     await waitFor(() => expect(heading('Sign in')).not.toBeInTheDocument());
     expect(heading('Waste dump')).toBeInTheDocument();
-    act(() => seen.last?.onPickArea({ kind: 'assembly', id: 's20-ac-128' }));
+    act(() => seen.last?.onPickArea({ kind: 'assembly', id: 's20-ac-128', name: 'Jodhpur' }));
     await waitFor(() => expect(heading('Waste dump')).not.toBeInTheDocument());
     expect(TopLayer.covering()).toBe(0);
   });

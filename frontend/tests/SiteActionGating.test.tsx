@@ -30,7 +30,7 @@ function expectNoActions() {
 describe('a site off the map shows its status and why, and no votes or actions', () => {
   it('a withdrawn site: no vote, no actions, no backers bar and no empty photo tile', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jdh_5')} userLocation={null} />);
-    expect(screen.getByText('Withdrawn')).toHaveClass('badge--removed');
+    expect(screen.getByText('Withdrawn')).toHaveClass('status-chip--closed');
     expect(screen.getByRole('heading', { name: 'No longer on the map' })).toBeInTheDocument();
     expect(screen.getByText(/Its reporter withdrew the report/)).toBeInTheDocument();
     expectNoActions();

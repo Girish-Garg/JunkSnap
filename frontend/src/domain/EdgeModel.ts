@@ -18,6 +18,9 @@ export const EDGE_MODEL = {
   minScore: 0.25,
 } as const;
 
+/** The model's path stamped with its hash, so a phone never runs an old model from its HTTP cache after a deploy. */
+export const EDGE_MODEL_URL_PATH = `${EDGE_MODEL.path}?v=${EDGE_MODEL.sha256.slice(0, 16)}`;
+
 /** A box as fractions of the frame's width and height (the scan_session hints box shape). */
 export interface BoxFraction {
   readonly left: number;

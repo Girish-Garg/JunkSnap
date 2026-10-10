@@ -108,9 +108,19 @@ export class SiteMap {
     this.#boundaries.label(markers);
   }
 
-  /** Area id to fill colour for the boundary kind shown. */
+  /** Area id to score colour, for the areas that show a score. */
   paintAreas(colors: ReadonlyMap<string, string>): void {
     this.#boundaries.paint(colors);
+  }
+
+  /** Area id to neighbour tint slot, for every area. */
+  tintAreas(tints: ReadonlyMap<string, number>): void {
+    this.#boundaries.tint(tints);
+  }
+
+  /** The area to outline and label (tapped, open, or where the person stands), or null. */
+  focusArea(id: string | null): void {
+    this.#boundaries.focus(id);
   }
 
   setMode(mode: MapMode): void {

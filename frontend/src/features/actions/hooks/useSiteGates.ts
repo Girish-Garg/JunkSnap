@@ -14,6 +14,7 @@ export interface SiteGates {
   readonly letter: GatedAction;
   readonly withdraw: GatedAction;
   readonly note: GatedAction;
+  readonly addPhoto: GatedAction;
 }
 
 type Remeasure = () => Promise<number | null>;
@@ -41,6 +42,7 @@ export function useSiteGates(site: SiteFeature, mapLocation: LonLat | null): Sit
       letter: action(SITE_GATES.letter),
       withdraw: action(SITE_GATES.withdraw),
       note: action(SITE_GATES.note),
+      addPhoto: action(SITE_GATES.addPhoto),
     };
   }, [gate, facts, remeasure]);
 }

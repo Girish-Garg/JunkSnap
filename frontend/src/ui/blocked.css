@@ -24,6 +24,10 @@
   border-color: var(--divider);
 }
 
+.button--tonal[aria-disabled='true']:hover {
+  background: var(--accent-tint);
+}
+
 .action-row__button[aria-disabled='true'] {
   color: var(--text-secondary);
   cursor: not-allowed;

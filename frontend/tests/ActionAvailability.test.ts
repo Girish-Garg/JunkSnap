@@ -21,6 +21,7 @@ const SITE: SiteActionFacts = {
   ownSite: false,
   distanceM: 200,
   locationDenied: false,
+  addPhotoLimitM: 490,
 };
 const site = (patch: Partial<SiteActionFacts>): SiteActionFacts => ({ ...SITE, ...patch });
 const cooling = (group: string) => new Set([group]);
@@ -42,7 +43,7 @@ describe('site action gates', () => {
     expect(vote({ busy: true })).toEqual(waiting('gate.busy'));
     expect(vote({ ownSite: true })).toEqual(blocked('vote.errors.own_site'));
     // Too far rests on a fix, so a tap takes a fresh one first (remedy relocate).
-    expect(vote({ distanceM: 1250 })).toEqual(blocked('vote.errors.too_far', undefined, 'relocate'));
+    expect(vote({ distanceM: 1250 })).toEqual(blocked('vote.errors.too_far', { limit: 1000 }, 'relocate'));
     // The map's fix is rough, so only clearly too far blocks: 1 km plus a 100 m margin.
     expect(vote({ distanceM: 1080 })).toEqual(OK);
     expect(vote({ distanceM: null })).toEqual(OK);
@@ -64,7 +65,7 @@ describe('site action gates: cleanup and letters', () => {
     const cleanup = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.cleanup.decide(site(patch)));
     expect(cleanup({ distanceM: 120 })).toEqual(OK);
     expect(cleanup({ site: { verification: 'verified', status: 'open', cleanup_status: 'checking' } })).toEqual(blocked('cleanup.errors.cleanup_pending'));
-    expect(cleanup({ distanceM: 400 })).toEqual(blocked('gate.tooFarCleanup', undefined, 'relocate'));
+    expect(cleanup({ distanceM: 400 })).toEqual(blocked('gate.tooFarCleanup', { limit: 50 }, 'relocate'));
     expect(cleanup({ site: { verification: 'verified', status: 'cleaned', cleanup_status: 'accepted' } })).toEqual(blocked('gate.siteClosed'));
     expect(cleanup({ distanceM: 20, cooling: cooling('cleanup') })).toEqual(blocked('cleanup.errors.rate_limited'));
     expect(cleanup({ distanceM: 20, online: false })).toEqual(blocked('gate.offline'));

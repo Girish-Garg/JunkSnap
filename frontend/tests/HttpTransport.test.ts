@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../src/domain/ApiError';
+import { ConditionalFetch } from '../src/services/ConditionalFetch';
 import { HttpTransport } from '../src/services/HttpTransport';
 import { fixedIdentity } from './snapFakes';
 
@@ -26,5 +28,27 @@ describe('HttpTransport timeouts', () => {
     await transport.put('https://bucket.test/upload', { 'Content-Type': 'video/mp4' }, new ArrayBuffer(4));
     expect(calls[0]?.signal).toBe(own);
     expect(calls[1]?.signal).toBeUndefined();
+  });
+});
+
+describe('ConditionalFetch reads (#126)', () => {
+  it('get the same timeout signal as json()', async () => {
+    const { calls, fetcher } = recordingFetch();
+    await new ConditionalFetch('https://api.test', fetcher).get('/sites/site_1', null);
+    expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('route failures through HttpErrors: a timeout, a lost connection and an api error code', async () => {
+    const failing = (error: unknown): typeof fetch => async () => {
+      throw error;
+    };
+    const timedOut = new ConditionalFetch('https://api.test', failing(new DOMException('signal timed out', 'TimeoutError')));
+    await expect(timedOut.get('/sites/site_1', null)).rejects.toMatchObject({ status: 0, code: 'timeout' });
+    const lost = new ConditionalFetch('https://api.test', failing(new TypeError('Failed to fetch')));
+    await expect(lost.get('/sites/site_1', null)).rejects.toMatchObject({ status: 0, code: 'network_error' });
+    const refused = new ConditionalFetch('https://api.test', async () => Response.json({ error: 'not_found', message: 'No site' }, { status: 404 }));
+    const error = await refused.get('/sites/site_1', null).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 404, code: 'not_found' });
   });
 });

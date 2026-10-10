@@ -61,11 +61,11 @@ describe('the pin preview card', () => {
     await waitFor(() => expect(seen.last?.sites.length).toBeGreaterThan(2));
     act(() => seen.last?.onPick('site_jdh_1'));
     await user.click(await screen.findByRole('button', { name: 'Close preview' }));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'View site' })).not.toBeInTheDocument());
     act(() => seen.last?.onPick('site_jdh_1'));
-    await screen.findByRole('button', { name: 'Details' });
+    await screen.findByRole('button', { name: 'View site' });
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'View site' })).not.toBeInTheDocument());
     await waitFor(() => expect(HistoryLayers.open()).toHaveLength(0));
   });
 });

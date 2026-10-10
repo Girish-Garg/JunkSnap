@@ -65,6 +65,18 @@ describe('HttpReportApi photo and status', () => {
   });
 });
 
+describe('HttpReportApi listing', () => {
+  it('lists the signed-in user\'s reports 50 at a time, passing the cursor back', async () => {
+    const sent: Sent[] = [];
+    const page = { reports: [], next_cursor: null };
+    const api = new HttpReportApi('https://api.test', fixedIdentity('id-token'), recordingFetch(200, page, sent));
+    await expect(api.mine(null)).resolves.toEqual(page);
+    await api.mine('eyJrIjoxfQ');
+    expect(sent.map((each) => each.url)).toEqual(['https://api.test/me/reports?limit=50', 'https://api.test/me/reports?limit=50&cursor=eyJrIjoxfQ']);
+    expect(sent[0]?.headers).toMatchObject({ Authorization: 'Bearer id-token' });
+  });
+});
+
 describe('HttpReportApi failures', () => {
   it('maps S3 and api failures to ApiError codes', async () => {
     const s3 = new HttpReportApi('https://api.test', fixedIdentity(), recordingFetch(403, {}));
