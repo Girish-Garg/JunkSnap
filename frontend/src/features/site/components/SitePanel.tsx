@@ -33,15 +33,17 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
   const presenter = useSitePresenter(details);
   // An unverified site shows the vote straight away; others after Confirm. The server refuses its own reporters.
   const [voting, setVoting] = useState(details.verification === 'unverified');
+  // An expired site takes no vote, cleanup, letter or withdrawal (decision 20261010-1855), so it shows no actions.
+  const active = details.status !== 'expired';
   return (
     <article className="site-panel">
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
       <SiteBackersBar backers={details.backers} />
       <SiteClearance site={details} onChanged={() => onChanged?.()} />
       <SiteExpiryNote site={details} />
-      <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />
-      {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} noBin={details.report_type === 'no_bin'} />}
-      <WithdrawReport site={details} onChanged={() => onChanged?.()} />
+      {active && <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />}
+      {active && voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} noBin={details.report_type === 'no_bin'} />}
+      {active && <WithdrawReport site={details} onChanged={() => onChanged?.()} />}
       <SitePhotoStrip photos={presenter.photos()} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />

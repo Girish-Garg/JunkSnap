@@ -1,24 +1,25 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import type { LayerContext, MapLayer } from './MapLayer';
 
-// SiteMap adds heat_weight from domain/HeatWeight (reports, size class, hazards).
-const WEIGHT: ExpressionSpecification = ['coalesce', ['get', 'heat_weight'], 0.5];
+// PinFeatures adds heat_weight from domain/HeatWeight: 0.4 for any site on the map, up to 1.
+const WEIGHT: ExpressionSpecification = ['coalesce', ['get', 'heat_weight'], 0.4];
 
-// Sequential ramp: transparent, then the teal accent family, then deep red for hotspots.
+// Sequential ramp. MapLibre cannot read CSS variables: --accent (11 122 115), --type-dump and --error.
+// A lone fresh site peaks near density 0.4 (weight 0.4 x intensity 2.5 x MapLibre's kernel peak 0.4): solid teal.
 const RAMP: ExpressionSpecification = [
   'interpolate',
   ['linear'],
   ['heatmap-density'],
   0,
-  'rgba(11, 110, 99, 0)',
-  0.25,
-  'rgba(11, 110, 99, 0.3)',
-  0.5,
-  'rgba(11, 110, 99, 0.55)',
-  0.75,
-  'rgba(197, 34, 31, 0.7)',
+  'rgba(11, 122, 115, 0)',
+  0.1,
+  'rgba(11, 122, 115, 0.3)',
+  0.4,
+  'rgba(11, 122, 115, 0.6)',
+  0.7,
+  'rgba(197, 34, 31, 0.75)',
   1,
-  'rgba(140, 20, 18, 0.85)',
+  'rgba(179, 38, 30, 0.9)',
 ];
 
 // Auto mode fades heat out between MapLibre zoom 11 and 12 (Google's 12 and 13) while pins fade in.
@@ -37,7 +38,7 @@ export default class HeatLayer implements MapLayer {
       layout: { visibility: mode === 'pins' ? 'none' : 'visible' },
       paint: {
         'heatmap-weight': WEIGHT,
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 12, 3],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 5, 2, 12, 2.5],
         'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 5, 14, 9, 28, 12, 40],
         'heatmap-color': RAMP,
         'heatmap-opacity': mode === 'auto' ? AUTO_OPACITY : 0.85,

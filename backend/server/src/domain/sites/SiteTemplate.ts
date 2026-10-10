@@ -14,11 +14,11 @@ export class SiteTemplate {
     this.#report = report;
   }
 
-  // The site id reuses the founding report's suffix, so a retried merge finds the same id.
+  // The site id is the scan spot's, else it reuses the founding report's suffix, so a retried merge finds the same id.
   feature(): SiteFeature {
     const report = this.#report;
     const properties: SiteProperties = {
-      site_id: `site_${report.reportId.slice(REPORT_PREFIX.length)}`,
+      site_id: report.spotSiteId ?? `site_${report.reportId.slice(REPORT_PREFIX.length)}`,
       report_type: report.reportType,
       context: report.context,
       status: "open",

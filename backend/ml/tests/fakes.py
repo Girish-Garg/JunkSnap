@@ -7,7 +7,8 @@ from ml.domain.case import VerificationCase
 from ml.domain.errors import ProviderError
 from ml.domain.images import BlurredImage
 from ml.domain.labels import DetectedLabel, LabelSet
-from ml.domain.llm import LlmRequest, LlmResponse
+from ml.domain.llm import LlmRequest, LlmResponse, TaskConfig
+from ml.domain.pricing import PriceTable
 from ml.domain.purposes import Purpose
 from ml.domain.verification import CaseFeatures, Claim, SignalResult
 from ml.ports.clock import Clock
@@ -17,6 +18,9 @@ from ml.ports.label_detector import LabelDetector
 from ml.ports.llm_provider import LlmProvider, ProviderBuilder
 from ml.ports.secret_reader import SecretReader
 from ml.ports.signal import Signal
+from ml.services.provider_factory import ProviderFactory
+from ml.services.provider_router import ProviderRouter
+from ml.services.vision_judge import VisionJudge
 
 JPEG = b"\xff\xd8\xff\xe0fake-jpeg"
 FIXED_NOW = datetime(2026, 10, 10, 2, 15, 3, tzinfo=UTC)
@@ -107,3 +111,11 @@ def make_case(purpose: str = "report", claim: Claim | None = None) -> Verificati
 
 def provider_error(name: str = "throttled") -> ProviderError:
     return ProviderError(name)
+
+
+def scripted_judge(*script: str | Exception) -> tuple[VisionJudge, FakeProvider]:
+    """The judge on one fake Bedrock model; a ProviderError in the script is an outage."""
+    provider = FakeProvider("apac.amazon.nova-lite-v1:0", script)
+    factory = ProviderFactory({"bedrock": FakeBuilder({provider.name: provider})})
+    router = ProviderRouter({"judge": TaskConfig("bedrock", provider.name)}, factory, PriceTable())
+    return VisionJudge(router, "system prompt"), provider

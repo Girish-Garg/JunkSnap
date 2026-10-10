@@ -87,4 +87,11 @@ describe('SitePanel expiry line', () => {
     expect(screen.getByText('Expired after 90 days without a new report, vote or cleanup photo')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toHaveClass('badge--expired');
   });
+
+  it('hides the action row and the vote on an expired site', async () => {
+    await renderApp(<SitePanel site={testSite({ status: 'expired', verification: 'unverified' })} userLocation={null} />);
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Letter' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: "Yes, it's waste" })).not.toBeInTheDocument();
+  });
 });

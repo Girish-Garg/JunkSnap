@@ -21,6 +21,11 @@ export class MergeTargetPicker {
     const rank = (site: Site): number =>
       site.siteId === report.meTooSiteId ? ME_TOO_RANK : site.point.distanceTo(report.point);
     const candidates = nearby.filter((site) => site.accepts(report)).sort((a, b) => rank(a) - rank(b));
+    // Frames of one scan spot always join their spot's site; views of one place differ too much for the embedding test.
+    const spotSite = candidates.find((site) => site.siteId === report.spotSiteId);
+    if (spotSite !== undefined) {
+      return spotSite;
+    }
     const own = await this.#reportVector(report, candidates);
     for (const site of candidates) {
       if (await this.#looksAlike(own, site)) {

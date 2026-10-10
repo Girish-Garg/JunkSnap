@@ -51,15 +51,15 @@ export interface Site {
       | "overflowing"
       | "damaged";
     /**
-     * open -> cleaned once at least 3 different people say it is cleared (decision 20261010-1855: accepted after-photos and cleaned votes, each person once by their latest word, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see clearance and cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. expired (decision 20261010-1855): an open or reopened site with no report, vote or cleanup photo for 90 days after expires_at was last refreshed; final, kept for the audit trail, and a new report there founds a fresh site. GET /sites?bbox leaves out cleaned, removed and expired sites.
+     * open -> cleaned once at least 3 different people say it is cleared (contracts v1.12, decision 20261010-1855: accepted after-photos and cleaned votes, each person once by their latest word, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see clearance and cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. expired (contracts v1.12, decision 20261010-1855): an open or reopened site with no report, vote or cleanup photo for 90 days after expires_at was last refreshed; final, kept for the audit trail, and a new report there founds a fresh site. GET /sites?bbox leaves out cleaned, removed and expired sites.
      */
     status: "open" | "cleaned" | "reopened" | "removed" | "expired";
     /**
-     * Decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at.
+     * Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at.
      */
     expires_at?: string;
     /**
-     * Decision 20261010-1855: progress towards cleaned. count is the distinct people (user id, else device token) whose latest word since last_reported_at says cleared: an accepted after-photo or a cleaned vote. still_there is the people whose latest vote is confirm cast after the first of them. needed is the larger of 3 (CLEANED_QUORUM) and still_there plus 3. Absent before the first cleared word; not in required so older rows stay valid.
+     * Contracts v1.12, decision 20261010-1855: progress towards cleaned. count is the distinct people (user id, else device token) whose latest word since last_reported_at says cleared: an accepted after-photo or a cleaned vote. still_there is the people whose latest vote is confirm cast after the first of them. needed is the larger of 3 (CLEANED_QUORUM) and still_there plus 3. Absent before the first cleared word; not in required so older rows stay valid.
      */
     clearance?: {
       count: number;
@@ -129,7 +129,7 @@ export interface Site {
       | [string, string, string, string, string]
       | [string, string, string, string, string, string];
     /**
-     * Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. pending_confirmation (decision 20261010-1855): the photo passed and counts as its uploader's cleared word, but fewer than 3 people have said so; the site stays on the map. accepted: the site is cleaned. Resets to none when a new photo merges in.
+     * Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. pending_confirmation (contracts v1.12, decision 20261010-1855): the photo passed and counts as its uploader's cleared word, but fewer than 3 people have said so; the site stays on the map. accepted: the site is cleaned. Resets to none when a new photo merges in.
      */
     cleanup_status: "none" | "checking" | "pending_confirmation" | "accepted" | "rejected";
     /**
@@ -1157,12 +1157,12 @@ export const siteSchema = {
             "removed",
             "expired"
           ],
-          "description": "open -> cleaned once at least 3 different people say it is cleared (decision 20261010-1855: accepted after-photos and cleaned votes, each person once by their latest word, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see clearance and cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. expired (decision 20261010-1855): an open or reopened site with no report, vote or cleanup photo for 90 days after expires_at was last refreshed; final, kept for the audit trail, and a new report there founds a fresh site. GET /sites?bbox leaves out cleaned, removed and expired sites."
+          "description": "open -> cleaned once at least 3 different people say it is cleared (contracts v1.12, decision 20261010-1855: accepted after-photos and cleaned votes, each person once by their latest word, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see clearance and cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. expired (contracts v1.12, decision 20261010-1855): an open or reopened site with no report, vote or cleanup photo for 90 days after expires_at was last refreshed; final, kept for the audit trail, and a new report there founds a fresh site. GET /sites?bbox leaves out cleaned, removed and expired sites."
         },
         "expires_at": {
           "type": "string",
           "format": "date-time",
-          "description": "Decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at."
+          "description": "Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at."
         },
         "clearance": {
           "type": "object",
@@ -1172,7 +1172,7 @@ export const siteSchema = {
             "needed",
             "still_there"
           ],
-          "description": "Decision 20261010-1855: progress towards cleaned. count is the distinct people (user id, else device token) whose latest word since last_reported_at says cleared: an accepted after-photo or a cleaned vote. still_there is the people whose latest vote is confirm cast after the first of them. needed is the larger of 3 (CLEANED_QUORUM) and still_there plus 3. Absent before the first cleared word; not in required so older rows stay valid.",
+          "description": "Contracts v1.12, decision 20261010-1855: progress towards cleaned. count is the distinct people (user id, else device token) whose latest word since last_reported_at says cleared: an accepted after-photo or a cleaned vote. still_there is the people whose latest vote is confirm cast after the first of them. needed is the larger of 3 (CLEANED_QUORUM) and still_there plus 3. Absent before the first cleared word; not in required so older rows stay valid.",
           "properties": {
             "count": {
               "type": "integer",
@@ -1306,7 +1306,7 @@ export const siteSchema = {
             "accepted",
             "rejected"
           ],
-          "description": "Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. pending_confirmation (decision 20261010-1855): the photo passed and counts as its uploader's cleared word, but fewer than 3 people have said so; the site stays on the map. accepted: the site is cleaned. Resets to none when a new photo merges in."
+          "description": "Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. pending_confirmation (contracts v1.12, decision 20261010-1855): the photo passed and counts as its uploader's cleared word, but fewer than 3 people have said so; the site stays on the map. accepted: the site is cleaned. Resets to none when a new photo merges in."
         },
         "cleanup_photo_url": {
           "type": [

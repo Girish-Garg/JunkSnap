@@ -88,7 +88,7 @@ Every step is idempotent per report id: moderation and verification results are 
 
 Step 1 also moderates the free-text note. It runs on Bedrock, Claude Haiku 4.5 India profile, through the TypeScript LLM layer, and on Bedrock only because the note is personal text. Amazon Comprehend is not enabled on this account, so nothing calls it.
 
-The LLM is the last step in detection. Rekognition labels, YOLO and Titan embeddings decide first; the vision judge runs only when they are not confident or disagree, and it never sets counts or boxes.
+The LLM is a standard step in detection (decision 20261011-0005). Rekognition labels, YOLO and the SigLIP 2 embedding heads run first, then the vision judge on every report, scan frame and cleanup; the combiner weighs its answer with theirs, and it never sets counts or boxes. A type the detectors were not trained on is the judge's call.
 
 Thresholds: probability 0.85 or more is auto-verified, 0.5 to 0.85 goes to community check, below 0.5 is rejected. Strong disagreement between signals always goes to community check. The server always re-verifies; scores from the phone are hints for live boxes and frame selection only.
 

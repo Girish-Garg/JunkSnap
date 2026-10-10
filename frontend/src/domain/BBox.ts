@@ -38,6 +38,24 @@ export class BBox {
     return new BBox(lon - halfLon, lat - halfLat, lon + halfLon, lat + halfLat);
   }
 
+  /** Equal tiles, none wider or taller than maxSpan degrees, covering this box row by row. */
+  split(maxSpan: number): readonly BBox[] {
+    const cols = BBox.#parts(this.maxLon - this.minLon, maxSpan);
+    const rows = BBox.#parts(this.maxLat - this.minLat, maxSpan);
+    const width = (this.maxLon - this.minLon) / cols;
+    const height = (this.maxLat - this.minLat) / rows;
+    return Array.from({ length: rows * cols }, (_, index) => {
+      const lon = this.minLon + (index % cols) * width;
+      const lat = this.minLat + Math.floor(index / cols) * height;
+      return new BBox(lon, lat, lon + width, lat + height);
+    });
+  }
+
+  // The epsilon keeps 2.97 / 0.99 at 3 parts despite floating point.
+  static #parts(length: number, maxSpan: number): number {
+    return Math.max(1, Math.ceil(length / maxSpan - 1e-9));
+  }
+
   toQuery(): string {
     return [this.minLon, this.minLat, this.maxLon, this.maxLat].map((n) => n.toFixed(5)).join(',');
   }

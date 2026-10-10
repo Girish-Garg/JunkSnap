@@ -23,15 +23,12 @@ const MAX_ZOOM = 18;
 const INDIA_BOUNDS: [[number, number], [number, number]] = [[60, 4], [100, 38.5]];
 const SOURCE_ID = 'sites';
 const PIN_SOURCE_ID = 'site-pin-groups';
-// GET /sites allows 1 by 1 degree; stay under it after rounding.
-const MAX_QUERY_SPAN_DEG = 0.99;
 // Must match DESKTOP_QUERY in ui/useMediaQuery.ts: the map then sits beside the side panel, not under it.
 const DESKTOP_QUERY = '(min-width: 1024px)';
 
 export interface MapView {
+  /** What the map shows; domain/SiteTiles turns it into GET /sites queries. */
   readonly bbox: BBox;
-  /** The view is wider than one API query, so only its centre is loaded. */
-  readonly clamped: boolean;
 }
 
 export interface SiteMapOptions {
@@ -220,8 +217,7 @@ export class SiteMap {
 
   #view(): MapView {
     const bounds = this.#map.getBounds();
-    const view = new BBox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth());
-    return { bbox: view.clampedTo(MAX_QUERY_SPAN_DEG), clamped: view.isWiderThan(MAX_QUERY_SPAN_DEG) };
+    return { bbox: new BBox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()) };
   }
 
   // Compact attribution opens expanded; start as the small "i" and let a tap expand it.

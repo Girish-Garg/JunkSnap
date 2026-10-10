@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { BrandLabel, LocationLookup, ReportUpload } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../errors.js";
 import { GeoPoint } from "./GeoPoint.js";
@@ -7,6 +8,7 @@ import type { SiteBrand, SiteLocation } from "./SiteTypes.js";
 
 const PILOT_DISTRICT_ID = "rajasthan-jodhpur";
 const UPLOAD_PREFIX = "upl_";
+const SPOT_ID_HEX = 26;
 
 export class MergeableReportFactory {
   readonly #media: PublicMedia;
@@ -34,7 +36,17 @@ export class MergeableReportFactory {
       brands: evidence.brands.map(MergeableReportFactory.#brand),
       location: MergeableReportFactory.#location(location),
       pilot: location.district.id === PILOT_DISTRICT_ID,
+      ...MergeableReportFactory.#spotSite(evidence),
     };
+  }
+
+  // site_ plus 26 hex of SHA-256 of <scan_id>:<spot t_ms>:<report_type>, like a scan frame's upload id.
+  static #spotSite({ upload, scanSpot }: MergeEvidence): Pick<MergeableReport, "spotSiteId"> {
+    if (upload.scan === undefined || scanSpot === undefined) {
+      return {};
+    }
+    const digest = createHash("sha256").update(`${upload.scan.scan_id}:${scanSpot}:${upload.report_type}`).digest("hex");
+    return { spotSiteId: `site_${digest.slice(0, SPOT_ID_HEX)}` };
   }
 
   // What the photo and the models added; all null for a no_bin report without a photo.

@@ -15,10 +15,12 @@ export class ScanTracker {
     this.#queue = queue;
   }
 
-  /** Posted, and the worker has not finished with it. */
+  /** Posted, and the worker has not finished with it or its frames are still being checked. */
   static isOpen(scan: QueuedScan): boolean {
-    const status = scan.data.status?.status;
-    return scan.data.scan_id !== null && status !== 'done' && status !== 'failed';
+    const status = scan.data.status;
+    if (scan.data.scan_id === null) return false;
+    if (status?.status === 'done') return (status.found?.checking ?? 0) > 0;
+    return status?.status !== 'failed';
   }
 
   async refresh(id: string): Promise<void> {

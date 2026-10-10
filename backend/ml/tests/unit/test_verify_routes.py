@@ -56,7 +56,7 @@ def client(score: float, judge_answers: list[str | Exception] | None = None) -> 
 
 
 def test_report_returns_verification_result() -> None:
-    response = client(0.95).post("/internal/verify", json=REQUEST)
+    response = client(0.95, [JUDGE_JSON]).post("/internal/verify", json=REQUEST)
 
     assert response.status_code == 200
     body = response.json()

@@ -16,6 +16,6 @@ Decision:
 - `SITE_TTL_DAYS` = 90: `site.expires_at` is 90 days after the latest report, vote or cleanup photo. An open or reopened site past it is `status: expired` (soft, final, never deleted): off `GET /sites?bbox`, letters, area letters and scores; votes and cleanups get 404.
 - Lazy on read in the api; the `scores` CronJob marks rows with a conditional update (new `dynamodb:UpdateItem` on sites for the scores role). A new report at an expired spot founds a fresh site.
 
-Consequences for other lanes: frontend shows "n of 3 people say it's cleared" with "It's cleared now" / "Still there" on a pending site, and "Expires in N days unless someone confirms it". Contracts are additive (v1.10). Infra needs a stack deploy for the scores role. ml unchanged.
+Consequences for other lanes: frontend shows "n of 3 people say it's cleared" with "It's cleared now" / "Still there" on a pending site, and "Expires in N days unless someone confirms it". Contracts are additive (v1.12). Infra needs a stack deploy for the scores role. ml unchanged.
 
 Rejected alternatives: DynamoDB TTL hard delete (erases history scores count); reopening an expired site (would revive old verification); counting one person's photo and vote twice.

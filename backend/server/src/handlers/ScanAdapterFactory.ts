@@ -2,6 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { S3Client } from "@aws-sdk/client-s3";
 import { SQSClient } from "@aws-sdk/client-sqs";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { DynamoFrameOutcomeReader } from "../adapters/DynamoFrameOutcomeReader.js";
 import { DynamoFrameReportRepository } from "../adapters/DynamoFrameReportRepository.js";
 import { DynamoScanRepository } from "../adapters/DynamoScanRepository.js";
 import { S3ScanMediaStore } from "../adapters/S3ScanMediaStore.js";
@@ -39,6 +40,10 @@ export class ScanAdapterFactory {
 
   frameReports(): DynamoFrameReportRepository {
     return new DynamoFrameReportRepository(this.#dynamo, this.#settings.reportsTable);
+  }
+
+  frameOutcomes(): DynamoFrameOutcomeReader {
+    return new DynamoFrameOutcomeReader(this.#dynamo, this.#settings.reportsTable);
   }
 
   queue(): SqsScanQueue {

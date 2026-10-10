@@ -16,6 +16,9 @@ import type {
   StepName,
   Viewer,
 } from "./ReportRecord.js";
+import type { VerifyClaim } from "./scout/AutoClaim.js";
+import type { ClaimPair } from "./scout/DetectableTypes.js";
+import { AUTO_CLAIMS } from "./scout/ScanClaim.js";
 import type { VerifyFeatures, VerifyRequest } from "./VerifyRequest.js";
 
 const OPEN_STATUSES: ReadonlySet<ReportStatus> = new Set(["queued", "processing"]);
@@ -120,9 +123,16 @@ export class Report {
     this.#set({ moderation_result: moderation, status });
   }
 
+  // A scout frame takes on the type and context the models found; finding nothing rejects it.
   recordVerification(verification: VerificationResult): void {
-    const status = verification.decision === "rejected" ? "rejected" : this.status;
-    this.#set({ verification_result: verification, status });
+    const kind = this.#record.auto_claim;
+    if (kind !== undefined) {
+      AUTO_CLAIMS[kind].assertAnswered(verification);
+    }
+    const rejected = verification.decision === "rejected";
+    const found = rejected ? undefined : this.#found(verification);
+    const status = rejected || found === null ? "rejected" : this.status;
+    this.#set({ verification_result: verification, status, ...found });
   }
 
   recordBrands(brands: readonly BrandLabel[]): void {
@@ -160,9 +170,8 @@ export class Report {
   }
 
   verifyRequest(features: Omit<VerifyFeatures, "gps_accuracy_m">): VerifyRequest {
-    const { report_type: reportType, context, gps } = this.#record;
-    const all = { gps_accuracy_m: gps.accuracy_m, ...features };
-    return { report_id: this.id, purpose: "report", blurred_key: this.blurredKey(), report_type: reportType, context, features: all };
+    const all = { gps_accuracy_m: this.#record.gps.accuracy_m, ...features };
+    return { report_id: this.id, purpose: "report", blurred_key: this.blurredKey(), ...this.#verifyClaim(), features: all };
   }
 
   blurredKey(): string {
@@ -199,6 +208,17 @@ export class Report {
       return null;
     }
     return `${publicBaseUrl}/${moderation.blurred_key}`;
+  }
+
+  #verifyClaim(): VerifyClaim {
+    const { report_type, context, auto_claim: kind } = this.#record;
+    return kind === undefined ? { report_type, context } : AUTO_CLAIMS[kind].verifyClaim({ report_type, context });
+  }
+
+  // Undefined when the person picked the whole claim.
+  #found(verification: VerificationResult): ClaimPair | null | undefined {
+    const kind = this.#record.auto_claim;
+    return kind === undefined ? undefined : AUTO_CLAIMS[kind].found(this.#record, verification);
   }
 
   #set(changes: Partial<ReportRecord>): void {

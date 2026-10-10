@@ -149,7 +149,7 @@ export function fakeMediaDevices(failWith?: string): MediaDevices & { readonly c
     getUserMedia: async () => {
       media.calls += 1;
       if (failWith) throw new DOMException('camera', failWith);
-      return { getTracks: () => [] } as unknown as MediaStream;
+      return { getTracks: () => [], getVideoTracks: () => [] } as unknown as MediaStream;
     },
   };
   return media as unknown as MediaDevices & { readonly calls: number };

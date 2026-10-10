@@ -9,8 +9,9 @@ from ml.domain.errors import ConfigError
 from ml.domain.purposes import Purpose
 from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
+from ml.services.judge_decides_combiner import AUTO_CLAIM_REASON, JudgeDecidesCombiner
 
-# Hand-set, not fitted. The judge only runs on unsure or split cases, so it breaks ties.
+# Hand-set, not fitted. The judge runs on every case and carries the largest weight.
 FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
     {"rekognition_labels": 0.4, "yolo": 0.3, "embedding_classifier": 0.3, "vision_judge": 0.6}
 )
@@ -41,25 +42,24 @@ class FixedWeightCombiner(Combiner):
         return CombinerInfo(kind=self.KIND, version=self.VERSION)
 
     @override
-    def for_claim(self, claim: Claim) -> Combiner:
-        """Hand-set weights fit every report type."""
+    def for_claim(self, claim: Claim, signals: Sequence[SignalResult] = ()) -> Combiner:
+        """Hand-set weights fit every report type; an auto claim also needs the judge's answer."""
+        if claim.judge_required:
+            return JudgeDecidesCombiner(self, AUTO_CLAIM_REASON)
         return self
 
     def probability(self, signals: Sequence[SignalResult]) -> float:
-        weights = [self._weight(signal.name) for signal in signals]
-        if not signals or sum(weights) <= 0:
+        """Neutral signals cannot see the claim, so they count as absent, not as 0.5."""
+        counted = [s for s in signals if not s.neutral] or list(signals)
+        weights = [self._weight(signal.name) for signal in counted]
+        if not counted or sum(weights) <= 0:
             raise ConfigError("the combiner needs at least one weighted signal")
-        total = sum(weight * signal.score for weight, signal in zip(weights, signals, strict=True))
+        total = sum(weight * signal.score for weight, signal in zip(weights, counted, strict=True))
         return total / sum(weights)
 
     def disagree(self, signals: Sequence[SignalResult]) -> bool:
         scores = [signal.score for signal in signals if not signal.neutral]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
-
-    def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:
-        if purpose.requires_judge or self.disagree(signals):
-            return True
-        return self._thresholds.is_unsure(self.probability(signals))
 
     def combine(self, signals: Sequence[SignalResult], purpose: Purpose) -> Outcome:
         judged = any(signal.name == JUDGE_SIGNAL for signal in signals)

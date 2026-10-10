@@ -1,42 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import type { BBox } from '../../../domain/BBox';
-import type { SiteFeature } from '../../../domain/Site';
+import type { SiteBatch, SiteTiles } from '../../../domain/SiteTiles';
 
-export interface SitesState {
-  readonly sites: readonly SiteFeature[];
+interface SitesState extends SiteBatch {
   readonly loaded: boolean;
-  readonly failed: boolean;
+  /** The plan these sites were loaded for; another one means the next load is still on its way. */
+  readonly plan: SiteTiles | null;
+  /** The plan whose last load failed. */
+  readonly failedPlan: SiteTiles | null;
 }
 
-export interface SitesLoad extends SitesState {
-  /** Fetches the same box again, so withdrawn, rejected and cleared sites leave the map without a reload. */
+export interface SitesLoad extends SiteBatch {
+  readonly loaded: boolean;
+  /** The last load of this view failed; a new view starts clean. */
+  readonly failed: boolean;
+  /** True while the sites on screen belong to an earlier view. */
+  readonly pending: boolean;
+  /** Fetches the same view again, so withdrawn, rejected and cleared sites leave the map without a reload. */
   readonly refresh: () => void;
 }
 
-const NOT_LOADED: SitesState = { sites: [], loaded: false, failed: false };
+const NOT_LOADED: SitesState = { sites: [], truncated: false, loaded: false, plan: null, failedPlan: null };
 
-/** Keeps the last list on screen while the next one loads. */
-export function useSites(bbox: BBox | null): SitesLoad {
+/** One GET /sites per tile of the view, merged. Keeps the last list on screen while the next one loads. */
+export function useSites(plan: SiteTiles | null): SitesLoad {
   const { api } = useServices();
   const [state, setState] = useState<SitesState>(NOT_LOADED);
   const [version, setVersion] = useState(0);
   useEffect(() => {
-    if (!bbox) return undefined;
+    if (!plan) return undefined;
     let current = true;
-    api.listSites(bbox).then(
-      (sites) => {
-        if (current) setState({ sites, loaded: true, failed: false });
+    Promise.all(plan.tiles.map((tile) => api.listSites(tile))).then(
+      (results) => {
+        if (current) setState({ ...plan.merge(results), loaded: true, plan, failedPlan: null });
       },
       (error: unknown) => {
         console.error('Could not load sites', error);
-        if (current) setState((previous) => ({ ...previous, failed: true }));
+        if (current) setState((previous) => ({ ...previous, failedPlan: plan }));
       },
     );
     return () => {
       current = false;
     };
-  }, [api, bbox, version]);
+  }, [api, plan, version]);
   const refresh = useCallback(() => setVersion((count) => count + 1), []);
-  return { ...state, refresh };
+  const { sites, truncated, loaded } = state;
+  const failed = plan !== null && state.failedPlan === plan;
+  return { sites, truncated, loaded, failed, pending: plan !== null && state.plan !== plan && !failed, refresh };
 }

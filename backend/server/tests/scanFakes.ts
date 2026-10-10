@@ -9,7 +9,9 @@ import { FrameHash } from "../src/domain/FrameHash.js";
 import type { GpsFix } from "../src/domain/ScanFrame.js";
 import type { ScanRecord, ScanUpdate } from "../src/domain/ScanRecord.js";
 import { InvalidVideoError } from "../src/domain/scanErrors.js";
+import type { FrameOutcome } from "../src/domain/scout/ScanFindings.js";
 import type { FrameHasher } from "../src/ports/FrameHasher.js";
+import type { FrameOutcomeReader } from "../src/ports/FrameOutcomeReader.js";
 import type { FrameReportRepository, QueuedFrameReport } from "../src/ports/FrameReportRepository.js";
 import type { DownloadedVideo, ScanMediaStore } from "../src/ports/ScanMediaStore.js";
 import type { ScanQueue } from "../src/ports/ScanQueue.js";
@@ -171,6 +173,17 @@ export class FakeFrameReportRepository implements FrameReportRepository {
     if (!this.rows.has(report.report_id)) {
       this.rows.set(report.report_id, report);
     }
+  }
+}
+
+export class FakeFrameOutcomeReader implements FrameOutcomeReader {
+  readonly rows = new Map<string, FrameOutcome>();
+
+  async outcomes(reportIds: readonly string[]): Promise<FrameOutcome[]> {
+    return reportIds.flatMap((id) => {
+      const row = this.rows.get(id);
+      return row === undefined ? [] : [row];
+    });
   }
 }
 

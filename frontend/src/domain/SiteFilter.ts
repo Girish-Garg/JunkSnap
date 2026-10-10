@@ -1,4 +1,4 @@
-import { REPORT_TYPES, type ReportType } from './ReportType';
+import type { ReportType } from './ReportType';
 import type { SiteFeature } from './Site';
 
 /** The listed verification states; rejected sites never reach the map. */
@@ -13,12 +13,6 @@ export class SiteFilter {
   constructor(hidden: Iterable<ReportType> = [], hiddenStates: Iterable<SiteState> = []) {
     this.#hidden = new Set(hidden);
     this.#hiddenStates = new Set(hiddenStates);
-  }
-
-  static countByType(sites: readonly SiteFeature[]): Readonly<Record<ReportType, number>> {
-    const counts = Object.fromEntries(REPORT_TYPES.map((type) => [type, 0])) as Record<ReportType, number>;
-    for (const site of sites) counts[site.properties.report_type] += 1;
-    return counts;
   }
 
   shows(type: ReportType): boolean {

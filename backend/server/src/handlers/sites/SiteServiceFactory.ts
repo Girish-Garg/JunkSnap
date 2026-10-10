@@ -25,7 +25,7 @@ import { CleanupService } from "../../services/sites/CleanupService.js";
 import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../services/sites/MergeTargetPicker.js";
 import { SiteFinder } from "../../services/sites/SiteFinder.js";
-import { SiteMerger } from "../../services/sites/SiteMerger.js";
+import { MERGE_ATTEMPTS, SiteMerger } from "../../services/sites/SiteMerger.js";
 import { VoteService } from "../../services/sites/VoteService.js";
 import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
@@ -101,7 +101,7 @@ export class SiteServiceFactory {
       scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,
       reportFactory: new MergeableReportFactory(this.#media()),
-      retry: this.#retry,
+      retry: new ConflictRetry(MERGE_ATTEMPTS),
     });
   }
 

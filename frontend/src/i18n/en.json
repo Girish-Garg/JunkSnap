@@ -44,7 +44,16 @@
     "sampleNote": "Sample data: these are test sites, not live reports.",
     "verified": "Verified",
     "unverified": "Unverified",
-    "verifiedOnly": "Verified only"
+    "verifiedOnly": "Verified only",
+    "inView_one": "{{count}} in view",
+    "inView_other": "{{count}} in view",
+    "counting": "Counting…",
+    "notLoaded": "Not loaded",
+    "scope": {
+      "view": "Counts are sites in this view of the map, not totals. They update when you move the map.",
+      "middle": "This view is too wide to load at once: counts cover only its middle. Zoom in to count every site here.",
+      "capped": "Over 500 sites here: only the newest 500 are loaded and counted. Zoom in for exact counts."
+    }
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -62,7 +71,8 @@
     "locationDeniedApp": "Location is blocked for JunkSnap.",
     "locationUnavailable": "Could not find your location.",
     "filteredEmpty": "No sites match. Turn a filter off.",
-    "zoomIn": "Zoom in to see every site here.",
+    "zoomIn": "Only the middle of this wide view is loaded. Zoom in to see every site here.",
+    "capped": "Showing the newest 500 sites here. Zoom in to see them all.",
     "empty": "No reports here yet."
   },
   "sheet": {
@@ -460,7 +470,7 @@
     "stop": "Stop recording",
     "timer": "Recording {{elapsed}} / {{limit}}",
     "saving": "Saving the video",
-    "pickFirst": "Pick the type and place, then record up to a minute while you move slowly.",
+    "pickFirst": "Record up to a minute while you move slowly. JunkSnap checks every frame.",
     "recorder_unsupported": "This browser cannot record video. Use Photo instead.",
     "video_too_short": "Record at least 1 second.",
     "video_too_large": "The video is over 40 MB. Record a shorter one.",
@@ -469,10 +479,42 @@
     "camera_unavailable": "The camera could not start.",
     "insecure": "The camera needs a secure (https) page.",
     "sentTitle": "Video saved",
+    "cameraStopped": "Camera stopped. Your clip so far is saved.",
     "again": "Record another",
     "activityTitle": "Video {{seconds}} s",
-    "result_one": "{{count}} report made from {{frames}} frames",
-    "result_other": "{{count}} reports made from {{frames}} frames",
+    "scout": "Area scout (auto)",
+    "scoutHint": "Just record. JunkSnap finds dumps, overflowing bins, dirty water and open debris in the frames by itself.",
+    "pickedHint": "Only this kind of waste is checked in the frames.",
+    "placeAuto": "Auto",
+    "placeAutoHint": "JunkSnap reads the place from each frame.",
+    "checking_one": "Checking {{count}} frame…",
+    "checking_other": "Checking {{count}} frames…",
+    "nothing": "Nothing found in this video",
+    "found": "Found {{count}}: {{parts}}",
+    "typeCount": {
+      "waste_dump_one": "{{count}} dump",
+      "waste_dump_other": "{{count}} dumps",
+      "no_bin_one": "{{count}} spot with no bin",
+      "no_bin_other": "{{count}} spots with no bin",
+      "contaminated_water_one": "{{count}} dirty water spot",
+      "contaminated_water_other": "{{count}} dirty water spots",
+      "open_construction_one": "{{count}} open construction site",
+      "open_construction_other": "{{count}} open construction sites",
+      "overflowing_bin_one": "{{count}} overflowing bin",
+      "overflowing_bin_other": "{{count}} overflowing bins"
+    },
+    "framesLabel": "Frames from this video",
+    "frameAt": "Frame at {{seconds}} s",
+    "frameResult": {
+      "checking": "Checking",
+      "added": "Added to a site",
+      "waiting": "Waiting for neighbours",
+      "not_waste": "Not waste",
+      "skipped": "Skipped",
+      "hidden": "Hidden by neighbours",
+      "failed": "Not checked",
+      "withdrawn": "You withdrew it"
+    },
     "steps": {
       "saved": "Saved on this phone",
       "uploaded": "Video uploaded",
