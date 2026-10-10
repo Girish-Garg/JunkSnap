@@ -2,27 +2,24 @@ import type { AreaCrawl } from '../domain/AreaCrawl';
 import type { AreaListing } from '../domain/AreaListing';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
 import type { AreaApi } from './AreaApi';
-
-interface Entry {
-  readonly at: number;
-  readonly listing: Promise<AreaListing>;
-}
-
-// The scores CronJob rewrites the rows every few minutes; a listing younger than this is reused.
-const LIST_TTL_MS = 5 * 60 * 1000;
+import type { CachePolicy, ExpiringCache } from './ExpiringCache';
+import type { TaggedAreaApi } from './TaggedAreaApi';
 
 /**
  * Remembers GET /areas/{kind}?within= per kind, area and limit, so the map fill, the Areas tab and the ranking
- * share one request each instead of asking again on every open. A failed request is forgotten at once.
+ * share one request each. An old listing shows at once while it is asked again with its ETag; a failed first
+ * request is not kept, so the next open tries again.
  */
 export class CachedAreaApi implements AreaApi {
-  readonly #inner: AreaApi;
-  readonly #now: () => number;
-  readonly #lists = new Map<string, Entry>();
+  // The scores CronJob rewrites the rows every 15 minutes; a listing younger than 5 minutes is reused as is.
+  static readonly POLICY: CachePolicy = { ttlMs: 5 * 60 * 1000, staleWhileRevalidate: true, maxEntries: 32 };
 
-  constructor(inner: AreaApi, now: () => number = () => Date.now()) {
+  readonly #inner: TaggedAreaApi;
+  readonly #lists: ExpiringCache<AreaListing>;
+
+  constructor(inner: TaggedAreaApi, lists: ExpiringCache<AreaListing>) {
     this.#inner = inner;
-    this.#now = now;
+    this.#lists = lists;
   }
 
   scores(kind: AreaKind, id: string): Promise<AreaScores> {
@@ -30,15 +27,10 @@ export class CachedAreaApi implements AreaApi {
   }
 
   list(kind: AreaKind, within: string, limit: number): Promise<AreaListing> {
-    const key = `${kind}|${within}|${String(limit)}`;
-    const cached = this.#lists.get(key);
-    if (cached && this.#now() - cached.at < LIST_TTL_MS) return cached.listing;
-    const listing = this.#inner.list(kind, within, limit);
-    this.#lists.set(key, { at: this.#now(), listing });
-    listing.catch(() => {
-      if (this.#lists.get(key)?.listing === listing) this.#lists.delete(key);
+    return this.#lists.get({
+      key: `${kind}|${within}|${String(limit)}`,
+      load: (previous) => this.#inner.listTagged(kind, within, limit, previous),
     });
-    return listing;
   }
 
   crawl(districtId: string): Promise<AreaCrawl> {

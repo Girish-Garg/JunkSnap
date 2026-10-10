@@ -3,6 +3,7 @@ import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
 import type { AreaApi } from '../services/AreaApi';
+import type { TaggedAreaApi } from '../services/TaggedAreaApi';
 import { areaFixtureLoaders } from '../services/areaFixtures';
 import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
 import { BoundaryCatalog } from '../services/BoundaryCatalog';
@@ -11,6 +12,8 @@ import { crawlFixtureLoaders } from '../services/crawlFixtures';
 import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
+import { ExpiringCache } from '../services/ExpiringCache';
+import { SystemClock } from '../services/SystemClock';
 import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockAreaApi } from '../services/MockAreaApi';
@@ -33,7 +36,7 @@ const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiCl
   live: (config) => new HttpApiClient(config.requireApiUrl()),
 };
 
-const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => AreaApi>> = {
+const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => TaggedAreaApi>> = {
   mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
   live: (config) => new HttpAreaApi(config.requireApiUrl()),
 };
@@ -115,7 +118,7 @@ export class ServiceContainer implements Services {
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config),
-      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config)),
+      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.POLICY, new SystemClock())),
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),

@@ -71,7 +71,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 - Representatives are offices and seats only (decision 0137): no names, no party.
 - Accounts (decision 20261010-0227): see Auth below. The app's `device_token` (a random UUID v4 kept in IndexedDB) stays for per-device rate limits and reputation.
 - Errors return an HTTP status and `{"error": "<code>", "message": "<plain text>"}`. Codes: `bad_request` (400), `bbox_too_large` (400), `scan_too_large` (400), `unauthorized` (401), `forbidden` (403), `own_site` (403), `too_far` (403), `not_found` (404), `area_not_found` (404), `cleanup_pending` (409), `already_cleaned` (409), `not_verified` (409), `site_rejected` (409), `site_verified` (409), `no_local_body` (422), `target_too_far` (422), `rate_limited` (429), `server_error` (500).
-- CORS: `api` allows the origins listed in `CORS_ORIGINS`, the methods `GET`, `HEAD`, `POST` and `DELETE`, and the `Authorization` and `X-Device-Token` headers. `ml` is cluster-internal and has no CORS.
+- CORS: `api` allows the origins listed in `CORS_ORIGINS`, the methods `GET`, `HEAD`, `POST` and `DELETE`, and the `Authorization`, `X-Device-Token` and `If-None-Match` headers; it exposes `ETag` and lets browsers keep a preflight for 600 s (`Access-Control-Max-Age`). `ml` is cluster-internal and has no CORS.
 
 ## Auth
 
@@ -124,6 +124,8 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `GET /areas/district/{id}/crawl` | api | none | 200 `area_crawl` | any district id matching `[a-z0-9-]{1,64}` answers 200 (`not_started` when the `crawls` table has no row); else 400 `bad_request` |
 | `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`; for a `no_bin` zone that means 10 people confirmed it, and a mapped bin nearby is shown as evidence, never a block (decision 20261010-1630); 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
+
+**Conditional reads** (issue 126). `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}?within`, `GET /areas/{kind}/{id}/scores`, `GET /reports/{id}` and `GET /scans/{id}` answer 200 with an `ETag` header: a strong tag, the first 27 base64url characters of SHA-256 of the response body, quoted. A request whose `If-None-Match` matches it (weak comparison, so `W/"x"` matches `"x"`; `*` matches any) gets 304 with no body and the same `ETag`; any change to the body changes the tag. Open routes send `Cache-Control: no-cache`; the owner-only `GET /reports/{id}` and `GET /scans/{id}` send `Cache-Control: private, no-cache`. The tag is computed after the route's own checks, so a 401 or a 404 for someone else's report never carries one and never answers 304. Errors and other routes carry no `ETag`. The app keeps each body with its tag and sends `If-None-Match` on the next read; this is additive, and a client that sends no `If-None-Match` sees no change. CloudFront forwards `If-None-Match` and passes `ETag` and 304 through for every non-`/media/*` path (`Managed-CachingDisabled` with `AllViewerExceptHostHeader`).
 
 Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never routes it; the worker calls it at `ML_URL`. Brand labels have no route: they run inside the worker.
 

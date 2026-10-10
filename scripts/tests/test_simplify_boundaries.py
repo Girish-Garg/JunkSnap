@@ -3,6 +3,7 @@
 Run with: uv run --with shapely --with pytest pytest scripts/tests -q
 """
 
+import dataclasses
 import json
 import math
 import sys
@@ -84,6 +85,16 @@ def test_keeps_only_listed_properties_and_counts_them(dirs: tuple[Path, Path]) -
         {"id": "s20-ac-2", "name": "East", "pc_id": "s20-pc-1"},
     ]
     assert result.manifest()["features"] == 2
+
+
+def test_manifest_version_is_a_content_hash_of_the_files(dirs: tuple[Path, Path]) -> None:
+    source, out = dirs
+    result = ship(sb.ASSEMBLY, source, out)
+    assert result.manifest()["version"] == result.version
+    assert len(result.version) == 16
+    relabelled = dataclasses.replace(result, labels=sb.Encoded([], '{"features":[]}', 0.0))
+    assert relabelled.version != result.version
+    assert dataclasses.replace(result).version == result.version
 
 
 def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) -> None:
