@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useViewerHistory } from './useViewerHistory';
 import type { ViewerPhoto } from './ViewerPhoto';
-
-const MARKER = 'junksnapPhotoViewer';
 
 export interface PhotoViewerState {
   readonly photos: readonly ViewerPhoto[];
@@ -15,36 +14,31 @@ export interface PhotoViewerControl {
   readonly show: (index: number) => void;
 }
 
-const ownsTopEntry = () => (window.history.state as Record<string, unknown> | null)?.[MARKER] === true;
+const clampIndex = (index: number, count: number) => Math.min(Math.max(0, index), count - 1);
 
-/**
- * Open and close the full-screen viewer. Opening pushes a history entry on the same URL, so the
- * Android and browser back button closes the viewer instead of leaving the page.
- */
+/** Open and close the full-screen viewer; the back button closes it (useViewerHistory). */
 export function usePhotoViewer(): PhotoViewerControl {
   const [state, setState] = useState<PhotoViewerState | null>(null);
-  const isOpen = state !== null;
+  const dismiss = useCallback(() => setState(null), []);
+  const history = useViewerHistory(state !== null, dismiss);
+  const { push, pop } = history;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const onBack = () => setState(null);
-    window.addEventListener('popstate', onBack);
-    return () => window.removeEventListener('popstate', onBack);
-  }, [isOpen]);
-
-  const open = useCallback((photos: readonly ViewerPhoto[], index: number) => {
-    if (photos.length === 0) return;
-    if (!ownsTopEntry()) window.history.pushState({ ...(window.history.state as object | null), [MARKER]: true }, '');
-    setState({ photos, index: Math.min(Math.max(0, index), photos.length - 1) });
-  }, []);
+  const open = useCallback(
+    (photos: readonly ViewerPhoto[], index: number) => {
+      if (photos.length === 0) return;
+      push();
+      setState({ photos, index: clampIndex(index, photos.length) });
+    },
+    [push],
+  );
 
   const close = useCallback(() => {
     setState(null);
-    if (ownsTopEntry()) window.history.back();
-  }, []);
+    pop();
+  }, [pop]);
 
   const show = useCallback((index: number) => {
-    setState((current) => (current ? { ...current, index: Math.min(Math.max(0, index), current.photos.length - 1) } : current));
+    setState((current) => (current ? { ...current, index: clampIndex(index, current.photos.length) } : current));
   }, []);
 
   return { state, open, close, show };

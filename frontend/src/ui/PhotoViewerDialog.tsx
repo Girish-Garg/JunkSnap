@@ -36,7 +36,7 @@ export function PhotoViewerDialog({ state, viewer }: PhotoViewerDialogProps) {
       </div>
       <PhotoViewerStage key={photo.url} photo={photo} onOutcome={paging.onOutcome} />
       <PhotoViewerPager index={index} total={photos.length} onPrevious={paging.previous} onNext={paging.next} />
-      <PhotoViewerCaption takenAt={photo.takenAt} />
+      <PhotoViewerCaption date={photo.date} />
     </div>
   );
 }

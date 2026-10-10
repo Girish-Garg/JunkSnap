@@ -15,7 +15,11 @@ export function SitePhotoStrip({ photos }: SitePhotoStripProps) {
   const { t } = useTranslation();
   const viewer = usePhotoViewer();
   const strip = useStripIndex(photos.length);
-  const shown: readonly ViewerPhoto[] = photos.map((photo) => ({ url: photo.url, alt: t(photo.altKey, photo.altParams), takenAt: photo.takenAt }));
+  const shown: readonly ViewerPhoto[] = photos.map((photo) => ({
+    url: photo.url,
+    alt: t(photo.altKey, photo.altParams),
+    date: photo.reportedAt ? { kind: 'reported', at: photo.reportedAt } : null,
+  }));
   return (
     <figure className="photo-strip">
       <div className="photo-strip__frame">

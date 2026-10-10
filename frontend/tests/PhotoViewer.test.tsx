@@ -29,6 +29,10 @@ async function openSitePhoto(n: number) {
   return screen.getByRole('dialog', { name: `Photo ${n} of 4` });
 }
 
+function viewerOwnsTop() {
+  return (window.history.state as Record<string, unknown> | null)?.['junksnapPhotoViewer'] === true;
+}
+
 afterEach(() => {
   // Leave history as each test found it: a viewer still open owns the top entry.
   window.history.replaceState(null, '');
@@ -86,6 +90,27 @@ describe('PhotoViewer closing', () => {
     swipe(0, 200);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('pops its history entry when the component under it unmounts while open', async () => {
+    const view = await renderApp(<SitePanel site={testSite({ photo_urls: PHOTOS })} userLocation={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Blurred photo 1 of 4' }));
+    expect(viewerOwnsTop()).toBe(true);
+    view.unmount();
+    await waitFor(() => expect(viewerOwnsTop()).toBe(false));
+  });
+});
+
+describe('PhotoViewer dates', () => {
+  it('says when a site photo was reported, read from its id, and shows no date without one', async () => {
+    const reported = 'https://example.test/media/reports/rpt_01m4fnncj00000000000000000.jpg';
+    await renderApp(<SitePanel site={testSite({ photo_urls: [reported, PHOTOS[0] ?? ''] })} userLocation={null} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Blurred photo 1 of 2' }));
+    const viewer = screen.getByRole('dialog', { name: 'Photo 1 of 2' });
+    expect(within(viewer).getByText(/^Reported 9 Oct 2026/)).toBeInTheDocument();
+    expect(within(viewer).queryByText(/^Taken /)).not.toBeInTheDocument();
+    fireEvent.click(within(viewer).getByRole('button', { name: 'Next photo' }));
+    expect(within(screen.getByRole('dialog')).queryByText(/^Reported /)).not.toBeInTheDocument();
+  });
 });
 
 describe('Other thumbnails open the viewer', () => {
@@ -96,7 +121,7 @@ describe('Other thumbnails open the viewer', () => {
     expect(screen.getByRole('dialog', { name: 'Photo 2 of 2' })).toBeInTheDocument();
   });
 
-  it('opens Activity thumbnails with the capture date, skipping reports with no blurred copy yet', async () => {
+  it('opens Activity thumbnails with the phone capture time as "Taken", skipping reports with no blurred copy yet', async () => {
     const report = (n: number, blurred: string | null) =>
       QueuedReport.fromData({
         ...QueuedReport.capture(sampleDraft(String(n).repeat(64)), new ArrayBuffer(0), new Date()).data,

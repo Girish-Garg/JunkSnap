@@ -64,7 +64,7 @@ describe('PhotoGesture zoom', () => {
 });
 
 describe('UlidTime', () => {
-  it('reads the capture time from a report or cleanup photo URL', () => {
+  it('reads when a report or cleanup photo was reported from its URL', () => {
     const millis = Date.UTC(2026, 9, 9, 6, 30);
     expect(UlidTime.fromPhotoUrl(`https://cdn.test/media/reports/rpt_${ulidAt(millis)}.jpg`)).toBe('2026-10-09T06:30:00.000Z');
     expect(UlidTime.fromPhotoUrl(`https://cdn.test/media/cleanups/cln_${ulidAt(millis)}.jpg`)).toBe('2026-10-09T06:30:00.000Z');

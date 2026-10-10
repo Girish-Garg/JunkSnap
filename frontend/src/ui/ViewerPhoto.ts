@@ -1,7 +1,13 @@
+/** taken: the phone's shutter time; reported: when the upload id was made (server side, from its ULID). */
+export interface PhotoDate {
+  readonly kind: 'taken' | 'reported';
+  readonly at: string;
+}
+
 /** One photo the full-screen viewer can show: a blurred public copy only, never an original. */
 export interface ViewerPhoto {
   readonly url: string;
   readonly alt: string;
-  /** ISO time the photo was taken, when the data says so; otherwise no date is shown. */
-  readonly takenAt: string | null;
+  /** Only when the data says so; otherwise no date is shown. */
+  readonly date: PhotoDate | null;
 }

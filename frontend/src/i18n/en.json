@@ -617,6 +617,7 @@
     "previous": "Previous photo",
     "next": "Next photo",
     "taken": "Taken {{date}}",
+    "reported": "Reported {{date}}",
     "blurred": "Faces and number plates are blurred."
   }
 }

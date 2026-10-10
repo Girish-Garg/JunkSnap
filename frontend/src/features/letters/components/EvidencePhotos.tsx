@@ -16,11 +16,12 @@ export function EvidencePhotos({ urls, text }: EvidencePhotosProps) {
   const { t } = useTranslation();
   const viewer = usePhotoViewer();
   if (urls.length === 0) return null;
-  const photos: readonly ViewerPhoto[] = urls.map((url, index) => ({
-    url,
-    alt: text.label('evidence.photoAlt', { n: index + 1 }),
-    takenAt: UlidTime.fromPhotoUrl(url),
-  }));
+  const photos: readonly ViewerPhoto[] = urls.map((url, index) => {
+    // The id's time is when the photo was reported (uploaded), not when it was taken.
+    const reportedAt = UlidTime.fromPhotoUrl(url);
+    const alt = text.label('evidence.photoAlt', { n: index + 1 });
+    return { url, alt, date: reportedAt ? { kind: 'reported', at: reportedAt } : null };
+  });
   return (
     <ul className="letter__photos">
       {photos.map((photo, index) => (

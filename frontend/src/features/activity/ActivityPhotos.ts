@@ -8,7 +8,7 @@ export class ActivityPhotos {
   constructor(reports: readonly QueuedReport[], alt: string) {
     this.photos = reports.flatMap(({ data }) => {
       const url = data.status?.blurred_url;
-      return url ? [{ url, alt, takenAt: data.draft.captured_at }] : [];
+      return url ? [{ url, alt, date: { kind: 'taken' as const, at: data.draft.captured_at } }] : [];
     });
   }
 
