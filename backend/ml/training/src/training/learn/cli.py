@@ -52,6 +52,7 @@ class LearnParser:
     def _fitting(self) -> None:
         heads = self._sub.add_parser("heads")
         heads.add_argument("embedder", choices=["titan", "siglip"])
+        heads.add_argument("--version", default="clf-1")
         cases = self._sub.add_parser("cases")
         cases.add_argument("split", choices=["val", "test"])
         cases.add_argument("--out", required=True)

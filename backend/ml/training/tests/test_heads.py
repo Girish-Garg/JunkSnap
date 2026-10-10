@@ -61,6 +61,9 @@ def test_report_type_head_learns_and_scores_on_test_only_once() -> None:
     assert result.test[0].name == "report_type:waste_dump" and result.test[0].f1 == 1.0
     assert result.strength == 1.0
     assert "| report_type:waste_dump | test | 50 |" in result.table()
+    saved = result.to_json("fake-embedder", "clf-test")
+    assert (saved["embedder"], saved["dim"], saved["version"]) == ("fake-embedder", 2, "clf-test")
+    assert saved["groups"]["report_type"]["classes"] == ["waste_dump"]
 
 
 def test_heads_with_too_few_positives_are_not_trained() -> None:

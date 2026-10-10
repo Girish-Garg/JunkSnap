@@ -26,6 +26,7 @@ from training.ports import ObjectStore
 from training.settings import Settings
 
 PINS = Path("backend/ml/src/ml/settings/models.json")
+EMBEDDER_IDS = {"titan": "amazon.titan-embed-image-v1", "siglip": "google/siglip2-base-patch16-224"}
 
 
 class FitCommands:
@@ -51,7 +52,8 @@ class FitCommands:
         materials = ClassMap.load(self._settings.class_map_path).vocabulary.materials
         selector = HeadSelector(HeadCatalogue.defaults(materials), SklearnLogisticFitter)
         chosen = selector.select(rows, vectors)
-        self._write(f"heads-{args.embedder}.json", chosen.to_json())
+        content = chosen.to_json(EMBEDDER_IDS[args.embedder], args.version)
+        self._write(f"heads-{args.embedder}.json", content)
         print(chosen.table())
 
     def cases(self, args: argparse.Namespace) -> None:

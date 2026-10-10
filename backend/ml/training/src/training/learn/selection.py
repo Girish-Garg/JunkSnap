@@ -24,10 +24,15 @@ class HeadResult:
     val: tuple[BinaryScores, ...]
     test: tuple[BinaryScores, ...]
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self, embedder: str, version: str) -> dict[str, Any]:
+        """The shape ml.domain.linear.EmbeddingHeads reads, plus how it was chosen."""
+        first = next(iter(self.heads.groups.values()))
         return {
+            "version": version,
+            "embedder": embedder,
+            "dim": len(first.weights[0]),
             "strength": self.strength,
-            "heads": self.heads.to_json(),
+            "groups": self.heads.to_json(),
             "val": [s.__dict__ for s in self.val],
             "test": [s.__dict__ for s in self.test],
         }
