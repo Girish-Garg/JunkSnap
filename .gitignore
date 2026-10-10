@@ -24,6 +24,7 @@ amplify/#current-cloud-backend/
 
 # Data (large rasters and embeddings stay in S3)
 data/raw/
+data/ward_crawler/.cache/
 *.tif
 *.parquet
 

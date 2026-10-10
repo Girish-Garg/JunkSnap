@@ -47,7 +47,7 @@ jobs:
       - name: Lint, type check and test each Python package
         shell: bash
         run: |
-          for d in backend/pipeline backend/ml; do
+          for d in backend/pipeline backend/ml backend/ml/training data/ward_crawler; do
             if [ ! -f "$d/pyproject.toml" ]; then
               echo "No $d/pyproject.toml yet, skipping"
               continue

@@ -48,7 +48,10 @@
     "label": "Map of reported waste sites",
     "locate": "Show my location",
     "snap": "Report a site with the camera",
-    "attribution": "Map credits"
+    "attribution": "Map credits",
+    "fallback": "This browser can't draw the map. Showing a list instead.",
+    "fallbackHint": "To see the map, turn on hardware acceleration in your browser settings.",
+    "listLabel": "Sites nearby"
   },
   "notice": {
     "offline": "Offline. Showing what was loaded.",
