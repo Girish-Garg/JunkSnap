@@ -109,6 +109,23 @@ describe("ScoreCalculator scores-v3 formulas", () => {
     expect(calculate(workedExample()).metrics.bin_service_pct).toBeNull();
   });
 
+  it("leaves bin service out of the mean and the diagnosis below 3 verified overflowing_bin sites", () => {
+    const unserviced = (day: string) => site({ reportType: "overflowing_bin", context: "damaged", verifiedCount: 1, firstReportedAt: day });
+    const row = calculate([...workedExample(), unserviced("2026-10-18T00:00:00Z"), unserviced("2026-10-19T00:00:00Z")]);
+    expect(row.metrics.bin_service_pct).toBeNull();
+    expect(row.scores.city).toEqual(calculate(workedExample()).scores.city);
+    expect(row.diagnosis).not.toContain("city_response");
+  });
+
+  it("never measures bin access at overflowing_bin sites, which stand at a bin", () => {
+    const atBin = site({ reportType: "overflowing_bin", context: "overflowing", verifiedCount: 3, insights: binned(5) });
+    const row = calculate([...workedExample(), atBin], FULL_FACTS);
+    const without = calculate(workedExample(), FULL_FACTS);
+    expect(row.metrics.median_distance_to_disposal_m).toBe(600);
+    expect(row.metrics.no_bin_within_3km_pct).toBe(25);
+    expect(row.scores.bin_access).toEqual(without.scores.bin_access);
+  });
+
   it("measures bin access from the sites' nearest known bins, never from no_bin report counts", () => {
     const row = calculate(workedExample(), FULL_FACTS);
     expect(row.metrics).toMatchObject({

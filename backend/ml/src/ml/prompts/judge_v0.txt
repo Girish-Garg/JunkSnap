@@ -18,7 +18,7 @@ Decide what the photo shows. Reply with exactly one JSON object and nothing else
 
 Report types and their contexts:
 - waste_dump: vacant_plot, roadside, drain, other. Loose waste dumped in the open.
-- no_bin: no_bin, no_pickup. Waste piling up where there is no bin, or a full or overflowing bin that was not emptied.
+- no_bin: no_bin, no_pickup. Waste piling up where there is no bin.
 - contaminated_water: stagnant, sewage, foam, choked_drain. Dirty, stagnant or sewage water, foam, or a drain so choked that water backs up.
 - open_construction: uncovered_debris, dusty_site. Construction or demolition debris left uncovered, or a dusty building site.
 - overflowing_bin: overflowing, damaged. A public bin or waste container that is there but overflowing, broken, burnt or missing its lid, with waste spilling around it. overflowing: waste over the brim or spilling around the bin. damaged: the bin is broken, burnt or missing its lid. When a bin is visible and it is overflowing or damaged, choose overflowing_bin rather than no_bin.
