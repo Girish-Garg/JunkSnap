@@ -56,6 +56,13 @@ export type ReportUpload = {
     accuracy_m: number;
   };
   /**
+   * Long-range marking (issue 115): where the waste is when the reporter saw it from a distance (across a plot, drain or road, or from a rooftop) and marked it on the map. At most 500 m from gps, else 422 target_too_far. When present, the site point, the merge distance, nearby places and the ward and seat lookup use target; authenticity (duplicate radius, GPS accuracy) still uses gps, which stays as evidence and is never public. Absent means the waste is where the reporter stands. Forbidden for no_bin (the zone is where the reporter stands) and for scan frames.
+   */
+  target?: {
+    lat: number;
+    lon: number;
+  };
+  /**
    * Per-device token: a random UUID v4 the app creates once and keeps in IndexedDB. Keys reputation and rate limits.
    */
   device_token: string;
@@ -200,6 +207,27 @@ export const reportUploadSchema = {
         }
       }
     },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "description": "Long-range marking (issue 115): where the waste is when the reporter saw it from a distance (across a plot, drain or road, or from a rooftop) and marked it on the map. At most 500 m from gps, else 422 target_too_far. When present, the site point, the merge distance, nearby places and the ward and seat lookup use target; authenticity (duplicate radius, GPS accuracy) still uses gps, which stays as evidence and is never public. Absent means the waste is where the reporter stands. Forbidden for no_bin (the zone is where the reporter stands) and for scan frames.",
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
     "device_token": {
       "type": "string",
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
@@ -269,6 +297,38 @@ export const reportUploadSchema = {
         "not": {
           "required": [
             "scan"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "capture_mode": {
+            "const": "scan"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "target"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "no_bin"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "target"
           ]
         }
       }

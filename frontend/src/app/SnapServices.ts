@@ -1,6 +1,7 @@
 import type { ActivityRemover } from '../services/ActivityRemover';
 import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
+import type { CompassHeading } from '../services/CompassHeading';
 import type { ScanCapture } from '../services/ScanCapture';
 import type { GpsWatcher } from '../services/GpsWatcher';
 import type { NoBinReporter } from '../services/NoBinReporter';
@@ -30,4 +31,6 @@ export interface SnapServices {
   readonly noBin: NoBinReporter;
   /** Deletes Activity rows, withdrawing reports from unverified sites first (decision 20261010-1700). */
   readonly remover: ActivityRemover;
+  /** The phone's heading for the long-range direction line; absent where there is no window (tests). */
+  readonly compass?: CompassHeading;
 }

@@ -1,0 +1,13 @@
+{
+  "upload_id": "upl_jdh_far",
+  "report_type": "waste_dump",
+  "context": "vacant_plot",
+  "capture_mode": "snap",
+  "sha256": "a3f0c2d4e6b8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192",
+  "gps": { "lat": 26.2912, "lon": 73.0301, "accuracy_m": 7 },
+  "target": { "lat": 26.29147, "lon": 73.0313 },
+  "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
+  "captured_at": "2026-10-11T03:40:00Z",
+  "user_id": "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7",
+  "note": "Seen from the road across the plot, about 120 m in"
+}

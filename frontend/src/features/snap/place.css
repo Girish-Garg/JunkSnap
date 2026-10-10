@@ -1,0 +1,68 @@
+/* The Snap place step: right here, or a long-range pin on a small map (decision 20261011-0400). Tokens only. */
+.place-target {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+
+.target-map {
+  position: relative;
+  height: 240px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--map-bg);
+}
+
+/* The reporter: a teal dot in a surface ring. */
+.target-map__you {
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow-1);
+}
+
+/* The waste: a chunky sticker pin with its tip on the spot (anchor bottom), big enough to grab with a thumb.
+   MapLibre positions the element with an inline transform, so the drop shape is drawn by ::before. */
+.target-map__pin {
+  width: 32px;
+  height: 36px;
+  cursor: grab;
+}
+
+.target-map__pin::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
+  border-radius: 50% 50% 50% 0;
+  background: var(--type-dump);
+  transform: rotate(-45deg);
+}
+
+.target-map__pin:active {
+  cursor: grabbing;
+}
+
+.place-target__distance {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.place-target__cap {
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-s);
+  background: var(--status-reopened-tint);
+  color: var(--status-reopened);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
