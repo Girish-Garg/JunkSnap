@@ -30,11 +30,19 @@ def square(west: float, east: float, shared_on_east: bool) -> list[list[float]]:
 
 
 def collection(features: list[tuple[dict[str, object], list[list[float]]]]) -> str:
-    return json.dumps({"type": "FeatureCollection", "features": [
-        {"type": "Feature", "properties": props,
-         "geometry": {"type": "Polygon", "coordinates": [ring]}}
-        for props, ring in features
-    ]})
+    return json.dumps(
+        {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": props,
+                    "geometry": {"type": "Polygon", "coordinates": [ring]},
+                }
+                for props, ring in features
+            ],
+        }
+    )
 
 
 def seats(tmp: Path) -> None:
@@ -46,8 +54,15 @@ def seats(tmp: Path) -> None:
 
 
 def wards(tmp: Path) -> None:
-    props = {"id": "jodhpur-mc-w1", "ward_no": 1, "name": "Ward 1", "zone": "North",
-             "confidence": 0.7, "review_status": "unreviewed", "offices": ["x"]}
+    props = {
+        "id": "jodhpur-mc-w1",
+        "ward_no": 1,
+        "name": "Ward 1",
+        "zone": "North",
+        "confidence": 0.7,
+        "review_status": "unreviewed",
+        "offices": ["x"],
+    }
     ward = (props, square(73.0, 73.1, True))
     (tmp / "jodhpur_wards.geojson").write_text(collection([ward]), encoding="utf-8")
 
@@ -66,7 +81,7 @@ def dirs(tmp_path: Path) -> tuple[Path, Path]:
 
 def test_keeps_only_listed_properties_and_writes_manifest(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     features = read(out / "assembly.geojson")
     assert [f["properties"] for f in features] == [
         {"id": "s20-ac-1", "name": "West", "pc_id": "s20-pc-1"},
@@ -80,7 +95,7 @@ def test_keeps_only_listed_properties_and_writes_manifest(dirs: tuple[Path, Path
 def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
     spec = sb.LayerSpec("assembly", "rajasthan_assembly.geojson", ("id",), 2_000)
-    [result] = sb.run(source, out, (spec,))
+    [result] = sb.run(source, out, (spec,), ship_all=True)
     assert result.coarse.bytes <= 2_000
     left, right = (shape(f["geometry"]) for f in read(out / "assembly.geojson"))
     assert len(left.exterior.coords) < STEPS / 4
@@ -90,7 +105,7 @@ def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) ->
 
 def test_labels_fall_inside_their_area(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     polygons = {f["properties"]["id"]: shape(f["geometry"]) for f in read(out / "assembly.geojson")}
     for label in read(out / "assembly_labels.geojson"):
         point = Point(label["geometry"]["coordinates"])
@@ -99,38 +114,22 @@ def test_labels_fall_inside_their_area(dirs: tuple[Path, Path]) -> None:
 
 def test_ward_files_are_picked_up_on_rerun_and_dropped_when_gone(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     assert not (out / "wards.geojson").exists()
     wards(source)
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     [ward] = read(out / "wards.geojson")
     assert ward["properties"]["review_status"] == "unreviewed"
     assert "offices" not in ward["properties"]
     (source / "jodhpur_wards.geojson").unlink()
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     assert not (out / "wards.geojson").exists()
     assert "wards" not in json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]
 
 
-def test_index_counts_mapped_wards_against_each_body(dirs: tuple[Path, Path]) -> None:
-    source, out = dirs
-    wards(source)
-    bodies = source / "local_bodies.json"
-    bodies.write_text(json.dumps([
-        {"id": "jodhpur-mc", "name": "Jodhpur MC", "towns": ["Jodhpur"], "wards": 100},
-        {"id": "jaipur-mc", "name": "Jaipur MC", "towns": ["Jaipur"], "wards": 150},
-    ]), encoding="utf-8")
-    sb.run(source, out, sb.LAYERS, bodies)
-    layers = json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]
-    assert layers["wards"]["coverage"] == [
-        {"body": "jodhpur-mc", "town": "Jodhpur", "mapped": 1, "wards": 100},
-    ]
-    assert "coverage" not in layers["assembly"]
-
-
 def test_rounds_coordinates_to_four_places(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     ring = read(out / "assembly.geojson")[0]["geometry"]["coordinates"][0]
     assert all(round(value, 4) == value for point in ring for value in point)
 

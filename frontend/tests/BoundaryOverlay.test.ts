@@ -4,13 +4,17 @@ import { BoundaryOverlay, type BoundaryFiles } from '../src/features/map/Boundar
 
 function fakeMap() {
   const sources = new Map<string, unknown>();
+  const images = new Set<string>();
+  const layers = new Set<string>();
   const map = {
     on: vi.fn(),
-    hasImage: () => false,
-    addImage: vi.fn(),
-    getLayer: () => undefined,
-    addLayer: vi.fn(),
-    removeLayer: vi.fn(),
+    hasImage: (name: string) => images.has(name),
+    addImage: vi.fn((name: string) => images.add(name)),
+    updateImage: vi.fn(),
+    setLayoutProperty: vi.fn(),
+    getLayer: (id: string) => (layers.has(id) ? { id } : undefined),
+    addLayer: vi.fn((spec: { id: string }) => layers.add(spec.id)),
+    removeLayer: vi.fn((id: string) => layers.delete(id)),
     getSource: (id: string) => (sources.has(id) ? { setData: vi.fn() } : undefined),
     addSource: vi.fn((id: string, spec: unknown) => sources.set(id, spec)),
     removeSource: vi.fn((id: string) => sources.delete(id)),
@@ -49,5 +53,31 @@ describe('BoundaryOverlay.show', () => {
     const { map } = fakeMap();
     new BoundaryOverlay(map as unknown as MapLibreMap, files, undefined).ready();
     expect(map.addImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count']);
+  });
+});
+
+describe('BoundaryOverlay.setDark', () => {
+  it('redraws the badges and the marker text in place when the theme turns dark', () => {
+    const { map } = fakeMap();
+    const overlay = new BoundaryOverlay(map as unknown as MapLibreMap, files, undefined);
+    overlay.ready();
+    overlay.show({ fine: false });
+    overlay.setDark(true);
+    expect(map.updateImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count']);
+    expect(map.setLayoutProperty).toHaveBeenCalledWith('boundary-marker', 'text-field', expect.anything());
+    overlay.setDark(true);
+    expect(map.updateImage).toHaveBeenCalledTimes(3);
+  });
+
+  it('starts dark when the theme is dark before the map is ready', () => {
+    const { map } = fakeMap();
+    const overlay = new BoundaryOverlay(map as unknown as MapLibreMap, files, undefined);
+    overlay.setDark(true);
+    overlay.ready();
+    overlay.show({ fine: false });
+    expect(map.updateImage).not.toHaveBeenCalled();
+    const [, firstBadge] = map.addImage.mock.calls[0] as unknown as [string, { data: Uint8Array; width: number; height: number }];
+    const middle = (Math.floor(firstBadge.height / 2) * firstBadge.width + Math.floor(firstBadge.width / 2)) * 4;
+    expect([...firstBadge.data.slice(middle, middle + 3)]).toEqual([42, 37, 30]);
   });
 });

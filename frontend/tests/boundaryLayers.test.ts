@@ -2,12 +2,12 @@ import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import type { LayerSpecification } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
 import { BoundaryFillLayer } from '../src/layers/boundaries/BoundaryFillLayer';
-import { AreaMarkerLayer, BADGE_IMAGES } from '../src/layers/boundaries/AreaMarkerLayer';
+import { AreaMarkerLayer, BADGE_IMAGES, markerText as markerTextFor } from '../src/layers/boundaries/AreaMarkerLayer';
 import type { BoundaryContext } from '../src/layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../src/layers/boundaries/BoundaryLineLayer';
 import { OutdatedLineLayer } from '../src/layers/boundaries/OutdatedLineLayer';
 
-const context = (): BoundaryContext => ({ polygonSource: 'polys', labelSource: 'labels' });
+const context = (): BoundaryContext => ({ polygonSource: 'polys', labelSource: 'labels', dark: false });
 type Section = 'paint' | 'layout';
 const prop = (spec: LayerSpecification, section: Section, name: string): unknown =>
   (spec as unknown as Record<Section, Record<string, unknown> | undefined>)[section]?.[name];
@@ -101,5 +101,16 @@ describe('AreaMarkerLayer placement', () => {
   it('sits above the basemap labels while fills and lines sit under them', () => {
     expect(marker.onTop).toBe(true);
     expect([new BoundaryFillLayer(), new BoundaryLineLayer(), new OutdatedLineLayer()].map((layer) => layer.onTop)).toEqual([false, false, false]);
+  });
+});
+
+describe('AreaMarkerLayer in the dark theme', () => {
+  const colours = (expression: unknown): unknown[] => JSON.stringify(expression).match(/#[0-9a-f]{6}/g) ?? [];
+
+  it('uses light text on the dark badge, and dark text on the light one', () => {
+    expect(colours(markerTextFor(false))).toEqual(['#221c15', '#5f5446', '#221c15']);
+    expect(colours(markerTextFor(true))).toEqual(['#f7f0e4', '#c9bdaa', '#f7f0e4']);
+    const dark = new AreaMarkerLayer().spec({ polygonSource: 'polys', labelSource: 'labels', dark: true });
+    expect(prop(dark, 'layout', 'text-field')).toEqual(markerTextFor(true));
   });
 });

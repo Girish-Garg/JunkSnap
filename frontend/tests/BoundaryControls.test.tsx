@@ -28,6 +28,7 @@ describe('Map areas', () => {
     expect(within(legend).getByText('Marker: score out of 100')).toBeInTheDocument();
     expect(within(legend).getByText('Marker: number of verified reports')).toBeInTheDocument();
     expect(within(legend).queryByText(/ward/i)).not.toBeInTheDocument();
+    expect(within(legend).getByText('Dashed outline: seat boundary out of date')).toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
     expect(seen.last?.areas).toEqual({ fine: true });
     // Sardarpura has 4 verified reports and every score withheld: a grey count fill, never a score colour.

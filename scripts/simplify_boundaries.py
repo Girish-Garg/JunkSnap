@@ -4,16 +4,16 @@
 # ///
 """Simplify data/boundaries/*.geojson into small map layers for the web app.
 
-Writes into frontend/public/boundaries:
-- <layer>.geojson: polygons simplified as one coverage (mapshaper style, shared edges stay
-  shared) with the smallest tolerance that fits the layer's byte budget;
-- <layer>_fine.geojson: near-original edges for close zooms, when they fit the fine budget
-  (only the areas matching `fine_prefix`; the rest keep their simplified shape);
-- <layer>_labels.geojson: one marker point per area, the pole of inaccessibility of the original
-  shape (polylabel), so markers never fall outside odd-shaped areas;
-- index.json: which layers and fine files exist, with counts, sizes and ward coverage.
+Builds each layer in memory: polygons simplified as one coverage (mapshaper style, shared edges
+stay shared) at the smallest tolerance that fits the layer's byte budget; near-original edges for
+close zooms when they fit the fine budget (only areas matching `fine_prefix`); one marker point per
+area at the pole of inaccessibility of the original shape (polylabel).
 
-Rerun it when new ward files arrive:  uv run scripts/simplify_boundaries.py
+Writes only what the app loads into frontend/public/boundaries: the combined areas layer
+(areas.geojson, areas_labels.geojson, areas_fine.geojson; see combined_areas.py) and index.json.
+Other files there are removed. Rerun when a boundary file changes:
+
+    uv run scripts/simplify_boundaries.py
 """
 
 import gzip
@@ -24,15 +24,12 @@ from pathlib import Path
 from typing import Any
 
 from boundary_geometry import label_point, rounded_geometry, simplify, without_overlaps
-from combined_areas import combine
+from combined_areas import combine, combine_points
 from shapely.geometry import shape
-from ward_coverage import ward_coverage
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIR = ROOT / "data" / "boundaries"
 OUT_DIR = ROOT / "frontend" / "public" / "boundaries"
-# Ward counts per local body, for the "34 of 100 wards" line in the map legend.
-LOCAL_BODIES = ROOT / "data" / "representatives" / "local_bodies.json"
 # Degrees; tried smallest first until the layer fits its budget.
 TOLERANCES = (0.0005, 0.001, 0.002, 0.004, 0.008, 0.016, 0.024, 0.032)
 FINE_TOLERANCES = (0.0, 0.0001, 0.0002, 0.0005)
@@ -219,7 +216,7 @@ def write(path: Path, text: str) -> None:
     path.write_bytes(text.encode("utf-8"))
 
 
-def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult | None:
+def build_layer(spec: LayerSpec, source_dir: Path) -> LayerResult | None:
     paths = sorted(source_dir.glob(spec.pattern))
     if not paths:
         return None
@@ -228,61 +225,59 @@ def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult
     labels_list = build_labels(features)
     labels = Encoded(labels_list, encode(labels_list), 0.0)
     fine = fit_fine(features, spec, coarse)
-    write(out_dir / f"{spec.name}.geojson", coarse.text)
-    write(out_dir / f"{spec.name}_labels.geojson", labels.text)
-    if fine:
-        write(out_dir / f"{spec.name}_fine.geojson", fine.text)
-    else:
-        (out_dir / f"{spec.name}_fine.geojson").unlink(missing_ok=True)
     sources = tuple(p.name for p in paths)
     return LayerResult(spec.name, coarse, labels, fine, sources, spec.attribution)
 
 
-def write_areas(results: list[LayerResult], out_dir: Path) -> LayerResult | None:
+def build_areas(results: list[LayerResult]) -> LayerResult | None:
     """The one layer the map draws: assembly seats in Rajasthan, Lok Sabha seats elsewhere."""
     by_name = {r.name: r for r in results}
     assembly, loksabha = by_name.get("assembly"), by_name.get("loksabha")
     if not assembly or not loksabha:
         return None
 
-    def encoded(a: Encoded, b: Encoded) -> Encoded:
-        features = combine(a.features, b.features)
+    def encoded(a: Encoded, b: Encoded, decimals: int) -> Encoded:
+        features = combine(a.features, b.features, decimals)
         return Encoded(features, encode(features), max(a.tolerance, b.tolerance))
 
-    coarse = encoded(assembly.coarse, loksabha.coarse)
-    labels = encoded(assembly.labels, loksabha.labels)
-    fine: Encoded | None = encoded(assembly.fine or assembly.coarse, loksabha.coarse)
+    coarse = encoded(assembly.coarse, loksabha.coarse, DECIMALS)
+    points = combine_points(assembly.labels.features, loksabha.labels.features)
+    labels = Encoded(points, encode(points), 0.0)
+    fine: Encoded | None = encoded(assembly.fine or assembly.coarse, loksabha.coarse, FINE_DECIMALS)
     if fine and fine.bytes > AREAS_FINE_BUDGET:
         fine = None
-    write(out_dir / "areas.geojson", coarse.text)
-    write(out_dir / "areas_labels.geojson", labels.text)
-    if fine:
-        write(out_dir / "areas_fine.geojson", fine.text)
-    else:
-        (out_dir / "areas_fine.geojson").unlink(missing_ok=True)
     return LayerResult("areas", coarse, labels, fine, assembly.sources + loksabha.sources)
+
+
+def write_layer(result: LayerResult, out_dir: Path) -> list[Path]:
+    """Writes a layer's files; returns their paths."""
+    files = {"": result.coarse, "_labels": result.labels, "_fine": result.fine}
+    written = []
+    for suffix, encoded in files.items():
+        if encoded is not None:
+            path = out_dir / f"{result.name}{suffix}.geojson"
+            write(path, encoded.text)
+            written.append(path)
+    return written
 
 
 def run(
     source_dir: Path,
     out_dir: Path,
     specs: tuple[LayerSpec, ...] = LAYERS,
-    bodies_path: Path = LOCAL_BODIES,
+    ship_all: bool = False,
 ) -> list[LayerResult]:
+    """Builds the layers and writes the areas layer; `ship_all` writes every layer, for tests."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    results = [r for spec in specs if (r := write_layer(spec, source_dir, out_dir)) is not None]
-    for stale in {s.name for s in specs} - {r.name for r in results}:
-        for suffix in (".geojson", "_labels.geojson", "_fine.geojson"):
-            (out_dir / f"{stale}{suffix}").unlink(missing_ok=True)
-    areas = write_areas(results, out_dir)
-    if areas:
-        results.append(areas)
-    manifest: dict[str, Any] = {"layers": {r.name: r.manifest() for r in results}}
-    if "wards" in manifest["layers"]:
-        coverage = ward_coverage(out_dir / "wards.geojson", bodies_path)
-        manifest["layers"]["wards"]["coverage"] = coverage
+    results = [r for spec in specs if (r := build_layer(spec, source_dir)) is not None]
+    areas = build_areas(results)
+    shipped = ([*results] if ship_all else []) + ([areas] if areas else [])
+    written = {path for result in shipped for path in write_layer(result, out_dir)}
+    for stale in set(out_dir.glob("*.geojson")) - written:
+        stale.unlink()
+    manifest = {"layers": {r.name: r.manifest() for r in shipped}}
     write(out_dir / "index.json", json.dumps(manifest, indent=2) + "\n")
-    return results
+    return [*results, *([areas] if areas else [])]
 
 
 def kb(text: str) -> str:

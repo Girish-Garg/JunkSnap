@@ -57,7 +57,7 @@ def test_label_files_carry_the_pole_of_each_original_shape(tmp_path: Path) -> No
     write(
         source / "rajasthan_assembly.geojson", [feature({"id": "s20-ac-1", "name": "C"}, C_SHAPE)]
     )
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     [label] = read(out / "assembly_labels.geojson")
     assert label["properties"] == {"id": "s20-ac-1", "name": "C"}
     assert Polygon(C_SHAPE).contains(Point(label["geometry"]["coordinates"]))
@@ -68,7 +68,7 @@ def test_unnamed_wards_get_a_ward_number_marker(tmp_path: Path) -> None:
     source.mkdir()
     ward = feature({"id": "jodhpur-mc-w7", "ward_no": 7, "name": None}, C_SHAPE)
     write(source / "jodhpur_wards.geojson", [ward])
-    sb.run(source, out)
+    sb.run(source, out, ship_all=True)
     [label] = read(out / "wards_labels.geojson")
     assert label["properties"] == {"id": "jodhpur-mc-w7", "name": "Ward 7"}
 
@@ -88,7 +88,7 @@ def test_fine_file_keeps_original_edges_for_the_chosen_areas_only(tmp_path: Path
     spec = sb.LayerSpec(
         "loksabha", "india_loksabha.geojson", ("id", "status"), 3_000, 60_000, "s20-"
     )
-    [result] = sb.run(source, out, (spec,))
+    [result] = sb.run(source, out, (spec,), ship_all=True)
     assert result.fine is not None and result.fine.tolerance == 0.0
     fine = {
         f["properties"]["id"]: shape(f["geometry"]) for f in read(out / "loksabha_fine.geojson")
@@ -106,7 +106,7 @@ def test_no_fine_file_when_it_does_not_fit(tmp_path: Path) -> None:
     source.mkdir()
     write(source / "india_loksabha.geojson", [wiggly_square(70.0, "s20")])
     spec = sb.LayerSpec("loksabha", "india_loksabha.geojson", ("id",), 3_000, 1_000, "s20-")
-    [result] = sb.run(source, out, (spec,))
+    [result] = sb.run(source, out, (spec,), ship_all=True)
     assert result.fine is None
     assert not (out / "loksabha_fine.geojson").exists()
     assert (

@@ -82,6 +82,13 @@
   }
 }
 
+/* A dashed outline: a Lok Sabha seat drawn from boundaries older than its re-delimitation. */
+.boundary-legend__dash {
+  flex: none;
+  width: 16px;
+  border-top: 2px dashed var(--text-secondary);
+}
+
 .marker-key__glyph {
   flex: none;
   color: var(--text-secondary);
