@@ -41,7 +41,7 @@ class ModelPublisher:
         """Uploads each file under a key that carries its hash, then rewrites the pins file."""
         if not self._store.is_remote:
             raise ConfigError("models are published to S3 only")
-        entries = {}
+        entries = self._existing(pins)
         for release in releases:
             model = self._upload(release)
             entries[release.name] = {**model.to_json(), "version": release.version}
@@ -49,6 +49,13 @@ class ModelPublisher:
                    "models": dict(sorted(entries.items()))}
         pins.write_text(json.dumps(content, indent=2) + "\n", encoding="utf-8", newline="\n")
         return content
+
+    @staticmethod
+    def _existing(pins: Path) -> dict[str, Any]:
+        """Pins of models not republished now stay, so a partial publish never drops one."""
+        if not pins.exists():
+            return {}
+        return dict(json.loads(pins.read_text(encoding="utf-8")).get("models", {}))
 
     def _upload(self, release: Release) -> ModelFile:
         digest = self._sha256(release.path)

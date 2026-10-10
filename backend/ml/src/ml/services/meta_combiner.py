@@ -32,12 +32,12 @@ class MetaLearnerCombiner(Combiner):
 
     def probability(self, signals: Sequence[SignalResult], purpose: Purpose) -> float:
         """Fitted on "waste is visible"; `support` maps a purpose's scores there and back."""
-        waste = {signal.name: purpose.support(signal.score) for signal in signals}
+        waste = {s.name: purpose.support(s.score) for s in signals if not s.neutral}
         model = self._model.judged if JUDGE_SIGNAL in waste else self._model.base
         return purpose.support(model.probability(waste))
 
     def disagree(self, signals: Sequence[SignalResult]) -> bool:
-        scores = [signal.score for signal in signals]
+        scores = [signal.score for signal in signals if not signal.neutral]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
 
     def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:

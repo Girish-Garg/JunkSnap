@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class TrainedModels:
-    """Downloads and checks every pinned file when built, so a bad pin stops the app at start."""
+    """Each pinned file is downloaded and checked as the verify graph is built at app start."""
 
     def __init__(
         self, store: ModelStore, pins: ModelPins, bedrock: "BedrockRuntimeClient"

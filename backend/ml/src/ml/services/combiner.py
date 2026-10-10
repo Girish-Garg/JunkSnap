@@ -47,7 +47,7 @@ class FixedWeightCombiner(Combiner):
         return total / sum(weights)
 
     def disagree(self, signals: Sequence[SignalResult]) -> bool:
-        scores = [signal.score for signal in signals]
+        scores = [signal.score for signal in signals if not signal.neutral]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
 
     def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:

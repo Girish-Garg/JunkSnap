@@ -1,8 +1,10 @@
 """Signal from image embeddings plus our logistic heads: waste or not, materials, burning."""
 
+import logging
+
 from ml.domain.case import VerificationCase
 from ml.domain.embedding import Embedding
-from ml.domain.errors import ConfigError
+from ml.domain.errors import ConfigError, ExternalServiceError
 from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare
 from ml.domain.linear import EmbeddingHeads
 from ml.domain.verification import SignalResult
@@ -10,7 +12,9 @@ from ml.ports.embedding_sink import EmbeddingSink
 from ml.ports.image_embedder import ImageEmbedder
 from ml.ports.signal import Signal
 
-# Claims the waste head speaks to; any other claim gets a neutral score the stacker ignores.
+logger = logging.getLogger(__name__)
+
+# Claims the waste head speaks to; any other claim gets a neutral score combiners skip.
 WASTE_CLAIMS = frozenset({"waste_dump", "no_bin"})
 NEUTRAL = 0.5
 MATERIAL_MIN = 0.5
@@ -46,8 +50,19 @@ class EmbeddingSignal(Signal):
             latency_ms=embedding.latency_ms,
             notes=(f"waste {waste:.2f}",) if waste is not None else (),
             insights=self._insights(embedding, source),
-            artifact_key=self._sink.store(case.report_id, embedding) if self._sink else None,
+            artifact_key=self._stored(case.report_id, embedding),
+            neutral=not claimed,
         )
+
+    def _stored(self, case_id: str, embedding: Embedding) -> str | None:
+        """A failed write leaves embedding_key null; the verdict does not depend on it."""
+        if self._sink is None:
+            return None
+        try:
+            return self._sink.store(case_id, embedding)
+        except ExternalServiceError as error:
+            logger.warning("embedding_not_stored", extra={"fields": {"reason": str(error)}})
+            return None
 
     def _insights(self, embedding: Embedding, source: InsightSource) -> Insights:
         materials = self._heads.probabilities("materials", embedding.vector)

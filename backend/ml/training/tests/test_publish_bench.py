@@ -21,6 +21,15 @@ def test_publish_uploads_under_a_hashed_key_and_pins_it(tmp_path: Path, store) -
     assert store.uploaded[pinned["key"]] == b"weights"
 
 
+def test_a_partial_publish_keeps_the_other_pins(tmp_path: Path, store) -> None:
+    pins = tmp_path / "models.json"
+    for name in ("yolo", "meta"):
+        path = tmp_path / f"{name}.bin"
+        path.write_bytes(name.encode())
+        ModelPublisher(store).publish([Release.parse(f"{name}={path}@v1")], pins)
+    assert set(json.loads(pins.read_text())["models"]) == {"yolo", "meta"}
+
+
 def test_release_needs_a_name_path_and_version() -> None:
     with pytest.raises(ConfigError):
         Release.parse("yolo=best.onnx")

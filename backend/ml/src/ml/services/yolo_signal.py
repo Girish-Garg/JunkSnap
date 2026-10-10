@@ -19,7 +19,7 @@ CLAIM_CLASSES: Mapping[str, frozenset[str]] = MappingProxyType(
         "open_construction": frozenset({"waste_pile"}),
     }
 )
-# A claim the detector cannot see gets this score: its logit is 0, so the stacker ignores it.
+# A claim the detector cannot see gets this score, flagged neutral so combiners skip it.
 NEUTRAL = 0.5
 BURNING_MIN = 0.5
 SIZE_BOX_MIN = 0.4
@@ -50,6 +50,7 @@ class YoloSignal(Signal):
             insights=Insights(
                 size_class=self._size(found, source), hazards=self._fire(found, source)
             ),
+            neutral=classes is None,
         )
 
     @staticmethod

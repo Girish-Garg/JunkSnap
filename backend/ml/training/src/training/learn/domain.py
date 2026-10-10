@@ -64,13 +64,17 @@ class LinearModel:
 
     def probabilities(self, features: tuple[float, ...]) -> dict[str, float]:
         return {
-            name: _sigmoid(sum(w * x for w, x in zip(row, features, strict=True)) + bias)
+            name: self.sigmoid(sum(w * x for w, x in zip(row, features, strict=True)) + bias)
             for name, row, bias in zip(self.classes, self.weights, self.biases, strict=True)
         }
 
     def to_json(self) -> dict[str, Any]:
         return {"classes": list(self.classes), "weights": [list(r) for r in self.weights],
                 "biases": list(self.biases)}
+
+    @staticmethod
+    def sigmoid(z: float) -> float:
+        return 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
 
     @staticmethod
     def stacked(models: list[LinearModel]) -> LinearModel:
@@ -81,9 +85,6 @@ class LinearModel:
             biases=tuple(b for m in models for b in m.biases),
         )
 
-
-def _sigmoid(z: float) -> float:
-    return 1.0 / (1.0 + math.exp(-z)) if z >= 0 else math.exp(z) / (1.0 + math.exp(z))
 
 
 @dataclass(frozen=True)
