@@ -5,7 +5,7 @@ const AreaScoresEnv = z.object({
   SCORES_TABLE: z.string().min(1),
 });
 
-// GET /areas/{kind}/{id}/scores reads only the scores table.
+// GET /areas/{kind}/{id}/scores and GET /areas/{kind} read only the scores table.
 export class AreaScoresSettings {
   readonly scoresTable: string;
 

@@ -1,7 +1,10 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import type { FastifyPluginAsync } from "fastify";
+import { DynamoScoreLister } from "../adapters/DynamoScoreLister.js";
 import { DynamoScoreRepository } from "../adapters/DynamoScoreRepository.js";
+import type { QueryValue } from "../domain/AreaListRequest.js";
+import { AreaListQuery } from "../services/AreaListQuery.js";
 import { AreaScoresQuery } from "../services/AreaScoresQuery.js";
 import { AreaScoresSettings } from "../settings/AreaScoresSettings.js";
 import type { RouteContext } from "./RouteBuilder.js";
@@ -11,10 +14,23 @@ interface AreaParams {
   readonly id: string;
 }
 
-export function areaScoresRoutes(query: AreaScoresQuery): FastifyPluginAsync {
+interface AreaListQuerystring {
+  readonly within?: QueryValue;
+  readonly limit?: QueryValue;
+}
+
+export interface AreaQueries {
+  readonly scores: AreaScoresQuery;
+  readonly list: AreaListQuery;
+}
+
+export function areaScoresRoutes(queries: AreaQueries): FastifyPluginAsync {
   return async (app) => {
     app.get<{ Params: AreaParams }>("/areas/:kind/:id/scores", async (request) =>
-      query.find(request.params.kind, request.params.id),
+      queries.scores.find(request.params.kind, request.params.id),
+    );
+    app.get<{ Params: Pick<AreaParams, "kind">; Querystring: AreaListQuerystring }>("/areas/:kind", async (request) =>
+      queries.list.list({ kind: request.params.kind, within: request.query.within, limit: request.query.limit }),
     );
   };
 }
@@ -24,7 +40,8 @@ export function buildAreaScoresRoutes(context: RouteContext): FastifyPluginAsync
   return async (app) => {
     const settings = AreaScoresSettings.fromEnv(context.env);
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
-    const query = new AreaScoresQuery(new DynamoScoreRepository(client, settings.scoresTable));
-    await app.register(areaScoresRoutes(query));
+    const scores = new AreaScoresQuery(new DynamoScoreRepository(client, settings.scoresTable));
+    const list = new AreaListQuery(new DynamoScoreLister(client, settings.scoresTable));
+    await app.register(areaScoresRoutes({ scores, list }));
   };
 }

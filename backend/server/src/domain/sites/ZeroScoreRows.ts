@@ -29,6 +29,12 @@ export class ZeroScoreRows {
     });
   }
 
+  // The scores rows' within ids: the site's district and, when it has one, its local body.
+  within(): string[] {
+    const { district, local_body } = this.#feature.properties.location;
+    return local_body === null ? [district.id] : [district.id, local_body.id];
+  }
+
   #row(area: WardScores["area"], computedAt: string): WardScores {
     const withheld = { value: null, reason: "too_few_reports" } as const;
     const { pilot, first_reported_at } = this.#feature.properties;

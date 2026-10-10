@@ -158,12 +158,12 @@ describe("DynamoAreaScoreSeeder", () => {
     const row = fixture<WardScores>("ward_scores.jpr-1.json");
     const client = new ScriptedClient([conditionFailed, throttled]);
     const seeder = new DynamoAreaScoreSeeder(dynamo(client), "junksnap-dev-scores", calls);
-    await seeder.seedIfMissing(row);
+    await seeder.seedIfMissing(row, ["rajasthan-jaipur", "jaipur-mc"]);
     expect(client.sent[0]?.input).toMatchObject({
       ConditionExpression: "attribute_not_exists(area_kind)",
-      Item: { area_kind: "assembly", area_id: "s20-ac-54", counts: row.counts },
+      Item: { area_kind: "assembly", area_id: "s20-ac-54", within: ["rajasthan-jaipur", "jaipur-mc"], counts: row.counts },
     });
-    await expect(seeder.seedIfMissing(row)).rejects.toThrow(ExternalServiceError);
+    await expect(seeder.seedIfMissing(row, [])).rejects.toThrow(ExternalServiceError);
   });
 });
 

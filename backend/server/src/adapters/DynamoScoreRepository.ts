@@ -1,13 +1,12 @@
 import { GetCommand, PutCommand, type DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { validateWardScores, type WardScores } from "../contracts/index.gen.js";
+import type { WardScores } from "../contracts/index.gen.js";
 import type { ComputedAreaScores } from "../domain/AreaInsights.js";
 import type { AreaKey } from "../domain/AreaKey.js";
-import { ExternalServiceError, InternalDataError } from "../domain/errors.js";
+import { ExternalServiceError } from "../domain/errors.js";
 import type { ScoreRepository } from "../ports/ScoreRepository.js";
+import { ScoreItem } from "./ScoreItem.js";
 
-const TABLE_KEYS = new Set(["area_kind", "area_id"]);
-
-// One item per area: the ward_scores body plus the area_kind and area_id keys; every row passes the contract both ways.
+// One item per area: the ward_scores body plus the area_kind and area_id keys and the `within` ids.
 export class DynamoScoreRepository implements ScoreRepository {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -17,20 +16,15 @@ export class DynamoScoreRepository implements ScoreRepository {
     this.#table = table;
   }
 
-  async save(row: ComputedAreaScores): Promise<void> {
-    const scores = DynamoScoreRepository.#checked(row);
-    const item = { area_kind: scores.area.kind, area_id: scores.area.id, ...scores };
+  async save(row: ComputedAreaScores, within: readonly string[]): Promise<void> {
+    const item = ScoreItem.of(row, within).item();
     await this.#send(() => this.#client.send(new PutCommand({ TableName: this.#table, Item: item })));
   }
 
   async find(area: AreaKey): Promise<WardScores | null> {
     const key = { area_kind: area.kind, area_id: area.id };
     const output = await this.#send(() => this.#client.send(new GetCommand({ TableName: this.#table, Key: key })));
-    if (output.Item === undefined) {
-      return null;
-    }
-    const body = Object.fromEntries(Object.entries(output.Item).filter(([field]) => !TABLE_KEYS.has(field)));
-    return DynamoScoreRepository.#checked(body);
+    return output.Item === undefined ? null : ScoreItem.read(output.Item).body();
   }
 
   async #send<T>(call: () => Promise<T>): Promise<T> {
@@ -38,14 +32,6 @@ export class DynamoScoreRepository implements ScoreRepository {
       return await call();
     } catch (error) {
       throw new ExternalServiceError("DynamoDB call on the scores table failed", { cause: error });
-    }
-  }
-
-  static #checked(row: object): WardScores {
-    try {
-      return validateWardScores(row);
-    } catch (error) {
-      throw new InternalDataError("scores row breaks the ward_scores contract", { cause: error });
     }
   }
 }

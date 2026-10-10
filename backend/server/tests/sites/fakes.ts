@@ -174,11 +174,13 @@ export class FakeReportStatus implements ReportStatusWriter {
 
 export class FakeScoreSeeder implements AreaScoreSeeder {
   readonly rows = new Map<string, WardScores>();
+  readonly within = new Map<string, readonly string[]>();
 
-  async seedIfMissing(row: WardScores): Promise<void> {
+  async seedIfMissing(row: WardScores, within: readonly string[]): Promise<void> {
     const key = `${row.area.kind}/${row.area.id}`;
     if (!this.rows.has(key)) {
       this.rows.set(key, row);
+      this.within.set(key, within);
     }
   }
 }

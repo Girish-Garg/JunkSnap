@@ -36,6 +36,11 @@ export class AreaSites {
     return [...new Set(ids)].sort();
   }
 
+  // Rejected sites still place the area, so every site counts here.
+  within(): string[] {
+    return [...new Set(this.#all.flatMap((site) => site.within()))].sort();
+  }
+
   isPilot(): boolean {
     return this.#all.some((site) => site.isPilot());
   }

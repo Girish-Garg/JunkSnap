@@ -56,6 +56,12 @@ export class AreaSite {
     return this.#props.localBodyId;
   }
 
+  // The district and local body that hold the site, for the city list's within filter.
+  within(): string[] {
+    const districts = this.#props.areas.filter((area) => area.kind === "district").map((area) => area.id);
+    return this.#props.localBodyId === null ? districts : [...districts, this.#props.localBodyId];
+  }
+
   withReportTimes(reportTimes: readonly number[]): AreaSite {
     return new AreaSite({ ...this.#props, reportTimes });
   }

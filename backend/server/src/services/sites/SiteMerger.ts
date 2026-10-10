@@ -91,8 +91,9 @@ export class SiteMerger {
   // Seeds before creating, so a retry that finds the site already merged needs no seeding.
   async #found(report: MergeableReport): Promise<Merged> {
     const site = Site.found(report);
-    const rows = new ZeroScoreRows(site.toFeature()).rows(this.#deps.clock.now().toISOString());
-    await Promise.all(rows.map((row) => this.#deps.scores.seedIfMissing(row)));
+    const zero = new ZeroScoreRows(site.toFeature());
+    const within = zero.within();
+    await Promise.all(zero.rows(this.#deps.clock.now().toISOString()).map((row) => this.#deps.scores.seedIfMissing(row, within)));
     if (await this.#deps.sites.create(site)) {
       return { site, outcome: "founded" };
     }
