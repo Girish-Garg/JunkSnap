@@ -16,7 +16,7 @@ from training.utils import s3_key
 LOG = logging.getLogger(__name__)
 TEACHER_FILE = "teacher_boxes.jsonl"
 
-# Thresholds picked by eye on 24 train photos; boxes are spot-checked, not hand-drawn.
+# Thresholds picked by eye on a few train photos; boxes are spot-checked, not hand-drawn.
 PROMPTS = (
     TeacherPrompt(
         "waste_pile",
