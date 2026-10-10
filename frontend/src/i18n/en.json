@@ -461,6 +461,7 @@
     "thanks": "Thanks. Votes now: {{yes}} yes, {{no}} no.",
     "errors": {
       "own_site": "You reported this site, so your vote is not counted here.",
+      "site_rejected": "This site was hidden after a neighbour check, so it takes no more votes.",
       "too_far": "Votes count only within 1 km of the site. Go closer and try again.",
       "location": "Your location is needed to vote. Allow location in the browser settings.",
       "rate_limited": "Too many tries. Wait a little and try again.",

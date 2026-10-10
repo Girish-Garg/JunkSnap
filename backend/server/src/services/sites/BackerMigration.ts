@@ -15,11 +15,13 @@ export interface BackerMigrationDeps {
 
 export interface MigrationSummary {
   readonly sites: number;
+  readonly migrated: number;
+  readonly skipped: number;
   readonly verified: number;
   readonly rejected: number;
 }
 
-// One-off move to decision 20261010-1530: recounts every site's backers from its stored photos and votes.
+// One-off move to decision 20261010-1530: recounts the backers of rows written before it.
 export class BackerMigration {
   readonly #deps: BackerMigrationDeps;
 
@@ -27,27 +29,39 @@ export class BackerMigration {
     this.#deps = deps;
   }
 
-  // Safe to run twice: the same photos and votes give the same answer.
+  // Safe to rerun: a site that already has backers is never touched, so no rerun can demote or un-reject it.
   async run(): Promise<MigrationSummary> {
     const migrated: Site[] = [];
+    let sites = 0;
     for (const siteId of await this.#deps.sites.allIds()) {
-      migrated.push(await this.migrate(siteId));
+      sites += 1;
+      const site = await this.migrate(siteId);
+      if (site !== null) {
+        migrated.push(site);
+      }
     }
     const count = (verification: string) => migrated.filter((site) => site.verification === verification).length;
-    return { sites: migrated.length, verified: count("verified"), rejected: count("rejected") };
+    const summary = { sites, migrated: migrated.length, skipped: sites - migrated.length };
+    return { ...summary, verified: count("verified"), rejected: count("rejected") };
   }
 
-  async migrate(siteId: string): Promise<Site> {
+  // Null when the site already counts its backers.
+  async migrate(siteId: string): Promise<Site | null> {
     const site = await this.#deps.retry.run(async () => {
       const stored = await this.#deps.sites.get(siteId);
       if (stored === null) {
         throw new SiteNotFoundError(`site ${siteId} vanished during the migration`);
       }
+      if (!stored.needsBackerCount) {
+        return null;
+      }
       stored.rebuild(VoteTally.of(await this.#deps.votes.forSite(siteId)));
       await this.#deps.sites.save(stored);
       return stored;
     });
-    await this.#deps.reports.followSite(site.reportIds, site.verification);
+    if (site !== null) {
+      await this.#deps.reports.followSite(site.reportIds, site.verification);
+    }
     return site;
   }
 }

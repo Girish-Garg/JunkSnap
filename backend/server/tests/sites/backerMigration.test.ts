@@ -6,6 +6,7 @@ import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { SiteItemMapper } from "../../src/adapters/sites/SiteItemMapper.js";
 import { SiteItemParser } from "../../src/adapters/SiteItemParser.js";
 import { Site } from "../../src/domain/sites/Site.js";
+import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { BackerMigration } from "../../src/services/sites/BackerMigration.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { report, siteFixture } from "./builders.js";
@@ -20,7 +21,8 @@ function oldVerifiedSite(id: string, photos: number): Site {
   const { feature, internals } = site.snapshot();
   const reports = internals.reports.map((merged) => ({ ...merged, verified: true }));
   const properties = { ...feature.properties, verification: "verified" as const, verified_count: photos };
-  return Site.restore({ feature: { ...feature, properties }, internals: { ...internals, reports } });
+  // A row from before the backers count: the mapper marks it needsBackerCount.
+  return Site.restore({ feature: { ...feature, properties }, internals: { ...internals, reports, needsBackerCount: true } });
 }
 
 function voteOn(votes: FakeVoteRepository, siteId: string) {
@@ -40,7 +42,7 @@ describe("BackerMigration", () => {
     }
     await voteOn(votes, "site_site_b_0")(9, "site_b-user-1");
     const migration = new BackerMigration({ sites, votes, reports, retry: new ConflictRetry() });
-    expect(await migration.run()).toEqual({ sites: 2, verified: 0, rejected: 0 });
+    expect(await migration.run()).toEqual({ sites: 2, migrated: 2, skipped: 0, verified: 0, rejected: 0 });
     expect(sites.feature("site_site_a_0").properties).toMatchObject({
       verification: "unverified",
       verified_count: 0,
@@ -50,17 +52,28 @@ describe("BackerMigration", () => {
     expect(reports.statuses.get("rpt_site_a_0")).toBe("unverified");
   });
 
-  it("verifies a site that already has ten backers, and is safe to run twice", async () => {
+  it("verifies a site that already has ten backers, and a rerun after a vote flip leaves it verified", async () => {
     const sites = new FakeSiteRepository();
     const votes = new FakeVoteRepository();
     sites.put(oldVerifiedSite("site_c", 3));
+    sites.put(Site.found(report({ id: "new_1", lat: 26.4 })));
     for (let n = 0; n < 7; n += 1) {
       await voteOn(votes, "site_site_c_0")(n, null);
     }
     const migration = new BackerMigration({ sites, votes, reports: new FakeReportStatus(), retry: new ConflictRetry() });
-    await migration.run();
-    expect(await migration.run()).toEqual({ sites: 1, verified: 1, rejected: 0 });
-    expect(sites.feature("site_site_c_0").properties).toMatchObject({ verification: "verified", verified_count: 3 });
+    expect(await migration.run()).toEqual({ sites: 2, migrated: 1, skipped: 1, verified: 1, rejected: 0 });
+    await votes.put({ siteId: "site_site_c_0", deviceToken: "site_site_c_0-voter-0", userId: null, choice: "reject", votedAt: NOW });
+    const live = await sites.get("site_site_c_0");
+    live?.recordVotes(VoteTally.of(await votes.forSite("site_site_c_0")));
+    if (live) {
+      await sites.save(live);
+    }
+    expect(await migration.run()).toEqual({ sites: 2, migrated: 0, skipped: 2, verified: 0, rejected: 0 });
+    expect(sites.feature("site_site_c_0").properties).toMatchObject({
+      verification: "verified",
+      verified_count: 3,
+      backers: { count: 10, photo_people: 3, vote_people: 6 },
+    });
   });
 });
 
@@ -72,7 +85,10 @@ describe("older site items", () => {
 
   it("read community_check as unverified with the photo people as provisional backers", () => {
     expect(_gone).toBeDefined();
-    const site = new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toSite(legacy);
+    const mapper = new SiteItemMapper(new NgeohashCells(), new RecordingLogger());
+    const site = mapper.toSite(legacy);
+    expect(site.needsBackerCount).toBe(true);
+    expect(mapper.toSite(mapper.toItem(site)).needsBackerCount).toBe(false);
     expect(site.toFeature().properties).toMatchObject({
       verification: "unverified",
       backers: { count: 1, needed: 10, photo_people: 1, vote_people: 0 },

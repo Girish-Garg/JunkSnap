@@ -16,7 +16,6 @@ import { SystemClock } from "../../adapters/sites/SystemClock.js";
 import { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../domain/sites/PublicMedia.js";
 import type { Logger } from "../../ports/Logger.js";
-import { BackerMigration } from "../../services/sites/BackerMigration.js";
 import { CleanupIntake } from "../../services/sites/CleanupIntake.js";
 import { CleanupService } from "../../services/sites/CleanupService.js";
 import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
@@ -61,11 +60,6 @@ export class SiteServiceFactory {
   // The worker reads site positions and kinds for cleanup moderation and recording.
   repository(): DynamoSiteRepository {
     return this.#sites();
-  }
-
-  backerMigration(): BackerMigration {
-    const votes = new DynamoVoteRepository(this.#clients.dynamo, this.#settings.tables.votes, this.#calls);
-    return new BackerMigration({ sites: this.#sites(), votes, reports: this.#reports(), retry: this.#retry });
   }
 
   finder(): SiteFinder {

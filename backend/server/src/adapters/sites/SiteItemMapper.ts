@@ -29,6 +29,7 @@ const StoredExtras = z.object({
   reporter_ids: z.array(z.string()).optional(),
   yes_voters: z.array(z.string()).default([]),
   no_voters: z.array(z.string()).default([]),
+  verified_backers: z.int().min(0).nullable().default(null),
   me_too_count: z.int().min(0).default(0),
   embedding_key: z.string().nullable().default(null),
   pending_cleanup_id: z.string().nullable().default(null),
@@ -63,6 +64,7 @@ export class SiteItemMapper {
       reporter_ids: internals.reporterIds,
       yes_voters: internals.yesVoters,
       no_voters: internals.noVoters,
+      verified_backers: internals.verifiedBackers,
       me_too_count: internals.meTooCount,
       embedding_key: internals.embeddingKey,
       pending_cleanup_id: internals.pendingCleanupId,
@@ -72,6 +74,7 @@ export class SiteItemMapper {
 
   toSite(stored: SiteItem): Site {
     const item = new LegacySiteFields().upgrade(stored);
+    const needsBackerCount = !("backers" in stored);
     const parsed = StoredExtras.safeParse(item);
     if (!parsed.success) {
       throw new InternalDataError(`site item ${String(item.site_id)} is malformed: ${z.prettifyError(parsed.error)}`);
@@ -79,7 +82,7 @@ export class SiteItemMapper {
     const properties = Object.fromEntries(PROPERTY_KEYS.filter((key) => key in item).map((key) => [key, item[key]]));
     const geometry = { type: "Point", coordinates: [parsed.data.lon, parsed.data.lat] };
     const feature = SiteItemMapper.#checked({ type: "Feature", geometry, properties });
-    return Site.restore({ feature, internals: SiteItemMapper.#internals(parsed.data) });
+    return Site.restore({ feature, internals: { ...SiteItemMapper.#internals(parsed.data), needsBackerCount } });
   }
 
   // For lists: one bad item is logged and left out instead of failing the whole answer.
@@ -95,7 +98,7 @@ export class SiteItemMapper {
     }
   }
 
-  static #internals(extras: Extras): SiteInternals {
+  static #internals(extras: Extras): Omit<SiteInternals, "needsBackerCount"> {
     return {
       reports: SiteItemMapper.#reports(extras),
       reporterDevices: extras.reporter_devices,
@@ -104,6 +107,7 @@ export class SiteItemMapper {
       reporterIds: extras.reporter_ids ?? extras.reporter_devices,
       yesVoters: extras.yes_voters,
       noVoters: extras.no_voters,
+      verifiedBackers: extras.verified_backers,
       meTooCount: extras.me_too_count,
       embeddingKey: extras.embedding_key,
       pendingCleanupId: extras.pending_cleanup_id,

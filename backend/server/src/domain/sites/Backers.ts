@@ -22,8 +22,15 @@ export class Backers {
     return new Set([...this.#photo, ...this.#yes]).size;
   }
 
-  view(): BackersView {
-    return { count: this.count, needed: BACKERS_NEEDED, photo_people: this.#photo.size, vote_people: this.#yes.size };
+  // A verified site never shows fewer backers than it had when it became verified.
+  view(frozen: number | null): BackersView {
+    const count = Math.max(this.count, frozen ?? 0);
+    return { count, needed: BACKERS_NEEDED, photo_people: this.#photo.size, vote_people: this.#yes.size };
+  }
+
+  // The count to keep once verified: the earlier frozen value, else today's (at least the 10 needed).
+  frozenAt(previous: number | null): number {
+    return previous ?? Math.max(this.count, BACKERS_NEEDED);
   }
 
   // Null while neither threshold is met: 10 backers verify, no voters 3 or more ahead reject.

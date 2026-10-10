@@ -51,6 +51,8 @@ export class SiteTemplate {
       reporterIds: [],
       yesVoters: [],
       noVoters: [],
+      needsBackerCount: false,
+      verifiedBackers: null,
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,

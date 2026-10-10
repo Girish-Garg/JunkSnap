@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
 import { Site } from "../../src/domain/sites/Site.js";
-import { OwnSiteError, SiteNotFoundError, TooFarError } from "../../src/domain/sites/SiteErrors.js";
+import { OwnSiteError, SiteNotFoundError, SiteRejectedError, TooFarError } from "../../src/domain/sites/SiteErrors.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { VoteService, type Ballot } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report, userOf } from "./builders.js";
@@ -78,6 +78,14 @@ describe("VoteService", () => {
     expect((await castMany(service, 1, 3, "reject"))?.verification).toBe("unverified");
     expect((await castMany(service, 4, 1, "reject"))?.verification).toBe("rejected");
     expect(reports.statuses.get("rpt_jdh_1")).toBe("rejected");
+  });
+
+  it("refuses votes on a rejected site with 409 site_rejected", async () => {
+    const { service, votes } = setup();
+    await castMany(service, 1, 4, "reject");
+    await expect(castMany(service, 5, 1)).rejects.toThrow(SiteRejectedError);
+    expect(await votes.forSite("site_jdh_1")).toHaveLength(4);
+    expect(new SiteRejectedError("x")).toMatchObject({ status: 409, code: "site_rejected" });
   });
 
   it("counts only a device's latest vote", async () => {

@@ -7,6 +7,7 @@ import {
   CleanupPendingError,
   InvalidTransitionError,
   OwnSiteError,
+  SiteRejectedError,
   TooFarError,
 } from "./SiteErrors.js";
 import type { SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, Voter, VoteResult } from "./SiteTypes.js";
@@ -66,6 +67,10 @@ export class Site {
     return this.#internals.embeddingKey;
   }
 
+  get needsBackerCount(): boolean {
+    return this.#internals.needsBackerCount;
+  }
+
   get version(): number {
     return this.#internals.version;
   }
@@ -102,8 +107,11 @@ export class Site {
     this.#recount();
   }
 
-  // own_site (same user or same device) is checked before distance (contracts/README.md).
+  // A rejected site takes no votes; own_site (same user or device) is checked before distance.
   admitVoter(voter: Voter, from: GeoPoint): void {
+    if (!this.isListed()) {
+      throw new SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
+    }
     if (this.#reportedBy(voter)) {
       throw new OwnSiteError("You reported this site, so a neighbour has to check it");
     }
@@ -123,7 +131,7 @@ export class Site {
   // Migration to decision 20261010-1530: recounts from the stored photos and votes, forgetting the old verdict.
   rebuild(tally: VoteTally): void {
     const reports = this.#internals.reports.map((report) => ({ ...report, verified: false }));
-    this.#internals = { ...this.#internals, reports };
+    this.#internals = { ...this.#internals, reports, needsBackerCount: false, verifiedBackers: null };
     this.#props = { ...this.#props, verification: "unverified", verified_count: 0 };
     this.#refreshInsights();
     this.recordVotes(tally);
@@ -210,11 +218,14 @@ export class Site {
 
   // Backers are the photo people plus the yes voters; settling happens only while unverified.
   #settle(): void {
-    const { reporterIds, yesVoters, noVoters } = this.#internals;
+    const { reporterIds, yesVoters, noVoters, verifiedBackers } = this.#internals;
     const backers = new Backers(reporterIds, yesVoters, noVoters);
     const outcome = this.#props.verification === "unverified" ? backers.outcome() : null;
-    this.#props = { ...this.#props, backers: backers.view(), verification: outcome ?? this.#props.verification };
-    if (this.#props.verification === "verified") {
+    const verification = outcome ?? this.#props.verification;
+    const frozen = verification === "verified" ? backers.frozenAt(verifiedBackers) : null;
+    this.#internals = { ...this.#internals, verifiedBackers: frozen };
+    this.#props = { ...this.#props, backers: backers.view(frozen), verification };
+    if (verification === "verified") {
       this.#confirmPendingReports();
     }
   }

@@ -41,7 +41,7 @@ describe("VoteTally", () => {
 describe("Backers", () => {
   it("counts a person with a photo and a yes vote once", () => {
     const backers = new Backers(["p1", "p2"], ["p2", "v1"], []);
-    expect(backers.view()).toEqual({ count: 3, needed: 10, photo_people: 2, vote_people: 2 });
+    expect(backers.view(null)).toEqual({ count: 3, needed: 10, photo_people: 2, vote_people: 2 });
   });
 
   it("verifies at exactly 10 backers", () => {
@@ -101,6 +101,18 @@ describe("Site backers", () => {
     expect(site.verification).toBe("rejected");
     site.recordVotes(VoteTally.of([...no(4), ...yes(12)]));
     expect(site.verification).toBe("rejected");
+  });
+
+  it("keeps the backers count it had at verification when a yes later turns into a no", () => {
+    const site = Site.found(report());
+    const ballots = yes(9);
+    site.recordVotes(VoteTally.of(ballots));
+    expect(site.toFeature().properties.backers).toMatchObject({ count: 10, vote_people: 9 });
+    const later = "2026-10-10T07:00:00Z";
+    const flipped = ballots.map((ballot, n) => (n === 0 ? { ...ballot, choice: "reject" as const, votedAt: later } : ballot));
+    site.recordVotes(VoteTally.of(flipped));
+    expect(site.toFeature().properties).toMatchObject({ verification: "verified", backers: { count: 10, vote_people: 8 } });
+    expect(site.snapshot().internals.verifiedBackers).toBe(10);
   });
 
   it("stays verified whatever later votes say", () => {
