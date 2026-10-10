@@ -6,8 +6,10 @@ import type { CapturedPhoto } from '../hooks/usePhotoCapture';
 import { usePhotoPreview } from '../hooks/usePhotoPreview';
 import { useReportChoice } from '../hooks/useReportChoice';
 import type { SnapFlow } from '../hooks/useSnapFlow';
+import { useTargetPlacement } from '../hooks/useTargetPlacement';
 import { ContextPicker } from './ContextPicker';
 import { GpsPanel } from './GpsPanel';
+import { PlaceStep } from './PlaceStep';
 import { SendActions } from './SendActions';
 import { TypePicker } from './TypePicker';
 
@@ -20,12 +22,16 @@ interface ReviewStageProps {
 export function ReviewStage({ photo, flow }: ReviewStageProps) {
   const { t } = useTranslation();
   const report = useReportChoice(flow.presetType, photo.gps);
+  const place = useTargetPlacement(photo.gps);
   const preview = usePhotoPreview(photo.bytes);
   const [sending, setSending] = useState(false);
+  // A no-bin report says "no dustbin near where I stand", so it never takes a long-range target.
+  const longRange = report.type !== 'no_bin';
+  const target = longRange ? place.target : null;
   const send = () => {
     if (!report.choice) return;
     setSending(true);
-    void flow.send(photo, report.choice).finally(() => setSending(false));
+    void flow.send(photo, target ? { ...report.choice, target } : report.choice).finally(() => setSending(false));
   };
   const note = t('snap.noteHint', { left: report.noteLeft });
   const notice = report.gpsTooVague ? t('nobin.photoTooVague', { metres: Math.round(photo.gps.accuracy_m) }) : null;
@@ -37,6 +43,7 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
       </div>
       <TypePicker value={report.type} onChange={report.chooseType} />
       <ContextPicker options={report.contexts} value={report.context} onChange={report.setContext} />
+      {longRange && <PlaceStep place={place} />}
       <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={note} />
       <SendActions canSend={report.choice !== null && !sending} saveFailed={flow.saveFailed} notice={notice} onSend={send} onRetake={flow.retake} />
     </div>

@@ -28,6 +28,8 @@ export interface MergeableReport {
   readonly reportType: ReportType;
   readonly context: ReportContext;
   readonly point: GeoPoint;
+  // Marked from a distance (decision 20261011-0400): merges only on a matching photo, never on distance alone.
+  readonly longRange: boolean;
   readonly deviceToken: string;
   readonly userId: string | null;
   readonly reportedAt: string;

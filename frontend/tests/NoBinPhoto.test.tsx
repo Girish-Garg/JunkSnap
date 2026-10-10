@@ -39,7 +39,10 @@ describe('No bin with a photo', () => {
     await user.click(screen.getByRole('radio', { name: 'No bin nearby' }));
     await user.click(screen.getByRole('button', { name: 'Send report' }));
     await screen.findByText('Verified');
-    expect(api.bodies('submit')[0]).toMatchObject({ report_type: 'no_bin', context: 'no_bin' });
+    const upload = api.bodies('submit')[0];
+    expect(upload).toMatchObject({ report_type: 'no_bin', context: 'no_bin' });
+    // A no-bin report is about where the reporter stands: never a long-range target.
+    expect(upload).not.toHaveProperty('target');
   });
 });
 

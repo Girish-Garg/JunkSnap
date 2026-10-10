@@ -184,7 +184,10 @@
     "closed": {
       "title": "No longer on the map",
       "removed": "Its reporter withdrew the report, so this site left the map. It takes no more votes, photos or letters.",
+      "expired": "This site expired and left the map. If the waste is still there, report it again with a new photo.",
       "rejected": "Neighbours said this is not a waste site, so it was hidden from the map. It takes no more votes or letters.",
+      "rejectedNoBin": "Neighbours said there is a bin within 1 km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",
+      "cleaned": "It was cleared, so it left the map. If the waste is back, report it with a new photo.",
       "cleanedByVotes": "Neighbours said it's cleared now, so it left the map. If the waste is back, report it with a new photo.",
       "cleanedByPhoto": "A cleanup photo showed it cleared, so it left the map. If the waste is back, report it with a new photo.",
       "binNow": "A bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
@@ -263,6 +266,25 @@
       "video": "Video",
       "nobin": "No bin here"
     }
+  },
+  "longRange": {
+    "label": "How far away is it?",
+    "here": "Right here",
+    "far": "Farther away",
+    "hint": "Seen it across a plot, a drain or a road? Choose Farther away and mark it on the map.",
+    "atYou": "Drag the pin, or tap the map, where the waste is.",
+    "distance": "Waste is about {{metres}} m from you",
+    "capped": "The pin stops at {{metres}} m. Mark only waste you can see clearly. On a rooftop or upper floor, tick the box below to reach {{high}} m.",
+    "cappedHigh": "The pin stops at {{metres}} m. Mark only waste you can see clearly.",
+    "high": "I'm up high (rooftop or upper floor): reach up to {{metres}} m",
+    "heading": "The dashed line shows the way your phone is facing.",
+    "mapLabel": "Map: drag the pin or tap where the waste is",
+    "noMap": "The map can't open on this phone, so the report uses where you stand.",
+    "you": "You are here",
+    "pin": "The waste",
+    "twoFingers": "Use two fingers to move the map",
+    "ctrlScroll": "Use Ctrl + scroll to zoom the map",
+    "cmdScroll": "Use ⌘ + scroll to zoom the map"
   },
   "account": {
     "title": "Account",

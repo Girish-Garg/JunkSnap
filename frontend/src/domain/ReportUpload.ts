@@ -2,9 +2,12 @@
 import type { ReportType } from './ReportType';
 import type { SiteContext } from './Site';
 
-export interface GpsFix {
+export interface LatLon {
   readonly lat: number;
   readonly lon: number;
+}
+
+export interface GpsFix extends LatLon {
   /** Reported accuracy radius in metres. */
   readonly accuracy_m: number;
 }
@@ -15,6 +18,8 @@ export interface ReportDraft {
   readonly context: SiteContext;
   readonly sha256: string;
   readonly gps: GpsFix;
+  /** Long-range marking: where the waste is when it was seen from a distance; absent means "right here". */
+  readonly target?: LatLon;
   readonly captured_at: string;
   readonly note?: string;
 }

@@ -29,6 +29,8 @@ export interface ReportRecord extends ReportUpload {
   readonly auto_claim?: AutoClaimKind;
   // Scan frames only: t_ms of the first frame of the frame's spot (ScanSpots).
   readonly scan_spot?: number;
+  // Metres from gps to target, only on a long-range report (decision 20261011-0400-hem-long-range-target).
+  readonly target_distance_m?: number;
   // Optimistic lock: every save writes version + 1 only if the stored version is still the one read.
   readonly version?: number;
 }

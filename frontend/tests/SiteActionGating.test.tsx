@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import type { ServiceContainer } from '../src/app/ServiceContainer';
+import type { SiteStatus } from '../src/domain/Site';
 import { SitePanel } from '../src/features/site/components/SitePanel';
+import { SitePresenter } from '../src/features/site/SitePresenter';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
 import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
-import { testSite } from './siteBuilder';
+import { testSite, type SitePatch } from './siteBuilder';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
@@ -48,6 +50,24 @@ describe('a site off the map shows its status and why, and no votes or actions',
     zone.unmount();
     await renderApp(<SitePanel site={testSite({ verification: 'rejected', backers: { count: 1, needed: 10, photo_people: 1, vote_people: 0 } })} userLocation={null} />);
     expect(screen.getByText(/Neighbours said this is not a waste site/)).toBeInTheDocument();
+    expectNoActions();
+  });
+});
+
+describe('closed reasons for older rows, no-bin zones and the coming expired status', () => {
+  it('says only "cleared" without cleaned_by, gives a rejected no-bin zone its own words, and explains expired', async () => {
+    const reasonFor = (patch: SitePatch) => new SitePresenter(testSite(patch).properties).closedReason();
+    expect(reasonFor({ status: 'cleaned', cleaned_by: null })).toBe('cleaned');
+    expect(reasonFor({ status: 'cleaned' })).toBe('cleaned');
+    expect(reasonFor({ status: 'cleaned', cleaned_by: 'after_photo' })).toBe('cleanedByPhoto');
+    expect(reasonFor({ verification: 'rejected', report_type: 'no_bin', context: 'no_bin' })).toBe('rejectedNoBin');
+    expect(reasonFor({ status: 'expired' as SiteStatus })).toBe('expired');
+    const { unmount } = await renderApp(<SitePanel site={testSite({ status: 'cleaned', cleaned_by: null })} userLocation={null} />);
+    expect(screen.getByText(/^It was cleared, so it left the map\./)).toBeInTheDocument();
+    expect(screen.queryByText(/A cleanup photo showed it/)).not.toBeInTheDocument();
+    unmount();
+    await renderApp(<SitePanel site={testSite({ status: 'expired' as SiteStatus })} userLocation={null} />, { language: 'hi' });
+    expect(screen.getByText(/यह स्थल समय-सीमा पूरी होने पर नक्शे से हट गया।/)).toBeInTheDocument();
     expectNoActions();
   });
 });
