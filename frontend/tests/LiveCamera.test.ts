@@ -7,7 +7,7 @@ import { FakePage, FakeScreen, ManualTimer, fakeStream, settle } from './cameraF
 type Opening = MediaStream | CaptureError;
 
 // Each getUserMedia call takes the next entry; the last one repeats.
-function rig(openings: (call: number) => Opening, withFrames = true) {
+function rig(openings: (call: number) => Opening, withFrames = true, recording = { on: false, lost: 0 }) {
   const timer = new ManualTimer();
   const page = new FakePage();
   const screen = new FakeScreen();
@@ -22,9 +22,16 @@ function rig(openings: (call: number) => Opening, withFrames = true) {
     return next;
   };
   const frames = withFrames ? FrameCounter.for(screen) : null;
-  const view = { screen, frames, onState: (state: CameraState) => states.push(state), onEvent: (event: CameraEvent) => events.push(event) };
+  const view = {
+    screen,
+    frames,
+    onState: (state: CameraState) => states.push(state),
+    onEvent: (event: CameraEvent) => events.push(event),
+    holding: () => recording.on,
+    onLost: () => (recording.lost += 1),
+  };
   const camera = new LiveCamera({ open, page, timer, now: () => timer.now }, view);
-  return { camera, timer, page, screen, states, events, streams, calls: () => calls };
+  return { camera, timer, page, screen, states, events, streams, recording, calls: () => calls };
 }
 
 const fresh = () => fakeStream();
@@ -144,15 +151,61 @@ it('LiveCamera: stops tracks, timers and listeners on unmount, and closes a stre
   expect(test.states).toEqual([]);
 });
 
-it('LiveCamera: without frame reports, restarts only for an ended track', async () => {
+const trackOf = (stream: MediaStream | undefined) => (stream as ReturnType<typeof fakeStream>).track;
+
+it('LiveCamera: without frame reports, an unmuted track counts as working and an ended one restarts', async () => {
   const test = rig(fresh, false);
   test.camera.start();
   await settle();
   test.timer.advance(60_000);
   expect(test.calls()).toBe(1);
-  (test.streams[0] as ReturnType<typeof fakeStream>).track.end();
+  trackOf(test.streams[0]).end();
   test.timer.advance(500);
   expect(test.events).toEqual(['ended']);
+});
+
+it('LiveCamera: without frame reports, a track muted for 2 s on a visible page is a stall', async () => {
+  const test = rig(fresh, false);
+  test.camera.start();
+  await settle();
+  trackOf(test.streams[0]).muted = true;
+  test.page.set(false);
+  test.timer.advance(10_000);
+  expect(test.calls()).toBe(1);
+  test.page.set(true);
+  test.timer.advance(1_500);
+  expect(test.calls()).toBe(1);
+  test.timer.advance(1_000);
+  await settle();
+  expect(test.events).toEqual(['stalled']);
+  expect(test.calls()).toBe(2);
+  expect(test.states.at(-1)).toBe('live');
+});
+
+it('LiveCamera: a freeze during a recording ends the recording once, then reopens after it', async () => {
+  const test = rig(fresh, true, { on: true, lost: 0 });
+  test.camera.start();
+  await settle();
+  test.timer.advance(10_000);
+  expect(test.recording.lost).toBe(1);
+  expect(test.calls()).toBe(1);
+  expect(trackOf(test.streams[0]).stopped).toBe(false);
+  expect(test.events).toEqual(['recording_cut']);
+  test.recording.on = false;
+  test.timer.advance(500);
+  await settle();
+  expect(test.events).toEqual(['recording_cut', 'stalled']);
+  expect(test.calls()).toBe(2);
+});
+
+it('LiveCamera: an ended track during a recording ends the recording too', async () => {
+  const test = rig(fresh, true, { on: true, lost: 0 });
+  test.camera.start();
+  await settle();
+  trackOf(test.streams[0]).end();
+  test.timer.advance(500);
+  expect(test.recording.lost).toBe(1);
+  expect(test.calls()).toBe(1);
 });
 
 it('FrameCounter: counts presented frames and stops asking when stopped', () => {
