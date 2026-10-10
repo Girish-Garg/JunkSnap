@@ -55,8 +55,8 @@ describe('AreaMarkerSource.merge', () => {
   const points: LabelPoints = {
     type: 'FeatureCollection',
     features: [
-      { type: 'Feature', properties: { id: 'a', name: 'A' }, geometry: { type: 'Point', coordinates: [73, 26] } },
-      { type: 'Feature', properties: { id: 'b', name: 'B' }, geometry: { type: 'Point', coordinates: [74, 27] } },
+      { type: 'Feature', properties: { id: 'a', name: 'A', kind: 'assembly' }, geometry: { type: 'Point', coordinates: [73, 26] } },
+      { type: 'Feature', properties: { id: 'b', name: 'B', kind: 'loksabha' }, geometry: { type: 'Point', coordinates: [74, 27] } },
     ],
   };
 
@@ -64,8 +64,8 @@ describe('AreaMarkerSource.merge', () => {
     const marker = { value: '44', basis: 'score', tooltip: 'A: score 44', rank: 0 } as const;
     const merged = AreaMarkerSource.merge(points, new Map([['a', marker]]));
     expect(merged.features.map((f) => f.properties)).toEqual([
-      { id: 'a', name: 'A', marker_value: '44', marker_basis: 'score', marker_tooltip: 'A: score 44', marker_rank: 0 },
-      { id: 'b', name: 'B', marker_rank: 9999 },
+      { id: 'a', name: 'A', kind: 'assembly', marker_value: '44', marker_basis: 'score', marker_tooltip: 'A: score 44', marker_rank: 0 },
+      { id: 'b', name: 'B', kind: 'loksabha', marker_rank: 9999 },
     ]);
     expect(MarkerTooltip.text(merged.features[0]?.properties ?? undefined)).toBe('A: score 44');
     expect(MarkerTooltip.text(merged.features[1]?.properties ?? undefined)).toBeNull();

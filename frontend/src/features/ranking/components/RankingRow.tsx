@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { areaPath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { BoundaryKind } from '../../../domain/AreaListing';
+import { AreaLetterButton } from '../../areas/components/AreaLetterButton';
 import type { RankingRowView } from '../RankingPresenter';
 
 interface RankingRowProps {
@@ -12,9 +14,10 @@ interface RankingRowProps {
 /** Rank, name, score with what it rests on (or why there is none), verified reports; opens the area page. */
 export function RankingRow({ kind, row }: RankingRowProps) {
   const { t } = useTranslation();
+  const { linkState } = useSheetNavigation();
   return (
     <li>
-      <Link className="ranking-row" to={areaPath(kind, row.id)}>
+      <Link className="ranking-row" to={areaPath(kind, row.id)} state={linkState}>
         <span className="ranking-row__rank" aria-label={row.rank ? t('ranking.rank', { n: row.rank }) : t('ranking.unranked')}>
           {row.rank ?? '–'}
         </span>
@@ -35,6 +38,7 @@ export function RankingRow({ kind, row }: RankingRowProps) {
           )}
         </span>
       </Link>
+      <AreaLetterButton kind={kind} areaId={row.id} short />
     </li>
   );
 }

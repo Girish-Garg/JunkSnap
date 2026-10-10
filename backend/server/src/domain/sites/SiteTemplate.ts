@@ -1,3 +1,4 @@
+import { BACKERS_NEEDED } from "./Backers.js";
 import { InsightMerge } from "./InsightMerge.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import type { SiteFeature, SiteInternals, SiteProperties } from "./SiteTypes.js";
@@ -20,10 +21,11 @@ export class SiteTemplate {
       report_type: report.reportType,
       context: report.context,
       status: "open",
-      verification: "community_check",
+      verification: "unverified",
       report_count: 0,
       verified_count: 0,
       corroborations: 0,
+      backers: { count: 0, needed: BACKERS_NEEDED, photo_people: 0, vote_people: 0 },
       votes: { confirm: 0, reject: 0 },
       photo_urls: [],
       cleanup_status: "none",
@@ -47,6 +49,10 @@ export class SiteTemplate {
       reporterDevices: [],
       reporterUsers: [],
       reporterIds: [],
+      yesVoters: [],
+      noVoters: [],
+      needsBackerCount: false,
+      verifiedBackers: null,
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,

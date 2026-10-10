@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, QueryCommand, type DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, ScanCommand, type DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import type { Site } from "../../domain/sites/Site.js";
 import { StaleSiteError } from "../../domain/sites/SiteErrors.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
@@ -49,6 +49,18 @@ export class DynamoSiteRepository implements SiteRepository {
       startKey = page.LastEvaluatedKey;
     } while (startKey !== undefined);
     return items.flatMap((item) => this.#mapper.toListedSite(item) ?? []);
+  }
+
+  async allIds(): Promise<string[]> {
+    const ids: string[] = [];
+    let startKey: Record<string, unknown> | undefined;
+    do {
+      const request = new ScanCommand({ TableName: this.#table, ProjectionExpression: "site_id", ExclusiveStartKey: startKey });
+      const page = await this.#calls.run("DynamoDB scan sites", () => this.#client.send(request));
+      ids.push(...(page.Items ?? []).map((item) => String(item.site_id)));
+      startKey = page.LastEvaluatedKey;
+    } while (startKey !== undefined);
+    return ids;
   }
 
   async create(site: Site): Promise<boolean> {

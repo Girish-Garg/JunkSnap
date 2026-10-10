@@ -24,7 +24,9 @@ from pathlib import Path
 from typing import Any
 
 from boundary_geometry import label_point, rounded_geometry, simplify, without_overlaps
+from combined_areas import combine
 from shapely.geometry import shape
+from ward_coverage import ward_coverage
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIR = ROOT / "data" / "boundaries"
@@ -36,6 +38,8 @@ TOLERANCES = (0.0005, 0.001, 0.002, 0.004, 0.008, 0.016, 0.024, 0.032)
 FINE_TOLERANCES = (0.0, 0.0001, 0.0002, 0.0005)
 DECIMALS = 4  # about 11 m
 FINE_DECIMALS = 5  # about 1 m
+# The map draws only the combined areas layer; its fine file is skipped above this size.
+AREAS_FINE_BUDGET = 1_300_000
 
 Feature = dict[str, Any]
 
@@ -234,18 +238,29 @@ def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult
     return LayerResult(spec.name, coarse, labels, fine, sources, spec.attribution)
 
 
-def ward_coverage(wards_path: Path, bodies_path: Path) -> list[dict[str, Any]]:
-    """Per local body: wards mapped (ids `<body>-w<n>`) against the body's ward count."""
-    ids = [f["properties"].get("id", "") for f in read_features([wards_path])]
-    bodies = json.loads(bodies_path.read_text(encoding="utf-8")) if bodies_path.exists() else []
-    coverage = []
-    for body in bodies:
-        mapped = sum(1 for ward_id in ids if str(ward_id).startswith(f"{body['id']}-w"))
-        if mapped:
-            town = (body.get("towns") or [body["name"]])[0]
-            wards = body.get("wards")
-            coverage.append({"body": body["id"], "town": town, "mapped": mapped, "wards": wards})
-    return coverage
+def write_areas(results: list[LayerResult], out_dir: Path) -> LayerResult | None:
+    """The one layer the map draws: assembly seats in Rajasthan, Lok Sabha seats elsewhere."""
+    by_name = {r.name: r for r in results}
+    assembly, loksabha = by_name.get("assembly"), by_name.get("loksabha")
+    if not assembly or not loksabha:
+        return None
+
+    def encoded(a: Encoded, b: Encoded) -> Encoded:
+        features = combine(a.features, b.features)
+        return Encoded(features, encode(features), max(a.tolerance, b.tolerance))
+
+    coarse = encoded(assembly.coarse, loksabha.coarse)
+    labels = encoded(assembly.labels, loksabha.labels)
+    fine: Encoded | None = encoded(assembly.fine or assembly.coarse, loksabha.coarse)
+    if fine and fine.bytes > AREAS_FINE_BUDGET:
+        fine = None
+    write(out_dir / "areas.geojson", coarse.text)
+    write(out_dir / "areas_labels.geojson", labels.text)
+    if fine:
+        write(out_dir / "areas_fine.geojson", fine.text)
+    else:
+        (out_dir / "areas_fine.geojson").unlink(missing_ok=True)
+    return LayerResult("areas", coarse, labels, fine, assembly.sources + loksabha.sources)
 
 
 def run(
@@ -259,6 +274,9 @@ def run(
     for stale in {s.name for s in specs} - {r.name for r in results}:
         for suffix in (".geojson", "_labels.geojson", "_fine.geojson"):
             (out_dir / f"{stale}{suffix}").unlink(missing_ok=True)
+    areas = write_areas(results, out_dir)
+    if areas:
+        results.append(areas)
     manifest: dict[str, Any] = {"layers": {r.name: r.manifest() for r in results}}
     if "wards" in manifest["layers"]:
         coverage = ward_coverage(out_dir / "wards.geojson", bodies_path)

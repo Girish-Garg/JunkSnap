@@ -26,6 +26,11 @@ export interface Addressees {
   readonly filingUrl: string | null;
 }
 
+export interface AreaAddressees {
+  readonly to: readonly Recipient[];
+  readonly cc: readonly CcLine[];
+}
+
 export interface Prose {
   readonly subject: string;
   readonly body: string;

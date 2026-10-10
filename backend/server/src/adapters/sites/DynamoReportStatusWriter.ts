@@ -4,7 +4,7 @@ import type { Clock } from "../../ports/sites/Clock.js";
 import type { ReportStatusWriter } from "../../ports/sites/ReportStatusWriter.js";
 import type { AwsCalls } from "./AwsCalls.js";
 
-// Report status values match site verification values one to one.
+// Report status values match site verification values one to one; community_check is the pre-1530 name of unverified.
 export class DynamoReportStatusWriter implements ReportStatusWriter {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -30,13 +30,15 @@ export class DynamoReportStatusWriter implements ReportStatusWriter {
       Key: { report_id: reportId },
       // The version bump makes the worker's optimistic lock see this write.
       UpdateExpression: "SET #status = :status, updated_at = :updated ADD #version :one",
-      ConditionExpression: "#status IN (:verified, :community_check) AND #status <> :status",
+      ConditionExpression: "#status IN (:unverified, :verified, :rejected, :community_check) AND #status <> :status",
       ExpressionAttributeNames: { "#status": "status", "#version": "version" },
       ExpressionAttributeValues: {
         ":status": status,
         ":updated": updatedAt,
         ":one": 1,
+        ":unverified": "unverified",
         ":verified": "verified",
+        ":rejected": "rejected",
         ":community_check": "community_check",
       },
     });

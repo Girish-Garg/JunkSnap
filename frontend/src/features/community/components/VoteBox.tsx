@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../ui/Button';
+import { Celebrate } from '../../../ui/Celebrate';
 import { useVote } from '../hooks/useVote';
 import '../community.css';
 
@@ -16,9 +17,7 @@ export function VoteBox({ siteId, onVoted }: VoteBoxProps) {
   const vote = useVote(siteId, onVoted);
   return (
     <section className="vote-box" aria-labelledby={TITLE_ID}>
-      <h3 id={TITLE_ID} className="vote-box__title">
-        {t('vote.title')}
-      </h3>
+      <h3 id={TITLE_ID} className="vote-box__title">{t('vote.title')}</h3>
       <p className="vote-box__text">{t('vote.text')}</p>
       <div className="vote-box__buttons">
         <Button onClick={() => vote.vote('confirm')} disabled={vote.busy}>
@@ -28,6 +27,7 @@ export function VoteBox({ siteId, onVoted }: VoteBoxProps) {
           {t('vote.no')}
         </Button>
       </div>
+      {vote.result && <Celebrate />}
       {vote.result && (
         <p className="vote-box__note" role="status">
           {t('vote.thanks', { yes: vote.result.votes.confirm, no: vote.result.votes.reject })}

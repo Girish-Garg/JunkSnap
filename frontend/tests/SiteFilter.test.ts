@@ -16,8 +16,13 @@ describe('SiteFilter', () => {
     expect(await idsOf(noDumps.toggleType('waste_dump'))).toContain('site_jdh_1');
   });
 
-  it('keeps only verified sites when asked', async () => {
-    expect(await idsOf(new SiteFilter().toggleVerifiedOnly())).not.toContain('site_jpr_1');
+  it('hides unverified or verified sites when switched off', async () => {
+    const verifiedOnly = new SiteFilter().toggleState('unverified');
+    expect(await idsOf(verifiedOnly)).not.toContain('site_jpr_1');
+    expect(await idsOf(verifiedOnly)).toContain('site_jdh_1');
+    expect(verifiedOnly.activeCount()).toBe(1);
+    const unverifiedOnly = new SiteFilter().toggleState('verified');
+    expect(await idsOf(unverifiedOnly)).toEqual(['site_jpr_1']);
   });
 
   it('counts sites per type for the filter sheet', async () => {

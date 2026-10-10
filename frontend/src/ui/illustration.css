@@ -1,0 +1,195 @@
+/* Cartoon illustrations and empty states. Outlines follow the text colour, so they hold up in dark mode. */
+.illustration {
+  display: block;
+  overflow: visible;
+}
+
+.ill-line {
+  stroke: var(--text);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.ill-thin {
+  stroke-width: 3;
+}
+
+.ill-sun {
+  fill: var(--sun);
+}
+
+.ill-accent {
+  fill: var(--accent-tint);
+}
+
+.ill-paper {
+  fill: var(--surface);
+}
+
+.ill-tile {
+  fill: var(--tile);
+}
+
+.ill-coral {
+  fill: var(--coral);
+}
+
+.ill-dot {
+  fill: var(--text);
+}
+
+.ill-shadow {
+  fill: var(--tile-hover);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+  padding: var(--s-6) var(--s-4) var(--s-8);
+  border-radius: var(--radius-l);
+  background: var(--page);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.empty-state .illustration {
+  margin-bottom: var(--s-2);
+  animation: ill-wobble 3.2s var(--ease-out) infinite;
+  transform-origin: 50% 90%;
+}
+
+.empty-state__title {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+@keyframes ill-wobble {
+  0%,
+  70%,
+  100% {
+    transform: none;
+  }
+
+  78% {
+    transform: rotate(-4deg) translateY(-2px);
+  }
+
+  86% {
+    transform: rotate(3deg);
+  }
+}
+
+.pending-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  padding-top: var(--s-4);
+}
+
+.pending-failed .notice {
+  box-shadow: none;
+  background: var(--tile);
+}
+
+/* Celebration: a burst of paper confetti from the middle, once. */
+.celebrate {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 0;
+  pointer-events: none;
+}
+
+.celebrate__bit {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--sun);
+  opacity: 0;
+  animation: confetti 900ms var(--ease-out) forwards;
+  animation-delay: calc(var(--i) * 18ms);
+}
+
+.celebrate__bit:nth-child(3n + 1) {
+  background: var(--accent);
+}
+
+.celebrate__bit:nth-child(3n + 2) {
+  border-radius: 50%;
+  background: var(--coral);
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(0) scale(0.4);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), var(--y)) rotate(var(--r)) scale(1);
+  }
+}
+
+/* The success tick draws itself inside a springy circle. */
+.success-tick {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  border: var(--outline) solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+  box-shadow: var(--shadow-sticker);
+  animation: tick-pop var(--dur-spring) var(--spring-bouncy);
+}
+
+.success-tick path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: tick-draw 420ms var(--ease-out) 260ms forwards;
+}
+
+@keyframes tick-pop {
+  from {
+    transform: scale(0.2) rotate(-30deg);
+  }
+}
+
+@keyframes tick-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate {
+    display: none;
+  }
+
+  .success-tick path {
+    stroke-dashoffset: 0;
+  }
+}

@@ -101,17 +101,16 @@ stateDiagram-v2
   [*] --> queued
   queued --> processing
   processing --> rejected: moderation or authenticity fails, or p below 0.5
-  processing --> verified: p at least 0.85
-  processing --> community_check: p 0.5 to 0.85, or disagreement
+  processing --> unverified: the models pass the photo; it joins a site
   processing --> needs_review: retries exhausted
-  community_check --> verified: confirmed by votes
-  community_check --> rejected: rejected by votes
-  verified --> [*]: merged into a site
+  unverified --> verified: the site reaches 10 backers
+  unverified --> rejected: no voters lead the backers by 3
+  verified --> [*]
   rejected --> [*]
   needs_review --> [*]
 ```
 
-State names are the `status` values of GET /reports/{id} in `contracts/README.md`. A verified report is merged into a site, which sets its `site_id`.
+State names are the `status` values of GET /reports/{id} in `contracts/README.md`. A passed report is merged into a site, which sets its `site_id`, and then follows the site: a site is verified when 10 different people back it by photo or yes vote (decision 20261010-1530).
 
 A site moves open → cleaned (only with an after-photo the pipeline confirms is clean) → reopened. A scan moves queued → processing → done, or failed (`invalid_video` or `retries_exhausted`).
 

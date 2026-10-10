@@ -25,13 +25,13 @@ export class LetterEvidence {
       first_reported_at: facts.firstReportedAt,
       last_reported_at: facts.lastReportedAt,
       photo_urls: facts.photoUrls,
-      insights: facts.insights === null ? null : LetterEvidence.#insights(facts.insights),
+      insights: facts.insights === null ? null : LetterEvidence.insights(facts.insights),
       nearest_bin: bin === null ? null : { distance_m: bin.distance_m, ref: bin.ref, source_url: bin.source.source_url },
       no_bin_within_3km: withBin ? facts.noBinWithin3km : null,
     };
   }
 
-  static #insights(insights: SiteInsights): NonNullable<Evidence["insights"]> {
+  static insights(insights: SiteInsights): NonNullable<Evidence["insights"]> {
     return {
       reports: insights.reports,
       composition: insights.composition.map(({ material, share_pct, reports }) => ({ material, share_pct, reports })),

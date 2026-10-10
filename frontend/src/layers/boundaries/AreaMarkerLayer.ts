@@ -1,5 +1,5 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
-import { LABEL_MIN_ZOOM, type BoundaryContext, type BoundaryLayer } from './BoundaryLayer';
+import { MARKER_MIN_ZOOM, type BoundaryContext, type BoundaryLayer } from './BoundaryLayer';
 
 /** Badge image names by marker basis; score and count badges carry a glyph left of the text. */
 export const BADGE_IMAGES = { plain: 'area-badge', score: 'area-badge-score', count: 'area-badge-count' } as const;
@@ -43,12 +43,12 @@ export class AreaMarkerLayer implements BoundaryLayer {
   readonly id = 'boundary-marker';
   readonly onTop = true;
 
-  spec({ kind, labelSource }: BoundaryContext): LayerSpecification {
+  spec({ labelSource }: BoundaryContext): LayerSpecification {
     return {
       id: this.id,
       type: 'symbol',
       source: labelSource,
-      minzoom: LABEL_MIN_ZOOM[kind],
+      minzoom: MARKER_MIN_ZOOM,
       layout: {
         'text-field': TEXT,
         'text-font': ['Noto Sans Regular'],

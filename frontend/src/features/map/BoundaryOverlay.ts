@@ -1,5 +1,4 @@
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import type { BoundaryKind } from '../../domain/AreaListing';
 import { AreaMarkerLayer, BADGE_IMAGES } from '../../layers/boundaries/AreaMarkerLayer';
 import { BoundaryFillLayer } from '../../layers/boundaries/BoundaryFillLayer';
 import type { BoundaryContext, BoundaryLayer } from '../../layers/boundaries/BoundaryLayer';
@@ -10,20 +9,23 @@ import { AreaMarkerSource, type LabelLoader } from './AreaMarkerSource';
 import { BadgeArt } from './BadgeArt';
 import type { BadgeKind } from './BadgeIcons';
 import { MarkerTooltip } from './MarkerTooltip';
+import type { MapAreaKind } from '../../services/BoundaryCatalog';
+
+const KINDS: readonly unknown[] = ['assembly', 'loksabha'] satisfies MapAreaKind[];
 
 export interface BoundaryFiles extends LabelLoader {
-  polygonsUrl(kind: BoundaryKind): string;
-  fineUrl(kind: BoundaryKind): string;
+  polygonsUrl(): string;
+  fineUrl(): string;
 }
 
+/** An area under a tap: its own kind (assembly seat or Lok Sabha seat) and id. */
 export interface AreaHit {
-  readonly kind: BoundaryKind;
+  readonly kind: MapAreaKind;
   readonly id: string;
 }
 
-/** Which boundaries to draw; `fine` says the kind has an original-edge file for close zooms. */
+/** How to draw the areas; `fine` says there is an original-edge file for close zooms. */
 export interface BoundaryView {
-  readonly kind: BoundaryKind;
   readonly fine: boolean;
   /** The layer's own credit line; seat boundaries credit DataMeet and ECI by default. */
   readonly attribution?: string;
@@ -44,7 +46,10 @@ export const FINE_MIN_ZOOM = 12;
 const SEAT_CREDIT =
   'Seat boundaries: <a href="https://github.com/datameet/maps">DataMeet</a> and the Election Commission of India (CC BY 2.5 IN)';
 
-/** Area boundaries and markers of one kind under the site layers, filled by colour per area id (feature state). */
+/**
+ * The map's areas (assembly seats where they exist, Lok Sabha seats elsewhere) and their markers under the
+ * site layers, filled by colour per area id through feature state.
+ */
 export class BoundaryOverlay {
   readonly #map: MapLibreMap;
   readonly #files: BoundaryFiles;
@@ -82,7 +87,7 @@ export class BoundaryOverlay {
   }
 
   static #key(view: BoundaryView | null): string {
-    return view ? `${view.kind}|${String(view.fine)}|${view.attribution ?? ''}` : '';
+    return view ? `${String(view.fine)}|${view.attribution ?? ''}` : '';
   }
 
   paint(colors: ReadonlyMap<string, string>): void {
@@ -100,22 +105,23 @@ export class BoundaryOverlay {
     if (!this.#view || layers.length === 0) return null;
     const [hit] = this.#map.queryRenderedFeatures(point, { layers });
     const id: unknown = hit?.properties['id'];
-    return typeof id === 'string' ? { kind: this.#view.kind, id } : null;
+    const kind: unknown = hit?.properties['kind'];
+    return typeof id === 'string' && KINDS.includes(kind) ? { kind: kind as MapAreaKind, id } : null;
   }
 
   #render(): void {
     if (!this.#ready) return;
     this.#clear();
     if (!this.#view) return;
-    const { kind, attribution } = this.#view;
+    const { attribution } = this.#view;
     this.#fineLoaded = false;
-    const polygons = { type: 'geojson', data: this.#files.polygonsUrl(kind), promoteId: 'id' } as const;
+    const polygons = { type: 'geojson', data: this.#files.polygonsUrl(), promoteId: 'id' } as const;
     this.#map.addSource(POLYGONS, { ...polygons, attribution: attribution ?? SEAT_CREDIT });
     this.#map.addSource(LABELS, { type: 'geojson', data: AreaMarkerSource.merge(null, new Map()) });
-    const context: BoundaryContext = { kind, polygonSource: POLYGONS, labelSource: LABELS };
+    const context: BoundaryContext = { polygonSource: POLYGONS, labelSource: LABELS };
     const underLabels = this.#firstBasemapLabel();
     for (const layer of LAYERS) this.#map.addLayer(layer.spec(context), layer.onTop ? this.#siteLayer() : underLabels);
-    this.#markers.load(kind);
+    this.#markers.load();
     this.#applyColors();
     this.#loadFineEdges();
   }
@@ -126,7 +132,7 @@ export class BoundaryOverlay {
     const source = this.#map.getSource<GeoJSONSource>(POLYGONS);
     if (!source) return;
     this.#fineLoaded = true;
-    source.setData(this.#files.fineUrl(this.#view.kind));
+    source.setData(this.#files.fineUrl());
     this.#applyColors();
   }
 

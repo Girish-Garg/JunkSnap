@@ -29,7 +29,7 @@ export class DynamoCrawlStatusReader implements CrawlStatusReader {
       ExpressionAttributeNames: { "#status": "status" },
     });
     const output = await this.#calls.run("DynamoDB read crawl status", () => this.#client.send(request));
-    // A row without a status is still counting verified reports below CRAWL_ACTIVATE_AFTER.
+    // A row without a status is still counting merged photos below CRAWL_ACTIVATE_AFTER.
     if (output.Item?.["status"] === undefined) {
       return notStartedCrawl(districtId);
     }

@@ -1,6 +1,6 @@
 ---
-status: proposed
-superseded_by:
+status: superseded
+superseded_by: 20261010-1530-hem-ten-people-verify.md
 area: contracts
 by: hem
 date: 2026-10-10T02:53+05:30

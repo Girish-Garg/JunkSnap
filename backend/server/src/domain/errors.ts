@@ -12,6 +12,7 @@ const HTTP_STATUS = {
   cleanup_pending: 409,
   already_cleaned: 409,
   not_verified: 409,
+  site_rejected: 409,
   no_local_body: 422,
   rate_limited: 429,
   server_error: 500,

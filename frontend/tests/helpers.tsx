@@ -17,12 +17,14 @@ import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
 import { MockApiClient } from '../src/services/MockApiClient';
 import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
+import { OnboardingPreference } from '../src/services/OnboardingPreference';
+import { ThemePreference } from '../src/services/ThemePreference';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 import { testSnapServices, type SnapTestOptions } from './snapFakes';
 
-// The layers scripts/simplify_boundaries.py writes before any ward file exists.
-export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {} } };
+// The map's one areas layer, as scripts/simplify_boundaries.py lists it.
+export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {}, areas: { fine: {} } } };
 
 export class MemoryStore implements KeyValueStore {
   readonly #values = new Map<string, string>();
@@ -55,6 +57,8 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
     locator: new GeoLocator(undefined),
     sharer: new Sharer({ clipboard: { writeText: async () => undefined } as unknown as Clipboard }),
     snap: testSnapServices({ ...snap, auth }),
+    onboarding: new OnboardingPreference(store),
+    theme: new ThemePreference(store, null),
   });
 }
 

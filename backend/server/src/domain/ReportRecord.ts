@@ -6,9 +6,9 @@ import type {
   VerificationResult,
 } from "../contracts/index.gen.js";
 
-export type ReportStatus = "queued" | "processing" | "verified" | "community_check" | "rejected" | "needs_review";
-// A report merged into a site the neighbours rejected becomes rejected too.
-export type SiteVerification = "verified" | "community_check" | "rejected";
+export type ReportStatus = "queued" | "processing" | "unverified" | "verified" | "rejected" | "needs_review";
+// A merged report follows its site (decision 20261010-1530).
+export type SiteVerification = "unverified" | "verified" | "rejected";
 export type StepName = "moderate" | "verify" | "brands" | "locate" | "merge";
 
 // The reports table item: upload fields and received_at stay top-level and absent fields are omitted, because GSIs key on them.

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { AreaKind } from '../../../domain/AreaScores';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../areas.css';
@@ -16,8 +16,8 @@ interface AreaSheetProps {
 
 export function AreaSheet({ kind, areaId }: AreaSheetProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate('/'), [navigate]);
+  const sheets = useSheetNavigation();
+  const close = useCallback(() => sheets.close('/'), [sheets]);
   const state = useAreaScores(kind, areaId);
   return (
     <BottomSheet

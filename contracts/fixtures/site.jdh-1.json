@@ -8,9 +8,10 @@
     "status": "open",
     "verification": "verified",
     "report_count": 7,
-    "verified_count": 6,
-    "corroborations": 4,
-    "votes": { "confirm": 2, "reject": 0 },
+    "verified_count": 7,
+    "corroborations": 7,
+    "backers": { "count": 10, "needed": 10, "photo_people": 5, "vote_people": 5 },
+    "votes": { "confirm": 5, "reject": 0 },
     "photo_urls": [
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1a.jpg"
@@ -40,7 +41,7 @@
     "pilot": true,
     "reporters": 5,
     "insights": {
-      "reports": 6,
+      "reports": 7,
       "composition": [
         { "material": "plastic", "share_pct": 52.5, "reports": 6, "sources": [
           { "signal": "rekognition_labels", "provider": "rekognition", "model": "DetectLabels", "version": "3.0" },

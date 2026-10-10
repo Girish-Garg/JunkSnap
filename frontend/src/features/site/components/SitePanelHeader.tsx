@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
+import { TypeIcon } from '../../../ui/TypeIcon';
 import { useDistanceLabel } from '../hooks/useDistanceLabel';
 import type { SitePresenter } from '../SitePresenter';
 import { SiteBadges } from './SiteBadges';
@@ -21,7 +21,9 @@ export function SitePanelHeader({ site, titleId, userLocation, presenter }: Site
   return (
     <header className="site-header">
       <h2 id={titleId} className="site-header__title" tabIndex={-1}>
-        <MarkerGlyph type={details.report_type} size={28} />
+        <span className={`type-chip type-chip--${details.report_type}`}>
+          <TypeIcon type={details.report_type} size={32} />
+        </span>
         {t(`reportType.${details.report_type}`)}
       </h2>
       <p className="site-header__meta">

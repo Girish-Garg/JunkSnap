@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { sitePath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
 import { useSite } from '../../site/hooks/useSite';
@@ -18,8 +19,8 @@ const TITLE_ID = 'cleanup-title';
 export function CleanupRoute() {
   const { t } = useTranslation();
   const { siteId = '' } = useParams();
-  const navigate = useNavigate();
-  const close = useCallback(() => navigate(sitePath(siteId)), [navigate, siteId]);
+  const sheets = useSheetNavigation();
+  const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useCleanup(siteId);
   const gps = useGpsFix(flow.phase === 'camera');
   const site = useSite(siteId);

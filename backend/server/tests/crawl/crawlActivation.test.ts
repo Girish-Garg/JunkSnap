@@ -99,15 +99,15 @@ describe("ActivatingReportMerger", () => {
     return { sink, merger: new ActivatingReportMerger(new FakeMerger(new Journal(), outcome), activator, logger) };
   }
 
-  it("queues the district of a verified report and returns the merge outcome", async () => {
+  it.each(["unverified", "verified"] as const)("queues the district from the first model-passed photo, here on a %s site", async (verification) => {
     const activator = new RecordingActivator();
-    const outcome: MergeOutcome = { siteId: "site_jdh_1", verification: "verified" };
+    const outcome: MergeOutcome = { siteId: "site_jdh_1", verification };
     const report = record();
     expect(await subject(outcome, activator).merger.merge(report)).toEqual(outcome);
     expect(activator.calls).toEqual([[{ id: "rajasthan-jodhpur", name: "Jodhpur" }, report.report_id]]);
   });
 
-  it.each(["community_check", "rejected"] as const)("leaves the district alone for a %s report", async (verification) => {
+  it.each(["rejected"] as const)("leaves the district alone for a report on a %s site", async (verification) => {
     const activator = new RecordingActivator();
     await subject({ siteId: "site_jdh_1", verification }, activator).merger.merge(record());
     expect(activator.calls).toEqual([]);

@@ -8,15 +8,13 @@ interface Selection {
   readonly pick: (siteId: string | null) => void;
 }
 
-/** What the map draws besides the sites: the view mode, the area boundaries and their fill, and area taps. */
+/** What the map draws besides the sites: the view mode, the areas with their fill and markers, and area taps. */
 export function useMapLayers(mode: MapMode, selection: Selection) {
   const boundary = useBoundaryLayer();
   const onPickArea = useAreaPick(selection.preview, () => selection.pick(null));
   const layerBindings = {
     mode,
-    boundary: boundary.kind,
-    boundaryFine: boundary.fine,
-    boundaryCredit: boundary.attribution,
+    areas: boundary.view,
     areaColors: boundary.colors,
     areaMarkers: boundary.markers,
     onPickArea,

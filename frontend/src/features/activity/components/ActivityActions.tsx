@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { sitePath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import { Button } from '../../../ui/Button';
@@ -8,7 +8,7 @@ import { Button } from '../../../ui/Button';
 /** Open the merged site, retry a waiting or refused report, or remove a refused one. */
 export function ActivityActions({ report }: { readonly report: QueuedReport }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const { snap } = useServices();
   const siteId = report.data.status?.site_id;
   const failed = report.data.stage === 'failed';
@@ -16,7 +16,7 @@ export function ActivityActions({ report }: { readonly report: QueuedReport }) {
   return (
     <div className="report-row__actions">
       {siteId && (
-        <Button variant="text" onClick={() => navigate(sitePath(siteId))}>
+        <Button variant="text" onClick={() => sheets.open(sitePath(siteId))}>
           {t('activity.openSite')}
         </Button>
       )}

@@ -1,16 +1,15 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl';
-import type { BoundaryKind } from '../../domain/AreaListing';
 import type { LabelPoints } from '../../services/BoundaryCatalog';
 import type { AreaMarker } from './AreaMarkers';
 
 export interface LabelLoader {
-  labels(kind: BoundaryKind): Promise<LabelPoints>;
+  labels(): Promise<LabelPoints>;
 }
 
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
-/** Keeps the marker source in step: the kind's marker points joined with each area's current value. */
+/** Keeps the marker source in step: the marker points joined with each area's current value. */
 export class AreaMarkerSource {
   readonly #map: MapLibreMap;
   readonly #loader: LabelLoader;
@@ -33,22 +32,23 @@ export class AreaMarkerSource {
       const value = marker?.value ? { marker_value: marker.value } : {};
       const basis = marker?.basis ? { marker_basis: marker.basis } : {};
       const tooltip = marker ? { marker_tooltip: marker.tooltip } : {};
-      return { ...point, properties: { ...point.properties, ...value, ...basis, ...tooltip, marker_rank: marker?.rank ?? 9999 } };
+      const rank = marker?.rank ?? 9999;
+      return { ...point, properties: { ...point.properties, ...value, ...basis, ...tooltip, marker_rank: rank } };
     });
     return { type: 'FeatureCollection', features };
   }
 
-  /** Starts loading a kind's points; an older load that finishes late is ignored. */
-  load(kind: BoundaryKind): void {
+  /** Starts loading the points; an older load that finishes late is ignored. */
+  load(): void {
     const request = ++this.#request;
     this.#points = null;
-    this.#loader.labels(kind).then(
+    this.#loader.labels().then(
       (points) => {
         if (request !== this.#request) return;
         this.#points = points;
         this.refresh();
       },
-      (error: unknown) => console.error(`Could not load ${kind} markers`, error),
+      (error: unknown) => console.error('Could not load the area markers', error),
     );
   }
 

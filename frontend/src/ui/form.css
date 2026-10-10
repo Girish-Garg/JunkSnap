@@ -1,18 +1,19 @@
+/* Fields, chips, checkboxes and buttons. */
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+  gap: var(--s-4);
+  margin-top: var(--s-6);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--s-2);
 }
 
 .field__label {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .field__control {
@@ -22,23 +23,49 @@
 .field__input {
   width: 100%;
   height: var(--target);
-  padding: 0 var(--edge);
-  border: 1px solid #dadce0;
+  padding: 0 var(--s-4);
+  border: var(--outline) solid var(--divider);
   border-radius: var(--radius-s);
   background: var(--surface);
   font-size: 16px;
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+.field__input:hover {
+  border-color: var(--line-strong);
 }
 
 .field__input:focus {
   border-color: var(--accent);
-  outline: 1px solid var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 4px var(--accent-tint);
 }
 
 .field__input[aria-invalid='true'] {
   border-color: var(--error);
+  animation: shake 360ms var(--ease-out);
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(-4px);
+  }
+
+  50% {
+    transform: translateX(4px);
+  }
+
+  75% {
+    transform: translateX(-2px);
+  }
 }
 
 .field__input--code {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.5em;
   text-align: center;
@@ -46,8 +73,8 @@
 
 .field__control .icon-button {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: var(--s-1);
+  right: var(--s-1);
 }
 
 .field__control .field__input--with-button {
@@ -56,42 +83,43 @@
 
 .field__hint {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
 }
 
 .field__error {
   color: var(--error);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
 }
 
 .field__input--area {
   height: auto;
-  min-height: 72px;
-  padding: 12px var(--edge);
-  line-height: 20px;
+  min-height: 80px;
+  padding: var(--s-3) var(--s-4);
+  line-height: var(--leading-body);
   resize: vertical;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--s-2);
 }
 
-/* 40 px chips with a 48 px touch target. */
+/* 44 px chips with a 48 px touch target. The chosen one fills and hops. */
 .chip {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid #dadce0;
-  border-radius: var(--radius-s);
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4) 0 var(--s-3);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-pill);
   background: var(--surface);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -101,42 +129,55 @@
   inset: -4px 0;
 }
 
+.chip:hover {
+  border-color: var(--line-strong);
+}
+
 .chip[aria-checked='true'] {
-  border-color: var(--accent);
+  border-color: var(--ink);
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--accent-ink);
+  animation: chip-hop var(--dur-spring) var(--spring-bouncy);
+}
+
+@keyframes chip-hop {
+  from {
+    transform: scale(0.9);
+  }
 }
 
 .checkbox {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
   min-height: var(--target);
   cursor: pointer;
 }
 
 .checkbox input {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   margin: 0;
   accent-color: var(--accent);
 }
 
+/* Buttons: chunky and round. Primary sits on a hard shadow and presses down into it. */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: var(--s-2);
   min-height: var(--target);
-  padding: 0 var(--space-3);
+  padding: 0 var(--s-6);
   border: 0;
   border-radius: var(--radius-pill);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .button--primary {
   background: var(--accent);
+  box-shadow: 0 3px 0 var(--accent-pressed);
   color: var(--on-accent);
 }
 
@@ -144,16 +185,47 @@
   background: var(--accent-hover);
 }
 
-.button--primary:disabled {
-  opacity: 0.6;
+.button--primary:active:not(:disabled),
+.button--sun:active:not(:disabled) {
+  box-shadow: 0 0 0 transparent;
+  transform: translateY(3px) scale(1.02, 0.96);
+}
+
+.button--sun {
+  border: var(--outline) solid var(--ink);
+  background: var(--sun);
+  box-shadow: var(--shadow-sticker);
+  color: var(--on-sun);
+}
+
+.button--sun:hover {
+  background: var(--sun-deep);
+}
+
+.button--secondary {
+  border: var(--outline) solid var(--divider);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.button--secondary:hover {
+  border-color: var(--line-strong);
+}
+
+.button:disabled {
+  opacity: 0.55;
   cursor: progress;
 }
 
 .button--text {
   min-height: var(--target);
-  padding: 0 var(--space-1);
+  padding: 0 var(--s-3);
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button--text:hover {
+  background: var(--accent-tint);
 }
 
 .form__row {
@@ -161,16 +233,17 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--s-1);
   color: var(--text-secondary);
 }
 
 .form__error {
   color: var(--error);
+  font-weight: 600;
 }
 
 .form__note {
   color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
 }

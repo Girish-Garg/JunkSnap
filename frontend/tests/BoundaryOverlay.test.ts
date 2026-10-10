@@ -1,6 +1,5 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { describe, expect, it, vi } from 'vitest';
-import type { BoundaryKind } from '../src/domain/AreaListing';
 import { BoundaryOverlay, type BoundaryFiles } from '../src/features/map/BoundaryOverlay';
 
 function fakeMap() {
@@ -24,26 +23,24 @@ function fakeMap() {
 }
 
 const files: BoundaryFiles = {
-  polygonsUrl: (kind: BoundaryKind) => `/b/${kind}.geojson`,
-  fineUrl: (kind: BoundaryKind) => `/b/${kind}_fine.geojson`,
+  polygonsUrl: () => '/b/areas.geojson',
+  fineUrl: () => '/b/areas_fine.geojson',
   labels: async () => ({ type: 'FeatureCollection', features: [] }),
 };
 
 describe('BoundaryOverlay.show', () => {
-  it('redraws when the kind or its credit changes, and not when nothing changed', () => {
+  it('redraws when the fine edges or the credit change, and not when nothing changed', () => {
     const { map, sources } = fakeMap();
     const overlay = new BoundaryOverlay(map as unknown as MapLibreMap, files, undefined);
     overlay.ready();
-    overlay.show({ kind: 'assembly', fine: true });
-    expect(sources.get('boundary-polygons')).toMatchObject({ data: '/b/assembly.geojson', promoteId: 'id' });
+    overlay.show({ fine: true });
+    expect(sources.get('boundary-polygons')).toMatchObject({ data: '/b/areas.geojson', promoteId: 'id' });
+    expect(sources.get('boundary-polygons')).toMatchObject({ attribution: expect.stringContaining('DataMeet') });
     const calls = map.addSource.mock.calls.length;
-    overlay.show({ kind: 'assembly', fine: true });
+    overlay.show({ fine: true });
     expect(map.addSource.mock.calls.length).toBe(calls);
-    overlay.show({ kind: 'ward', fine: true, attribution: 'Approximate, unreviewed wards' });
-    expect(sources.get('boundary-polygons')).toMatchObject({
-      data: '/b/ward.geojson',
-      attribution: 'Approximate, unreviewed wards',
-    });
+    overlay.show({ fine: true, attribution: 'Other seats' });
+    expect(sources.get('boundary-polygons')).toMatchObject({ attribution: 'Other seats' });
     overlay.show(null);
     expect(sources.has('boundary-polygons')).toBe(false);
   });

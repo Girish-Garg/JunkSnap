@@ -54,6 +54,20 @@
           "wards": 150
         }
       ]
+    },
+    "areas": {
+      "features": 718,
+      "bytes": 811455,
+      "label_bytes": 107146,
+      "tolerance_deg": 0.024,
+      "sources": [
+        "rajasthan_assembly.geojson",
+        "india_loksabha.geojson"
+      ],
+      "fine": {
+        "bytes": 1084624,
+        "tolerance_deg": 0.024
+      }
     }
   }
 }

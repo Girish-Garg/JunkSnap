@@ -1,6 +1,6 @@
 ---
-status: accepted
-superseded_by:
+status: superseded
+superseded_by: 20261010-1502-hem-ui-playful-redesign
 area: frontend
 by: hem
 date: 2026-10-10T02:01+05:30

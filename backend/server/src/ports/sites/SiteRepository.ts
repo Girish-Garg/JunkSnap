@@ -7,6 +7,8 @@ export interface SiteRepository {
   inCell(cell: string): Promise<Site[]>;
   // False when a site with that id already exists.
   create(site: Site): Promise<boolean>;
+  // Every site id in the table (a full scan, for the one-off backers migration).
+  allIds(): Promise<string[]>;
   // Throws StaleSiteError when another writer saved the site since it was read.
   save(site: Site): Promise<void>;
 }
