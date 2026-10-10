@@ -44,7 +44,15 @@ class LayerSpec:
     pattern: str
     keep: tuple[str, ...]
     budget_bytes: int
+    attribution: str = ""
+    clip_overlaps: bool = False
 
+
+WARDS_CREDIT = (
+    "Approximate, unreviewed wards from the 2025 ward-formation orders (Rajasthan Gazette); "
+    "places © OpenStreetMap contributors (ODbL) and ECI polling stations "
+    "(CC0 as declared by the ramSeraph/indian_facilities copy)"
+)
 
 LAYERS = (
     LayerSpec("assembly", "rajasthan_assembly.geojson", ("id", "name", "pc_id"), 400_000),
@@ -52,6 +60,7 @@ LAYERS = (
     LayerSpec(
         "wards", "*_wards.geojson",
         ("id", "ward_no", "name", "zone", "confidence", "review_status"), 400_000,
+        attribution=WARDS_CREDIT, clip_overlaps=True,
     ),
 )
 
@@ -66,12 +75,16 @@ class LayerResult:
     label_bytes: int
     tolerance: float
     sources: tuple[str, ...]
+    attribution: str = ""
 
     def manifest(self) -> dict[str, Any]:
-        return {
+        entry: dict[str, Any] = {
             "features": self.features, "bytes": self.bytes, "label_bytes": self.label_bytes,
             "tolerance_deg": self.tolerance, "sources": list(self.sources),
         }
+        if self.attribution:
+            entry["attribution"] = self.attribution
+        return entry
 
 
 def read_features(paths: list[Path]) -> list[Feature]:
@@ -133,6 +146,24 @@ def build_polygons(features: list[Feature], spec: LayerSpec, tolerance: float) -
         if geometry is not None:
             properties = kept(feature["properties"], spec.keep)
             out.append({"type": "Feature", "properties": properties, "geometry": geometry})
+    return without_overlaps(out) if spec.clip_overlaps else out
+
+
+def without_overlaps(features: list[Feature]) -> list[Feature]:
+    """Cuts each area by the ones before it (one-grid margin), so rounding leaves no slivers."""
+    grid = 10.0**-DECIMALS
+    taken: BaseGeometry | None = None
+    out: list[Feature] = []
+    for feature in features:
+        geom = shape(feature["geometry"])
+        if taken is not None:
+            geom = geom.difference(taken.buffer(grid * 1.5))
+        geometry = rounded_geometry(shapely.set_precision(geom, grid))
+        if geometry is None:
+            continue
+        out.append({**feature, "geometry": geometry})
+        written = shape(geometry)
+        taken = written if taken is None else taken.union(written)
     return out
 
 
@@ -174,7 +205,8 @@ def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult
     (out_dir / f"{spec.name}.geojson").write_bytes(text.encode("utf-8"))
     (out_dir / f"{spec.name}_labels.geojson").write_bytes(labels.encode("utf-8"))
     return LayerResult(spec.name, len(polygons), len(text.encode("utf-8")),
-                       len(labels.encode("utf-8")), tolerance, tuple(p.name for p in paths))
+                       len(labels.encode("utf-8")), tolerance, tuple(p.name for p in paths),
+                       spec.attribution)
 
 
 def ward_coverage(wards_path: Path, bodies_path: Path) -> list[dict[str, Any]]:
