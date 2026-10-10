@@ -12,9 +12,10 @@ export interface BinAccessMeasure {
 }
 
 // scores-v2 bin access: measured from known bins, never from no_bin report counts (decision 20261010-1430).
+// overflowing_bin sites stand at a bin, so they would make an area look well served: never measured (decision 20261010-1645).
 export class BinAccessScore {
   measure(sites: AreaSites): BinAccessMeasure {
-    const verified = sites.verified();
+    const verified = sites.verified().filter((site) => !site.isType("overflowing_bin"));
     const measured = verified.filter((site) => site.binMeasured());
     const noBinWithin3kmPct = percent(measured.filter((site) => site.noBinNearby()).length, measured.length);
     const medianDistanceToBinM = median(verified.flatMap(BinAccessScore.#distance));

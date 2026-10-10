@@ -31,8 +31,8 @@
       "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "backers", "votes", "photo_urls", "cleanup_status", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
       "properties": {
         "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
-        "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"], "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)." },
-        "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"] },
+        "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"], "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)." },
+        "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged"] },
         "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
         "verification": {
           "enum": ["unverified", "verified", "rejected"],
@@ -235,7 +235,8 @@
         { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
         { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
         { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
-        { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } }
+        { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } },
+        { "if": { "properties": { "report_type": { "const": "overflowing_bin" } } }, "then": { "properties": { "context": { "enum": ["overflowing", "damaged"] } } } }
       ]
     }
   },

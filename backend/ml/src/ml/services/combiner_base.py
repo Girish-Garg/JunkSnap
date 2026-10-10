@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 from ml.domain.case import CombinerInfo
 from ml.domain.purposes import Purpose
-from ml.domain.verification import Outcome, SignalResult, Thresholds
+from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 
 
 class Combiner(ABC):
@@ -15,6 +15,10 @@ class Combiner(ABC):
 
     @abstractmethod
     def info(self) -> CombinerInfo: ...
+
+    @abstractmethod
+    def for_claim(self, claim: Claim) -> "Combiner":
+        """The combiner that decides this claim; one not fitted for the claim hands over."""
 
     @abstractmethod
     def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool: ...

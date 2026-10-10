@@ -17,7 +17,8 @@ export type ScanSession = {
   /**
    * Picked before recording; every frame report gets it, and verification still checks it.
    */
-  report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+  report_type:
+    "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
   context:
     | "vacant_plot"
     | "roadside"
@@ -30,7 +31,9 @@ export type ScanSession = {
     | "foam"
     | "choked_drain"
     | "uncovered_debris"
-    | "dusty_site";
+    | "dusty_site"
+    | "overflowing"
+    | "damaged";
   /**
    * When recording started; t_ms 0.
    */
@@ -150,7 +153,8 @@ export const scanSessionSchema = {
         "waste_dump",
         "no_bin",
         "contaminated_water",
-        "open_construction"
+        "open_construction",
+        "overflowing_bin"
       ],
       "description": "Picked before recording; every frame report gets it, and verification still checks it."
     },
@@ -167,7 +171,9 @@ export const scanSessionSchema = {
         "foam",
         "choked_drain",
         "uncovered_debris",
-        "dusty_site"
+        "dusty_site",
+        "overflowing",
+        "damaged"
       ]
     },
     "started_at": {
@@ -399,6 +405,25 @@ export const scanSessionSchema = {
             "enum": [
               "uncovered_debris",
               "dusty_site"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "overflowing_bin"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "context": {
+            "enum": [
+              "overflowing",
+              "damaged"
             ]
           }
         }

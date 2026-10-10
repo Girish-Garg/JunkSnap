@@ -1006,6 +1006,10 @@ export interface WardScores {
      * Share of no_bin sites cleared or served in the window (city score).
      */
     no_bin_response_pct: number | null;
+    /**
+     * Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid.
+     */
+    bin_service_pct?: number | null;
     new_dumps_per_km2_month: number | null;
     /**
      * Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score).
@@ -1211,6 +1215,15 @@ export const wardScoresSchema = {
           "minimum": 0,
           "maximum": 100,
           "description": "Share of no_bin sites cleared or served in the window (city score)."
+        },
+        "bin_service_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid."
         },
         "new_dumps_per_km2_month": {
           "type": [

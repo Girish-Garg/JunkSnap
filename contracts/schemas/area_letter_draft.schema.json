@@ -18,7 +18,7 @@
         "name": { "type": "string" }
       }
     },
-    "issue": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "all"], "description": "The report type the letter is about; all covers every type in the area." },
+    "issue": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin", "all"], "description": "The report type the letter is about; all covers every type in the area." },
     "to": {
       "type": "array",
       "minItems": 1,
@@ -112,7 +112,7 @@
             "required": ["site_id", "report_type", "context", "status", "report_count", "verified_count", "first_reported_at", "last_reported_at", "photo_urls", "insights"],
             "properties": {
               "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$" },
-              "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
+              "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] },
               "context": { "type": "string" },
               "status": { "enum": ["open", "cleaned", "reopened"] },
               "report_count": { "type": "integer", "minimum": 1 },

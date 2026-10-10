@@ -14,7 +14,13 @@ export interface AreaLetterDraft {
   /**
    * The report type the letter is about; all covers every type in the area.
    */
-  issue: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "all";
+  issue:
+    | "waste_dump"
+    | "no_bin"
+    | "contaminated_water"
+    | "open_construction"
+    | "overflowing_bin"
+    | "all";
   /**
    * Offices responsible for the area kind: ward and assembly, the head of each local body with sites there; loksabha and district, the District Collector of each district, then the local body heads.
    *
@@ -119,7 +125,8 @@ export interface AreaLetterDraft {
     worst_sites: [
       {
         site_id: string;
-        report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+        report_type:
+          "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
         context: string;
         status: "open" | "cleaned" | "reopened";
         report_count: number;
@@ -159,7 +166,8 @@ export interface AreaLetterDraft {
       },
       ...{
         site_id: string;
-        report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+        report_type:
+          "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
         context: string;
         status: "open" | "cleaned" | "reopened";
         report_count: number;
@@ -278,6 +286,7 @@ export const areaLetterDraftSchema = {
         "no_bin",
         "contaminated_water",
         "open_construction",
+        "overflowing_bin",
         "all"
       ],
       "description": "The report type the letter is about; all covers every type in the area."
@@ -515,7 +524,8 @@ export const areaLetterDraftSchema = {
                   "waste_dump",
                   "no_bin",
                   "contaminated_water",
-                  "open_construction"
+                  "open_construction",
+                  "overflowing_bin"
                 ]
               },
               "context": {

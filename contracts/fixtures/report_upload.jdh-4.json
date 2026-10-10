@@ -1,0 +1,21 @@
+{
+  "upload_id": "upl_jdh_4",
+  "report_type": "overflowing_bin",
+  "context": "overflowing",
+  "capture_mode": "snap",
+  "sha256": "7c1e9a4b2d3f5e6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a",
+  "gps": {
+    "lat": 26.2805,
+    "lon": 73.0189,
+    "accuracy_m": 5
+  },
+  "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
+  "captured_at": "2026-10-10T04:08:30Z",
+  "user_id": "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7",
+  "note": "Bin lid broken, waste spilling onto the road",
+  "hints": {
+    "model": "yolo-junk-nano-v0",
+    "waste_score": 0.81,
+    "recall_audit": false
+  }
+}

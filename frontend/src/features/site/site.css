@@ -33,6 +33,10 @@
   background: var(--type-construction-tint);
 }
 
+.type-chip--overflowing_bin {
+  background: var(--type-overflowing-tint);
+}
+
 .site-header__title {
   display: flex;
   align-items: center;
