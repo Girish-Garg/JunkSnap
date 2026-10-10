@@ -40,13 +40,30 @@ describe('useMapSelection', () => {
     expect(result.current.selection.camera?.points).toEqual([SITE_B.geometry.coordinates]);
   });
 
+});
+
+describe('useMapSelection places', () => {
   it('previews a one-site place and fits a larger one', () => {
     const { result } = renderSelection();
-    act(() => result.current.selection.showPlace({ name: 'Ward 37', kind: 'ward', sites: [SITE_A] }));
+    act(() => result.current.selection.showPlace({ sites: [SITE_A], point: null }));
     expect(result.current.selection.preview?.properties.site_id).toBe('site_a');
-    act(() => result.current.selection.showPlace({ name: 'Jodhpur', kind: 'town', sites: [SITE_A, SITE_B] }));
+    act(() => result.current.selection.showPlace({ sites: [SITE_A, SITE_B], point: [73.02, 26.27] }));
     expect(result.current.selection.preview).toBeNull();
     expect(result.current.selection.camera?.points).toHaveLength(2);
+  });
+
+  it('flies to the middle of a seat with no site loaded, at seat zoom', () => {
+    const { result } = renderSelection();
+    act(() => result.current.selection.showPlace({ sites: [], point: [72.9, 26.1] }));
+    expect(result.current.selection.preview).toBeNull();
+    expect(result.current.selection.camera).toEqual({ points: [[72.9, 26.1]], zoom: 10.5 });
+  });
+
+  it('frames points for the opening view without previewing a site', () => {
+    const { result } = renderSelection();
+    act(() => result.current.selection.frame([[73, 26], [73.1, 26.1]]));
+    expect(result.current.selection.camera).toEqual({ points: [[73, 26], [73.1, 26.1]] });
+    expect(result.current.selection.preview).toBeNull();
   });
 });
 

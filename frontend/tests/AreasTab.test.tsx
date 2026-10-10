@@ -20,14 +20,15 @@ vi.mock('../src/features/map/components/SiteMapView', async () => {
 });
 
 describe('Areas list', () => {
-  it('lists the areas of the sites on the map by kind and filters them by name', async () => {
+  it('lists the reported areas by kind from the area list route and filters them by name', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/areas' });
     expect(await screen.findByRole('link', { name: /Sardarpura/ })).toHaveAttribute('href', '/areas/assembly/s20-ac-127');
     expect(screen.getByRole('heading', { name: 'Lok Sabha seats' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Districts' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Find an area'), 'sard');
-    expect(screen.getAllByRole('link', { name: /Sites on the map/ })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: /verified reports/ })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /Sardarpura/ })).toHaveTextContent('Sites: 3 · verified reports: 4');
     expect(screen.getByRole('link', { name: 'City ranking' })).toHaveAttribute('href', '/ranking');
   });
 

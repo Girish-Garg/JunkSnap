@@ -60,6 +60,28 @@ describe('map list mode', () => {
     expect(await screen.findByText('No reports here yet.')).toBeInTheDocument();
   });
 
+});
+
+describe('map list mode language', () => {
+  it('keeps the language toggle beside Filters, since the search field is hidden', async () => {
+    const user = userEvent.setup();
+    withWebGl2(false);
+    await renderApp(<AppRoutes />);
+    await user.click(screen.getByRole('button', { name: 'हिन्दी' }));
+    expect(await screen.findByText(/यह ब्राउज़र नक्शा नहीं दिखा पा रहा/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'English' })).toBeInTheDocument();
+  });
+
+  it('inside the Android app, gives advice for the app instead of the browser settings', async () => {
+    withWebGl2(false);
+    vi.stubGlobal('__TAURI__', { core: { invoke: async () => undefined } });
+    await renderApp(<AppRoutes />);
+    expect(screen.getByText(/update Android System WebView/)).toBeInTheDocument();
+    expect(screen.queryByText(/hardware acceleration in your browser/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/This browser/)).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   it('shows the notice in Hindi', async () => {
     withWebGl2(false);
     await renderApp(<AppRoutes />, { language: 'hi' });

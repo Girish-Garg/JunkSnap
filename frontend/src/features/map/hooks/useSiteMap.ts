@@ -41,7 +41,7 @@ export function useSiteMap(container: RefObject<HTMLDivElement | null>, bindings
   useEffect(() => mapRef.current?.showBoundaries(bindings.areas), [mapRef, bindings.areas]);
   useEffect(() => mapRef.current?.labelAreas(bindings.areaMarkers), [mapRef, bindings.areaMarkers]);
   useEffect(() => mapRef.current?.paintAreas(bindings.areaColors), [mapRef, bindings.areaColors]);
-  useEffect(() => mapRef.current?.moveTo(bindings.camera?.points ?? []), [mapRef, bindings.camera]);
+  useEffect(() => mapRef.current?.moveTo(bindings.camera?.points ?? [], bindings.camera?.zoom), [mapRef, bindings.camera]);
   useEffect(() => mapRef.current?.setAttributionLabel(t('map.attribution')), [mapRef, t]);
   useEffect(() => {
     if (bindings.userLocation) mapRef.current?.showUser(bindings.userLocation);

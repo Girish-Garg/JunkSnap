@@ -36,6 +36,7 @@ const NONE: AreasIndex = { available: false, fine: false, attribution: null };
 export class BoundaryCatalog {
   readonly #baseUrl: string;
   readonly #fetch: Fetch;
+  #labels: Promise<LabelPoints> | null = null;
 
   constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init)) {
     this.#baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
@@ -61,8 +62,16 @@ export class BoundaryCatalog {
     }
   }
 
-  /** The marker points; the map joins each area's value onto them. */
-  async labels(): Promise<LabelPoints> {
+  /** The marker points, fetched once for the map and search; a failed fetch is tried again next time. */
+  labels(): Promise<LabelPoints> {
+    this.#labels ??= this.#fetchLabels().catch((error: unknown) => {
+      this.#labels = null;
+      throw error;
+    });
+    return this.#labels;
+  }
+
+  async #fetchLabels(): Promise<LabelPoints> {
     const response = await this.#fetch(this.labelsUrl());
     if (!response.ok) throw new Error(`Could not load the area markers: ${response.status}`);
     return (await response.json()) as LabelPoints;

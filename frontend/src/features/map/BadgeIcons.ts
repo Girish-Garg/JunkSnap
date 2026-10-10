@@ -24,5 +24,17 @@ const score: Glyph = (x, y) => BARS.some((bar) => inRect(x, y, bar));
 // A camera with a lens: verified photo reports.
 const count: Glyph = (x, y) => CAMERA.some((part) => inRect(x, y, part)) && Math.hypot(x + 0.5 - 12, y + 0.5 - 14) >= 4;
 
+// A flag on a pole: pilot-city data (Jodhpur), drawn after a shown score.
+const FLAG: readonly Rect[] = [
+  [4, 2, 7, 23],
+  [7, 3, 20, 13],
+];
+const pilot: Glyph = (x, y) => FLAG.some((part) => inRect(x, y, part)) && !(x >= 15 && Math.abs(y - 8) < x - 14);
+
 /** The glyph drawn at the left of each badge kind; plain badges have none. */
 export const BADGE_GLYPHS: Readonly<Record<BadgeKind, Glyph | null>> = { plain: null, score, count };
+
+/** Glyphs drawn inside a marker's text after a shown score: its verified report count, and the pilot flag. */
+export type InlineGlyph = 'count' | 'pilot';
+
+export const INLINE_GLYPHS: Readonly<Record<InlineGlyph, Glyph>> = { count, pilot };

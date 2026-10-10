@@ -1,4 +1,4 @@
-import { BADGE_GLYPHS, type BadgeKind, type Glyph } from './BadgeIcons';
+import { BADGE_GLYPHS, INLINE_GLYPHS, type BadgeKind, type Glyph, type InlineGlyph } from './BadgeIcons';
 
 /** A stretchable rounded badge for MapLibre's icon-text-fit; the text sits inside `content`. */
 export interface BadgeImage {
@@ -40,8 +40,27 @@ interface Frame {
   readonly palette: Palette;
 }
 
+/** A glyph alone on a clear ground, for an image inside a marker's text. */
+export interface GlyphImage {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Uint8Array;
+  readonly options: { readonly pixelRatio: number };
+}
+
 /** Draws badges pixel by pixel: no canvas needed, so it also works in tests and workers. */
 export class BadgeArt {
+  /** The count or pilot glyph in the badge glyph colour, 12 px on screen, for MapLibre's inline text images. */
+  static inline(kind: InlineGlyph, dark = false): GlyphImage {
+    const glyph = INLINE_GLYPHS[kind];
+    const [r, g, b] = BADGE_PALETTES[dark ? 'dark' : 'light'].glyph;
+    const data = new Uint8Array(GLYPH_SIZE * GLYPH_SIZE * 4);
+    for (let i = 0; i < GLYPH_SIZE * GLYPH_SIZE; i++) {
+      if (glyph(i % GLYPH_SIZE, Math.floor(i / GLYPH_SIZE))) data.set([r, g, b, 255], i * 4);
+    }
+    return { width: GLYPH_SIZE, height: GLYPH_SIZE, data, options: { pixelRatio: RATIO } };
+  }
+
   /** A plain badge, or one with a fixed glyph at its left that the text never covers or stretches. */
   static create(kind: BadgeKind = 'plain', dark = false): BadgeImage {
     const glyph = BADGE_GLYPHS[kind];

@@ -25,6 +25,7 @@ Playful on top of map-app patterns (decision 20261010-1502, which replaces the m
 - Report types: dump `#c5221f`, no bin `#e37400`, water `#1967d2`, construction `#5d4037`, overflowing or broken bin `#7b3fa6`. Chips and lists use hand-drawn type icons (`TypeIcon`: heap, crossed bin, drop, cone, open bin spilling over) filled with the type colour on a soft tint tile; map pins keep the round glyph discs. Colour is never the only cue.
 - Icons: the key icons are hand-drawn components in `src/ui/icons/` (one file each, 24 grid, 2 px rounded outline): map with a pin, neighbourhood with a flag, the logo camera, clipboard with a tick, a friendly face, sliders, target, share and printer. At rest they are outlines; the current tab or a pressed pill fills the two tones (sun and teal tint) and hops. The small utility icons (close, search, chevrons) stay plain paths in `Icon`.
 - Appearance: Account → Settings offers System (the default), Light and Dark (`ThemePreference`, localStorage key `junksnap.theme`). An inline script in `index.html` sets `data-theme` before first paint. The basemap switches to its dark palette in place (`BasemapTheme.paint`).
+- Language: Account → Settings also offers English and हिन्दी (the same choice as the EN / हि toggle). In list mode, where the search field is hidden, the toggle sits beside Filters.
 - Status chips: a dot plus the word, on a tint (open, cleaned, reopened, community check).
 - Elevation: soft warm shadows for floating things, and a hard ink "sticker" shadow for the chunky ones (Report, the primary site action, the success tick).
 
@@ -39,7 +40,8 @@ Playful on top of map-app patterns (decision 20261010-1502, which replaces the m
 ## States
 
 - Empty states use small cartoons in the logo's style (`Illustration`): a happy bin (nothing here), a sleepy unplugged cloud (could not load) and the camera with its lens shut (camera blocked).
-- The toast gives one line for each of: offline, load failed, location blocked, filters hiding everything, "zoom in", and a truly empty view.
+- The toast gives one line for each of: offline, load failed, location blocked, filters hiding everything, "zoom in", sites just off screen (with a "Show the nearest report" button), and a truly empty view. It never says "No reports here yet" while the search around the view is still running.
+- Opening view: if the first view loads empty and nothing else has moved the map (the person, a search, a deep link or a location fix), it widens once to take in the nearest sites (`NearestSites`).
 - Mock mode: Filters carries a small "Sample data" note, and code fields show the sample code.
 
 ## Rules kept from 0201

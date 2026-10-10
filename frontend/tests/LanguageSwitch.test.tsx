@@ -1,12 +1,15 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { AppRoutes } from '../src/app/AppRoutes';
 import { FiltersButton } from '../src/features/map/components/FiltersButton';
 import { SearchBar } from '../src/features/map/components/SearchBar';
 import en from '../src/i18n/en.json';
 import hi from '../src/i18n/hi.json';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
 import { MemoryStore, renderApp, testServices } from './helpers';
+
+vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
 function keysOf(value: object, prefix = ''): string[] {
   return Object.entries(value).flatMap(([key, child]: [string, unknown]) =>
@@ -36,6 +39,22 @@ describe('language toggle in the search field', () => {
     expect(screen.queryByRole('button', { name: /Filters/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'हिन्दी' })).toHaveAttribute('aria-pressed', 'true');
     expect(store.getItem('junksnap.language')).toBe('hi');
+  });
+});
+
+describe('language in Account settings', () => {
+  it('switches the whole app to Hindi and back, and remembers it', async () => {
+    const store = new MemoryStore();
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/account', services: testServices(store) });
+    const settings = await screen.findByRole('region', { name: 'Settings' });
+    const english = within(settings).getByRole('group', { name: 'Language' });
+    await user.click(within(english).getByRole('button', { name: 'हिन्दी' }));
+    expect(store.getItem('junksnap.language')).toBe('hi');
+    const hindi = within(await screen.findByRole('region', { name: 'सेटिंग्स' })).getByRole('group', { name: 'भाषा' });
+    expect(within(hindi).getByRole('button', { name: 'हिन्दी' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(within(hindi).getByRole('button', { name: 'English' }));
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
   });
 });
 

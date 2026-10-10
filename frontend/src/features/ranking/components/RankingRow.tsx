@@ -21,9 +21,8 @@ export function RankingRow({ kind, row }: RankingRowProps) {
         </span>
         <span className="ranking-row__text">
           <span className="ranking-row__name">{row.name}</span>
-          <span className="ranking-row__meta">
-            {row.note} · {row.reports}
-          </span>
+          <span className="ranking-row__meta">{row.meta}</span>
+          {row.pilot && <span className="badge ranking-row__pilot">{t('site.pilot')}</span>}
         </span>
         <span className="ranking-row__score">
           {row.score === null ? (

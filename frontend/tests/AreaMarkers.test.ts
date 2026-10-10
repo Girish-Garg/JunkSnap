@@ -9,7 +9,7 @@ import { areaRow } from './areaRows';
 
 const texts = {
   number: (n: number) => String(n),
-  score: (name: string, n: string) => `${name}: score ${n}`,
+  score: (name: string, n: string, reports: string, pilot: boolean) => `${name}: score ${n} from ${reports}${pilot ? ', pilot' : ''}`,
   reports: (name: string, _count: number, n: string) => `${name}: ${n} reports`,
   noReports: (name: string) => `${name}: none`,
 };
@@ -24,9 +24,17 @@ describe('AreaMarkers', () => {
       ],
       texts,
     );
-    expect(markers.get('a')).toMatchObject({ value: '44', basis: 'score', tooltip: 'A: score 44' });
-    expect(markers.get('b')).toMatchObject({ value: '4', basis: 'count', tooltip: 'B: 4 reports' });
+    expect(markers.get('a')).toMatchObject({ value: '44', basis: 'score', tooltip: 'A: score 44 from 14, pilot' });
+    expect(markers.get('b')).toMatchObject({ value: '4', basis: 'count', count: null, pilot: false, tooltip: 'B: 4 reports' });
     expect(markers.get('c')).toMatchObject({ value: null, basis: null, tooltip: 'C: none' });
+  });
+
+  it('puts the verified report count and the pilot flag beside every shown score', () => {
+    const scored = areaRow({ id: 'a', reports: 14, scores: { city: 41 } });
+    const elsewhere = { ...areaRow({ id: 'b', reports: 12, scores: { city: 60 } }), pilot: false };
+    const markers = AreaMarkers.of([scored, elsewhere], texts);
+    expect(markers.get('a')).toMatchObject({ value: '41', count: '14', pilot: true });
+    expect(markers.get('b')).toMatchObject({ value: '60', count: '12', pilot: false });
   });
 
   it('never shows a withheld score, even when the row carries a value', () => {
@@ -61,10 +69,11 @@ describe('AreaMarkerSource.merge', () => {
   };
 
   it('puts each value, basis, tooltip and rank flat on the marker point', () => {
-    const marker = { value: '44', basis: 'score', tooltip: 'A: score 44', rank: 0 } as const;
+    const marker = { value: '44', basis: 'score', count: '14', pilot: true, tooltip: 'A: score 44', rank: 0 } as const;
     const merged = AreaMarkerSource.merge(points, new Map([['a', marker]]));
+    const flat = { marker_value: '44', marker_basis: 'score', marker_count: '14', marker_pilot: true, marker_tooltip: 'A: score 44' };
     expect(merged.features.map((f) => f.properties)).toEqual([
-      { id: 'a', name: 'A', kind: 'assembly', marker_value: '44', marker_basis: 'score', marker_tooltip: 'A: score 44', marker_rank: 0 },
+      { id: 'a', name: 'A', kind: 'assembly', ...flat, marker_rank: 0 },
       { id: 'b', name: 'B', kind: 'loksabha', marker_rank: 9999 },
     ]);
     expect(MarkerTooltip.text(merged.features[0]?.properties ?? undefined)).toBe('A: score 44');

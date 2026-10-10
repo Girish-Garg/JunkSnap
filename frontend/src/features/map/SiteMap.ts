@@ -29,6 +29,8 @@ const DESKTOP_QUERY = '(min-width: 1024px)';
 export interface MapView {
   /** What the map shows; domain/SiteTiles turns it into GET /sites queries. */
   readonly bbox: BBox;
+  /** The person moved the map (drag, pinch, wheel), not the app. */
+  readonly byUser?: boolean;
 }
 
 export interface SiteMapOptions {
@@ -116,12 +118,13 @@ export class SiteMap {
     this.#renderLayers();
   }
 
-  /** One point: fly there, clear of the sheet or card. Several: fit them all. */
-  moveTo(points: readonly LonLat[]): void {
+  /** One point: fly there (to `zoom`, else at least street level), clear of the sheet or card. Several: fit them all. */
+  moveTo(points: readonly LonLat[], zoom?: number): void {
     const [first] = points;
     if (!first) return;
     if (points.length === 1) {
-      this.#map.flyTo({ center: [...first], zoom: Math.max(this.#map.getZoom(), SITE_ZOOM), offset: this.#clearOffset() });
+      const to = zoom ?? Math.max(this.#map.getZoom(), SITE_ZOOM);
+      this.#map.flyTo({ center: [...first], zoom: to, offset: this.#clearOffset() });
       return;
     }
     const bounds = points.reduce((box, point) => box.extend([...point]), new LngLatBounds([...first], [...first]));
@@ -153,16 +156,17 @@ export class SiteMap {
 
   #listen({ onPick, onPickStack, onPickArea, onViewChange }: SiteMapOptions): void {
     // A zero-size container gives an empty box; the resize that follows fires moveend with the real one.
-    const emitView = () => {
-      if (this.#map.getContainer().clientHeight > 0) onViewChange(this.#view());
+    const emitView = (byUser = false) => {
+      if (this.#map.getContainer().clientHeight > 0) onViewChange({ ...this.#view(), byUser });
     };
     this.#map.on('load', () => {
       this.#collapseAttribution();
       this.#addSiteLayers()
-        .then(emitView)
+        .then(() => emitView())
         .catch((error: unknown) => console.error('Could not add site layers', error));
     });
-    this.#map.on('moveend', emitView);
+    // MapLibre sets originalEvent only on moves the person made; flyTo and fitBounds have none.
+    this.#map.on('moveend', (event) => emitView(event.originalEvent !== undefined));
     // Pins that overlap at one zoom stand apart at another, so the stacks follow the zoom.
     this.#map.on('zoomend', () => this.#refreshPins());
     this.#map.on('click', (event) => {

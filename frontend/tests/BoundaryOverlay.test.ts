@@ -52,7 +52,7 @@ describe('BoundaryOverlay.show', () => {
   it('adds the plain, score and photo badge images once ready', () => {
     const { map } = fakeMap();
     new BoundaryOverlay(map as unknown as MapLibreMap, files, undefined).ready();
-    expect(map.addImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count']);
+    expect(map.addImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count', 'area-glyph-count', 'area-glyph-pilot']);
   });
 });
 
@@ -63,10 +63,10 @@ describe('BoundaryOverlay.setDark', () => {
     overlay.ready();
     overlay.show({ fine: false });
     overlay.setDark(true);
-    expect(map.updateImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count']);
+    expect(map.updateImage.mock.calls.map(([name]) => name)).toEqual(['area-badge', 'area-badge-score', 'area-badge-count', 'area-glyph-count', 'area-glyph-pilot']);
     expect(map.setLayoutProperty).toHaveBeenCalledWith('boundary-marker', 'text-field', expect.anything());
     overlay.setDark(true);
-    expect(map.updateImage).toHaveBeenCalledTimes(3);
+    expect(map.updateImage).toHaveBeenCalledTimes(5);
   });
 
   it('starts dark when the theme is dark before the map is ready', () => {

@@ -12,7 +12,7 @@ export function useAreaMarkers(rows: readonly AreaScores[]): ReadonlyMap<string,
     () =>
       AreaMarkers.of(rows, {
         number: (value) => format.number(value),
-        score: (name, n) => t('boundaries.tooltipScore', { name, n }),
+        score: (name, n, reports, pilot) => t(pilot ? 'boundaries.tooltipScorePilot' : 'boundaries.tooltipScore', { name, n, reports }),
         reports: (name, count, n) => t('boundaries.tooltipReports', { name, count, n }),
         noReports: (name) => t('boundaries.tooltipNone', { name }),
       }),

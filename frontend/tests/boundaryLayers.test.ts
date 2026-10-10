@@ -2,7 +2,7 @@ import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import type { LayerSpecification } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
 import { BoundaryFillLayer } from '../src/layers/boundaries/BoundaryFillLayer';
-import { AreaMarkerLayer, BADGE_IMAGES, markerText as markerTextFor } from '../src/layers/boundaries/AreaMarkerLayer';
+import { AreaMarkerLayer, BADGE_IMAGES, INLINE_IMAGES, markerText as markerTextFor } from '../src/layers/boundaries/AreaMarkerLayer';
 import type { BoundaryContext } from '../src/layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../src/layers/boundaries/BoundaryLineLayer';
 import { OutdatedLineLayer } from '../src/layers/boundaries/OutdatedLineLayer';
@@ -62,13 +62,22 @@ describe('boundary lines', () => {
   });
 });
 
-function markerText(spec: LayerSpecification, properties: Record<string, unknown>): string {
+interface Formatted {
+  readonly sections: readonly { readonly text: string; readonly image: { readonly name: string } | null }[];
+}
+
+function formatted(spec: LayerSpecification, properties: Record<string, unknown>): Formatted {
   const parsed = createExpression(prop(spec, 'layout', 'text-field'), { type: 'formatted' } as never);
   if (parsed.result !== 'success') throw new Error('Invalid text-field');
   const feature = { type: 'Point', properties } as never;
-  const formatted = parsed.value.evaluate({ zoom: 12 }, feature) as { sections: { text: string }[] };
-  return formatted.sections.map((section) => section.text).join('');
+  return parsed.value.evaluate({ zoom: 12 }, feature) as Formatted;
 }
+
+const markerText = (spec: LayerSpecification, properties: Record<string, unknown>): string =>
+  formatted(spec, properties).sections.map((section) => section.text).join('').trimEnd();
+
+const markerImages = (spec: LayerSpecification, properties: Record<string, unknown>): string[] =>
+  formatted(spec, properties).sections.flatMap((section) => (section.image ? [section.image.name] : []));
 
 describe('AreaMarkerLayer', () => {
   const marker = new AreaMarkerLayer();
@@ -83,6 +92,15 @@ describe('AreaMarkerLayer', () => {
     expect(prop(spec, 'layout', 'icon-text-fit')).toBe('both');
     expect(markerText(spec, { name: 'Jodhpur', marker_value: '44' })).toBe('Jodhpur\n44');
     expect(markerText(spec, { name: 'Sardarpura' })).toBe('Sardarpura');
+  });
+
+  it('puts the verified report count beside a shown score, and the pilot flag on pilot-city data', () => {
+    const spec = marker.spec(context());
+    const scored = { name: 'Jodhpur', marker_value: '44', marker_count: '14' };
+    expect(markerText(spec, scored)).toBe('Jodhpur\n44  14');
+    expect(markerImages(spec, scored)).toEqual([INLINE_IMAGES.count]);
+    expect(markerImages(spec, { ...scored, marker_pilot: true })).toEqual([INLINE_IMAGES.count, INLINE_IMAGES.pilot]);
+    expect(markerImages(spec, { name: 'Sardarpura', marker_value: '4' })).toEqual([]);
   });
 });
 
@@ -108,8 +126,9 @@ describe('AreaMarkerLayer in the dark theme', () => {
   const colours = (expression: unknown): unknown[] => JSON.stringify(expression).match(/#[0-9a-f]{6}/g) ?? [];
 
   it('uses light text on the dark badge, and dark text on the light one', () => {
-    expect(colours(markerTextFor(false))).toEqual(['#221c15', '#5f5446', '#221c15']);
-    expect(colours(markerTextFor(true))).toEqual(['#f7f0e4', '#c9bdaa', '#f7f0e4']);
+    const [name, value] = ['#221c15', '#5f5446'];
+    expect(colours(markerTextFor(false))).toEqual([name, value, value, name, value, value, name, value, name]);
+    expect(colours(markerTextFor(true))).toEqual(['#f7f0e4', '#c9bdaa', '#c9bdaa', '#f7f0e4', '#c9bdaa', '#c9bdaa', '#f7f0e4', '#c9bdaa', '#f7f0e4']);
     const dark = new AreaMarkerLayer().spec({ polygonSource: 'polys', labelSource: 'labels', dark: true });
     expect(prop(dark, 'layout', 'text-field')).toEqual(markerTextFor(true));
   });
