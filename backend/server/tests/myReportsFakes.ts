@@ -1,7 +1,8 @@
 import { Report } from "../src/domain/Report.js";
+import type { Clock } from "../src/ports/Clock.js";
 import type { UserReportLister, UserReportPage, UserReportPageRequest } from "../src/ports/UserReportLister.js";
 import { MyReportsQuery } from "../src/services/MyReportsQuery.js";
-import type { FakeReportRepository } from "./reportFakes.js";
+import { FixedClock, type FakeReportRepository } from "./reportFakes.js";
 
 // Lists the fake repository's rows the way DynamoUserReportLister queries by-user: snaps only, newest first.
 export class FakeUserReportLister implements UserReportLister {
@@ -22,6 +23,10 @@ export class FakeUserReportLister implements UserReportLister {
   }
 }
 
-export function fakeMine(reports: FakeReportRepository, publicBaseUrl: string): MyReportsQuery {
-  return new MyReportsQuery(new FakeUserReportLister(reports), publicBaseUrl);
+export function fakeMine(
+  reports: FakeReportRepository,
+  publicBaseUrl: string,
+  clock: Clock = new FixedClock("2026-10-10T02:14:52Z"),
+): MyReportsQuery {
+  return new MyReportsQuery(new FakeUserReportLister(reports), publicBaseUrl, clock);
 }

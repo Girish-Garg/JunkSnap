@@ -4,18 +4,21 @@ from typing import Any
 
 import pytest
 from fakes import (
-    JUDGE_JSON,
+    CLEAN_FIELDS,
+    JUDGE_FIELDS,
     FakeBuilder,
     FakeDetector,
     FakeProvider,
     FakeSignal,
     FixedClock,
+    judge_json,
     make_case,
 )
 from model_fakes import meta_model
 
 from ml.domain.auto_claims import AutoContextClaim, ScoutClaim, claim_for
 from ml.domain.errors import InvalidClaimError
+from ml.domain.judge_attributes import ClaimAnswer
 from ml.domain.label_insights import LabelInsights
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
@@ -24,6 +27,7 @@ from ml.domain.verification import Claim, JudgeVerdict, SignalResult, Thresholds
 from ml.handlers.verify_body import VerifyBody
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
+from ml.services.judge_answer import JudgeAnswer
 from ml.services.judge_decides_combiner import AUTO_CLAIM_REASON
 from ml.services.label_signal import RekognitionLabelSignal
 from ml.services.meta_combiner import MetaLearnerCombiner
@@ -46,17 +50,23 @@ def body(report_type: str, context: str, purpose: str = "report") -> dict[str, A
     }
 
 
-def answer(report_type: str, context: str | None, confidence: float = 0.9) -> str:
-    named = "null" if context is None else f'"{context}"'
-    return (
-        JUDGE_JSON.replace('"waste_dump"', f'"{report_type}"')
-        .replace('"vacant_plot"', named)
-        .replace('"confidence": 0.9', f'"confidence": {confidence}')
-    )
+# What the judge sees for each shown type, as judge_v1 attributes.
+SHOWN: dict[str, dict[str, object]] = {
+    "waste_dump": {},
+    "overflowing_bin": {"bin": "yes", "bin_overflowing_or_broken": "yes"},
+    "contaminated_water": {"garbage": "no", "water_contamination": "yes"},
+    "not_waste": {**CLEAN_FIELDS, "user_verdict": "yes"},  # the user verdict is left to the rules
+}
 
 
-def verdict(report_type: str, confidence: float = 0.9) -> JudgeVerdict:
-    return JudgeVerdict(report_type, None, False, (), "sample", confidence)
+def answer(shown: str, context: str | None, confidence: float = 0.9, verdict: str = "yes") -> str:
+    fields = {**JUDGE_FIELDS, **SHOWN[shown], "context": context}
+    return judge_json(fields, user_verdict=verdict, user_verdict_confidence=confidence)
+
+
+def verdict(shown: str, user_verdict: str = "yes") -> JudgeVerdict:
+    reply = answer(shown, None, 0.9, user_verdict)
+    return JudgeAnswer.model_validate_json(reply).to_verdict()
 
 
 def test_the_verify_body_accepts_an_area_scout_and_an_automatic_place() -> None:
@@ -79,15 +89,27 @@ def test_auto_claims_outside_the_contract_pairs_are_refused(
         VerifyBody.model_validate(body(report_type, context, purpose)).to_input()
 
 
-def test_a_scout_claim_is_backed_by_any_waste_it_can_find_and_denied_by_no_bin() -> None:
+def test_a_scout_claim_is_backed_by_any_waste_it_can_find_and_denied_by_a_clean_photo() -> None:
     report = Purpose.named("report")
     assert report.judge_support(verdict("overflowing_bin"), SCOUT) == pytest.approx(0.9)
     assert report.judge_support(verdict("contaminated_water"), SCOUT) == pytest.approx(0.9)
-    assert report.judge_support(verdict("not_waste"), SCOUT) == pytest.approx(0.1)
-    assert report.judge_support(verdict("no_bin"), SCOUT) == pytest.approx(0.1)
+    clean = verdict("not_waste")
+    assert clean.answer_for(SCOUT) is ClaimAnswer.NO
+    assert report.judge_support(clean, SCOUT) == pytest.approx(0.1)
     picked = claim_for("waste_dump", "auto")
     assert report.judge_support(verdict("waste_dump"), picked) == pytest.approx(0.9)
-    assert report.judge_support(verdict("overflowing_bin"), picked) == pytest.approx(0.5)
+    water = claim_for("contaminated_water", "auto")
+    assert verdict("waste_dump").answer_for(water) is ClaimAnswer.NO  # no dirty water seen
+    assert report.judge_support(verdict("waste_dump"), water) == pytest.approx(0.1)
+
+
+def test_a_scout_claim_with_nothing_shown_for_sure_is_uncertain() -> None:
+    unsure = JudgeAnswer.model_validate_json(
+        judge_json(CLEAN_FIELDS, garbage="uncertain", user_verdict="uncertain")
+    ).to_verdict()
+
+    assert unsure.answer_for(SCOUT) is ClaimAnswer.UNCERTAIN
+    assert unsure.report_type == "not_waste"  # nothing shown for sure, so no type is named
 
 
 def test_every_combiner_needs_the_judges_answer_on_an_auto_claim() -> None:
@@ -134,14 +156,17 @@ def test_a_scout_frame_the_judge_calls_not_waste_is_rejected() -> None:
     verifier, _provider = stacked_scout(answer("not_waste", None), 0.3)
     result = verifier.verify(make_case(claim=SCOUT))
     assert result.outcome.decision == "rejected"
-    assert result.to_contract()["judge"] == {
+    judge = result.to_contract()["judge"]
+    assert isinstance(judge, dict)
+    assert {key: value for key, value in judge.items() if key != "attributes"} == {
         "report_type": "not_waste", "context": None, "burning": False,
-        "readable_brands": [], "rationale": "Mixed waste on an open plot.",
+        "readable_brands": [], "rationale": "A clean street with no waste.",
     }
+    assert judge["attributes"]["garbage"] == "no"
 
 
 def test_the_judge_veto_rejects_a_scout_frame_even_against_sure_detectors() -> None:
-    """A no_bin answer is not vetoed here; the worker rejects it as nothing a scout can find."""
+    """Rekognition's labels are not a trained detector, so they never lift the judge's no."""
     verifier, _provider = stacked_scout(answer("not_waste", None, 0.95), 0.95)
     result = verifier.verify(make_case(claim=SCOUT))
     assert result.outcome.disagreement

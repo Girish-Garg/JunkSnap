@@ -1,3 +1,4 @@
+import type { ConfirmRequest } from '../domain/ReportConfirmation';
 import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, NoBinUpload, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
@@ -10,6 +11,8 @@ export interface ReportApi {
   /** Idempotent per upload_id: a retry returns the same report id. */
   submit(upload: ReportUpload | NoBinUpload): Promise<AcceptedReport>;
   status(reportId: string): Promise<ReportStatusView>;
+  /** The reporter's answer to a needs_confirmation report; returns the report status (contracts v1.16). */
+  confirm(reportId: string, request: ConfirmRequest): Promise<ReportStatusView>;
   /** GET /me/reports: the signed-in user's own reports, newest first; cursor is the next_cursor before. */
   mine(cursor: string | null): Promise<ReportListPage>;
 }

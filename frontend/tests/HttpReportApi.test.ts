@@ -92,3 +92,24 @@ describe('HttpReportApi failures', () => {
     await expect(offline.status('rpt_1')).rejects.toMatchObject({ status: 0, code: 'network_error' });
   });
 });
+
+describe('HttpReportApi reporter confirmation (contracts v1.16)', () => {
+  it('POSTs only {"sure": ...} with the bearer and device tokens, and returns the report status', async () => {
+    const sent: Sent[] = [];
+    const view = { report_id: 'rpt_1', status: 'processing', site_id: null, blurred_url: null, updated_at: '2026-10-11T10:00:00Z', confirmation: null };
+    const api = new HttpReportApi('https://api.test/', fixedIdentity('id-token'), recordingFetch(200, view, sent));
+    await expect(api.confirm('rpt_1', { sure: true })).resolves.toEqual(view);
+    await api.confirm('rpt_1', { sure: false });
+    expect(sent[0]).toMatchObject({ url: 'https://api.test/reports/rpt_1/confirm', method: 'POST' });
+    expect(sent[0]?.headers).toMatchObject({ Authorization: 'Bearer id-token', 'X-Device-Token': DEVICE_TOKEN, 'Content-Type': 'application/json' });
+    expect(JSON.parse(String(sent[0]?.body))).toEqual({ sure: true });
+    expect(JSON.parse(String(sent[1]?.body))).toEqual({ sure: false });
+  });
+
+  it('maps a closed question and the hourly limit to their error codes', async () => {
+    const closed = new HttpReportApi('https://api.test', fixedIdentity('id-token'), recordingFetch(409, { error: 'confirmation_closed', message: 'Closed' }));
+    await expect(closed.confirm('rpt_1', { sure: true })).rejects.toMatchObject({ status: 409, code: 'confirmation_closed' });
+    const limited = new HttpReportApi('https://api.test', fixedIdentity('id-token'), recordingFetch(429, { error: 'rate_limited', message: 'Slow down' }));
+    await expect(limited.confirm('rpt_1', { sure: false })).rejects.toMatchObject({ status: 429, code: 'rate_limited' });
+  });
+});

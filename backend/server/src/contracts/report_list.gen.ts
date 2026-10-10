@@ -12,6 +12,9 @@ export interface ReportList {
    */
   reports: {
     report_id: string;
+    /**
+     * needs_confirmation and not_confirmed since contracts v1.16: the judge was unsure and the reporter is asked, or did not answer in time.
+     */
     status:
       | "queued"
       | "processing"
@@ -20,12 +23,27 @@ export interface ReportList {
       | "verified"
       | "rejected"
       | "needs_review"
-      | "withdrawn";
+      | "withdrawn"
+      | "needs_confirmation"
+      | "not_confirmed";
     site_id: string | null;
     blurred_url: string | null;
     report: {};
     moderation: {} | null;
     verification: {} | null;
+    /**
+     * Contracts v1.16: null unless the verify step asked the reporter; as in the GET /reports/{id} response. Not in required, so v1.14 producers stay valid.
+     */
+    confirmation?: null | {
+      question: string;
+      reasoning: string;
+      report_type:
+        "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
+      asked_at: string;
+      expires_at: string;
+      answer: "sure" | "withdrawn" | "expired" | null;
+      answered_at: string | null;
+    };
     received_at: string;
     /**
      * The row's last change; the app keeps it as the item's freshness token.
@@ -82,8 +100,11 @@ export const reportListSchema = {
               "verified",
               "rejected",
               "needs_review",
-              "withdrawn"
-            ]
+              "withdrawn",
+              "needs_confirmation",
+              "not_confirmed"
+            ],
+            "description": "needs_confirmation and not_confirmed since contracts v1.16: the judge was unsure and the reporter is asked, or did not answer in time."
           },
           "site_id": {
             "type": [
@@ -119,6 +140,68 @@ export const reportListSchema = {
             "type": [
               "object",
               "null"
+            ]
+          },
+          "confirmation": {
+            "description": "Contracts v1.16: null unless the verify step asked the reporter; as in the GET /reports/{id} response. Not in required, so v1.14 producers stay valid.",
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "question",
+                  "reasoning",
+                  "report_type",
+                  "asked_at",
+                  "expires_at",
+                  "answer",
+                  "answered_at"
+                ],
+                "properties": {
+                  "question": {
+                    "type": "string"
+                  },
+                  "reasoning": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "report_type": {
+                    "enum": [
+                      "waste_dump",
+                      "no_bin",
+                      "contaminated_water",
+                      "open_construction",
+                      "overflowing_bin"
+                    ]
+                  },
+                  "asked_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "answer": {
+                    "enum": [
+                      "sure",
+                      "withdrawn",
+                      "expired",
+                      null
+                    ]
+                  },
+                  "answered_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              }
             ]
           },
           "received_at": {

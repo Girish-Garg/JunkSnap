@@ -1,10 +1,12 @@
 from fakes import (
+    CLEAN_FIELDS,
     FIXED_NOW,
     JUDGE_JSON,
     FakeBuilder,
     FakeProvider,
     FakeSignal,
     FixedClock,
+    judge_json,
     make_case,
     provider_error,
 )
@@ -44,7 +46,7 @@ def test_confident_signals_still_ask_the_judge() -> None:
 
 
 def test_confident_rejection_is_confirmed_by_the_judge() -> None:
-    not_waste = JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
+    not_waste = judge_json(CLEAN_FIELDS)
     stacked, provider = verifier([FakeSignal("rekognition_labels", 0.1)], [not_waste])
 
     result = stacked.verify(make_case())
@@ -95,10 +97,8 @@ def test_judge_failure_keeps_the_signal_decision() -> None:
     assert result.outcome.decision == "community_check"
 
 
-CLEAN_JSON = (
-    JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
-    .replace('"confidence": 0.9}', '"confidence": 0.9, "scene_fits_site": true}')
-)
+# The judge finds the site clean (the cleanup's claim), in a place that fits it.
+CLEAN_JSON = judge_json(CLEAN_FIELDS, user_verdict="yes", scene_fits_site=True)
 
 
 def test_cleanup_always_asks_the_judge_about_the_site() -> None:
@@ -112,7 +112,7 @@ def test_cleanup_always_asks_the_judge_about_the_site() -> None:
 
 
 def test_cleanup_of_a_scene_that_does_not_fit_the_site_is_rejected() -> None:
-    elsewhere = CLEAN_JSON.replace('"scene_fits_site": true', '"scene_fits_site": false')
+    elsewhere = judge_json(CLEAN_FIELDS, user_verdict="yes", scene_fits_site=False)
     stacked, _ = verifier([FakeSignal("rekognition_labels", 1.0)], [elsewhere])
 
     result = stacked.verify(make_case("cleanup"))
@@ -121,7 +121,7 @@ def test_cleanup_of_a_scene_that_does_not_fit_the_site_is_rejected() -> None:
 
 
 def test_cleanup_answer_without_the_scene_check_is_retried() -> None:
-    no_scene = CLEAN_JSON.replace(', "scene_fits_site": true', "")
+    no_scene = judge_json(CLEAN_FIELDS, user_verdict="yes")
     stacked, provider = verifier([FakeSignal("rekognition_labels", 1.0)], [no_scene, CLEAN_JSON])
 
     result = stacked.verify(make_case("cleanup"))
@@ -139,9 +139,12 @@ def test_cleanup_without_a_judge_answer_is_rejected() -> None:
     assert (result.outcome.is_clean, result.outcome.decision) == (False, "rejected")
 
 
-def test_report_prompt_says_nothing_about_the_claim() -> None:
+def test_report_prompt_states_the_claim_for_the_user_verdict() -> None:
+    """Decision 0305: the judge answers whether the photo supports the reporter's claim."""
     stacked, provider = verifier([FakeSignal("rekognition_labels", 0.7)], [JUDGE_JSON])
 
     stacked.verify(make_case())
 
-    assert "waste_dump" not in provider.requests[0].prompt
+    prompt = provider.requests[0].prompt
+    assert prompt.endswith("The resident says this photo shows: waste_dump (vacant_plot).")
+    assert "cleanup" not in prompt

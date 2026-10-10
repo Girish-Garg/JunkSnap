@@ -151,6 +151,43 @@ describe('merging the server list with the phone', () => {
   });
 });
 
+// A report GET /me/reports lists after the check was unsure (contracts v1.16).
+function asked(n: number, status: ReportStatus, answer: 'expired' | null): ReportStatusView {
+  const answeredAt = answer === null ? null : '2026-10-11T03:01:00Z';
+  const confirmation = {
+    question: 'Our check wasn\'t sure this shows a waste dump. Only report it if you\'re 100% sure.',
+    reasoning: 'A roadside with a few scattered items.', report_type: 'waste_dump',
+    asked_at: '2026-10-10T03:01:00Z', expires_at: '2026-10-11T03:01:00Z', answer, answered_at: answeredAt,
+  } as const;
+  return { ...listed(n, status), confirmation };
+}
+
+describe('reports the check was unsure about (contracts v1.16)', () => {
+  it('brings back a waiting report with its question, and asks it in Activity', async () => {
+    const api = new FakeReportApi();
+    api.pages_ = [[asked(1, 'needs_confirmation', null)]];
+    api.status_ = 'needs_confirmation'; // Activity also polls an open report with GET /reports/{id}
+    const services = testServices(new MemoryStore(), { api });
+    await signIn(services.auth as MockAuthService, 'resident@example.com');
+    await renderApp(<AppRoutes />, { route: '/activity', services });
+    const photos = await screen.findByRole('list', { name: 'Photos' });
+    expect(await within(photos).findByRole('button', { name: 'Yes, I\'m sure' })).toBeInTheDocument();
+    expect(within(photos).getByRole('button', { name: 'Withdraw' })).toBeInTheDocument();
+  });
+
+  it('keeps a report that was not confirmed in time, and updates a waiting row when it expires', async () => {
+    const { snap, api, clock } = await rig();
+    api.pages_ = [[asked(1, 'needs_confirmation', null), asked(2, 'not_confirmed', 'expired')]];
+    await snap.activity.revalidate();
+    expect(ids(snap)).toEqual(['rpt_1', 'rpt_2']);
+    expect(snap.queue.find('1'.repeat(64))?.data.status?.confirmation?.answer).toBeNull();
+    api.pages_ = [[{ ...asked(1, 'not_confirmed', 'expired'), updated_at: '2026-10-11T03:02:00Z' }, asked(2, 'not_confirmed', 'expired')]];
+    clock.advance(60_000);
+    await snap.activity.revalidate();
+    expect(snap.queue.find('1'.repeat(64))?.data.status?.status).toBe('not_confirmed');
+  });
+});
+
 describe('merging after a delete', () => {
   it('never brings back a report deleted from Activity', async () => {
     const { snap, api } = await rig([sentRow(1, true)]);

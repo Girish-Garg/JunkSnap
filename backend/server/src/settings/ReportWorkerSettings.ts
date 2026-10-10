@@ -7,6 +7,7 @@ const ReportWorkerEnv = z.object({
   USERS_TABLE: z.string().min(1),
   REPORTS_QUEUE_URL: z.url(),
   ML_URL: z.url(),
+  CONFIRM_TTL_HOURS: z.coerce.number().positive().default(24),
 });
 
 export class ReportWorkerSettings {
@@ -18,6 +19,8 @@ export class ReportWorkerSettings {
   readonly usersTable: string;
   readonly reportsQueueUrl: string;
   readonly mlUrl: string;
+  // Hours a reporter has to answer a needs_confirmation report (contracts v1.16).
+  readonly confirmTtlHours: number;
 
   private constructor(values: z.output<typeof ReportWorkerEnv>) {
     this.reportsTable = values.REPORTS_TABLE;
@@ -25,6 +28,7 @@ export class ReportWorkerSettings {
     this.usersTable = values.USERS_TABLE;
     this.reportsQueueUrl = values.REPORTS_QUEUE_URL;
     this.mlUrl = values.ML_URL;
+    this.confirmTtlHours = values.CONFIRM_TTL_HOURS;
   }
 
   static fromEnv(env: Env): ReportWorkerSettings {

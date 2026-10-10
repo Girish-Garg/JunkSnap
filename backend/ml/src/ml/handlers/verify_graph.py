@@ -27,6 +27,7 @@ from ml.ports.llm_provider import ProviderBuilder
 from ml.ports.signal import Signal
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
+from ml.services.judge_answer import PROMPT_VERSION
 from ml.services.label_signal import RekognitionLabelSignal
 from ml.services.provider_factory import ProviderFactory
 from ml.services.provider_router import ProviderRouter
@@ -37,7 +38,7 @@ from ml.settings.core import CoreSettings
 from ml.settings.llm import LlmSettings
 from ml.settings.models import ModelSettings
 
-JUDGE_PROMPT = "judge_v0.txt"
+JUDGE_PROMPT = f"{PROMPT_VERSION}.txt"  # the version judge.attributes.prompt records
 # Few retries: a throttled provider should hand over to the next one quickly.
 AWS_CONFIG = Config(retries={"max_attempts": 2, "mode": "standard"}, read_timeout=60)
 

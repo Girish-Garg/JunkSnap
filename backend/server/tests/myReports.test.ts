@@ -39,7 +39,7 @@ beforeEach(async () => {
   const snapLimit = new SnapLimit(new FakeSnapCounter(reports));
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock });
-  const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE), mine: fakeMine(reports, BASE) };
+  const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE, clock), mine: fakeMine(reports, BASE, clock) };
   const plugin = new ReportEndpoints(services, new RouteGuard(new TokenIsUser())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);

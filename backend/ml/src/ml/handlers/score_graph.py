@@ -24,6 +24,7 @@ from ml.ports.image_embedder import ImageEmbedder
 from ml.ports.signal import Signal
 from ml.services.case_scorer import UsageCost
 from ml.services.embedding_signal import EmbeddingSignal
+from ml.services.judge_answer import PROMPT_VERSION
 from ml.services.label_signal import RekognitionLabelSignal
 from ml.services.metered_provider import MeteredBuilder, UsageLog
 from ml.services.provider_factory import ProviderFactory
@@ -31,7 +32,7 @@ from ml.services.provider_router import ProviderRouter
 from ml.services.vision_judge import VisionJudge
 from ml.services.yolo_signal import YoloSignal
 
-JUDGE_PROMPT = "judge_v0.txt"
+JUDGE_PROMPT = f"{PROMPT_VERSION}.txt"  # the version judge.attributes.prompt records
 # Offline runs wait out throttling instead of failing over.
 OFFLINE_CONFIG = Config(retries={"max_attempts": 8, "mode": "adaptive"}, read_timeout=120)
 REGION = "ap-south-1"

@@ -1,5 +1,6 @@
 """In-memory fakes of the ml package's ports, shared by unit and contract tests."""
 
+import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
 
@@ -24,10 +25,27 @@ from ml.services.vision_judge import VisionJudge
 
 JPEG = b"\xff\xd8\xff\xe0fake-jpeg"
 FIXED_NOW = datetime(2026, 10, 10, 2, 15, 3, tzinfo=UTC)
-JUDGE_JSON = (
-    '{"report_type": "waste_dump", "context": "vacant_plot", "burning": false, '
-    '"readable_brands": [], "rationale": "Mixed waste on an open plot.", "confidence": 0.9}'
-)
+# A structured judge answer (prompt judge_v1): a usable photo of loose waste, claim backed.
+JUDGE_FIELDS: dict[str, object] = {
+    "garbage": "yes", "bin": "no", "bin_overflowing_or_broken": "no",
+    "water_contamination": "no", "construction_debris": "no", "burning": "no",
+    "photo_usable": "yes", "context": "vacant_plot", "user_verdict": "yes",
+    "user_verdict_confidence": 0.9, "reasoning": "Mixed waste on an open plot.",
+    "readable_brands": [],
+}
+CLEAN_FIELDS: dict[str, object] = {
+    **JUDGE_FIELDS, "garbage": "no", "context": None, "user_verdict": "no",
+    "reasoning": "A clean street with no waste.",
+}
+
+
+def judge_json(base: dict[str, object] | None = None, **fields: object) -> str:
+    """A judge answer: JUDGE_FIELDS (or base) with these fields changed; ... drops a field."""
+    body = {**(JUDGE_FIELDS if base is None else base), **fields}
+    return json.dumps({key: value for key, value in body.items() if value is not ...})
+
+
+JUDGE_JSON = judge_json()
 
 
 class FakeProvider(LlmProvider):

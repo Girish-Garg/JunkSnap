@@ -20,6 +20,8 @@ describe('ReportOutcome for every report status', () => {
     ['verified', view('verified', { site_id: 'site_jdh_1' }), 'verified'],
     ['withdrawn', view('withdrawn'), 'withdrawn'],
     ['needs_review', view('needs_review'), 'review'],
+    ['needs_confirmation', view('needs_confirmation'), 'asking'],
+    ['not_confirmed', view('not_confirmed'), 'not_confirmed'],
     ['rejected by moderation', view('rejected', { moderation: { outcome: 'rejected', reasons: ['duplicate'] } }), 'stopped'],
     ['rejected, judge could not see the photo', view('rejected', { moderation: PASSED, verification: MODELS_UNCLEAR }), 'unclear'],
     ['rejected, judge says not waste', view('rejected', { moderation: PASSED, verification: MODELS_NO }), 'not_waste'],

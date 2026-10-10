@@ -15,6 +15,8 @@ export interface ReportEvidenceLoaders {
   readonly snap: ReportEvidenceLoader;
   /** A scan frame the models sent to neighbours: the jpr-1 set. */
   readonly frame: ReportEvidenceLoader;
+  /** A snap the judge was unsure about, so its reporter is asked: jdh-1 sent and moderated, verification jdh-confirm. */
+  readonly confirm: ReportEvidenceLoader;
 }
 
 export const reportEvidenceLoaders: ReportEvidenceLoaders = {
@@ -27,5 +29,10 @@ export const reportEvidenceLoaders: ReportEvidenceLoaders = {
     report: (await import('../../../contracts/fixtures/report_upload.jpr-1.json')).default as unknown as UploadEvidence,
     moderation: (await import('../../../contracts/fixtures/moderation_result.jpr-1.json')).default as unknown as ModerationEvidence,
     verification: (await import('../../../contracts/fixtures/verification_result.jpr-1.json')).default as unknown as VerificationEvidence,
+  }),
+  confirm: async () => ({
+    report: (await import('../../../contracts/fixtures/report_upload.jdh-1.json')).default as unknown as UploadEvidence,
+    moderation: (await import('../../../contracts/fixtures/moderation_result.jdh-1.json')).default as unknown as ModerationEvidence,
+    verification: (await import('../../../contracts/fixtures/verification_result.jdh-confirm.json')).default as unknown as VerificationEvidence,
   }),
 };

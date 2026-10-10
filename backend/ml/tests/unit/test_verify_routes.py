@@ -1,7 +1,10 @@
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 from fakes import (
+    CLEAN_FIELDS,
     JUDGE_JSON,
     FakeBuilder,
     FakeFitter,
@@ -9,8 +12,10 @@ from fakes import (
     FakeProvider,
     FakeSignal,
     FixedClock,
+    judge_json,
 )
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator
 
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
@@ -25,6 +30,8 @@ from ml.services.verify_service import VerifyService
 from ml.services.vision_judge import VisionJudge
 from ml.settings.core import CoreSettings
 
+SCHEMAS = Path(__file__).resolve().parents[4] / "contracts" / "schemas"
+SCHEMA = json.loads((SCHEMAS / "verification_result.schema.json").read_text("utf-8"))
 REQUEST: dict[str, Any] = {
     "report_id": "rpt_jdh_1",
     "purpose": "report",
@@ -35,9 +42,8 @@ REQUEST: dict[str, Any] = {
 }
 CLEANUP = {**REQUEST, "report_id": "cln_jdh_3c", "purpose": "cleanup",
            "blurred_key": "media/cleanups/cln_jdh_3c.jpg"}
-CLEAN_JSON = (
-    JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
-    .replace('"confidence": 0.9}', '"confidence": 0.95, "scene_fits_site": true}')
+CLEAN_JSON = judge_json(
+    CLEAN_FIELDS, user_verdict="yes", user_verdict_confidence=0.95, scene_fits_site=True
 )
 
 
@@ -94,6 +100,17 @@ def test_bad_requests_get_the_contract_error(change: dict[str, str]) -> None:
 
     assert response.status_code == 400
     assert response.json()["error"] == "bad_request"
+
+
+def test_an_unsure_judge_answers_needs_confirmation_over_http() -> None:
+    unsure = judge_json(garbage="uncertain", user_verdict="uncertain", user_verdict_confidence=0.5)
+    body = client(0.95, [unsure]).post("/internal/verify", json=REQUEST).json()
+
+    assert body["decision"] == "needs_confirmation"
+    assert body["combiner"]["version"] == "fw-v0+judge_unsure:ask_reporter by bedrock/m@4.6"
+    assert body["judge"]["attributes"]["user_verdict"] == "uncertain"
+    assert body["judge"]["attributes"]["prompt"] == "judge_v1"
+    Draft202012Validator(SCHEMA).validate(body)
 
 
 def test_cleanup_key_must_be_under_media_cleanups() -> None:

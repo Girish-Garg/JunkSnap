@@ -33,11 +33,14 @@ export class SiteReportMerger implements ReportMerger {
     }
     const moderation = moderation_result ?? null;
     const verification = verification_result ?? null;
-    const upload = Report.fromRecord(record).upload();
+    const report = Report.fromRecord(record);
+    const upload = report.upload();
     const { spot: site } = ReportPlacement.of(upload);
     const near = this.#places.near(site.lat, site.lon);
     const bin = this.#bins.measure(site, location.town);
     const spot = record.scan_spot === undefined ? {} : { scanSpot: record.scan_spot };
-    return { upload, moderation, verification, location, near, bin, brands: record.brand_labels ?? [], ...spot };
+    const brands = record.brand_labels ?? [];
+    const reporterConfirmed = report.isConfirmedByReporter();
+    return { upload, moderation, verification, location, near, bin, brands, reporterConfirmed, ...spot };
   }
 }

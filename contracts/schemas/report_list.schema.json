@@ -17,12 +17,32 @@
         "required": ["report_id", "status", "site_id", "blurred_url", "report", "moderation", "verification", "received_at", "updated_at"],
         "properties": {
           "report_id": { "type": "string", "pattern": "^rpt_[0-9a-z_]{1,64}$" },
-          "status": { "enum": ["queued", "processing", "unverified", "community_check", "verified", "rejected", "needs_review", "withdrawn"] },
+          "status": { "enum": ["queued", "processing", "unverified", "community_check", "verified", "rejected", "needs_review", "withdrawn", "needs_confirmation", "not_confirmed"], "description": "needs_confirmation and not_confirmed since contracts v1.16: the judge was unsure and the reporter is asked, or did not answer in time." },
           "site_id": { "type": ["string", "null"] },
           "blurred_url": { "type": ["string", "null"], "format": "uri" },
           "report": { "type": "object", "required": ["upload_id", "report_type", "context", "capture_mode", "gps", "captured_at"] },
           "moderation": { "type": ["object", "null"] },
           "verification": { "type": ["object", "null"] },
+          "confirmation": {
+            "description": "Contracts v1.16: null unless the verify step asked the reporter; as in the GET /reports/{id} response. Not in required, so v1.14 producers stay valid.",
+            "anyOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["question", "reasoning", "report_type", "asked_at", "expires_at", "answer", "answered_at"],
+                "properties": {
+                  "question": { "type": "string" },
+                  "reasoning": { "type": "string", "maxLength": 300 },
+                  "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] },
+                  "asked_at": { "type": "string", "format": "date-time" },
+                  "expires_at": { "type": "string", "format": "date-time" },
+                  "answer": { "enum": ["sure", "withdrawn", "expired", null] },
+                  "answered_at": { "type": ["string", "null"], "format": "date-time" }
+                }
+              }
+            ]
+          },
           "received_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time", "description": "The row's last change; the app keeps it as the item's freshness token." }
         }
