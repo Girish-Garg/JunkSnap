@@ -35,8 +35,8 @@ export class LetterText {
     return this.label('verified', { verified: this.#draft.verifier.verified, total: this.#draft.verifier.total });
   }
 
-  /** The whole letter as plain text, for the clipboard. */
-  plain(): string {
+  /** The whole letter as plain text, for the clipboard; `link` adds the site or area page, with its photos and counts. */
+  plain(link?: string): string {
     const d = this.#draft;
     const citations = d.citations.map((c, i) => `${i + 1}. ${c.document}, ${c.clause}\n"${c.quote}"\n${this.label('hash')}: ${c.source_sha256}`);
     return [
@@ -49,6 +49,7 @@ export class LetterText {
       this.label('citations'),
       ...citations,
       this.verified(),
+      ...(link ? ['', `${this.label('link')}: ${link}`] : []),
     ].join('\n');
   }
 }
