@@ -84,9 +84,33 @@
   },
   "preview": {
     "close": "Close preview",
-    "details": "Details",
     "reports_one": "{{count}} report",
-    "reports_other": "{{count}} reports"
+    "reports_other": "{{count}} reports",
+    "viewSite": "View site"
+  },
+  "chip": {
+    "waiting": "Waiting · {{count}} of {{needed}}",
+    "waitingPlain": "Waiting for people",
+    "verified": "Verified",
+    "cleared": "Cleared",
+    "reopened": "Reopened",
+    "removed": "Withdrawn",
+    "expired": "Expired",
+    "rejected": "Rejected"
+  },
+  "addPhoto": {
+    "action": "Add a photo",
+    "title": "Add a photo to this site",
+    "preset": "For this site: {{type}}.",
+    "here": "You are at the site.",
+    "longRange": "You are {{distance}} away, so it is marked on the site’s pin.",
+    "tooFarPhoto": "This photo was taken {{distance}} from the site. Take it within {{limit}} m to add it.",
+    "joins": "Once it passes the checks, it may join this site’s photos.",
+    "closed": "This site is closed, so it takes no new photos.",
+    "tooFar": "Go within {{limit}} m of the site to add a photo.",
+    "signIn": "Sign in to add a photo.",
+    "loading": "Reading the site…",
+    "failed": "This site could not be read. Close this and try again from the map."
   },
   "stack": {
     "title_one": "{{count}} site at this spot",
@@ -199,7 +223,10 @@
       "cleanedByPhoto": "Three people said it's cleared, at least one with a cleanup photo, so it left the map. If the waste is back, report it with a new photo.",
       "binNow": "A bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
       "other": "This site is no longer on the map, so it takes no more votes or letters."
-    }
+    },
+    "photoCount_one": "{{count}} photo",
+    "photoCount_other": "{{count}} photos",
+    "noPhotos": "No photos yet"
   },
   "snap": {
     "title": "Report a waste site",
@@ -498,11 +525,13 @@
     "needs_review": "Needs a manual check",
     "unverified": "Waiting for 10 people to confirm",
     "community_check": "Waiting for a neighbour check",
+    "unclear": "Retake: photo not clear",
     "not_waste": "Not a waste site",
     "unconfirmed": "Waste not confirmed",
     "withdrawn": "Withdrawn"
   },
   "rejection": {
+    "unclear": "Retake: we couldn't see waste clearly. Hold the phone steady and snap the waste in good light.",
     "not_waste": "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.",
     "unconfirmed": "Our checks couldn't confirm waste in this photo.",
     "dismiss": "Dismiss"
@@ -657,6 +686,7 @@
     "hash": "SHA-256 of the official text",
     "verified": "{{verified}} of {{total}} quotes verified word for word",
     "templateFallback": "Template letter: the drafted wording did not pass the quote check, so the standard letter with the same verified quotes is used.",
+    "link": "Photos and counts online",
     "residentFiles": "This letter is filed by a resident. JunkSnap does not send or file it.",
     "cc": {
       "councillor": "Ward councillor, {{seat}} (for attention)",
@@ -991,6 +1021,7 @@
       "waiting": "On the map, waiting for neighbours",
       "waitingCount": "On the map, waiting for neighbours ({{count}} of {{needed}})",
       "verified": "Verified",
+      "unclear": "Retake: waste not clear",
       "not_waste": "Not a waste site",
       "unconfirmed": "Couldn't confirm waste",
       "withdrawn": "Withdrawn",
@@ -1002,6 +1033,7 @@
       "checking": "We're still checking this photo. This page updates by itself.",
       "waiting": "The checks passed. Once enough neighbours back this spot, by photo or by vote, it becomes verified.",
       "verified": "Enough people backed this spot, so it counts in the area's scores and letters.",
+      "unclear": "Retake: we couldn't see waste clearly in this photo, so it isn't on the map.",
       "not_waste": "The checks found no waste in this photo, so it isn't on the map.",
       "unconfirmed": "The checks couldn't confirm waste in this photo, so it isn't on the map.",
       "withdrawn": "You took this report back.",

@@ -9,6 +9,7 @@ import { AreaDiagnosis } from './AreaDiagnosis';
 import { AreaInsights } from './AreaInsights';
 import { AreaLetterButton } from './AreaLetterButton';
 import { AreaScoreList } from './AreaScoreList';
+import { AreaShareButton } from './AreaShareButton';
 import { AreaSites } from './AreaSites';
 import { DistrictCrawl } from './DistrictCrawl';
 
@@ -30,6 +31,7 @@ export function AreaPage({ scores }: AreaPageProps) {
       <p className="area-page__meta">
         <span>{area.kind()}</span>
         {scores.pilot && <span className="badge">{t('site.pilot')}</span>}
+        <AreaShareButton area={scores.area} />
       </p>
       <DistrictCrawl districtId={districtId} />
       <AreaLetterButton kind={scores.area.kind} areaId={scores.area.id} ready={area.letterReady()} />

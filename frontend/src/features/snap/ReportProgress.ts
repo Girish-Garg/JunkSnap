@@ -24,6 +24,7 @@ const TONES: Readonly<Record<string, ProgressTone>> = {
   withdrawn: 'muted',
   verified: 'good',
   rejected: 'alert',
+  unclear: 'alert',
   not_waste: 'alert',
   unconfirmed: 'alert',
   refused: 'alert',

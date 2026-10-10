@@ -1,39 +1,40 @@
 import type { BBox } from '../domain/BBox';
-import type { SiteCollection, SiteFeature } from '../domain/Site';
+import type { SiteFeature } from '../domain/Site';
 import type { ApiClient } from './ApiClient';
-import { HttpErrors } from './HttpErrors';
+import { ConditionalFetch } from './ConditionalFetch';
+import type { ExpiringCache } from './ExpiringCache';
+import { SiteCaches } from './SiteCaches';
+import { SystemClock } from './SystemClock';
 
 type Fetch = typeof fetch;
 
 export class HttpApiClient implements ApiClient {
-  readonly #baseUrl: string;
-  readonly #fetch: Fetch;
+  readonly #http: ConditionalFetch;
+  readonly #caches: SiteCaches;
 
-  constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init)) {
-    this.#baseUrl = baseUrl.replace(/\/+$/, '');
-    this.#fetch = fetchImpl;
+  constructor(
+    baseUrl: string,
+    fetchImpl: Fetch = (input, init) => fetch(input, init),
+    caches: SiteCaches = SiteCaches.standard(new SystemClock()),
+  ) {
+    this.#http = new ConditionalFetch(baseUrl, fetchImpl);
+    this.#caches = caches;
   }
 
   async listSites(bbox: BBox): Promise<readonly SiteFeature[]> {
-    const body = await this.#get<SiteCollection>(`/sites?bbox=${bbox.toQuery()}`);
+    const query = bbox.toQuery();
+    const body = await this.#get(this.#caches.boxes, query, `/sites?bbox=${query}`);
     return body.features;
   }
 
   getSite(siteId: string): Promise<SiteFeature> {
-    return this.#get<SiteFeature>(`/sites/${encodeURIComponent(siteId)}`);
+    return this.#get(this.#caches.sites, siteId, `/sites/${encodeURIComponent(siteId)}`);
   }
 
-  async #get<T>(path: string): Promise<T> {
-    const response = await this.#send(path);
-    if (!response.ok) throw await HttpErrors.fromResponse(response);
-    return (await response.json()) as T;
-  }
-
-  async #send(path: string): Promise<Response> {
-    try {
-      return await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Accept: 'application/json' } });
-    } catch (cause) {
-      throw HttpErrors.network(`Request to ${path}`, cause);
-    }
+  // A failed refresh still rejects, so the map says it could not load; the cache keeps the old copy for the next 304.
+  async #get<T>(cache: ExpiringCache<T>, key: string, path: string): Promise<T> {
+    const read = await cache.read({ key, load: (previous) => this.#http.get<T>(path, previous) });
+    if (read.error !== null) throw read.error;
+    return read.value;
   }
 }

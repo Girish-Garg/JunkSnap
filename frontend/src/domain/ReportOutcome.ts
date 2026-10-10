@@ -9,6 +9,7 @@ export type OutcomeKind =
   | 'checking'
   | 'waiting'
   | 'verified'
+  | 'unclear'
   | 'not_waste'
   | 'unconfirmed'
   | 'withdrawn'
@@ -29,6 +30,7 @@ const BY_STATUS: Readonly<Record<Exclude<ReportStatus, 'rejected'>, OutcomeKind>
 
 const TONES: Readonly<Partial<Record<OutcomeKind, OutcomeTone>>> = {
   verified: 'good',
+  unclear: 'alert',
   not_waste: 'alert',
   unconfirmed: 'alert',
   removed: 'alert',
@@ -36,7 +38,7 @@ const TONES: Readonly<Partial<Record<OutcomeKind, OutcomeTone>>> = {
 };
 
 // Outcomes where the reporter can do better with a new photo, so the view offers retake tips.
-const RETAKE: ReadonlySet<OutcomeKind> = new Set(['not_waste', 'unconfirmed', 'stopped', 'removed']);
+const RETAKE: ReadonlySet<OutcomeKind> = new Set(['unclear', 'not_waste', 'unconfirmed', 'stopped', 'removed']);
 
 /** Maps GET /reports/{id} to one plain outcome; rows from before decision 20261010-1530 say community_check. */
 export class ReportOutcome {

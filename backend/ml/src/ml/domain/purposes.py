@@ -69,11 +69,22 @@ class ReportPurpose(Purpose):
         return ""
 
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
+        if verdict.unclear:
+            return 0.0  # an unusable photo supports no claim (decision 20261011-0230)
         if claim.matches(verdict.report_type):
             return verdict.confidence
         if claim.denies(verdict.report_type):
-            return 1.0 - verdict.confidence
+            return self._denial_support(verdict.confidence)
         return OTHER_TYPE_SUPPORT
+
+    @staticmethod
+    def _denial_support(confidence: float) -> float:
+        """A "no" never supports the claim: at most 0.5 on either reading of its confidence.
+
+        Models read "confidence" as sure-of-the-answer or as chance-of-waste; on prod Nova Lite
+        said not_waste at 0.1, and 1 - 0.1 made it a 0.9 "yes" (decision 20261011-0230).
+        """
+        return min(confidence, 1.0 - confidence)
 
     @override
     def outcome(
@@ -118,6 +129,8 @@ class CleanupPurpose(Purpose):
 
     @override
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
+        if verdict.unclear:
+            return 0.0  # an unusable photo cannot show the site clean
         if verdict.report_type != NOT_WASTE:
             return 1.0 - verdict.confidence
         return verdict.confidence if verdict.scene_fits_site else 0.0

@@ -51,6 +51,8 @@ export interface VerificationEvidence {
   readonly judge: JudgeEvidence | null;
   readonly signals?: readonly SignalEvidence[];
   readonly features?: { readonly gps_accuracy_m: number };
+  /** version ends with `+<veto reason> by <models>` when a veto rejected the photo (decision 20261011-0230). */
+  readonly combiner?: { readonly version: string };
 }
 
 /** report_upload as the api echoes it back. */

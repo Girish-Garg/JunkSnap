@@ -1,4 +1,4 @@
-import { EDGE_MODEL } from '../domain/EdgeModel';
+import { EDGE_MODEL_URL_PATH } from '../domain/EdgeModel';
 import { BitmapFrameGrabber } from '../services/BitmapFrameGrabber';
 import { EdgeDetector, type WorkerLike } from '../services/EdgeDetector';
 import type { DetectorFactory } from '../services/EdgeHints';
@@ -11,7 +11,7 @@ export const browserDetectorFactory: DetectorFactory = (threads) =>
   new EdgeDetector({
     worker: new Worker(new URL('../workers/edge.worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike,
     grabber: new BitmapFrameGrabber((video, options) => createImageBitmap(video, options)),
-    modelUrl: new URL(`${import.meta.env.BASE_URL}${EDGE_MODEL.path}`, window.location.href).href,
+    modelUrl: new URL(`${import.meta.env.BASE_URL}${EDGE_MODEL_URL_PATH}`, window.location.href).href,
     threads,
     now: () => Date.now(),
   });
