@@ -4,27 +4,32 @@
 # ///
 """Build the JunkSnap Android app (Tauri 2) against one stage and print the APK path.
 
-Usage: uv run scripts/build_android.py dev [--target aarch64 x86_64] [--skip-web]
+Usage: uv run scripts/build_android.py dev [--target aarch64 x86_64] [--skip-web] [--debug]
 Reads VITE_API_URL and the Cognito ids from the junksnap-<stage> stack outputs (as
-deploy_web.py does), builds frontend/dist, then runs `tauri android build --apk` in
-apps/android-tauri. The release APK is signed with the Android SDK debug key (no release
-keystore); install it with `adb install -r <apk>` or copy it to the phone. The stage's api
-CORS_ORIGINS must include https://tauri.localhost (the app's WebView origin).
+deploy_web.py does), builds frontend/dist and marks it with the stage in dist/.stage, then
+runs `tauri android build --apk` in apps/android-tauri. The stage's api origin and originals
+bucket are added to the CSP in tauri.conf.json for that build only. The release APK is signed
+with the Android SDK debug key (no release keystore); --debug builds a debuggable APK whose
+WebView shows in chrome://inspect. Install with `adb install -r <apk>` or copy it to the
+phone. The stage's api CORS_ORIGINS and UploadOrigins must include https://tauri.localhost.
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from deploy import ROOT
+from deploy import REGION, ROOT
 from deploy_web import VITE_FROM_OUTPUTS, stack_outputs
 
 APP = ROOT / "apps" / "android-tauri"
 FRONTEND = ROOT / "frontend"
-GRADLE_APK = APP / "src-tauri/gen/android/app/build/outputs/apk/universal/release"
+STAGE_MARK = FRONTEND / "dist" / ".stage"
+TAURI_CONF = APP / "src-tauri" / "tauri.conf.json"
+GRADLE_APKS = APP / "src-tauri/gen/android/app/build/outputs/apk/universal"
 APP_ORIGIN = "https://tauri.localhost"
 LOCAL = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
 # Toolchain defaults for this team's Windows machines; any value already set wins.
@@ -62,6 +67,23 @@ class Toolchain:
         return versions[-1]
 
 
+class StageCsp:
+    """The CSP from tauri.conf.json plus this stage's api origin and originals bucket."""
+
+    def __init__(self, outputs: dict[str, str]) -> None:
+        self._api = outputs["PublicBaseUrl"].rstrip("/")
+        self._uploads = f"https://{outputs['OriginalsBucketName']}.s3.{REGION}.amazonaws.com"
+
+    def config(self) -> dict[str, object]:
+        csp: dict[str, list[str]] = {
+            key: [value] if isinstance(value, str) else list(value)
+            for key, value in json.loads(TAURI_CONF.read_text())["app"]["security"]["csp"].items()
+        }
+        csp["connect-src"] += [self._api, self._uploads]
+        csp["img-src"].append(self._api)  # blurred photos: PUBLIC_BASE_URL/media/...
+        return {"app": {"security": {"csp": csp}}}
+
+
 class AndroidBuild:
     """Builds frontend/dist for one stage, then the Tauri Android APK around it."""
 
@@ -76,35 +98,52 @@ class AndroidBuild:
         env = {**self._env, **web_env}
         stream(["npm", "ci", "--no-audit", "--no-fund"], FRONTEND, env)
         stream(["npm", "run", "build"], FRONTEND, env)
+        STAGE_MARK.write_text(self._stage)
 
-    def apk(self, targets: list[str]) -> Path:
-        if not (FRONTEND / "dist" / "index.html").is_file():
-            sys.exit("no frontend/dist/index.html; run without --skip-web first")
+    def apk(self, targets: list[str], csp: StageCsp, debug: bool) -> Path:
+        self._check_stage_mark()
+        conf = APP / "out" / f"tauri.{self._stage}.conf.json"
+        conf.parent.mkdir(exist_ok=True)
+        conf.write_text(json.dumps(csp.config(), indent=2))
         stream(["npm", "ci", "--no-audit", "--no-fund"], APP, self._env)
-        build = ["npx", "tauri", "android", "build", "--apk", "--ci", "--target", *targets]
-        stream(build, APP, self._env)
-        built = GRADLE_APK / "app-universal-release.apk"
+        build = ["npx", "tauri", "android", "build", "--apk", "--ci", "--config", str(conf)]
+        build += ["--debug"] if debug else []
+        stream([*build, "--target", *targets], APP, self._env)
+        variant = "debug" if debug else "release"
+        built = GRADLE_APKS / variant / f"app-universal-{variant}.apk"
         if not built.is_file():
             sys.exit(f"tauri finished but {built} is missing")
-        out = APP / "out" / f"junksnap-{self._stage}.apk"
-        out.parent.mkdir(exist_ok=True)
+        out = APP / "out" / f"junksnap-{self._stage}{'-debug' if debug else ''}.apk"
         shutil.copyfile(built, out)
         return out
 
+    def _check_stage_mark(self) -> None:
+        """Refuse to package a dist/ built for another stage (or by plain `npm run build`)."""
+        built_for = STAGE_MARK.read_text().strip() if STAGE_MARK.is_file() else None
+        if built_for != self._stage:
+            sys.exit(f"frontend/dist was built for {built_for or 'no known stage'}, not "
+                     f"{self._stage}; run without --skip-web")
 
-def main() -> None:
+
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the JunkSnap Android APK.")
     parser.add_argument("stage", nargs="?", default="dev", choices=["dev", "demo"])
     parser.add_argument("--target", nargs="+", default=["aarch64", "x86_64"],
                         choices=["aarch64", "armv7", "i686", "x86_64"],
                         help="ABIs in the APK: aarch64 for phones, x86_64 for the emulator")
-    parser.add_argument("--skip-web", action="store_true", help="reuse the existing dist/")
-    args = parser.parse_args()
+    parser.add_argument("--skip-web", action="store_true", help="reuse dist/ built for this stage")
+    parser.add_argument("--debug", action="store_true", help="debuggable APK (chrome://inspect)")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
     os.environ.setdefault("AWS_PROFILE", "junksnap")
+    outputs = stack_outputs(f"junksnap-{args.stage}")
     build = AndroidBuild(args.stage, Toolchain().env())
     if not args.skip_web:
-        build.web(stack_outputs(f"junksnap-{args.stage}"))
-    apk = build.apk(args.target)
+        build.web(outputs)
+    apk = build.apk(args.target, StageCsp(outputs), args.debug)
     size_mb = apk.stat().st_size / 1_000_000
     print(f"\nAPK ({args.stage}, {size_mb:.1f} MB): {apk}")
     print(f"Install: adb install -r \"{apk}\"  (or copy it to the phone and allow unknown apps)")
