@@ -1,0 +1,76 @@
+/* City ranking. Neutral colours only: no traffic lights, no party colours. */
+.ranking-filters {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.ranking-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.ranking-row__rank {
+  flex: none;
+  width: 32px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: center;
+}
+
+.ranking-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ranking-row__name {
+  font-weight: 500;
+}
+
+.ranking-row__meta,
+.ranking-row__of,
+.ranking-footnote {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.ranking-row__score {
+  flex: none;
+  text-align: right;
+}
+
+.ranking-row__score strong {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.ranking-row__withheld {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ranking-footnote {
+  margin: var(--space-2) 0;
+}
+
+.ranking-skeleton {
+  display: grid;
+  gap: 12px;
+}

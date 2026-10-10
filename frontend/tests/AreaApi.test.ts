@@ -13,9 +13,16 @@ describe('MockAreaApi', () => {
     expect(scores.scores.city).toEqual({ value: 41, reason: null });
   });
 
-  it('returns the worker zero row for an area with sites but no score yet', async () => {
+  it('also reads rows from the area_list fixture, withheld scores and all', async () => {
     const scores = await mock().scores('assembly', 's20-ac-127');
     expect(scores.area).toEqual({ kind: 'assembly', id: 's20-ac-127', name: 'Sardarpura' });
+    expect(scores.counts.verified_reports).toBe(4);
+    expect(scores.scores.city).toEqual({ value: null, reason: 'too_few_reports' });
+  });
+
+  it('returns the worker zero row for an area with sites but no score yet', async () => {
+    const scores = await mock().scores('loksabha', 's20-pc-16');
+    expect(scores.area).toEqual({ kind: 'loksabha', id: 's20-pc-16', name: 'Jodhpur' });
     expect(scores.counts.verified_reports).toBe(0);
     expect(Object.values(scores.scores)).toEqual(Array(3).fill({ value: null, reason: 'too_few_reports' }));
     expect(scores.diagnosis).toEqual([]);

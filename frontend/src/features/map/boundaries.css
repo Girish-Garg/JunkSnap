@@ -1,0 +1,109 @@
+/* Boundary layer switcher and choropleth legend. Tokens only; the fill colours live in ChoroplethScale. */
+.map-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.boundary-switcher {
+  position: relative;
+}
+
+.boundary-switcher__panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-1));
+  display: grid;
+  gap: var(--space-1);
+  width: min(320px, calc(100vw - 2 * var(--edge)));
+  padding: 12px var(--space-2);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.boundary-switcher__title {
+  font-weight: 500;
+}
+
+.boundary-switcher__note {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.boundary-switcher__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.boundary-legend {
+  position: absolute;
+  bottom: calc(var(--edge) + 28px);
+  left: var(--edge);
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  max-width: min(240px, calc(100vw - 2 * var(--edge) - 64px));
+  padding: var(--space-1) 12px;
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.boundary-legend__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-1);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.boundary-legend__ramp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.boundary-legend__swatches {
+  display: flex;
+  flex: none;
+}
+
+.boundary-legend__swatches span {
+  width: 12px;
+  height: 12px;
+}
+
+.boundary-legend__dash {
+  flex: none;
+  width: 36px;
+  border-top: 2px dashed var(--text-secondary);
+}
+
+.map-page--card .boundary-legend {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .map-page--sheet .boundary-legend,
+  .map-area:has(.boundary-switcher__panel) .boundary-legend {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Clear of the 400 px side panel. */
+  .map-page--sheet .boundary-legend {
+    left: calc(400px + var(--edge));
+  }
+}

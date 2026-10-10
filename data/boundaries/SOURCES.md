@@ -39,6 +39,10 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 Jodhpur's two corporations (North and South, 80 wards each) became one Jodhpur Municipal Corporation with newly delimited wards in November 2025 (100 per a news report, unverified until the gazette notification is found; see `../representatives/SOURCES.md`); Jaipur's became one corporation with 150 wards. No open map of the new wards was found: OpenStreetMap has no `admin_level=10` boundaries in Jodhpur (checked 2026-10-10), and the open ward maps that exist (DataMeet Municipal_Spatial_Data for Jaipur, Swachh Bharat Mission wards in indian_admin_boundaries) predate the 2025 merger, so their ward numbers are wrong now. `ward` stays null until a current map is published or the ward records task (W1) provides one.
 
+## Web copies: frontend/public/boundaries
+
+`uv run scripts/simplify_boundaries.py` writes the map layers the web app draws: `assembly`, `loksabha` and, once any `*_wards.geojson` file is here, `wards` (each `<layer>.geojson` plus `<layer>_labels.geojson` and an `index.json` the app reads to know which layers exist). Each layer is simplified as one coverage, so neighbours keep shared edges, at the smallest tolerance that fits its byte budget; coordinates are rounded to 4 decimals (about 11 m). Only display properties are kept (`id`, `name`, plus `pc_id`, `status`, or the ward fields). They are for drawing only: location lookups use the full files above. Rerun the script whenever a boundary file here changes. Same sources and licences as the files they come from.
+
 ## india_outline.geojson
 
 India outline for the inside-India authenticity check (issue #13). One Feature, a MultiPolygon in WGS 84 (lon, lat).

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { RANKING_PATH } from '../../../app/paths';
 import { AREA_KINDS } from '../../../domain/AreaKey';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import { TextField } from '../../../ui/TextField';
@@ -23,6 +24,9 @@ export function AreasRoute() {
         {t('areas.title')}
       </h2>
       <p className="sheet-text">{t('areas.intro')}</p>
+      <Link className="area-back" to={RANKING_PATH}>
+        {t('ranking.open')}
+      </Link>
       <div className="area-search">
         <TextField id="area-search" label={t('areas.search')} value={query} onChange={setQuery} autoComplete="off" />
       </div>

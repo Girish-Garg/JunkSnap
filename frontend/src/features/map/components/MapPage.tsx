@@ -20,7 +20,7 @@ export function MapPage() {
         <MapSurface
           sites={page.sites}
           selectedId={selection.selectedId}
-          mode={filters.mode}
+          {...page.layerBindings}
           userLocation={page.location.position}
           camera={selection.camera}
           onPick={selection.pick}
