@@ -1,4 +1,4 @@
-"""Stacked verification: signals first, the vision judge only when needed, then the combiner."""
+"""Stacked verification: the detectors and the vision judge on every case, then the combiner."""
 
 import logging
 from collections.abc import Sequence
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class StackedVerifier:
-    """Composite of the signals, the judge (only when unsure or split) and the combiner."""
+    """Composite of the signals, the judge (always asked) and the combiner."""
 
     def __init__(
         self,
@@ -33,12 +33,11 @@ class StackedVerifier:
         self._clock = clock
 
     def verify(self, case: VerificationCase) -> VerificationResult:
-        combiner = self._combiner.for_claim(case.claim)
         results = self._measured(case)
-        needed = combiner.needs_judge(results, case.purpose)
-        reading = self._judge.judge(case) if needed else None
+        reading = self._judge.judge(case)  # every report, frame and cleanup; None on an outage
         if reading is not None:
             results.append(reading.signal)
+        combiner = self._combiner.for_claim(case.claim, results)
         verdict = None if reading is None else reading.verdict
         evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds)
         outcome = case.purpose.review(combiner.combine(results, case.purpose), evidence)

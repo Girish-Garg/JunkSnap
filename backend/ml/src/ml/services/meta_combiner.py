@@ -32,11 +32,19 @@ class MetaLearnerCombiner(Combiner):
     def info(self) -> CombinerInfo:
         return CombinerInfo(kind=self.KIND, version=self._model.version)
 
-    def for_claim(self, claim: Claim) -> Combiner:
-        """A type with no training rows goes to the judge, on the v0 fixed weights."""
-        if self._model.covers(claim.report_type):
+    def for_claim(self, claim: Claim, signals: Sequence[SignalResult] = ()) -> Combiner:
+        """The fitted model decides only claims it has rows for and all its signals can see.
+
+        Otherwise the judge decides on the v0 fixed weights, and blind signals count as absent.
+        """
+        kind = claim.report_type
+        blind = [s.name for s in signals if s.neutral and s.name in self._model.base.signals]
+        if self._model.covers(kind) and not blind:
             return JudgeDecidesCombiner(self, AUTO_CLAIM_REASON) if claim.judge_required else self
-        reason = f"meta-learner has no training rows for {claim.report_type}; judge decides"
+        if not self._model.covers(kind):
+            reason = f"meta-learner has no training rows for {kind}; judge decides"
+        else:
+            reason = f"{', '.join(blind)} not trained for {kind}; judge decides"
         return JudgeDecidesCombiner(FixedWeightCombiner(self._thresholds), reason)
 
     def probability(self, signals: Sequence[SignalResult], purpose: Purpose) -> float:
@@ -48,11 +56,6 @@ class MetaLearnerCombiner(Combiner):
     def disagree(self, signals: Sequence[SignalResult]) -> bool:
         scores = [signal.score for signal in signals if not signal.neutral]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
-
-    def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:
-        if purpose.requires_judge or self.disagree(signals):
-            return True
-        return self._thresholds.is_unsure(self.probability(signals, purpose))
 
     def combine(self, signals: Sequence[SignalResult], purpose: Purpose) -> Outcome:
         judged = any(signal.name == JUDGE_SIGNAL for signal in signals)

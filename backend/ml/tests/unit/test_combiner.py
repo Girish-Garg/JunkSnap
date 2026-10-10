@@ -19,7 +19,7 @@ def signal(name: str, score: float) -> SignalResult:
      (0.5, "community_check"), (0.49, "rejected"), (0.0, "rejected")],
 )
 def test_report_thresholds(score: float, decision: str) -> None:
-    outcome = COMBINER.combine([signal("rekognition_labels", score)], REPORT)
+    outcome = COMBINER.combine([signal("vision_judge", score)], REPORT)
 
     assert outcome.decision == decision
     assert outcome.is_clean is None
@@ -52,19 +52,22 @@ def test_mild_difference_is_not_disagreement() -> None:
     assert COMBINER.disagree(signals) is False
 
 
-@pytest.mark.parametrize(
-    ("scores", "needed"),
-    [((0.95,), False), ((0.2,), False), ((0.7,), True), ((0.9, 0.3), True)],
-)
-def test_judge_needed_only_when_unsure_or_split(scores: tuple[float, ...], needed: bool) -> None:
-    names = ("rekognition_labels", "yolo")
-    signals = [signal(name, score) for name, score in zip(names, scores, strict=False)]
+@pytest.mark.parametrize("score", [0.95, 0.85])
+def test_without_the_judge_a_sure_report_goes_to_community_check(score: float) -> None:
+    outcome = COMBINER.combine([signal("rekognition_labels", score)], REPORT)
 
-    assert COMBINER.needs_judge(signals, REPORT) is needed
+    assert outcome.decision == "community_check"
 
 
-def test_cleanup_always_needs_the_judge() -> None:
-    assert COMBINER.needs_judge([signal("rekognition_labels", 1.0)], CLEANUP) is True
+def test_without_the_judge_a_low_report_is_still_rejected() -> None:
+    assert COMBINER.combine([signal("rekognition_labels", 0.2)], REPORT).decision == "rejected"
+
+
+def test_a_neutral_signal_counts_as_absent_not_as_half() -> None:
+    blind = SignalResult("yolo", 0.5, "junksnap", "yolo", "v1", 90, neutral=True)
+    signals = [signal("rekognition_labels", 0.3), blind, signal("vision_judge", 0.8)]
+
+    assert COMBINER.probability(signals) == pytest.approx((0.4 * 0.3 + 0.6 * 0.8) / 1.0)
 
 
 @pytest.mark.parametrize(

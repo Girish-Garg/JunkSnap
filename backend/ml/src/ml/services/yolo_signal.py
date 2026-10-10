@@ -12,12 +12,13 @@ from ml.ports.object_detector import ObjectDetector
 from ml.ports.signal import Signal
 
 WASTE_CLASSES = frozenset({"waste_pile", "bag", "waste_item"})
-# How detector boxes show each claimed report type; no class sees contaminated water.
+# How detector boxes show each claimed report type. No class sees contaminated water, and
+# none sees construction debris: waste_pile boxes are a teacher's "pile of garbage", so a
+# flyover site without one is not a "no" (issue 111). Unlisted claims are neutral.
 CLAIM_EVIDENCE: Mapping[str, DetectionEvidence] = MappingProxyType(
     {
         "waste_dump": AnyClassEvidence(WASTE_CLASSES),
         "no_bin": AnyClassEvidence(WASTE_CLASSES),
-        "open_construction": AnyClassEvidence(frozenset({"waste_pile"})),
         "overflowing_bin": BinWithWasteEvidence(WASTE_CLASSES),
     }
 )

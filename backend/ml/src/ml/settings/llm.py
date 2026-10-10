@@ -9,14 +9,13 @@ from ml.settings.base import EnvSettings
 
 TASKS = ("judge",)
 
-# Decision 20261010-0133: Bedrock first, then OpenAI.
+# Decision 20261010-0133: Bedrock first, then OpenAI. Nova Lite leads (decision 20261011-0005):
+# the judge eval.md measured and meta-v2 was fitted on. Bedrock refuses Claude on this account,
+# so Claude is reachable only through LLM_TASKS.
 DEFAULT_TASK_CONFIG = TaskConfig(
     provider="bedrock",
-    model="global.anthropic.claude-sonnet-4-6",
+    model="apac.amazon.nova-lite-v1:0",
     fallback=(
-        ModelChoice("bedrock", "in.anthropic.claude-haiku-4-5-20251001-v1:0"),
-        # Nova Lite before Nova Pro: more accurate and cheaper as judge (docs/ml/eval.md).
-        ModelChoice("bedrock", "apac.amazon.nova-lite-v1:0"),
         ModelChoice("bedrock", "apac.amazon.nova-pro-v1:0"),
         ModelChoice("openai", "gpt-4.1-mini"),
     ),
