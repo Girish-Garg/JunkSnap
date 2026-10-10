@@ -169,6 +169,12 @@ wheels = [
 bedrock-runtime = [
     { name = "mypy-boto3-bedrock-runtime" },
 ]
+dynamodb = [
+    { name = "mypy-boto3-dynamodb" },
+]
+s3 = [
+    { name = "mypy-boto3-s3" },
+]
 
 [[package]]
 name = "botocore"
@@ -469,6 +475,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/26/78/542f5804cf0f9e3c1ccbf30917eaa3b4b6002b91965de02d065d7441fc93/mypy_boto3_bedrock_runtime-1.43.62.tar.gz", hash = "sha256:beb70b08ef72cdfd5036bcd3270f2fbac0a2ce5e40f70dfc1d87c4f139d4d7ff", size = 31492, upload-time = "2026-07-31T19:54:15.291Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/b2/e3bff20acd290b909f1c28856d6d8d7984f7f7d5bda299d5957f64e97bb3/mypy_boto3_bedrock_runtime-1.43.62-py3-none-any.whl", hash = "sha256:603d9df54da5029fc0d0e3c09b6db33733af53182bee030c0c7af99e88ed3b39", size = 37865, upload-time = "2026-07-31T19:54:13.959Z" },
+]
+
+[[package]]
+name = "mypy-boto3-dynamodb"
+version = "1.43.106"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/3b/debe960b7687129df6584a0aaf3bc917c2e58546444087fee4fecc4bddb0/mypy_boto3_dynamodb-1.43.106.tar.gz", hash = "sha256:b51472f27ab55c83d983269cff2e618dee923851c433b7c933d21a0f8b0e18be", size = 50402, upload-time = "2026-09-30T22:44:34.15Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/fa/ec97f68da6997cc734d6ad991a9f6fc6413fa31293b5d3e89692b32864b3/mypy_boto3_dynamodb-1.43.106-py3-none-any.whl", hash = "sha256:46aeaa7261e74786908d0ee32089be997007127cb40f81d16ec80c21c37a52a3", size = 60590, upload-time = "2026-09-30T22:44:32.61Z" },
+]
+
+[[package]]
+name = "mypy-boto3-s3"
+version = "1.43.106"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/db/e3922d6c62365c1098da97d9a775e78c66827df5cba11619a7d2a11cdae4/mypy_boto3_s3-1.43.106.tar.gz", hash = "sha256:731195f15830699a36e29d3c8abb2918bccd3587eb2edcb233f8046967893279", size = 79447, upload-time = "2026-09-30T22:44:48.472Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/4a/52419b5496215ab52c6c257134c1ac0da25c1ca5d802f133424d02a43686/mypy_boto3_s3-1.43.106-py3-none-any.whl", hash = "sha256:e233d04dbcf3925522dff4346e75c37344ec3d1cbb82337e5eed2af263847668", size = 86791, upload-time = "2026-09-30T22:44:46.139Z" },
 ]
 
 [[package]]
@@ -907,7 +931,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "boto3-stubs", extra = ["bedrock-runtime"] },
+    { name = "boto3-stubs", extra = ["bedrock-runtime", "dynamodb", "s3"] },
     { name = "mypy" },
     { name = "pytest" },
     { name = "ruff" },
@@ -925,7 +949,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "boto3-stubs", extras = ["bedrock-runtime"], specifier = ">=1.40" },
+    { name = "boto3-stubs", extras = ["bedrock-runtime", "dynamodb", "s3"], specifier = ">=1.40" },
     { name = "mypy", specifier = ">=1.17" },
     { name = "pytest", specifier = ">=8.4" },
     { name = "ruff", specifier = ">=0.12" },

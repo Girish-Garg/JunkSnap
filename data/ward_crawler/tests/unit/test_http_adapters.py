@@ -76,7 +76,7 @@ def fetcher(answer: Callable[[httpx.Request], httpx.Response], tmp_path: Path) -
     return HttpPageFetcher(polite, PageCache(tmp_path), PageTextReader(HtmlText(), PdfText()))
 
 
-def test_fetcher_hashes_the_bytes_converts_html_and_caches(tmp_path: Path) -> None:
+def test_fetcher_hashes_the_bytes_converts_html_and_reuses_unchanged_pages(tmp_path: Path) -> None:
     html = b"<html><body><p>Ward 12 Paota</p></body></html>"
     hits: list[str] = []
 
@@ -92,8 +92,9 @@ def test_fetcher_hashes_the_bytes_converts_html_and_caches(tmp_path: Path) -> No
 
     assert first.text == "Ward 12 Paota"
     assert first.sha256 == hashlib.sha256(html).hexdigest()
+    # The second fetch revalidates; the same bytes keep the cached page and its fetch time.
     assert second == first
-    assert hits == ["/robots.txt", "/wards"]
+    assert hits == ["/robots.txt", "/wards", "/wards"]
 
 
 def test_fetcher_turns_http_errors_into_fetch_errors(tmp_path: Path) -> None:
