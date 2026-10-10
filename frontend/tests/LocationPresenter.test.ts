@@ -14,7 +14,7 @@ describe('LocationPresenter', () => {
 
   it('says when there is no ward map or assembly map', () => {
     const presenter = presenterFor({ location: { ward: null, assembly_seat: null } });
-    expect(presenter.line()).toBe('site.noWard · site.noAssembly · site.mp(Jodhpur)');
+    expect(presenter.line()).toBe('site.noWardLine · site.noAssembly · site.mp(Jodhpur)');
     expect(presenter.facts().map((fact) => fact.value)).toContain('site.noAssembly');
   });
 

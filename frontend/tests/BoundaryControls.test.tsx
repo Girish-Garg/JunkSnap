@@ -2,8 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
-import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import { ServiceContainer } from '../src/app/ServiceContainer';
+import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import type { AreaApi } from '../src/services/AreaApi';
 import { renderApp, testServices } from './helpers';
 
@@ -17,25 +17,37 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({
   },
 }));
 
-describe('Map boundary controls', () => {
-  it('opens on assembly seats filled from the area list, with a legend saying what the fill means', async () => {
+describe('Map areas', () => {
+  it('draws one areas layer filled from the area lists, with a one-line legend and the marker key', async () => {
     await renderApp(<AppRoutes />);
+    // The honesty pill stays visible beside the Legend chip; the legend opens from the chip.
+    expect(await screen.findByText('Scores show after 10 verified reports')).toBeInTheDocument();
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
     const legend = await screen.findByRole('region', { name: 'Map colours' });
-    expect(within(legend).getByText('Assembly seats')).toBeInTheDocument();
-    expect(within(legend).getByText('Score, darker is worse')).toBeInTheDocument();
-    expect(within(legend).getByText('Verified reports, no score yet')).toBeInTheDocument();
-    expect(within(legend).getByText('A score shows after 10 verified reports.')).toBeInTheDocument();
+    expect(within(legend).getByText(/Seats coloured by score/)).toBeInTheDocument();
+    expect(within(legend).getByText('Marker: score out of 100')).toBeInTheDocument();
+    expect(within(legend).getByText('Marker: number of verified reports')).toBeInTheDocument();
+    expect(within(legend).queryByText(/ward/i)).not.toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
-    expect(seen.last?.boundary).toBe('assembly');
+    expect(seen.last?.areas).toEqual({ fine: true });
     // Sardarpura has 4 verified reports and every score withheld: a grey count fill, never a score colour.
     expect(seen.last?.areaColors.get('s20-ac-127')).toBe('#c4c7c5');
+    // Markers follow the same rule: the shown score, else the report count.
+    expect(seen.last?.areaMarkers.get('s20-ac-128')?.value).toBe('44');
+    expect(seen.last?.areaMarkers.get('s20-ac-127')?.value).toBe('4');
   });
 
+  it('has no layer switcher; the ranking is one tap away', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />);
+    expect(screen.queryByRole('button', { name: 'Map areas' })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'City ranking' }));
+    expect(await screen.findByRole('heading', { name: 'Jodhpur ranking' })).toBeInTheDocument();
+  });
 });
 
-describe('Map fill when a city fails to load', () => {
-  it('keeps one city filled when the other city fails to load', async () => {
+describe('Map fill when a list fails to load', () => {
+  it('keeps the other lists filled', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const base = testServices();
     const areas: AreaApi = {
@@ -46,25 +58,5 @@ describe('Map fill when a city fails to load', () => {
     };
     await renderApp(<AppRoutes />, { services: new ServiceContainer({ ...base, areas }) });
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
-  });
-
-});
-
-describe('Map layer switcher', () => {
-  it('switches layers, marks outdated seats in the legend and turns boundaries off', async () => {
-    const user = userEvent.setup();
-    await renderApp(<AppRoutes />);
-    await user.click(await screen.findByRole('button', { name: 'Legend' }));
-    await user.click(await screen.findByRole('button', { name: 'Map areas' }));
-    const panel = screen.getByRole('group', { name: 'Areas on the map' });
-    expect(within(panel).queryByRole('button', { name: 'Wards' })).not.toBeInTheDocument();
-    expect(within(panel).getByText('Ward map not available yet.')).toBeInTheDocument();
-    await user.click(within(panel).getByRole('button', { name: 'Lok Sabha' }));
-    expect(await screen.findByText('Outdated seat boundary')).toBeInTheDocument();
-    expect(seen.last?.boundary).toBe('loksabha');
-    await user.click(within(panel).getByRole('button', { name: 'Off' }));
-    expect(screen.queryByRole('region', { name: 'Map colours' })).not.toBeInTheDocument();
-    expect(seen.last?.boundary).toBeNull();
-    expect(within(panel).getByRole('link', { name: 'City ranking' })).toHaveAttribute('href', '/ranking');
   });
 });

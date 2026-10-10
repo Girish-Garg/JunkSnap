@@ -19,7 +19,7 @@ export class LocationPresenter {
   line(): string {
     const { ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;
     const parts = [
-      ward?.name ?? this.#t('site.noWard'),
+      ward?.name ?? this.#t('site.noWardLine'),
       assembly ? this.#t('site.mla', { name: assembly.name }) : this.#t('site.noAssembly'),
     ];
     if (loksabha.status !== 'outdated') parts.push(this.#t('site.mp', { name: loksabha.name }));

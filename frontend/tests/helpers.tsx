@@ -23,8 +23,8 @@ import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 import { testSnapServices, type SnapTestOptions } from './snapFakes';
 
-// The layers scripts/simplify_boundaries.py writes before any ward file exists.
-export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {} } };
+// The map's one areas layer, as scripts/simplify_boundaries.py lists it.
+export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {}, areas: { fine: {} } } };
 
 export class MemoryStore implements KeyValueStore {
   readonly #values = new Map<string, string>();

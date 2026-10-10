@@ -81,7 +81,7 @@ def test_simplifies_and_keeps_shared_edges_identical(dirs: tuple[Path, Path]) ->
     source, out = dirs
     spec = sb.LayerSpec("assembly", "rajasthan_assembly.geojson", ("id",), 2_000)
     [result] = sb.run(source, out, (spec,))
-    assert result.bytes <= 2_000
+    assert result.coarse.bytes <= 2_000
     left, right = (shape(f["geometry"]) for f in read(out / "assembly.geojson"))
     assert len(left.exterior.coords) < STEPS / 4
     assert left.intersection(right).area == pytest.approx(0, abs=1e-9)

@@ -43,7 +43,8 @@
     },
     "sampleNote": "Sample data: these are test sites, not live reports.",
     "verified": "Verified",
-    "unverified": "Unverified"
+    "unverified": "Unverified",
+    "verifiedOnly": "Verified only"
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -99,7 +100,8 @@
   "verification": {
     "verified": "Verified",
     "rejected": "Rejected after a neighbour check",
-    "unverified": "Unverified"
+    "unverified": "Unverified",
+    "community_check": "Waiting for a neighbour check"
   },
   "actions": {
     "label": "Site actions",
@@ -132,7 +134,7 @@
     "localBody": "Local body",
     "notKnown": "Not known",
     "ward": "Ward",
-    "noWard": "No open ward map",
+    "noWard": "Not mapped yet; letters go to the city-wide body",
     "assemblySeat": "Assembly seat (MLA)",
     "loksabhaSeat": "Lok Sabha seat (MP)",
     "history": "History",
@@ -151,7 +153,8 @@
       "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
       "notMapped": "Bins not mapped here yet",
       "mappedNear": "A mapped bin is {{distance}} away (OpenStreetMap)"
-    }
+    },
+    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body"
   },
   "snap": {
     "title": "Report a waste site",
@@ -418,7 +421,8 @@
     "verified": "Verified",
     "rejected": "Not accepted after checking",
     "needs_review": "Needs a manual check",
-    "unverified": "Waiting for 10 people to confirm"
+    "unverified": "Waiting for 10 people to confirm",
+    "community_check": "Waiting for a neighbour check"
   },
   "scan": {
     "record": "Start recording",
@@ -585,24 +589,19 @@
     }
   },
   "boundaries": {
-    "button": "Map areas",
-    "title": "Areas on the map",
-    "off": "Off",
     "layer": {
       "ward": "Wards",
       "assembly": "Assembly",
       "loksabha": "Lok Sabha"
     },
-    "noWards": "Ward map not available yet.",
     "legend": "Map colours",
-    "byScore": "Score, darker is worse",
-    "byCount": "Verified reports, no score yet",
-    "outdated": "Outdated seat boundary",
-    "scoreRule": "A score shows after 10 verified reports.",
-    "wardsApprox": "Approximate ward areas from official ward lists, unreviewed",
-    "wardsApproxCounted": "Approximate ward areas from official ward lists, unreviewed ({{counts}})",
-    "wardsOf": "{{mapped}} of {{wards}} wards",
-    "wardsMapped": "{{mapped}} wards",
+    "tooltipScore": "{{name}}: score {{n}} of 100",
+    "tooltipReports_one": "{{name}}: {{n}} verified report, no score yet",
+    "tooltipReports_other": "{{name}}: {{n}} verified reports, no score yet",
+    "tooltipNone": "{{name}}: no verified reports yet",
+    "keyScore": "Marker: score out of 100",
+    "keyCount": "Marker: number of verified reports",
+    "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
     "legendChip": "Legend",
     "caveat": "Scores show after 10 verified reports"
   },

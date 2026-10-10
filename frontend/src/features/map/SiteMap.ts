@@ -3,12 +3,12 @@ import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJ
 import { BBox } from '../../domain/BBox';
 import { BackersBadge } from '../../domain/BackersBadge';
 import { HeatWeight } from '../../domain/HeatWeight';
-import type { BoundaryKind } from '../../domain/AreaListing';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
+import type { AreaMarker } from './AreaMarkers';
 import { BasemapMode } from './BasemapMode';
-import { BoundaryOverlay, type AreaHit, type BoundaryUrls } from './BoundaryOverlay';
+import { BoundaryOverlay, type AreaHit, type BoundaryFiles, type BoundaryView } from './BoundaryOverlay';
 import { PinDrop } from './PinDrop';
 import { SelectedPulse } from './SelectedPulse';
 
@@ -41,7 +41,7 @@ export interface SiteMapOptions {
   readonly onPick: (siteId: string | null) => void;
   /** A tap that hit no site but an area of the boundary layer shown. */
   readonly onPickArea: (area: AreaHit) => void;
-  readonly boundaries: BoundaryUrls;
+  readonly boundaries: BoundaryFiles;
   readonly onViewChange: (view: MapView) => void;
 }
 
@@ -91,8 +91,13 @@ export class SiteMap {
     this.#showPulse();
   }
 
-  showBoundaries(kind: BoundaryKind | null): void {
-    this.#boundaries.show(kind);
+  showBoundaries(view: BoundaryView | null): void {
+    this.#boundaries.show(view);
+  }
+
+  /** Area id to the value its marker shows under its name. */
+  labelAreas(markers: ReadonlyMap<string, AreaMarker>): void {
+    this.#boundaries.label(markers);
   }
 
   /** Area id to fill colour for the boundary kind shown. */
