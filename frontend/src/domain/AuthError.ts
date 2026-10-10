@@ -1,6 +1,15 @@
 import { JunkSnapError } from './JunkSnapError';
 
-export type AuthProblem = 'wrong_credentials' | 'exists' | 'bad_code' | 'not_confirmed' | 'unavailable' | 'unknown';
+export type AuthProblem =
+  | 'wrong_credentials'
+  | 'exists'
+  | 'bad_code'
+  | 'not_confirmed'
+  | 'weak_password'
+  | 'too_many'
+  | 'network'
+  | 'unavailable'
+  | 'unknown';
 
 export class AuthError extends JunkSnapError {
   readonly problem: AuthProblem;

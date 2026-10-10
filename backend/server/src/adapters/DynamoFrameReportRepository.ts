@@ -3,7 +3,7 @@ import { GetCommand, PutCommand, type DynamoDBDocumentClient } from "@aws-sdk/li
 import { ExternalServiceError } from "../domain/errors.js";
 import type { FrameReportRepository, QueuedFrameReport } from "../ports/FrameReportRepository.js";
 
-// Writes the same row shape POST /reports stores: report_upload fields, received_at and status.
+// Writes the same row shape POST /reports stores (DynamoReportRepository.create): upload fields, status, no steps, version 1.
 export class DynamoFrameReportRepository implements FrameReportRepository {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -30,7 +30,7 @@ export class DynamoFrameReportRepository implements FrameReportRepository {
   async createQueued({ report_id, upload, received_at }: QueuedFrameReport): Promise<void> {
     const command = new PutCommand({
       TableName: this.#table,
-      Item: { report_id, ...upload, received_at, status: "queued", updated_at: received_at },
+      Item: { report_id, ...upload, received_at, status: "queued", updated_at: received_at, completed_steps: [], version: 1 },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
     try {

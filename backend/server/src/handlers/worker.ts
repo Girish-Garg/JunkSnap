@@ -6,7 +6,7 @@ import { buildReportQueuePoller } from "./reportWorker.js";
 
 const STOP_SIGNALS = ["SIGTERM", "SIGINT"] as const;
 
-export type PollerFactory = (context: EntryContext) => QueuePoller;
+export type PollerFactory = (context: EntryContext) => QueuePoller | Promise<QueuePoller>;
 
 export async function runWorker(
   context: EntryContext,
@@ -14,7 +14,9 @@ export async function runWorker(
   buildPoller: PollerFactory = buildReportQueuePoller,
 ): Promise<void> {
   const { logger } = context;
-  const loop = new WorkerLoop(buildPoller(context), logger);
+  // A synchronous factory keeps signal handlers registered before the caller can emit a signal.
+  const built = buildPoller(context);
+  const loop = new WorkerLoop(built instanceof Promise ? await built : built, logger);
   for (const signal of STOP_SIGNALS) {
     signals.once(signal, () => {
       loop.stop(signal);

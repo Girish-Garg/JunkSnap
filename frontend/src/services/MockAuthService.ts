@@ -30,6 +30,9 @@ export class MockAuthService implements AuthService {
     return true;
   }
 
+  // The constructor already read the saved session.
+  async restore(): Promise<void> {}
+
   currentUser(): AuthUser | null {
     return this.#user;
   }
@@ -85,6 +88,11 @@ export class MockAuthService implements AuthService {
 
   sampleCode(): string {
     return MOCK_CODE;
+  }
+
+  // A placeholder token so the mock report api sends only for a signed-in user, like the real one.
+  async idToken(): Promise<string | null> {
+    return this.#user ? 'sample-id-token' : null;
   }
 
   #setUser(email: string): AuthUser {

@@ -18,6 +18,8 @@ const PATHS = {
   photo: 'M3.5 5.5h17v13h-17zM4.5 17l5-4.5l3.5 3l2.5-2l4 3.5M15.5 8.5h.01',
   offline: 'M7 18h10.5a3.5 3.5 0 0 0 .6-6.95A5.5 5.5 0 0 0 7.5 9.3A4.4 4.4 0 0 0 7 18zM4 4l16 16',
   info: 'M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18zM12 11v5M12 7.5v.01',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  retry: 'M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4',
 } as const;
 
 export type IconName = keyof typeof PATHS;

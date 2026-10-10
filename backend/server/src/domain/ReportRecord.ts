@@ -7,7 +7,8 @@ import type {
 } from "../contracts/index.gen.js";
 
 export type ReportStatus = "queued" | "processing" | "verified" | "community_check" | "rejected" | "needs_review";
-export type SiteVerification = "verified" | "community_check";
+// A report merged into a site the neighbours rejected becomes rejected too.
+export type SiteVerification = "verified" | "community_check" | "rejected";
 export type StepName = "moderate" | "verify" | "brands" | "locate" | "merge";
 
 // The reports table item: upload fields and received_at stay top-level and absent fields are omitted, because GSIs key on them.

@@ -58,6 +58,11 @@ export class SiteServiceFactory {
     return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger);
   }
 
+  // The worker reads site positions and kinds for cleanup moderation and recording.
+  repository(): DynamoSiteRepository {
+    return this.#sites();
+  }
+
   finder(): SiteFinder {
     return new SiteFinder(this.#sites(), this.#cells);
   }

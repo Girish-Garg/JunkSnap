@@ -14,6 +14,11 @@ export class Credentials {
     return CODE.test(value);
   }
 
+  /** The user pool's password policy: 8 or more characters with a small letter and a number. */
+  static meetsPolicy(password: string): boolean {
+    return password.length >= MIN_PASSWORD_LENGTH && /[a-z]/.test(password) && /\d/.test(password);
+  }
+
   static strength(password: string): PasswordStrength {
     if (password.length < MIN_PASSWORD_LENGTH) return 'weak';
     const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((pattern) => pattern.test(password)).length;

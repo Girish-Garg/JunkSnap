@@ -151,7 +151,7 @@ describe("DynamoFrameReportRepository", () => {
     await expect(reports.createQueued(report)).resolves.toBeUndefined();
     expect(await reports.exists("rpt_a")).toBe(true);
     expect(dynamo.inputs[0]).toMatchObject({
-      Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z" },
+      Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z", completed_steps: [], version: 1 },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
   });
@@ -164,6 +164,34 @@ describe("FramecrcParser", () => {
   it("reads the size and the latest pts, even when packets come out of display order", () => {
     const packets = "0, 0, 1024, 512, 900, 0x1\r\n0, 512, 76800, 512, 900, 0x2, F=0x0\r\n0, 1024, 2048, 512, 900, 0x3\r\n";
     expect(parser.parse(header + packets)).toEqual({ width: 720, height: 1280, lastFrameMs: 5000 });
+  });
+
+  // Heads and tails of real listings: headless Chrome MediaRecorder (WebM VP9 with no duration header, and
+  // fragmented MP4 with an #extradata line first) and an ffmpeg frag_keyframe+empty_moov MP4 like Android writes.
+  it.each([
+    [
+      "Chrome WebM VP9",
+      "#software: Lavf63.1.102\n#tb 0: 1/1000\n#media_type 0: video\n#codec_id 0: vp9\n#dimensions 0: 1280x720\n#sar 0: 1/1\n" +
+        "0,          0,          0,        0,   119274, 0xb9e705bc\n0,       9889,       9889,        1,     5924, 0xcae77ab2, F=0x0\n" +
+        "0,       9920,       9920,        1,     5660, 0xf8a9e04f, F=0x0\n",
+      9920,
+    ],
+    [
+      "Chrome fragmented MP4",
+      "#extradata 0:       38, 0x057b0d05\n#software: Lavf63.1.102\n#tb 0: 1/30000\n#media_type 0: video\n#codec_id 0: h264\n" +
+        "#dimensions 0: 1280x720\n#sar 0: 1/1\n0,          0,          0,      936,   180904, 0x574d6e15\n" +
+        "0,     295942,     295942,      999,     7630, 0xed3d69de, F=0x0\n",
+      9864,
+    ],
+    [
+      "Android-style fragmented MP4",
+      "#extradata 0:       41, 0x050c0b73\n#software: Lavf63.1.102\n#tb 0: 1/15360\n#media_type 0: video\n#codec_id 0: h264\n" +
+        "#dimensions 0: 1280x720\n#sar 0: 0/1\n0,          0,          0,      512,   111496, 0xfd24654d\n" +
+        "0,     153088,     153088,      512,     1390, 0xb75e268d, F=0x0\n",
+      9966,
+    ],
+  ])("reads a browser recording: %s", (_case, listing, lastFrameMs) => {
+    expect(parser.parse(listing)).toEqual({ width: 1280, height: 720, lastFrameMs });
   });
 
   it.each([

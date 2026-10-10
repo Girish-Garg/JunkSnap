@@ -207,3 +207,71 @@
     left: 80px;
   }
 }
+
+/* List fallback when the browser cannot draw the map (no WebGL2). */
+.site-list {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  /* Clears the Filters pill; search and locate are hidden in list mode. */
+  padding: 72px var(--edge) var(--space-3);
+  background: var(--page);
+}
+
+.site-list__notice,
+.site-list__items,
+.site-list .map-status {
+  max-width: 640px;
+}
+
+.site-list .map-status {
+  margin-top: var(--space-2);
+}
+
+.site-list__notice {
+  display: flex;
+  gap: var(--space-1);
+  padding: 12px var(--space-2);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.site-list__hint {
+  color: var(--text-secondary);
+}
+
+.site-list__items {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-bottom: 1px solid var(--divider);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.site-list__text {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.site-list__text strong {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 500;
+}

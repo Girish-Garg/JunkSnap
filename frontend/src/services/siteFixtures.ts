@@ -6,3 +6,8 @@ export const siteFixtureLoaders: SiteFixtureLoaders = import.meta.glob<SiteFeatu
   '../../../contracts/fixtures/site.*.json',
   { import: 'default' },
 );
+
+/** Mock mode's sample report joins the jdh-1 site (contracts/README.md). */
+export const sampleSiteLoader = (): Promise<SiteFeature> => import('../../../contracts/fixtures/site.jdh-1.json').then(
+  (module) => module.default as unknown as SiteFeature,
+);

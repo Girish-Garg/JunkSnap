@@ -1,4 +1,3 @@
-import { ConcurrentUpdateError } from "../domain/ConcurrentUpdateError.js";
 import { InternalDataError } from "../domain/errors.js";
 import type { QueueMessage } from "../domain/QueueMessage.js";
 import type { Report } from "../domain/Report.js";
@@ -34,10 +33,9 @@ export class ReportPipeline implements MessageHandler {
     try {
       await this.#run(report);
     } catch (error) {
-      // A lost save race means another worker owns the report; SQS retries this message after it settles.
-      if (!(error instanceof ConcurrentUpdateError)) {
-        await this.#giveUpOnLastAttempt(report.id, message);
-      }
+      // A lost save race usually means another delivery owns the report, and SQS retries this one later.
+      // On the last receive nothing retries, so a report still open is marked needs_review either way.
+      await this.#giveUpOnLastAttempt(report.id, message);
       throw error;
     }
   }
