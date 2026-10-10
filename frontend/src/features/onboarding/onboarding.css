@@ -218,6 +218,10 @@
   padding: var(--s-3) var(--edge) var(--s-4);
 }
 
+.onboarding__footer .button {
+  white-space: nowrap;
+}
+
 .onboarding__dots {
   display: flex;
   gap: var(--s-4);
