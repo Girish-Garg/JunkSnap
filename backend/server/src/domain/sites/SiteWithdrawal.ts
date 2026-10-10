@@ -29,7 +29,8 @@ export class SiteWithdrawal {
     const audit = { ...internals, withdrawnReports: [...internals.withdrawnReports, ...withdrawn] };
     if (reports.length === 0) {
       const removed = { status: "removed", removed_reason: "withdrawn", removed_at: this.#request.at } as const;
-      return { feature: { ...feature, properties: { ...feature.properties, ...removed } }, internals: { ...audit, reports } };
+      const internalsLeft = { ...audit, ...this.#reporters(internals), reports };
+      return { feature: { ...feature, properties: { ...feature.properties, ...removed } }, internals: internalsLeft };
     }
     const geometry = SiteWithdrawal.#geometry(feature, reports);
     const properties = this.#properties(feature.properties, withdrawn.length);
@@ -45,24 +46,40 @@ export class SiteWithdrawal {
     return { type: "Point", coordinates: zoneCentre(reports, new GeoPoint(lat, lon)).coordinates() };
   }
 
-  // Counts, photos, brands and dates from the reports that stay; the caller's blurred copies leave the photos.
+  // Counts and photos always; brands and dates only when every report that stays has a known row.
   #properties(props: SiteProperties, withdrawn: number): SiteProperties {
-    const stay = this.#stay();
     const dropped = new Set(this.#request.mine.map((report) => report.photoUrl));
-    const times = stay.map((report) => report.reportedAt);
-    return {
+    const counted = {
       ...props,
       report_count: Math.max(1, props.report_count - withdrawn),
       photo_urls: newestPhotos(props.photo_urls.filter((url) => !dropped.has(url))),
+    };
+    if (!this.#complete()) {
+      return counted;
+    }
+    const stay = this.#stay();
+    const times = stay.map((report) => report.reportedAt);
+    return {
+      ...counted,
       brands: mergeBrands([], stay.flatMap((report) => report.brands)),
       first_reported_at: times.reduce(earlierTime, times[0] ?? props.first_reported_at),
       last_reported_at: times.reduce(laterTime, times[0] ?? props.last_reported_at),
     };
   }
 
-  // A device, user or person leaves the reporters unless another report that stays is theirs too.
+  // False while a report that stays has no row in the by-site index yet: it may hold any reporter, brand or date.
+  #complete(): boolean {
+    const known = new Set(this.#request.others.map((report) => report.reportId));
+    return this.#state.internals.reports.every((report) => this.#mine.has(report.reportId) || known.has(report.reportId));
+  }
+
+  // A device, user or person leaves the reporters unless another report that stays is theirs too, or might be.
   #reporters(internals: SiteInternals): Pick<SiteInternals, "reporterDevices" | "reporterUsers" | "reporterIds"> {
     const { mine } = this.#request;
+    if (!this.#complete()) {
+      const { reporterDevices, reporterUsers, reporterIds } = internals;
+      return { reporterDevices, reporterUsers, reporterIds };
+    }
     const stay = this.#stay();
     const keep = (ids: readonly string[], of: (report: SiteReportRef) => string | null) => {
       const leaving = new Set(mine.map(of).filter((id) => !stay.some((report) => of(report) === id)));

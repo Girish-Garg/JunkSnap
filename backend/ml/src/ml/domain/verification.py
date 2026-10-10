@@ -105,8 +105,25 @@ class Thresholds:
 
 
 @dataclass(frozen=True)
+class Veto:
+    """A strong "no" that rejected the photo whatever the combiner said, and its models."""
+
+    reason: str  # for example judge_veto:not_waste
+    sources: tuple[SignalResult, ...]
+
+    def label(self) -> str:
+        """The reason with each model's provider, model and version, for the evidence."""
+        models = ",".join(f"{s.provider}/{s.model}@{s.version}" for s in self.sources)
+        return f"{self.reason} by {models}"
+
+
+@dataclass(frozen=True)
 class Outcome:
     probability: float
     decision: str
     disagreement: bool
     is_clean: bool | None
+    veto: Veto | None = None
+
+    def vetoed(self, veto: Veto) -> "Outcome":
+        return Outcome(self.probability, "rejected", self.disagreement, self.is_clean, veto)

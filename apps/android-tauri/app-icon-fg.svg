@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <g transform="translate(352 272) scale(10)">
-    <path fill="#fff" d="M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z"/>
-    <circle cx="16" cy="12" r="4.5" fill="#0b5d57"/>
-  </g>
-</svg>
+<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><g transform="translate(28.16 31.45) scale(0.5075)" fill="none" stroke="#221c15" stroke-linecap="round" stroke-linejoin="round"><path d="M101 19l5-8M108 26l9-2M95 15l-1-9" stroke-width="5"/><rect x="24" y="22" width="36" height="22" rx="8" fill="#ffc23d" stroke-width="6"/><rect x="76" y="27" width="20" height="14" rx="5" fill="#ff7a59" stroke-width="5"/><rect x="9" y="36" width="102" height="70" rx="22" fill="#ffc23d" stroke-width="6"/><circle cx="23" cy="52" r="4" fill="#221c15" stroke="none"/><circle cx="61" cy="71" r="28" fill="#0b7a73" stroke-width="6"/><path d="M40 60a24 24 0 0 1 9-10" stroke="#fffdf8" stroke-width="4"/><path d="M44 66l3-10l7-4l4 2l6-4l8 3l4 7l3 7l-3 7l2 5l-7 7l-8 2l-6-3l-7 1l-5-7l-2-7z" fill="#fffdf8" stroke-width="4"/><path d="M57 62l9 1l4 9l-12 2z" fill="#d9f1ec" stroke="none"/><path d="M58 74l12-2l-7 16l-6-3z" fill="#ece1cf" stroke="none"/><path d="M54 52l3 10l-10 4M57 62l9 1l6-10M66 63l4 9l9-5M70 72l-7 16M57 62l1 12l-13 5M58 74l12-2M58 74l-1 11" stroke-width="2.5"/></g></svg>

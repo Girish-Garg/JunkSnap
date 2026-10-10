@@ -84,6 +84,10 @@ export class Site {
   }
 
   // On the active map: not rejected, removed or cleaned (decision 20261010-1700).
+  isRemoved(): boolean {
+    return this.#props.status === "removed";
+  }
+
   isListed(): boolean {
     const { verification, status } = this.#props;
     return verification !== "rejected" && status !== "removed" && status !== "cleaned";
@@ -129,9 +133,13 @@ export class Site {
   }
 
   // Votes always count, but only an unverified site can change verification; cleared votes can clean any open site.
+  // A removed site keeps its verification and backers as they were, like #resettle.
   recordVotes(tally: VoteTally): void {
     this.#props = { ...this.#props, votes: { confirm: tally.confirm, reject: tally.reject, cleaned: tally.cleaned } };
     this.#internals = { ...this.#internals, yesVoters: tally.yesPeople, noVoters: tally.noPeople };
+    if (this.isRemoved()) {
+      return;
+    }
     this.#settle();
     this.#clearIfVoted(tally);
     this.#recount();
@@ -201,10 +209,11 @@ export class Site {
   }
 
   // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
-  // A removed site shows no photo; the stored item keeps the URLs for the audit trail (decision 20261010-1700).
+  // A removed site shows no photo or after-photo; the stored item keeps the URLs for the audit trail (decision 20261010-1700).
   toFeature(): SiteFeature {
     const shown = publishedPoint(this.#point, this.#props);
-    const properties = this.#props.status === "removed" ? { ...this.#props, photo_urls: [] as PhotoUrls } : this.#props;
+    const hidden = { photo_urls: [] as PhotoUrls, cleanup_photo_url: null };
+    const properties = this.isRemoved() ? { ...this.#props, ...hidden } : this.#props;
     return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties };
   }
 

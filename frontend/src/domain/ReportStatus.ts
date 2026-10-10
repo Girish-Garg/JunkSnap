@@ -9,6 +9,13 @@ export interface ReportStatusView {
   /** Public blurred copy; null until moderation has made it. */
   readonly blurred_url: string | null;
   readonly updated_at: string;
+  /** Null until moderation ran; mock statuses leave it out. */
+  readonly moderation?: { readonly outcome: 'passed' | 'rejected' } | null;
+  /** The verification_result, only the fields the app reads. */
+  readonly verification?: {
+    readonly decision: 'auto_verified' | 'community_check' | 'rejected';
+    readonly judge: { readonly report_type: string } | null;
+  } | null;
 }
 
 const IN_PIPELINE: ReadonlySet<ReportStatus> = new Set(['queued', 'processing']);

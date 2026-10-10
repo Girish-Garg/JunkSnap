@@ -40,16 +40,16 @@ export class WithdrawalService {
     await this.#load(siteId);
     const now = this.#deps.clock.now();
     await this.#deps.limiter.fits(requester, now);
-    const { site, result } = await this.#deps.retry.run(async () => this.#apply(siteId, await this.#request(siteId, requester, now)));
+    const { site, result } = await this.#deps.retry.run(async () => this.#apply(siteId, requester, now));
     await this.#deps.limiter.take(requester, now);
     await this.#deps.withdrawer.markWithdrawn(result.withdrawn_report_ids, now.toISOString());
     await this.#deps.reports.followSite(site.reportIds, site.verification);
     return result;
   }
 
-  // Read on every attempt, so a report merged meanwhile is part of the recount.
-  async #request(siteId: string, requester: Requester, now: Date): Promise<Withdrawal> {
-    const rows = await this.#deps.rows.forSite(siteId);
+  // Rows are read on every attempt and matched to the site's own report ids; a site report with no row stays unknown.
+  async #request(site: Site, requester: Requester, now: Date): Promise<Withdrawal> {
+    const rows = (await this.#deps.rows.forSite(site.siteId)).filter((row) => site.holds(row.reportId));
     const mine = rows.filter((row) => row.userId === requester.userId);
     if (mine.length === 0) {
       throw new NotFoundError("You have no report on this site");
@@ -58,8 +58,9 @@ export class WithdrawalService {
   }
 
   // A retried call finds the reports already withdrawn and answers the same way without a second save.
-  async #apply(siteId: string, request: Withdrawal): Promise<Applied> {
+  async #apply(siteId: string, requester: Requester, now: Date): Promise<Applied> {
     const site = await this.#load(siteId);
+    const request = await this.#request(site, requester, now);
     const result = site.withdraw(request);
     const held = WithdrawalService.#held(site, request.mine);
     if (held.length === 0) {
