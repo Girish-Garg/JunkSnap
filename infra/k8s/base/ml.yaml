@@ -28,23 +28,41 @@ spec:
           ports:
             - name: http
               containerPort: 8000
+          # ORIGINALS_BUCKET comes from the ConfigMap; trained models are read from its models/ prefix.
           envFrom:
             - configMapRef:
                 name: junksnap-config
+          env:
+            - name: ML_MODEL_DIR
+              value: /models
+          volumeMounts:
+            - name: models
+              mountPath: /models
+          # The app downloads and checks about 420 MB of models before it serves (SigLIP alone is 372 MB),
+          # so liveness and readiness wait for this probe: up to 5 minutes.
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 60
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             periodSeconds: 10
           livenessProbe:
             httpGet: { path: /healthz, port: http }
-            initialDelaySeconds: 15
             periodSeconds: 20
+          # About 1 GiB more than v0 for the SigLIP, YOLO and head sessions in ONNX Runtime.
           resources:
-            requests: { cpu: 200m, memory: 768Mi }
-            limits: { cpu: "1", memory: 1536Mi }
+            requests: { cpu: 200m, memory: 1792Mi }
+            limits: { cpu: "1", memory: 2560Mi }
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
+      volumes:
+        # Model cache for this pod only; a new pod downloads and checks the files again.
+        - name: models
+          emptyDir:
+            sizeLimit: 1Gi
 ---
 apiVersion: v1
 kind: Service
