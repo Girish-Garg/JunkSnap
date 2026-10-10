@@ -8,14 +8,14 @@ All numbers are measured on the **public test split** (hash split, seed 26; noth
 
 | source | licence | what it gives | train / val / test |
 |---|---|---|---|
-| QR4Change (Pune streets) | CC BY 4.0 | waste or not (people's labels); teacher piles and bins | 1,590 / 193 / 184 |
+| QR4Change (urban civic issues, VIIT Pune) | CC BY 4.0 | waste or not (people's labels); teacher piles and bins | 1,590 / 193 / 184 |
 | TACO | CC BY 4.0 | litter boxes (`waste_item`, `bag`), materials | 832 / 79 / 123 |
 | garbage_od (Roboflow, via HF) | CC BY 4.0 | material boxes (`waste_item`), materials | 8,360 / 1,044 / 1,060 |
 | D-Fire | CC0 1.0 | fire and smoke boxes (`burning`), photos without fire as background | 1,196 / 147 / 157 |
 
 ## Detector
 
-YOLO26s (Ultralytics 8.4.175, COCO-pretrained), 80 epochs at 640 px on the RTX 5080, seed 26, best checkpoint by val mAP. Test split: 1,521 photos (QR4Change, TACO, garbage_od, D-Fire), mAP from Ultralytics `val`.
+YOLO26s (Ultralytics 8.4.175, COCO-pretrained), 80 epochs at 640 px on the RTX 5080, seed 26, best checkpoint by Ultralytics' val fitness (mostly mAP50-95); the run was resumed once from epoch 7 after the machine's session stopped. Test split: 1,521 photos (QR4Change, TACO, garbage_od, D-Fire), mAP from Ultralytics `val`.
 
 | class | boxes (test) | who drew them | precision | recall | mAP50 | mAP50-95 |
 |---|---|---|---|---|---|---|
@@ -26,9 +26,9 @@ YOLO26s (Ultralytics 8.4.175, COCO-pretrained), 80 epochs at 640 px on the RTX 5
 | waste_item | 8,251 | people (TACO, garbage_od) | 0.788 | 0.603 | 0.685 | 0.436 |
 | all | 8,713 | | 0.761 | 0.466 | 0.537 | 0.363 |
 
-`bag` has 26 training boxes and 5 test boxes, so its row is noise. The `waste_pile` and `bin` rows say how well the detector reproduces the teacher, not how well it finds piles; the field audit's hand-drawn boxes will replace them.
+`bag` has 26 boxes in all and 5 in test, so its row is noise. The `waste_pile` and `bin` rows say how well the detector reproduces the teacher, not how well it finds piles; the field audit's hand-drawn boxes will replace them.
 
-Teacher settings (`training/learn/teacher.py`): queries "a pile of garbage", "a heap of rubbish", "garbage dumped on the ground" for piles, kept at score 0.3 or above (or the single best box at 0.15 or above where people labelled the photo garbage), only on photos people labelled garbage; "a garbage bin", "a dustbin", "a dumpster" at 0.3 or above on every QR4Change photo; boxes inside a kept box dropped. 1,295 pile and 1,429 bin boxes over 1,967 photos; about 36 photos were checked by eye, not every box.
+Teacher settings (`training/learn/teacher.py`): queries "a pile of garbage", "a heap of rubbish", "garbage dumped on the ground" for piles, kept at score 0.3 or above (or the single best box at 0.15 or above where people labelled the photo garbage), only on photos people labelled garbage; "a garbage bin", "a dustbin", "a dumpster" at 0.3 or above on every QR4Change photo; boxes inside a kept box dropped. 1,295 pile and 1,429 bin boxes over 1,967 photos; 15 photos were checked by eye, not every box.
 
 As a signal (QR4Change test photos, claim `waste_dump`, people's labels; score = best waste box confidence): see the signal table below.
 
@@ -111,7 +111,7 @@ Claude Sonnet 4.6 and Haiku 4.5 were not run: Bedrock refuses them for this acco
 
 ## Gaps and what would change these numbers
 
-- No Jodhpur field photos yet: every number above is on public photos, and QR4Change's clean photos include many non-Indian street bins. The field holdout (grouped by scan and site) replaces this table once imported.
+- No Jodhpur field photos yet: every number above is on public photos, and QR4Change's clean photos include street scenes from outside India. The field holdout (grouped by scan and site) replaces this table once imported.
 - No human pile or bin boxes; no boxes at all for construction debris, medical waste, dead animals or chemicals. No size labels, so `YoloSignal`'s size class (share of the photo under waste boxes: under 10% small, under 35% medium, else large) is a rule, not a trained estimate.
 - Material shares are presence probabilities normalised over the materials seen, not measured areas. Textile, e-waste, construction debris and medical have no head.
 - Only `waste_dump` claims have labelled photos; `YoloSignal` and `EmbeddingSignal` are neutral for claims they cannot see (`contaminated_water`; the embedding head also for `open_construction`), and combiners skip neutral signals.
