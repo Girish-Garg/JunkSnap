@@ -267,7 +267,10 @@
     "mapLabel": "Map: drag the pin or tap where the waste is",
     "noMap": "The map can't open on this phone, so the report uses where you stand.",
     "you": "You are here",
-    "pin": "The waste"
+    "pin": "The waste",
+    "twoFingers": "Use two fingers to move the map",
+    "ctrlScroll": "Use Ctrl + scroll to zoom the map",
+    "cmdScroll": "Use ⌘ + scroll to zoom the map"
   },
   "account": {
     "title": "Account",

@@ -17,9 +17,9 @@ export class Map {
   readonly sources = new globalThis.Map<string, FakeSource>();
   readonly layers: { id: string }[] = [];
   removed = false;
-  readonly options: { container: HTMLElement };
+  readonly options: { container: HTMLElement; cooperativeGestures?: boolean; locale?: Record<string, string> };
 
-  constructor(options: { container: HTMLElement }) {
+  constructor(options: { container: HTMLElement; cooperativeGestures?: boolean; locale?: Record<string, string> }) {
     this.options = options;
     created.maps.push(this);
   }

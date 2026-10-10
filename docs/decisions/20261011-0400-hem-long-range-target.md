@@ -14,6 +14,7 @@ Decision:
 - The api rejects a target more than 500 m from `gps` with 422 `target_too_far` and stores `target_distance_m`. The app caps the pin at 300 m, or 500 m when the reporter says they are up high, and says why.
 - The worker uses `target` for the site point, merge radius, nearby places, nearest bin, ml's nearby-verified count and the ward and seat lookup. Authenticity stays on `gps`: duplicate radius, `gps_accuracy_m`, timestamps.
 - `gps` stays as evidence on the reports row and is never public; a site's point is its spot, never a reporter's position.
+- A long-range report merges only on a matching photo (both embeddings present, cosine 0.88 or more); otherwise it founds its own site.
 - Not for `no_bin` (the zone is where the reporter stands) or scan frames: the schema forbids both.
 
 Consequences for other lanes: the cleanup `near_site` check (50 m from the site) still needs the cleaner at the waste; a long-range cleanup is a later change. Votes keep their 1 km radius from the site point.

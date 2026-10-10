@@ -1,13 +1,25 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { LatLon } from '../../../domain/ReportUpload';
-import { TargetMap, type TargetMapOptions } from '../TargetMap';
+import { TargetMap, type TargetMapLabels, type TargetMapOptions } from '../TargetMap';
 
 export interface TargetMapState {
   readonly origin: LatLon;
   readonly spot: LatLon;
   readonly headingEnd: LatLon | null;
   readonly onMove: (point: LatLon) => void;
+}
+
+function labelsIn(t: TFunction): TargetMapLabels {
+  return {
+    attribution: t('map.attribution'),
+    you: t('longRange.you'),
+    pin: t('longRange.pin'),
+    twoFingers: t('longRange.twoFingers'),
+    ctrlScroll: t('longRange.ctrlScroll'),
+    cmdScroll: t('longRange.cmdScroll'),
+  };
 }
 
 function tryCreate(options: TargetMapOptions, onFail: () => void): TargetMap | null {
@@ -30,7 +42,7 @@ export function useTargetMap(enabled: boolean, view: TargetMapState, onFail: () 
   const { lat, lon } = view.origin;
   useEffect(() => {
     if (!enabled || !container.current) return undefined;
-    const labels = { attribution: t('map.attribution'), you: t('longRange.you'), pin: t('longRange.pin') };
+    const labels = labelsIn(t);
     const options = { container: container.current, origin: { lat, lon }, labels, onMove: (point: LatLon) => onMove(point) };
     const created = tryCreate(options, () => failed());
     if (created) showOn(created);

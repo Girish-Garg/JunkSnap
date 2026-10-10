@@ -21,13 +21,15 @@ export class MergeableReportFactory {
     const reportId = MergeableReportFactory.#reportId(evidence);
     MergeableReportFactory.#assertPassed(evidence, reportId);
     const { upload, location } = evidence;
+    const placement = ReportPlacement.of(upload);
     return {
       ...this.#results(evidence),
       reportId,
       reportType: upload.report_type,
       context: upload.context,
       // The site's spot: a long-range target when set (decision 20261011-0400); the reporter's fix never becomes public.
-      point: ReportPlacement.of(upload).spot,
+      point: placement.spot,
+      longRange: placement.longRange,
       deviceToken: upload.device_token,
       userId: upload.user_id ?? null,
       reportedAt: upload.captured_at,

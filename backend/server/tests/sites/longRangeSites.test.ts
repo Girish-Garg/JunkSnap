@@ -54,14 +54,6 @@ describe("site placement from a long-range target", () => {
     expect(sites.internals(result.siteId)?.reports[0]?.point).toEqual(WASTE);
   });
 
-  it("merges a second report whose target is within the merge radius, though its reporter stood elsewhere", async () => {
-    const { merger } = setup();
-    const first = await merger.merge(longRange("far_1", DEVICE_B, REPORTER, WASTE));
-    const across = { lat: northOf(-200), lon: BASE_LON, accuracy_m: 5 };
-    const second = await merger.merge(longRange("far_2", DEVICE_C, across, { lat: northOf(15), lon: BASE_LON }));
-    expect(second).toMatchObject({ siteId: first.siteId, outcome: "merged" });
-  });
-
   it("founds a new site for a plain report taken where the long-range reporter stood", async () => {
     const { merger } = setup();
     const first = await merger.merge(longRange("far_1", DEVICE_B, REPORTER, WASTE));

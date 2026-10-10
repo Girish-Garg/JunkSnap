@@ -9,7 +9,14 @@ interface LineData {
 }
 
 const ORIGIN = { lat: 26.26183, lon: 73.00352 };
-const labels = { attribution: 'Map credits', you: 'You are here', pin: 'The waste' };
+const labels = {
+  attribution: 'Map credits',
+  you: 'You are here',
+  pin: 'The waste',
+  twoFingers: 'Use two fingers to move the map',
+  ctrlScroll: 'Use Ctrl + scroll to zoom the map',
+  cmdScroll: 'Use ⌘ + scroll to zoom the map',
+};
 
 function create() {
   const moves: { lat: number; lon: number }[] = [];
@@ -40,6 +47,12 @@ describe('TargetMap pin and taps', () => {
     pin.lngLat = [73.005, 26.263];
     pin.handlers.get('dragend')?.();
     expect(moves).toEqual([{ lat: 26.263, lon: 73.005 }]);
+  });
+
+  it('leaves one-finger drags to the sheet: two fingers move the map, with the hint in the UI language', () => {
+    const { seen } = create();
+    expect(seen.options.cooperativeGestures).toBe(true);
+    expect(seen.options.locale?.['CooperativeGesturesHandler.MobileHelpText']).toBe('Use two fingers to move the map');
   });
 
   it('reports a tap on the map', () => {

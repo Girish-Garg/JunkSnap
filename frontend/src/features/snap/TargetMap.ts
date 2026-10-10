@@ -13,10 +13,20 @@ const HEADING_ID = 'heading-line';
 export interface TargetMapOptions {
   readonly container: HTMLElement;
   readonly origin: LatLon;
-  /** Accessible names in the UI language: the attribution toggle, the reporter's dot and the waste pin. */
-  readonly labels: { readonly attribution: string; readonly you: string; readonly pin: string };
+  /** Text in the UI language: the attribution toggle, the reporter's dot, the waste pin and the gesture hints. */
+  readonly labels: TargetMapLabels;
   /** The pin was dropped after a drag, or the map was tapped; the point is raw, before any cap. */
   readonly onMove: (point: LatLon) => void;
+}
+
+export interface TargetMapLabels {
+  readonly attribution: string;
+  readonly you: string;
+  readonly pin: string;
+  /** Shown when one finger drags the map (the sheet scrolls instead), and for a plain wheel on desktop. */
+  readonly twoFingers: string;
+  readonly ctrlScroll: string;
+  readonly cmdScroll: string;
 }
 
 interface Drawn {
@@ -45,8 +55,10 @@ export class TargetMap {
       center,
       zoom: START_ZOOM,
       maxZoom: MAX_ZOOM,
+      // The map sits in a scrolling sheet: one finger scrolls the sheet, two move the map. Pin drags and taps still work.
+      cooperativeGestures: true,
       attributionControl: false,
-      locale: { 'AttributionControl.ToggleAttribution': labels.attribution },
+      locale: TargetMap.#locale(labels),
     });
     this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
     new Marker({ element: TargetMap.#element('target-map__you', labels.you) }).setLngLat(center).addTo(this.#map);
@@ -100,6 +112,15 @@ export class TargetMap {
 
   static #line(points: readonly LatLon[]): Feature<LineString> {
     return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: points.map((p) => [p.lon, p.lat]) } };
+  }
+
+  static #locale(labels: TargetMapLabels): Record<string, string> {
+    return {
+      'AttributionControl.ToggleAttribution': labels.attribution,
+      'CooperativeGesturesHandler.MobileHelpText': labels.twoFingers,
+      'CooperativeGesturesHandler.WindowsHelpText': labels.ctrlScroll,
+      'CooperativeGesturesHandler.MacHelpText': labels.cmdScroll,
+    };
   }
 
   static #element(className: string, label: string): HTMLElement {
