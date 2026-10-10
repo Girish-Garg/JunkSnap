@@ -1,14 +1,17 @@
-"""Timeouts for the judge's provider clients: a hung model hands over to the next one."""
+"""Short timeouts for Bedrock model calls (judge, Titan) and OpenAI: a hung model hands over."""
 
 from dataclasses import dataclass
 
 import httpx
 from botocore.config import Config
 
-# The worker waits 60 s for /internal/verify. Two attempts of 15 s on a hung Nova Lite
-# still leave Nova Pro time to answer (median 1.8 s, docs/ml/eval.md).
-READ_TIMEOUT_S = 15.0
-CONNECT_TIMEOUT_S = 5.0
+# The worker waits 60 s for /internal/verify. With every judge model hung at once,
+# Nova Lite 2 x 8 s + Nova Pro 2 x 8 s + OpenAI 8 s = 40 s, inside the 50 s left after
+# 10 s for the detectors. A healthy Nova Lite answers in 1.5 s median (docs/ml/eval.md).
+WORKER_BUDGET_S = 60.0
+DETECTORS_S = 10.0
+READ_TIMEOUT_S = 8.0
+CONNECT_TIMEOUT_S = 3.0
 ATTEMPTS = 2  # the first call and 1 retry
 
 
@@ -19,7 +22,7 @@ class JudgeTimeouts:
     attempts: int = ATTEMPTS
 
     def aws_config(self) -> Config:
-        """bedrock-runtime: a read timeout is resent once; total_max_attempts counts both."""
+        """bedrock-runtime (judge and Titan): a timeout is resent once; the total counts both."""
         return Config(
             retries={"total_max_attempts": self.attempts, "mode": "standard"},
             connect_timeout=self.connect_s,

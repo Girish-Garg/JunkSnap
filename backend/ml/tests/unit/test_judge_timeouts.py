@@ -4,6 +4,8 @@ import socket
 import threading
 import time
 from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
 
 import boto3
 import httpx
@@ -13,12 +15,19 @@ from botocore.config import Config
 from fakes import JUDGE_JSON, FakeBuilder, FakeProvider
 
 from ml.adapters.bedrock_converse import BedrockConverseProvider
+from ml.adapters.s3_model_store import S3ModelStore
+from ml.domain.errors import ExternalServiceError
 from ml.domain.llm import LlmRequest, ModelChoice, TaskConfig
+from ml.domain.model_files import PinnedModel
 from ml.domain.pricing import PriceTable
-from ml.handlers.judge_timeouts import JudgeTimeouts
+from ml.handlers.judge_timeouts import DETECTORS_S, WORKER_BUDGET_S, JudgeTimeouts
+from ml.handlers.verify_graph import VerifierBuilder
 from ml.services.judge_answer import JudgeAnswer
 from ml.services.provider_factory import ProviderFactory
 from ml.services.provider_router import JsonJob, ProviderRouter
+from ml.settings.core import CoreSettings
+from ml.settings.llm import LlmSettings
+from ml.settings.models import ModelSettings
 
 LITE = "apac.amazon.nova-lite-v1:0"
 PRO = "apac.amazon.nova-pro-v1:0"
@@ -65,11 +74,49 @@ def hung() -> Iterator[HungServer]:
     server.close()
 
 
-def test_defaults_fit_the_workers_60_s_budget() -> None:
+def test_defaults_are_8_s_reads_and_one_resend() -> None:
     config = JudgeTimeouts().aws_config()
-    assert config.read_timeout == 15.0
+    assert config.read_timeout == 8.0
     assert config.retries == {"total_max_attempts": 2, "mode": "standard"}
-    assert JudgeTimeouts().http_client().timeout.read == 15.0
+    assert JudgeTimeouts().http_client().timeout.read == 8.0
+
+
+def test_nova_lite_nova_pro_and_openai_all_hung_fit_the_workers_budget() -> None:
+    t = JudgeTimeouts()
+    worst = 2 * (t.attempts * t.read_s) + t.read_s  # two Bedrock models, then OpenAI
+    assert worst < WORKER_BUDGET_S - DETECTORS_S
+
+
+def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timeouts = JudgeTimeouts(read_s=7.5, connect_s=2.5)
+    configs: list[tuple[str, Any]] = []
+    clients: list[httpx.Client] = []
+    real_client, real_http = boto3.session.Session.client, JudgeTimeouts.http_client
+
+    def client(self: boto3.session.Session, name: str, **kwargs: Any) -> Any:
+        configs.append((name, kwargs.get("config")))
+        return real_client(self, name, **kwargs)  # type: ignore[call-overload]
+
+    def http_client(self: JudgeTimeouts) -> httpx.Client:
+        clients.append(real_http(self))
+        return clients[-1]
+
+    def refuse(self: S3ModelStore, model: PinnedModel) -> Path:
+        raise ExternalServiceError("offline test")  # after the Titan client is made
+
+    monkeypatch.setattr(boto3.session.Session, "client", client)
+    monkeypatch.setattr(JudgeTimeouts, "http_client", http_client)
+    monkeypatch.setattr(S3ModelStore, "fetch", refuse)
+    models = ModelSettings(ORIGINALS_BUCKET="bucket")
+    VerifierBuilder(CoreSettings(), LlmSettings(), models, timeouts).verifier()
+
+    bedrock = [config for name, config in configs if name == "bedrock-runtime"]
+    assert len(bedrock) == 2  # Titan embeddings and the judge
+    assert all(c.read_timeout == 7.5 and c.connect_timeout == 2.5 for c in bedrock)
+    assert all(c.retries["total_max_attempts"] == 2 for c in bedrock)
+    assert [c.timeout.read for c in clients] == [7.5]
 
 
 def test_a_hung_bedrock_model_is_retried_once_then_the_next_answers(hung: HungServer) -> None:

@@ -45,10 +45,17 @@ logger = logging.getLogger(__name__)
 
 
 class VerifierBuilder:
-    def __init__(self, core: CoreSettings, llm: LlmSettings, models: ModelSettings) -> None:
+    def __init__(
+        self,
+        core: CoreSettings,
+        llm: LlmSettings,
+        models: ModelSettings,
+        timeouts: JudgeTimeouts | None = None,
+    ) -> None:
         self._core = core
         self._llm = llm
         self._models = models
+        self._timeouts = timeouts or JudgeTimeouts()  # every Bedrock model call and OpenAI
         self._session = boto3.session.Session(region_name=core.aws_region)
 
     def service(self, images: BlurredImageStore) -> VerifyService:
@@ -84,7 +91,7 @@ class VerifierBuilder:
             return None
         s3 = self._session.client("s3", config=AWS_CONFIG)
         store = S3ModelStore(s3, self._models.originals_bucket, Path(self._models.model_dir))
-        bedrock = self._session.client("bedrock-runtime", config=AWS_CONFIG)
+        bedrock = self._session.client("bedrock-runtime", config=self._timeouts.aws_config())
         return TrainedModels(store, self._models.pins(), bedrock)
 
     def _embedding_sink(self) -> S3EmbeddingSink:
@@ -103,11 +110,10 @@ class VerifierBuilder:
             self._session.client("secretsmanager", config=AWS_CONFIG)
         )
         openai_secret = self._llm.openai_secret(self._core.stage)
-        timeouts = JudgeTimeouts()
-        bedrock = self._session.client("bedrock-runtime", config=timeouts.aws_config())
+        bedrock = self._session.client("bedrock-runtime", config=self._timeouts.aws_config())
         return {
             "bedrock": BedrockProviderBuilder(bedrock),
-            "openai": OpenAiProviderBuilder(timeouts.http_client(), secrets, openai_secret),
+            "openai": OpenAiProviderBuilder(self._timeouts.http_client(), secrets, openai_secret),
         }
 
     @staticmethod
