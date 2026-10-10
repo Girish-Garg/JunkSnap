@@ -21,7 +21,9 @@ function cameraWith(track: FakeTrack): MediaDevices & { opens: number } {
   return media as unknown as MediaDevices & { opens: number };
 }
 
-it('Scan: a camera that freezes mid-recording ends the recording, keeps the clip and says so', async () => {
+// Signed in, Video mode, recording 5 s; then the camera freezes (jsdom has no
+// requestVideoFrameCallback, so a muted track is the freeze signal).
+async function freezeWhileRecording() {
   const user = userEvent.setup();
   const clock = new FakeClock();
   const track = new FakeTrack();
@@ -34,10 +36,29 @@ it('Scan: a camera that freezes mid-recording ends the recording, keeps the clip
   const record = await screen.findByRole('button', { name: 'Start recording' });
   await waitFor(() => expect(record).toBeEnabled());
   const opens = camera.opens; // Photo opened the camera, then Video did
-  await user.click(record);
-  clock.advance(5_000);
-  track.muted = true; // jsdom has no requestVideoFrameCallback, so a muted track is the freeze signal
+  return { services, camera, opens, start: () => user.click(record), freeze: () => ((track.muted = true), clock.advance(5_000)) };
+}
+
+it('Scan: a camera that freezes mid-recording ends the recording, keeps the clip and says so', async () => {
+  const test = await freezeWhileRecording();
+  await test.start();
+  test.freeze();
   expect(await screen.findByText('Camera stopped. Your clip so far is saved.', {}, { timeout: 5_000 })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 2, name: 'Video saved' })).toBeInTheDocument();
-  expect(camera.opens).toBe(opens); // the recording ended; the camera was not reopened under it
+  expect(test.camera.opens).toBe(test.opens); // the camera was not reopened under the recording
+});
+
+it('Scan: the camera is not reopened while the cut recording is still being saved', async () => {
+  const test = await freezeWhileRecording();
+  const queue = test.services.snap.scans;
+  const add = queue.add.bind(queue);
+  let finishSaving = () => undefined as void;
+  const saving = vi.spyOn(queue, 'add').mockImplementation((draft, video) => new Promise((resolve) => (finishSaving = () => void add(draft, video).then(resolve))));
+  await test.start();
+  test.freeze();
+  await waitFor(() => expect(saving).toHaveBeenCalled(), { timeout: 5_000 });
+  await new Promise((resolve) => setTimeout(resolve, 1_500)); // three watchdog checks with the camera still frozen
+  expect(test.camera.opens).toBe(test.opens);
+  finishSaving();
+  expect(await screen.findByText('Camera stopped. Your clip so far is saved.')).toBeInTheDocument();
 });
