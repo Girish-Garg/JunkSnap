@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/area_letter_draft.schema.json",
+  "title": "area_letter_draft",
+  "description": "A cited letter draft about one issue in one area, from POST /areas/{kind}/{id}/letters. Addressed by office only, neutral wording. Nothing is filed automatically; the resident files it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["letter_id", "area", "issue", "to", "cc", "subject", "body", "language", "citations", "verifier", "template_fallback", "provider", "model", "version", "created_at", "evidence"],
+  "properties": {
+    "letter_id": { "type": "string", "pattern": "^ltr_[a-z0-9_]{1,40}$" },
+    "area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "name"],
+      "properties": {
+        "kind": { "enum": ["ward", "assembly", "loksabha", "district"] },
+        "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+        "name": { "type": "string" }
+      }
+    },
+    "issue": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "all"], "description": "The report type the letter is about; all covers every type in the area." },
+    "to": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Offices responsible for the area kind: ward and assembly, the head of each local body with sites there; loksabha and district, the District Collector of each district, then the local body heads.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["office", "body"],
+        "properties": {
+          "office": { "type": "string", "description": "For example Commissioner or District Collector." },
+          "body": { "type": "string", "description": "For example Jodhpur Municipal Corporation, or Jodhpur district, Rajasthan." }
+        }
+      }
+    },
+    "cc": {
+      "type": "array",
+      "description": "At most one line, the area's own seat, for attention: the ward councillor, the MLA, or the MP (never for an outdated Lok Sabha seat). Empty for a district or when no representative is listed.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["office", "seat", "marking"],
+        "properties": {
+          "office": { "enum": ["councillor", "mla", "mp"] },
+          "seat": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+              "name": { "type": "string" }
+            }
+          },
+          "marking": { "const": "for attention" }
+        }
+      }
+    },
+    "subject": { "type": "string", "maxLength": 200 },
+    "body": { "type": "string", "description": "Letter prose. May be regional; quotes inside stay in the official English or Hindi." },
+    "language": { "enum": ["en", "hi"] },
+    "citations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "document", "clause", "quote", "source_sha256", "verified"],
+        "properties": {
+          "rule_id": { "type": "string", "pattern": "^[a-z0-9-]{1,64}$" },
+          "document": { "type": "string" },
+          "clause": { "type": "string" },
+          "quote": { "type": "string" },
+          "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the official PDF the rule comes from." },
+          "verified": { "const": true }
+        }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified", "total"],
+      "description": "verified must equal total and the length of citations, as for letter_draft.",
+      "properties": {
+        "verified": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "template_fallback": { "type": "boolean" },
+    "provider": { "enum": ["bedrock", "openai", "openrouter", "rekognition", "comprehend", "junksnap"] },
+    "model": { "type": "string" },
+    "version": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reports", "reporters", "verified_reports", "sites", "first_reported_at", "last_reported_at", "worst_sites", "scores", "bin_access"],
+      "description": "What the letter rests on, for the app to show and print with it. Counts cover the issue's sites in the area that are not rejected; verified_reports counts verified sites only.",
+      "properties": {
+        "reports": { "type": "integer", "minimum": 1 },
+        "reporters": { "type": ["integer", "null"], "minimum": 1, "description": "Distinct people (user id, else device) across those sites; null when no site has reporter ids yet." },
+        "verified_reports": { "type": "integer", "minimum": 0 },
+        "sites": { "type": "integer", "minimum": 1 },
+        "first_reported_at": { "type": "string", "format": "date-time" },
+        "last_reported_at": { "type": "string", "format": "date-time" },
+        "worst_sites": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Up to 5 verified sites with the most verified reports, open and reopened before cleaned.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["site_id", "report_type", "context", "status", "report_count", "verified_count", "first_reported_at", "last_reported_at", "photo_urls", "insights"],
+            "properties": {
+              "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$" },
+              "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
+              "context": { "type": "string" },
+              "status": { "enum": ["open", "cleaned", "reopened"] },
+              "report_count": { "type": "integer", "minimum": 1 },
+              "verified_count": { "type": "integer", "minimum": 0 },
+              "first_reported_at": { "type": "string", "format": "date-time" },
+              "last_reported_at": { "type": "string", "format": "date-time" },
+              "photo_urls": { "type": "array", "maxItems": 6, "items": { "type": "string", "format": "uri" }, "description": "Blurred public copies only." },
+              "insights": {
+                "description": "The site's measured insights, as in letter_draft.evidence.insights; null when the site has none.",
+                "anyOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["reports", "composition", "size_class", "hazards", "near"],
+                    "properties": {
+                      "reports": { "type": "integer", "minimum": 0 },
+                      "composition": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["material", "share_pct", "reports"],
+                          "properties": {
+                            "material": { "type": "string" },
+                            "share_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+                            "reports": { "type": "integer", "minimum": 1 }
+                          }
+                        }
+                      },
+                      "size_class": { "enum": ["small", "medium", "large", null] },
+                      "hazards": { "type": "array", "items": { "type": "string" } },
+                      "near": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["kind", "distance_m"],
+                          "properties": {
+                            "kind": { "enum": ["school", "hospital", "water", "drain"] },
+                            "distance_m": { "type": "number", "minimum": 0 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "scores": {
+          "type": "array",
+          "description": "The area's measured scores from ward_scores; withheld scores are left out. verified_reports is the count the scores rest on (all issues).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value", "verified_reports"],
+            "properties": {
+              "name": { "enum": ["city", "citizen", "bin_access"] },
+              "value": { "type": "number", "minimum": 0, "maximum": 100 },
+              "verified_reports": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "bin_access": {
+          "description": "For waste_dump, no_bin and all: of the issue's verified sites, how many had bin access measured and how many have no known bin within 3 km. Null for other issues.",
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sites_measured", "sites_without_bin_within_3km"],
+              "properties": {
+                "sites_measured": { "type": "integer", "minimum": 0 },
+                "sites_without_bin_within_3km": { "type": "integer", "minimum": 0 }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

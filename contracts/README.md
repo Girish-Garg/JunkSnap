@@ -12,6 +12,8 @@ Contracts v1.4 (decision 20261010-1430, issue 79) measures bin access: `site.rep
 
 Contracts v1.5 (decision 20261010-1445-hem-ward-crawler-service, issue 78) adds the `crawls` table, the `crawl/` prefix in the originals bucket, the public route `GET /areas/district/{id}/crawl` with the new `area_crawl` shape, the `crawler` CronJob and image, and the `CRAWL_*` and `CRAWLS_TABLE` variables. No existing shape changes.
 
+Contracts v1.6 (decision 20261010-1600-hem-area-letters, issue 89) adds `POST /areas/{kind}/{id}/letters` and its response schema `area_letter_draft`: one cited letter about one issue in one area. No existing shape changes.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -32,6 +34,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `ward_scores` | `scores` CronJob, with area `insights`; worker creates the first zero-count row | api, frontend area page |
 | `area_list` | api (`GET /areas/{kind}`): ranked `ward_scores` rows within a district or local body | frontend city ranking |
 | `letter_draft` | api | frontend letter preview |
+| `area_letter_draft` | api | frontend area page letter preview |
 | `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location; read at worker start), scores (area, population, disposal points; read every run); per city each keeps the file with more `reviewed` records, then one with `map_layers` over one without, then the newer `generated_at` |
 | `area_crawl` | api, from the `crawls` row (`not_started` without one) | frontend area pages and Areas list (the crawl banner) |
 
@@ -58,7 +61,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 - One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
 - Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /areas/district/{id}/crawl`, `GET /healthz`.
-- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
+- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `POST /areas/{kind}/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
 - `user_id` is the token's `sub`, opaque. The api writes it on reports, scans, votes and cleanups, and ignores any `user_id` in a request body. These routes still send `device_token`.
 - `GET /reports/{id}` and `GET /scans/{id}` return 404 unless the token's user owns the item. A guest report made before accounts (no `user_id`) opens with its `X-Device-Token`.
@@ -97,6 +100,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
 | `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
+| `POST /areas/{kind}/{id}/letters` | api | area letter request | 200 `area_letter_draft` | signed in; up to 60 s; 400 `bad_request` for an unknown kind, a bad id or body; 404 `area_not_found` when the area has no reported sites; 409 `not_verified` unless the area's verified sites of that issue hold at least 10 verified reports (the message gives the count, for example "Not enough verified reports yet (3 of 10) for this issue in this area."); for `no_bin`, and the no-bin sites inside `all`, a site counts only with at least `NO_BIN_MIN_REPORTERS` distinct reporters and `insights.no_bin_within_3km` true, and the 409 message lists the sites left out, for example "No-bin sites left out: Bins not mapped here yet (2 sites)."; 422 `no_local_body` for a ward or assembly letter with no local body to address; 429 `rate_limited`, sharing the 5 letters an hour with site letters and checked before any site is read; never filed automatically |
 | `GET /areas/district/{id}/crawl` | api | none | 200 `area_crawl` | any district id matching `[a-z0-9-]{1,64}` answers 200 (`not_started` when the `crawls` table has no row); else 400 `bad_request` |
 | `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`, and for a `no_bin` site unless `reporters` is at least `NO_BIN_MIN_REPORTERS` and `insights.no_bin_within_3km` is true (the message gives the reason, for example "3 of 5 people reported no bin here; nearest known bin 4.2 km"); 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
@@ -114,6 +118,8 @@ Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never
 **Scans** (decision 20261010-0203). The phone records the video and the GPS track in sync, PUTs the video with the presigned URL, then posts the `scan_session`. For a `kind: scan` message the worker checks the video against the scan video limit, cuts one frame per second, and maps each frame's `t_ms` onto `gps_track` by linear interpolation between the fixes before and after it; the frame's `accuracy_m` is the larger of the two. It drops frames under the scan frame rule. For each kept frame it writes the JPEG to `reports/{upload_id}.jpg` in the originals bucket, a `report_upload` with `capture_mode: scan`, the `scan` link and the session's type, context, `device_token` and `user_id`, and the report row (`queued`), then sends a `kind: report` message. From there the frame runs the normal pipeline, moderation and blur included. Consecutive frames of one spot usually fail the duplicate check, so one ride past adds one report per spot. The video is never public and never goes to a model.
 
 **Letters.** Every citation has `verified: true`, and `verifier.verified` equals `verifier.total` and the number of citations. A draft that fails the quote verifier falls back to the template letter with the same verified citations; an unverified quote never ships. Cc follows `site.location`: the councillor only when there is a ward, the MLA only when there is an assembly seat (outside Rajasthan the MP only), and never the MP of a Lok Sabha seat with `status: outdated`.
+
+**Area letters.** Same rule book, quote verifier, wording check, template fallback and counters as site letters. `to` follows the area kind: ward and assembly, the head of each local body with sites there; Lok Sabha and district, the District Collector of each district first, then the local body heads. `cc` is only the area's own seat, for attention: the ward councillor, the MLA, or the MP (never for an outdated Lok Sabha seat); a district letter has none. Rules are picked from the situation tags of every verified site of the issue (for Lok Sabha and district, Collector rules first), at most 4. `evidence` holds the issue's counts in the area, up to 5 worst verified sites with blurred photos, dates and measured insights, the measured `ward_scores` (withheld scores left out) and, for `waste_dump`, `no_bin` and `all`, bin access.
 
 ## Inline bodies
 
@@ -202,6 +208,8 @@ Cleanup request (the photo is presigned first, with `purpose: cleanup`) and its 
 ```
 
 Letter request: `{"device_token": "<uuid>", "channel": "local_body", "language": "en"}`. `channel` takes the values of `letter_draft.channel`; `language` is `en` or `hi`.
+
+Area letter request: `{"issue": "waste_dump", "language": "en", "device_token": "<uuid>"}`. `issue` is a report type or `all`; `language` is `en` or `hi`.
 
 Verify request (worker to ml). `purpose` is `report` or `cleanup`; `ml` only ever reads the blurred copy.
 

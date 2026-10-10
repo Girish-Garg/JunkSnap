@@ -1,0 +1,63 @@
+{
+  "letter_id": "ltr_jdh_area_1",
+  "area": { "kind": "assembly", "id": "s20-ac-128", "name": "Jodhpur" },
+  "issue": "waste_dump",
+  "to": [{ "office": "Commissioner", "body": "Jodhpur Municipal Corporation" }],
+  "cc": [{ "office": "mla", "seat": { "id": "s20-ac-128", "name": "Jodhpur" }, "marking": "for attention" }],
+  "subject": "Request for action on waste dumps in Jodhpur assembly constituency (JunkSnap area report)",
+  "body": "To the Commissioner, Jodhpur Municipal Corporation.\n\nResidents have reported waste dumps in Jodhpur assembly constituency: 12 reports from 9 people at 3 sites since 8 October 2026, 11 of them verified.\n\nSites with the most verified reports:\n- site_jdh_1: a waste dump on a vacant plot, 6 verified reports, open since 9 October 2026\n\nThe relevant provisions read:\n\nSolid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026), rule 15(1):\n\"SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.\"\n\nWe request that these sites be cleared and that bins or collection points be provided nearby.\n\nThis letter is filed by a resident. A copy goes for attention to the MLA for Jodhpur.",
+  "language": "en",
+  "citations": [
+    {
+      "rule_id": "swm-2026-15-1",
+      "document": "Solid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026)",
+      "clause": "15(1)",
+      "quote": "SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.",
+      "source_sha256": "4963ee304d0e6d69097a35036243c27a6cb5548c9d12338d999ab18c63d81591",
+      "verified": true
+    }
+  ],
+  "verifier": { "verified": 1, "total": 1 },
+  "template_fallback": true,
+  "provider": "junksnap",
+  "model": "area-letter-template",
+  "version": "1",
+  "created_at": "2026-10-10T11:30:00Z",
+  "evidence": {
+    "reports": 12,
+    "reporters": 9,
+    "verified_reports": 11,
+    "sites": 3,
+    "first_reported_at": "2026-10-08T05:10:00Z",
+    "last_reported_at": "2026-10-10T02:14:05Z",
+    "worst_sites": [
+      {
+        "site_id": "site_jdh_1",
+        "report_type": "waste_dump",
+        "context": "vacant_plot",
+        "status": "open",
+        "report_count": 7,
+        "verified_count": 6,
+        "first_reported_at": "2026-10-09T03:40:00Z",
+        "last_reported_at": "2026-10-10T02:14:05Z",
+        "photo_urls": [
+          "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
+          "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1a.jpg"
+        ],
+        "insights": {
+          "reports": 6,
+          "composition": [{ "material": "plastic", "share_pct": 52.5, "reports": 6 }],
+          "size_class": "medium",
+          "hazards": [],
+          "near": [{ "kind": "school", "distance_m": 83 }]
+        }
+      }
+    ],
+    "scores": [
+      { "name": "city", "value": 41, "verified_reports": 14 },
+      { "name": "citizen", "value": 58, "verified_reports": 14 },
+      { "name": "bin_access", "value": 32, "verified_reports": 14 }
+    ],
+    "bin_access": { "sites_measured": 3, "sites_without_bin_within_3km": 1 }
+  }
+}

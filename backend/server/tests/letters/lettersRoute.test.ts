@@ -138,6 +138,7 @@ describe("buildLettersRoutes", () => {
     SITES_TABLE: "junksnap-dev-sites",
     DEVICES_TABLE: "junksnap-dev-devices",
     USERS_TABLE: "junksnap-dev-users",
+    SCORES_TABLE: "junksnap-dev-scores",
     COGNITO_USER_POOL_ID: "ap-south-1_TestPool1",
     COGNITO_CLIENT_ID: "test-client-id",
   });

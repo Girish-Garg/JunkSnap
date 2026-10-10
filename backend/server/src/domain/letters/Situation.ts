@@ -31,6 +31,15 @@ export class Situation {
     return new Situation(weights);
   }
 
+  // An area letter covers several sites: each tag keeps its highest weight across them.
+  static combined(situations: readonly Situation[]): Situation {
+    const weights = new Map<string, number>();
+    for (const [tag, weight] of situations.flatMap((situation) => [...situation.#weights])) {
+      weights.set(tag, Math.max(weight, weights.get(tag) ?? 0));
+    }
+    return new Situation(weights);
+  }
+
   weightOf(tag: string): number {
     return this.#weights.get(tag) ?? 0;
   }
