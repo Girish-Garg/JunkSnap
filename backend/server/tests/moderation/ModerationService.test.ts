@@ -1,8 +1,9 @@
 import sharp from "sharp";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SharpBlurrer } from "../../src/adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../../src/adapters/moderation/SharpImageCodec.js";
 import { validateModerationResult } from "../../src/contracts/index.gen.js";
+import { ExternalServiceError } from "../../src/domain/errors.js";
 import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../../src/domain/moderation/PhotoSubmission.js";
@@ -84,7 +85,7 @@ describe("ModerationService on a clean photo", () => {
       provider: "rekognition",
       model: "DetectFaces+DetectText+DetectLabels",
       version: "3.0+3.0",
-      regions: { faces: 1, plates: 1, heads: 0, plate_zones: 0, people: 0, vehicles: 0 },
+      regions: { faces: 1, plates: 1, heads: 0, plate_zones: 0, people: 0, vehicles: 0, band: 0 },
       low_light: false,
     });
     expect(result.image_moderation).toEqual({ result: "pass", labels: [], provider: "rekognition", model: "DetectModerationLabels+DetectLabels", version: "7.0+3.0" });
@@ -223,6 +224,14 @@ describe("ModerationService rejections", () => {
     expect(result.reasons).toEqual(["outside_india"]);
     expect(result.checks.inside_india).toEqual({ result: "fail", detail: "point outside the India boundary" });
     expect(result.checks.device_token.result).toBe("skipped");
+  });
+});
+
+describe("ModerationService when a blur detector fails", () => {
+  it.each(["faces", "plates", "subjects"] as const)("writes no public copy when the %s finder throws", async (finder) => {
+    vi.spyOn(harness[finder], "find").mockRejectedValue(new ExternalServiceError("Rekognition failed"));
+    await expect(harness.service().moderate(reportSubmission(jpeg))).rejects.toThrow(ExternalServiceError);
+    expect(harness.store.written.size).toBe(0);
   });
 });
 

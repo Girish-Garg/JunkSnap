@@ -122,7 +122,15 @@ describe("BlurPlanner", () => {
   it("blurs every person and vehicle whole in a dark photo, even with a face found", () => {
     const plan = planner.plan({ ...bright, brightness: 0.1, faces: [box(0.12, 0.12, 0.05, 0.06)], subjects: [person(0.1, 0.1, 0.6), car(0.5, 0.5)] });
     expect(plan.lowLight).toBe(true);
-    expect(plan.counts).toEqual({ faces: 1, plates: 0, heads: 0, plate_zones: 0, people: 1, vehicles: 1 });
+    expect(plan.counts).toEqual({ faces: 1, plates: 0, heads: 0, plate_zones: 0, people: 1, vehicles: 1, band: 0 });
+  });
+
+  it("blurs the lower 45% band of a dark photo where nothing at all was found, and only then", () => {
+    const empty = planner.plan({ ...bright, brightness: 0.1 });
+    expect(empty).toMatchObject({ lowLight: true, counts: { band: 1 } });
+    expect(empty.regions).toEqual([{ box: box(0, 0.55, 1, 0.45), padding: { fraction: 0, minPixels: 0 } }]);
+    expect(planner.plan({ ...bright, brightness: 0.1, subjects: [car(0.1, 0.5)] }).counts).toMatchObject({ band: 0, vehicles: 1 });
+    expect(planner.plan(bright).counts.band).toBe(0);
   });
 
   it("counts a label plate only when no text plate covers it", () => {
@@ -139,7 +147,7 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
     expect(photo.brightness).toBeLessThan(0.3);
     const record = (await privacyBlur("night_road", blurrer).blur(photo)).record.toContract();
     expect(record).toMatchObject({ faces: 0, plates: 0, low_light: true, model: "DetectFaces+DetectText+DetectLabels", version: "3.0+3.0" });
-    expect(record.regions).toEqual({ faces: 0, plates: 0, heads: 0, plate_zones: 0, people: 2, vehicles: 3 });
+    expect(record.regions).toEqual({ faces: 0, plates: 0, heads: 0, plate_zones: 0, people: 2, vehicles: 3, band: 0 });
     expect(blurrer.regions).toHaveLength(5);
   });
 
@@ -155,7 +163,7 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
   it("uses head and plate zones on the same scene in daylight, and whole boxes for the unsure ones", async () => {
     const photo = { upright: await testJpeg(), hash: HASH, brightness: 0.6, aspect: 256 / 192 };
     const record = (await privacyBlur("night_road", new RecordingBlurrer()).blur(photo)).record.toContract();
-    expect(record.regions).toEqual({ faces: 0, plates: 0, heads: 1, plate_zones: 2, people: 1, vehicles: 1 });
+    expect(record.regions).toEqual({ faces: 0, plates: 0, heads: 1, plate_zones: 2, people: 1, vehicles: 1, band: 0 });
     expect(record.low_light).toBe(false);
   });
 
@@ -173,9 +181,19 @@ describe("PrivacyBlur on Rekognition fixtures", () => {
       provider: "rekognition",
       model: "DetectFaces+DetectText+DetectLabels",
       version: "3.0+3.0",
-      regions: { faces: 1, plates: 1, heads: 0, plate_zones: 0, people: 0, vehicles: 0 },
+      regions: { faces: 1, plates: 1, heads: 0, plate_zones: 0, people: 0, vehicles: 0, band: 0 },
       low_light: false,
     });
+  });
+
+  it("blurs the lower band of a dark photo where Rekognition found nothing, and the plate there becomes unreadable", async () => {
+    const night = await nightJpeg();
+    const blurred = await privacyBlur("dump_only", new SharpBlurrer(95)).blur(await loaded(night));
+    expect(blurred.record.toContract()).toMatchObject({ faces: 0, plates: 0, low_light: true, regions: { band: 1, people: 0, vehicles: 0 } });
+    const before = await sharp(night).removeAlpha().raw().toBuffer();
+    const after = await sharp(blurred.jpeg).removeAlpha().raw().toBuffer();
+    expect(meanDiff(before, after, 400, (x, y) => x >= 150 && x < 182 && y >= 200 && y < 224)).toBeGreaterThan(40);
+    expect(meanDiff(before, after, 400, (_x, y) => y < 150)).toBeLessThan(1.5);
   });
 
   it("blurs nothing on a plain dump photo, and the record still fits the contract", async () => {

@@ -3,7 +3,7 @@
   "outcome": "passed",
   "reasons": [],
   "blurred_key": "media/reports/rpt_jdh_1.jpg",
-  "blur": { "faces": 0, "plates": 1, "provider": "rekognition", "model": "DetectFaces+DetectText+DetectLabels", "version": "3.0+3.0", "regions": { "faces": 0, "plates": 1, "heads": 1, "plate_zones": 0, "people": 0, "vehicles": 0 }, "low_light": false },
+  "blur": { "faces": 0, "plates": 1, "provider": "rekognition", "model": "DetectFaces+DetectText+DetectLabels", "version": "3.0+3.0", "regions": { "faces": 0, "plates": 1, "heads": 1, "plate_zones": 0, "people": 0, "vehicles": 0, "band": 0 }, "low_light": false },
   "image_moderation": { "result": "pass", "labels": [], "provider": "rekognition", "model": "DetectModerationLabels+DetectLabels", "version": "7.0+3.0" },
   "checks": {
     "inside_india": { "result": "pass", "detail": "point inside the India boundary" },

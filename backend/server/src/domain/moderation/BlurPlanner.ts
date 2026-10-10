@@ -1,4 +1,4 @@
-import type { BlurRegion, Box, Padding } from "./Box.js";
+import { type BlurRegion, Box, type Padding } from "./Box.js";
 import type { Subject, SubjectKind } from "./Subject.js";
 
 // Face boxes stop at the brow and chin, so 40% more also covers hair, ears and jaw.
@@ -9,7 +9,7 @@ export const PLATE_PADDING: Padding = { fraction: 0.3, minPixels: 6 };
 export const ZONE_PADDING: Padding = { fraction: 0.2, minPixels: 6 };
 export const WHOLE_PADDING: Padding = { fraction: 0.1, minPixels: 6 };
 // Stored with every public copy; the re-blur script skips copies already made under this policy.
-export const BLUR_POLICY = "subjects-1";
+export const BLUR_POLICY = "subjects-2";
 
 // Mean grey level (0 to 1) below which a found-nothing answer from DetectFaces or DetectText is not trusted.
 const DARK_BELOW = 0.3;
@@ -25,8 +25,12 @@ const STANDING_MAX_WIDTH = 0.7;
 // Where a plate zone starts, as a share of the box height from its top. Front and back plates sit low on cars,
 // trucks, buses and autos, and about mid height on two-wheelers; the zone is full width for angled views.
 const PLATE_ZONE_FROM: Readonly<Record<Exclude<SubjectKind, "person">, number>> = { vehicle: 0.4, two_wheeler: 0.25 };
+// A dark photo where nothing at all was found: the lower 45% of the frame, where kerb-level plates and the faces
+// of people nearby usually are, is blurred rather than trusting the empty answer.
+const DARK_BAND = new Box(0, 0.55, 1, 0.45);
+const NO_PADDING: Padding = { fraction: 0, minPixels: 0 };
 
-export type RegionKind = "faces" | "plates" | "heads" | "plate_zones" | "people" | "vehicles";
+export type RegionKind = "faces" | "plates" | "heads" | "plate_zones" | "people" | "vehicles" | "band";
 export type RegionCounts = Readonly<Record<RegionKind, number>>;
 
 export interface BlurInput {
@@ -53,7 +57,8 @@ interface Planned {
 }
 
 // Never trusts "found nothing": a person without a found face loses the head, a vehicle without a found plate
-// loses its plate zone, and a dark photo, an unsure detection or a small box is blurred whole.
+// loses its plate zone, and a dark photo, an unsure detection or a small box is blurred whole. A dark photo with
+// nothing found at all loses its lower band.
 export class BlurPlanner {
   plan(input: BlurInput): BlurPlan {
     const plates = [...input.textPlates, ...this.#uncovered(input.labelPlates, input.textPlates)];
@@ -63,6 +68,9 @@ export class BlurPlanner {
       ...plates.map((box) => this.#planned("plates", box, PLATE_PADDING)),
       ...input.subjects.flatMap((subject) => this.#cover(subject, input, subject.kind === "person" ? input.faces : plates)),
     ];
+    if (lowLight && planned.length === 0) {
+      planned.push(this.#planned("band", DARK_BAND, NO_PADDING));
+    }
     return { regions: planned.map((item) => item.region), counts: this.#count(planned), lowLight };
   }
 
@@ -97,7 +105,7 @@ export class BlurPlanner {
   }
 
   #count(planned: readonly Planned[]): RegionCounts {
-    const counts: Record<RegionKind, number> = { faces: 0, plates: 0, heads: 0, plate_zones: 0, people: 0, vehicles: 0 };
+    const counts: Record<RegionKind, number> = { faces: 0, plates: 0, heads: 0, plate_zones: 0, people: 0, vehicles: 0, band: 0 };
     for (const item of planned) {
       counts[item.kind] += 1;
     }
