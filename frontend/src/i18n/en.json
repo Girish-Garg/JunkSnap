@@ -44,7 +44,16 @@
     "sampleNote": "Sample data: these are test sites, not live reports.",
     "verified": "Verified",
     "unverified": "Unverified",
-    "verifiedOnly": "Verified only"
+    "verifiedOnly": "Verified only",
+    "inView_one": "{{count}} in view",
+    "inView_other": "{{count}} in view",
+    "counting": "Counting…",
+    "notLoaded": "Not loaded",
+    "scope": {
+      "view": "Counts are sites in this view of the map, not totals. They update when you move the map.",
+      "middle": "This view is too wide to load at once: counts cover only its middle. Zoom in to count every site here.",
+      "capped": "Over 500 sites here: only the newest 500 are loaded and counted. Zoom in for exact counts."
+    }
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -62,7 +71,8 @@
     "locationDeniedApp": "Location is blocked for JunkSnap.",
     "locationUnavailable": "Could not find your location.",
     "filteredEmpty": "No sites match. Turn a filter off.",
-    "zoomIn": "Zoom in to see every site here.",
+    "zoomIn": "Only the middle of this wide view is loaded. Zoom in to see every site here.",
+    "capped": "Showing the newest 500 sites here. Zoom in to see them all.",
     "empty": "No reports here yet."
   },
   "sheet": {

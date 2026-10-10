@@ -9,7 +9,7 @@ import { MapStatus } from './MapStatus';
 import { SiteListItem } from './SiteListItem';
 
 // Same opening view as SiteMap: Jodhpur, one API query wide.
-const FALLBACK_VIEW: MapView = { bbox: BBox.around([73.02, 26.27], 0.99), clamped: false };
+const FALLBACK_VIEW: MapView = { bbox: BBox.around([73.02, 26.27], 0.99) };
 
 interface SiteListProps {
   readonly sites: readonly SiteFeature[];

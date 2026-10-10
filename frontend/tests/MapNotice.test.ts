@@ -29,6 +29,11 @@ describe('MapNotice.pick', () => {
     expect(keyFor({ loadedCount: 0, shownCount: 0 })).toBe('notice.empty');
   });
 
+  it('says when a query hit the 500 cap instead of showing a silently cut list', () => {
+    expect(keyFor({ truncated: true })).toBe('notice.capped');
+    expect(keyFor({ truncated: true, clamped: true })).toBe('notice.zoomIn');
+  });
+
   it('stays quiet before the first load', () => {
     expect(keyFor({ loaded: false, loadedCount: 0, shownCount: 0 })).toBeNull();
   });

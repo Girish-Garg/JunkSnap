@@ -209,6 +209,10 @@
   margin: var(--s-6) 0 var(--s-2);
 }
 
+.filters__scope {
+  margin: 0 0 var(--s-2);
+}
+
 .map-controls {
   position: absolute;
   right: var(--edge);

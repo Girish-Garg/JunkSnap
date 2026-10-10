@@ -19,7 +19,7 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({
 async function openStack(siteIds: readonly string[]): Promise<void> {
   await renderApp(<AppRoutes />);
   await waitFor(() => expect(seen.last).not.toBeNull());
-  act(() => seen.last?.onViewChange({ bbox: new BBox(72.5, 26, 76, 27.2), clamped: false }));
+  act(() => seen.last?.onViewChange({ bbox: new BBox(72.5, 26, 76, 27.2) }));
   await waitFor(() => expect(seen.last?.sites.length).toBeGreaterThan(2));
   act(() => seen.last?.onPickStack(siteIds));
 }
