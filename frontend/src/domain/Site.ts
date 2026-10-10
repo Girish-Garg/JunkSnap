@@ -1,4 +1,5 @@
 import type { SiteCommunity } from './Community';
+import type { PhotoFlags } from './PhotoFlag';
 // Mirrors contracts/schemas/site.schema.json; change the contract first.
 import type { ReportType } from './ReportType';
 import type { SiteInsights } from './SiteInsights';
@@ -113,6 +114,8 @@ export interface SiteProperties {
   readonly zone_radius_m?: number;
   readonly votes: SiteVotes;
   readonly photo_urls: readonly string[];
+  /** v1.15: photos residents reported; warned ones show behind a tap, hidden ones have left photo_urls. */
+  readonly photo_flags?: readonly PhotoFlags[];
   readonly cleanup_status: CleanupStatus;
   readonly cleanup_photo_url: string | null;
   readonly burning: boolean;
@@ -128,7 +131,7 @@ export interface SiteProperties {
   /** What set the last cleaned status; absent on older rows. */
   readonly cleaned_by?: 'after_photo' | 'votes' | null;
   /** Why a removed site left the map, and when; absent on older rows. */
-  readonly removed_reason?: 'withdrawn' | null;
+  readonly removed_reason?: 'withdrawn' | 'photos_reported' | null;
   readonly removed_at?: string | null;
   readonly pilot: boolean;
   /** v1.4: distinct people who reported the site (user id, else device); absent on older rows. */

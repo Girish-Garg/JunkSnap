@@ -1,9 +1,10 @@
 import type { NoteRequest, SiteNote } from '../domain/Community';
+import type { PhotoFlagRequest, PhotoFlagResult } from '../domain/PhotoFlag';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import type { SiteCacheEviction } from './SiteCacheEviction';
 import type { SiteActionsApi } from './SiteActionsApi';
 
-/** Forgets the cached site and site tiles after a vote, cleanup or withdrawal, whether or not the server took it. */
+/** Forgets the cached site and site tiles after a vote, cleanup, withdrawal or photo report, whether or not the server took it. */
 export class EvictingSiteActionsApi implements SiteActionsApi {
   readonly #inner: SiteActionsApi;
   readonly #eviction: SiteCacheEviction;
@@ -23,6 +24,11 @@ export class EvictingSiteActionsApi implements SiteActionsApi {
 
   withdraw(siteId: string): Promise<WithdrawalResult> {
     return this.#evictAfter(siteId, this.#inner.withdraw(siteId));
+  }
+
+  /** A photo report can cover or hide a photo, or remove the site. */
+  flagPhoto(siteId: string, photoId: string, request: PhotoFlagRequest): Promise<PhotoFlagResult> {
+    return this.#evictAfter(siteId, this.#inner.flagPhoto(siteId, photoId, request));
   }
 
   letter(siteId: string, request: LetterRequest): Promise<LetterDraft> {

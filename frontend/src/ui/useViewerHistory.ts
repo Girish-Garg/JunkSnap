@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { HistoryLayers } from './HistoryLayers';
 
 const MARKER = 'junksnapPhotoViewer';
 
@@ -7,8 +8,8 @@ const ownsTopEntry = () => (window.history.state as Record<string, unknown> | nu
 export interface ViewerHistory {
   /** Pushes the viewer's entry on the same URL, once. */
   readonly push: () => void;
-  /** Pops the viewer's entry if it is still on top. */
-  readonly pop: () => void;
+  /** Pops the viewer's entry if it is still on top, then runs after once the step back has landed (at once without one). */
+  readonly pop: (after?: () => void) => void;
 }
 
 /**
@@ -17,7 +18,6 @@ export interface ViewerHistory {
  */
 export function useViewerHistory(isOpen: boolean, onBack: () => void): ViewerHistory {
   const pushed = useRef(false);
-
   useEffect(() => {
     if (!isOpen) return;
     const onPop = () => {
@@ -33,9 +33,12 @@ export function useViewerHistory(isOpen: boolean, onBack: () => void): ViewerHis
     pushed.current = true;
   }, []);
 
-  const pop = useCallback(() => {
-    if (pushed.current && ownsTopEntry()) window.history.back();
+  const pop = useCallback((after?: () => void) => {
+    const owned = pushed.current && ownsTopEntry();
     pushed.current = false;
+    if (!owned) return after?.();
+    if (after) HistoryLayers.afterPop(after);
+    window.history.back();
   }, []);
 
   // Unmounting while open pops the entry, so back does not land on a viewer that is gone.

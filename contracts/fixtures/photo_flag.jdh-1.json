@@ -1,0 +1,10 @@
+{
+  "site_id": "site_jdh_1",
+  "photo_id": "rpt_jdh_1a",
+  "reason": "unrelated",
+  "text_status": "shown",
+  "moderation": { "result": "clean", "reasons": [], "provider": "bedrock", "model": "apac.anthropic.claude-haiku-4-5-20251001-v1:0", "version": "v1:0" },
+  "photo": { "count": 3, "warned": true, "hidden": false },
+  "site_status": "open",
+  "created_at": "2026-10-11T03:10:00Z"
+}

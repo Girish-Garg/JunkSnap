@@ -16,6 +16,7 @@
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3.jpg",
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3a.jpg"
     ],
+    "photo_flags": [{ "photo_id": "rpt_jdh_3a", "count": 3, "warned": true, "hidden": false }],
     "cleanup_status": "none",
     "cleanup_photo_url": "https://d111111abcdef8.cloudfront.net/media/cleanups/cln_jdh_3c.jpg",
     "burning": false,
