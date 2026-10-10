@@ -36,10 +36,13 @@ Exports (ONNX, end to end with YOLO26's NMS-free head, output `(1, 300, 6)`), CP
 
 | file | for | size | threads | median latency |
 |---|---|---|---|---|
-| `best-640-fp32.onnx` (YOLO26s) | ml service (`YoloSignal`) | 38.2 MB | 2 / 4 | 103 ms / 77 ms |
-| `best-320-fp16.onnx` (YOLO26s) | phone, fp16 | 19.1 MB | 1 | 62 ms |
-| `best-320-int8.onnx` (YOLO26s) | phone, int8 | 9.9 MB | 1 | 95 ms |
-EDGE
+| `best-640-fp32.onnx` (YOLO26s) | ml service (`YoloSignal`, S3 `models/yolo/`) | 38.2 MB | 2 / 4 | 103 ms / 77 ms |
+| `best-320-fp16.onnx` (YOLO26s) | comparison, not published | 19.1 MB | 1 | 62 ms |
+| `best-320-int8.onnx` (YOLO26s) | comparison, not published | 9.9 MB | 1 | 95 ms |
+| `best-320-int8.onnx` (YOLO26n, phone) | phone, int8 (S3 `models/edge_int8/`) | 2.8 MB | 1 | 21 ms |
+| `best-320-fp16.onnx` (YOLO26n, phone) | phone, fp16 (S3 `models/edge_fp16/`) | 4.9 MB | 1 | 13 ms |
+
+The phone models are a separate YOLO26n trained 40 epochs at 320 px on the same data. Test mAP50 / mAP50-95 at 320 px: PyTorch 0.424 / 0.290, fp16 ONNX 0.412 / 0.280, int8 ONNX 0.372 / 0.242 (YOLO26s at 640: 0.537 / 0.363). The int8 file suits onnxruntime-web on WASM; the fp16 file suits WebGPU. The YOLO26s 320 px exports above were not published.
 
 Desktop CPU timings stand in for a phone; expect several times slower on a mid-range Android in the browser.
 
