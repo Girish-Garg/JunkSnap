@@ -1,20 +1,32 @@
 import { ApiError } from '../domain/ApiError';
+import { CrawlProgress, type AreaCrawl } from '../domain/AreaCrawl';
 import { AreaKey } from '../domain/AreaKey';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
 import type { SiteFeature } from '../domain/Site';
 import type { AreaApi } from './AreaApi';
 import type { AreaFixtureLoaders } from './areaFixtures';
+import type { CrawlFixtureLoaders } from './crawlFixtures';
 import type { SiteFixtureLoaders } from './siteFixtures';
 import { ZeroAreaScores } from './ZeroAreaScores';
 
-/** Mirrors the api: a fixture row, else the worker's zero row for an area with sites, else area_not_found. */
+/**
+ * Mirrors the api: a fixture row, else the worker's zero row for an area with sites, else area_not_found.
+ * A district's crawl is its fixture, else not_started, as for a district with no crawls row.
+ */
 export class MockAreaApi implements AreaApi {
   readonly #scores: AreaFixtureLoaders;
   readonly #sites: SiteFixtureLoaders;
+  readonly #crawls: CrawlFixtureLoaders;
 
-  constructor(scores: AreaFixtureLoaders, sites: SiteFixtureLoaders) {
+  constructor(scores: AreaFixtureLoaders, sites: SiteFixtureLoaders, crawls: CrawlFixtureLoaders) {
     this.#scores = scores;
     this.#sites = sites;
+    this.#crawls = crawls;
+  }
+
+  async crawl(districtId: string): Promise<AreaCrawl> {
+    const rows = await Promise.all(Object.values(this.#crawls).map((load) => load()));
+    return rows.find((row) => row.district_id === districtId) ?? CrawlProgress.notStarted(districtId);
   }
 
   async scores(kind: AreaKind, id: string): Promise<AreaScores> {

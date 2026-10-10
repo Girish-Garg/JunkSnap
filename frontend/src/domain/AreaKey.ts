@@ -51,4 +51,18 @@ export class AreaKey {
   holds(site: SiteFeature): boolean {
     return FIELDS[this.kind](site.properties.location)?.id === this.id;
   }
+
+  /** The area's own id when it is a district, else null. */
+  get districtId(): string | null {
+    return this.kind === 'district' ? this.id : null;
+  }
+
+  /** The district this area lies in: its own, else the one district every given site of it is in, else null. */
+  districtIn(sites: readonly SiteFeature[]): string | null {
+    if (this.districtId) return this.districtId;
+    const held = sites.filter((site) => this.holds(site));
+    const ids = new Set(held.map((site) => site.properties.location.district.id));
+    const [only] = ids;
+    return ids.size === 1 && only ? only : null;
+  }
 }

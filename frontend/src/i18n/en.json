@@ -367,7 +367,11 @@
     },
     "ofSites": "{{part}} of {{whole}} sites",
     "sitesTitle": "Sites on the map in this area",
-    "footnote": "Reports from {{from}} to {{to}}. Updated {{computed}}. Formula {{version}}. Scores describe the whole area, never a person."
+    "footnote": "Reports from {{from}} to {{to}}. Updated {{computed}}. Formula {{version}}. Scores describe the whole area, never a person.",
+    "crawl": {
+      "collecting": "We're collecting official ward data for this area. Scores appear after enough verified reports and once ward data is in.",
+      "expected": "Expected by {{date}}"
+    }
   },
   "activity": {
     "title": "Activity",

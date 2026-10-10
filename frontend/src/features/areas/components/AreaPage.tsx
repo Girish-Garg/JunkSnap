@@ -3,12 +3,14 @@ import { Link } from 'react-router';
 import { AREAS_PATH } from '../../../app/paths';
 import type { AreaScores } from '../../../domain/AreaScores';
 import { FactList } from '../../../ui/FactList';
+import { useAreaDistrict } from '../hooks/useAreaDistrict';
 import { useAreaPresenters } from '../hooks/useAreaPresenters';
 import { AREA_TITLE_ID } from './areaIds';
 import { AreaDiagnosis } from './AreaDiagnosis';
 import { AreaInsights } from './AreaInsights';
 import { AreaScoreList } from './AreaScoreList';
 import { AreaSites } from './AreaSites';
+import { DistrictCrawl } from './DistrictCrawl';
 
 interface AreaPageProps {
   readonly scores: AreaScores;
@@ -18,6 +20,7 @@ interface AreaPageProps {
 export function AreaPage({ scores }: AreaPageProps) {
   const { t } = useTranslation();
   const { area, insights } = useAreaPresenters(scores);
+  const districtId = useAreaDistrict(scores.area);
   return (
     <article className="area-page">
       <Link className="area-back" to={AREAS_PATH}>
@@ -30,6 +33,7 @@ export function AreaPage({ scores }: AreaPageProps) {
         <span>{area.kind()}</span>
         {scores.pilot && <span className="badge">{t('site.pilot')}</span>}
       </p>
+      <DistrictCrawl districtId={districtId} />
       <AreaScoreList scores={area.scores()} />
       <AreaDiagnosis items={area.diagnosis()} />
       <FactList title={t('areas.counts')} facts={area.counts()} />
