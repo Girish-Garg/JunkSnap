@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection } from 'geojson';
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
+import { BackersBadge } from '../../domain/BackersBadge';
 import { HeatWeight } from '../../domain/HeatWeight';
 import type { BoundaryKind } from '../../domain/AreaListing';
 import type { MapMode } from '../../domain/MapMode';
@@ -202,10 +203,10 @@ export class SiteMap {
   }
 
   #collection(): FeatureCollection {
-    // Nested properties do not reach MapLibre expressions, so the heat weight is added flat.
+    // Nested properties do not reach MapLibre expressions, so the heat weight and the n/10 badge are added flat.
     const features = this.#sites.map((site) => ({
       ...site,
-      properties: { ...site.properties, heat_weight: HeatWeight.of(site.properties) },
+      properties: { ...site.properties, heat_weight: HeatWeight.of(site.properties), backers_badge: BackersBadge.of(site.properties) },
     }));
     // MapLibre types want mutable GeoJSON but it only reads it.
     return { type: 'FeatureCollection', features: features as unknown as Feature[] };

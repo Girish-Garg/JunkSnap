@@ -23,10 +23,11 @@ export interface Voter {
 export interface VoteResult {
   readonly site_id: string;
   readonly votes: SiteProperties["votes"];
+  readonly backers: SiteProperties["backers"];
   readonly verification: Verification;
 }
 
-// verified: auto-verified by the models, or confirmed when votes settled the site.
+// verified: the report belongs to a verified site (decision 20261010-1530).
 export interface MergedReport {
   readonly reportId: string;
   readonly verified: boolean;
@@ -40,6 +41,13 @@ export interface SiteInternals {
   readonly reporterUsers: readonly string[];
   // One id per person: the user id, else the device token; site.reporters is its length.
   readonly reporterIds: readonly string[];
+  // People whose latest vote is yes or no; reporterIds are the photo people.
+  readonly yesVoters: readonly string[];
+  readonly noVoters: readonly string[];
+  // True for a row written before decision 20261010-1530 that the backers migration has not counted yet.
+  readonly needsBackerCount: boolean;
+  // backers.count frozen when the site became verified, so a later yes-to-no flip never shows "9 of 10".
+  readonly verifiedBackers: number | null;
   readonly meTooCount: number;
   readonly embeddingKey: string | null;
   readonly pendingCleanupId: string | null;

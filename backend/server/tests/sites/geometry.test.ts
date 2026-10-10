@@ -5,7 +5,6 @@ import { BoundingBox } from "../../src/domain/sites/BoundingBox.js";
 import { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
 import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
 import { BboxTooLargeError } from "../../src/domain/sites/SiteErrors.js";
-import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { BASE_LAT, BASE_LON, northOf } from "./builders.js";
 
 const base = new GeoPoint(BASE_LAT, BASE_LON);
@@ -77,43 +76,5 @@ describe("EmbeddingVector", () => {
     expect(a.cosine(new EmbeddingVector([0, 1, 0]))).toBeCloseTo(0);
     expect(a.cosine(new EmbeddingVector([0, 0, 0]))).toBe(0);
     expect(a.cosine(new EmbeddingVector([1, 0]))).toBeNull();
-  });
-});
-
-describe("VoteTally", () => {
-  let devices = 0;
-  const vote = (choice: "confirm" | "reject", weight: number, userId: string | null = null, votedAt = "2026-10-10T05:00:00Z") => {
-    devices += 1;
-    return { siteId: "site_x", deviceToken: `device-${devices}`, userId, choice, weight, votedAt };
-  };
-
-  it("counts one user on two phones once, with their latest vote", () => {
-    const tally = VoteTally.of([
-      vote("confirm", 1.5, "user-1", "2026-10-10T05:00:00Z"),
-      vote("reject", 1.5, "user-1", "2026-10-10T05:05:00Z"),
-      vote("confirm", 1.5, "user-2"),
-      vote("confirm", 1.5),
-    ]);
-    expect([tally.confirm, tally.reject]).toEqual([2, 1]);
-    expect(tally.outcome()).toBeNull();
-  });
-
-  it("weighs 0.5 plus reputation, so a new device counts 1.0", () => {
-    expect(VoteTally.weightFor(0.5)).toBe(1);
-    expect(VoteTally.weightFor(0.74)).toBeCloseTo(1.24);
-    expect(VoteTally.weightFor(7)).toBe(1.5);
-    expect(VoteTally.weightFor(-1)).toBe(0.5);
-  });
-
-  it("settles at +3 and -3 after rounding the net weight", () => {
-    expect(VoteTally.of([vote("confirm", 1.1), vote("confirm", 1.1), vote("confirm", 0.8)]).outcome()).toBe("verified");
-    expect(VoteTally.of([vote("reject", 1.5), vote("reject", 1.5)]).outcome()).toBe("rejected");
-    expect(VoteTally.of([vote("confirm", 1.5), vote("confirm", 1.5), vote("reject", 0.5)]).outcome()).toBeNull();
-    expect(VoteTally.of([]).outcome()).toBeNull();
-  });
-
-  it("counts votes by choice", () => {
-    const tally = VoteTally.of([vote("confirm", 1), vote("reject", 1), vote("confirm", 1)]);
-    expect([tally.confirm, tally.reject]).toEqual([2, 1]);
   });
 });

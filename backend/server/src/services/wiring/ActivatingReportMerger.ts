@@ -3,7 +3,8 @@ import type { CrawlActivator } from "../../ports/CrawlActivator.js";
 import type { Logger } from "../../ports/Logger.js";
 import type { ReportMerger } from "../../ports/ReportMerger.js";
 
-// The pipeline stops once a report settles, so a verified report queues its district's ward crawl inside the merge.
+// The pipeline stops once a report settles, so a merged photo queues its district's ward crawl inside the merge:
+// the crawl starts with the first model-passed photo in an area, not at verification (decision 20261010-1530).
 export class ActivatingReportMerger implements ReportMerger {
   readonly #inner: ReportMerger;
   readonly #activator: CrawlActivator;
@@ -17,13 +18,13 @@ export class ActivatingReportMerger implements ReportMerger {
 
   async merge(record: ReportRecord): Promise<MergeOutcome> {
     const outcome = await this.#inner.merge(record);
-    if (outcome.verification === "verified") {
+    if (outcome.verification !== "rejected") {
       await this.#activate(record);
     }
     return outcome;
   }
 
-  // A failed activation never holds the report back; the district's next verified report tries again.
+  // A failed activation never holds the report back; the district's next merged photo tries again.
   async #activate(record: ReportRecord): Promise<void> {
     const district = record.location?.district;
     if (district === undefined) {

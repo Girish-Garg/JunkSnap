@@ -146,7 +146,8 @@
 /* Desktop: the map starts after the side panel, so the legend does too. */
 @media (min-width: 1024px) {
   .legend-toggle {
-    bottom: var(--edge);
+    /* Clear of MapLibre's credit button in the corner. */
+    bottom: calc(var(--edge) + var(--s-6));
     left: calc(var(--panel-width) + var(--edge));
   }
 }

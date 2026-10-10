@@ -41,7 +41,7 @@ describe("SiteMerger founding", () => {
   it("founds a site named after the report and seeds a zero row per area", async () => {
     const { merger, sites, scores } = setup();
     const result = await merger.merge(evidence());
-    expect(result).toEqual({ siteId: "site_jdh_1", outcome: "founded", reportStatus: "verified" });
+    expect(result).toEqual({ siteId: "site_jdh_1", outcome: "founded", reportStatus: "unverified" });
     expect(sites.feature("site_jdh_1").properties.report_count).toBe(1);
     expect([...scores.rows.keys()].sort()).toEqual([
       "assembly/s20-ac-128",
@@ -71,10 +71,11 @@ describe("SiteMerger founding", () => {
     expect(scores.rows.get("loksabha/s20-pc-16")?.counts.sites).toBe(1);
   });
 
-  it("starts a community check site for a community check report", async () => {
-    const { merger } = setup();
-    const result = await merger.merge(evidence({ decision: "community_check" }));
-    expect(result.reportStatus).toBe("community_check");
+  it("starts an unverified site even for a photo the models were sure about", async () => {
+    const { merger, sites } = setup();
+    const result = await merger.merge(evidence({ decision: "auto_verified" }));
+    expect(result.reportStatus).toBe("unverified");
+    expect(sites.feature("site_jdh_1").properties.backers).toEqual({ count: 1, needed: 10, photo_people: 1, vote_people: 0 });
   });
 });
 
@@ -109,20 +110,19 @@ describe("SiteMerger merging", () => {
   it("skips rejected sites", async () => {
     const { merger, sites } = setup();
     const rejected = Site.found(report({ decision: "community_check" }));
-    const rejectVote = { siteId: "s", deviceToken: "d", userId: null, choice: "reject" as const, weight: 3, votedAt: NOW };
-    rejected.recordVotes(VoteTally.of([rejectVote]));
+    const rejectVote = (n: number) => ({ siteId: "s", deviceToken: `d${n}`, userId: null, choice: "reject" as const, votedAt: NOW });
+    rejected.recordVotes(VoteTally.of([1, 2, 3, 4].map(rejectVote)));
     sites.put(rejected);
     expect((await merger.merge(evidence({ id: "jdh_2" }))).siteId).toBe("site_jdh_2");
   });
 
-  it("lets only an auto-verified report into a cleaned site, and that reopens it", async () => {
+  it("lets a passed photo into a cleaned site, which reopens it", async () => {
     const { merger, sites } = setup();
     const cleaned = Site.found(report());
     cleaned.startCleanup("cln_x");
     cleaned.acceptCleanup("cln_x", `${BASE_URL}/media/cleanups/cln_x.jpg`, NOW);
     sites.put(cleaned);
-    expect((await merger.merge(evidence({ id: "jdh_2", decision: "community_check" }))).siteId).toBe("site_jdh_2");
-    expect((await merger.merge(evidence({ id: "jdh_3" }))).siteId).toBe("site_jdh_1");
+    expect((await merger.merge(evidence({ id: "jdh_3", decision: "community_check" }))).siteId).toBe("site_jdh_1");
     expect(sites.feature("site_jdh_1").properties).toMatchObject({ status: "reopened", cleanup_status: "none" });
   });
 
@@ -185,40 +185,43 @@ describe("SiteMerger embeddings", () => {
   });
 });
 
+// The nth photo comes from its own person.
+const person = (n: number) => ({ id: `jdh_${n}`, device: `device-${n}`, user: `user-${n}` });
+
+async function photos(merger: SiteMerger, from: number, to: number) {
+  let last;
+  for (let n = from; n <= to; n += 1) {
+    last = await merger.merge(evidence(person(n)));
+  }
+  return last;
+}
+
 describe("SiteMerger report status", () => {
-  it("moves every merged report to verified when an auto-verified report settles the site", async () => {
+  it("moves every merged report to verified when the tenth person's photo verifies the site", async () => {
     const { merger, reports } = setup();
-    await merger.merge(evidence({ decision: "community_check" }));
-    const result = await merger.merge(evidence({ id: "jdh_2", device: DEVICE_B }));
-    expect(result.reportStatus).toBe("verified");
-    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
+    expect((await photos(merger, 1, 9))?.reportStatus).toBe("unverified");
+    expect(await photos(merger, 10, 10)).toMatchObject({ siteId: "site_jdh_1", reportStatus: "verified" });
+    expect([...reports.statuses.values()]).toEqual(Array.from({ length: 10 }, () => "verified"));
   });
 
-  it("gives a community check report its verified site's status, and rewrites it on every pass", async () => {
+  it("gives every report its unverified site's status on every pass", async () => {
     const { merger, reports } = setup();
-    await merger.merge(evidence());
-    const result = await merger.merge(evidence({ id: "jdh_2", decision: "community_check" }));
-    expect(result).toMatchObject({ outcome: "merged", reportStatus: "verified" });
-    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
-    await merger.merge(evidence({ id: "jdh_2", decision: "community_check" }));
-    expect(reports.calls).toBe(3);
-  });
-
-  it("writes no status while the site is still in community check", async () => {
-    const { merger, reports } = setup();
-    await merger.merge(evidence({ decision: "community_check" }));
+    await merger.merge(evidence({ decision: "auto_verified" }));
     await merger.merge(evidence({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
-    expect(reports.calls).toBe(0);
+    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "unverified", rpt_jdh_2: "unverified" });
+    await merger.merge(evidence({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
+    expect(reports.calls).toBe(3);
   });
 
   it("repairs the statuses when a redelivered message follows a failed status write", async () => {
     const { merger, reports, sites } = setup();
-    await merger.merge(evidence({ decision: "community_check" }));
+    await photos(merger, 1, 9);
     reports.failNext();
-    await expect(merger.merge(evidence({ id: "jdh_2", device: DEVICE_B }))).rejects.toThrow(/unreachable/);
+    await expect(photos(merger, 10, 10)).rejects.toThrow(/unreachable/);
     expect(sites.feature("site_jdh_1").properties.verification).toBe("verified");
-    expect(reports.statuses.size).toBe(0);
-    expect(await merger.merge(evidence({ id: "jdh_2", device: DEVICE_B }))).toMatchObject({ outcome: "unchanged" });
-    expect(Object.fromEntries(reports.statuses)).toEqual({ rpt_jdh_1: "verified", rpt_jdh_2: "verified" });
+    expect(reports.statuses.get("rpt_jdh_10")).toBeUndefined();
+    expect(await photos(merger, 10, 10)).toMatchObject({ outcome: "unchanged", reportStatus: "verified" });
+    expect(reports.statuses.get("rpt_jdh_1")).toBe("verified");
+    expect(reports.statuses.get("rpt_jdh_10")).toBe("verified");
   });
 });

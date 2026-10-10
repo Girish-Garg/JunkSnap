@@ -18,7 +18,7 @@ const jodhpur = wardSite();
 const body = { device_token: DEVICE, channel: "local_body", language: "en" };
 const sites = [
   jodhpur,
-  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "community_check" }),
+  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "unverified" }),
   siteWith(jodhpur, { site_id: "site_far_1" }, { local_body: null }),
 ];
 

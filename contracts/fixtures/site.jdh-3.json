@@ -9,8 +9,9 @@
     "verification": "verified",
     "report_count": 5,
     "verified_count": 5,
-    "corroborations": 3,
-    "votes": { "confirm": 0, "reject": 0 },
+    "corroborations": 9,
+    "backers": { "count": 10, "needed": 10, "photo_people": 4, "vote_people": 6 },
+    "votes": { "confirm": 6, "reject": 0 },
     "photo_urls": [
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3.jpg",
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_3a.jpg"

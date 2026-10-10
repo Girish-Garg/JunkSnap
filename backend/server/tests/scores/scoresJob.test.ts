@@ -116,7 +116,7 @@ describe("ScoresJob", () => {
   it("reads report times once per verified site with verified reports", async () => {
     const { job, reports, scores } = setup([
       site({ siteId: "site_v", areas: everyArea, verifiedCount: 2 }),
-      site({ siteId: "site_c", verification: "community_check", verifiedCount: 0 }),
+      site({ siteId: "site_c", verification: "unverified", verifiedCount: 0 }),
       site({ siteId: "site_z", verifiedCount: 0 }),
     ]);
     await job.run(NOW);

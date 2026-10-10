@@ -16,6 +16,7 @@ export class MergeableReportFactory {
   }
 
   create(evidence: MergeEvidence): MergeableReport {
+    MergeableReportFactory.#assertPassed(evidence);
     const { upload, moderation, verification, location } = evidence;
     const blurredKey = moderation.blurred_key;
     return {
@@ -26,7 +27,6 @@ export class MergeableReportFactory {
       deviceToken: upload.device_token,
       userId: upload.user_id ?? null,
       reportedAt: upload.captured_at,
-      autoVerified: MergeableReportFactory.#autoVerified(verification),
       embeddingKey: verification.embedding_key,
       meTooSiteId: upload.me_too_site_id ?? null,
       photoUrl: blurredKey === null ? null : this.#media.urlFor(blurredKey),
@@ -47,11 +47,11 @@ export class MergeableReportFactory {
     return reportId;
   }
 
-  static #autoVerified(verification: VerificationResult): boolean {
-    if (verification.decision === "rejected") {
-      throw new InternalDataError(`${verification.report_id} was rejected and is never merged`);
+  // The models only gate the photo (decision 20261010-1530): a rejected one never reaches a site.
+  static #assertPassed({ moderation, verification }: MergeEvidence): void {
+    if (moderation.outcome !== "passed" || verification.decision === "rejected") {
+      throw new InternalDataError(`${verification.report_id} did not pass the models and is never merged`);
     }
-    return verification.decision === "auto_verified";
   }
 
   static #brand(label: BrandLabel): SiteBrand {

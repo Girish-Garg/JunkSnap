@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { REPORT_TYPES } from '../../../domain/ReportType';
 import type { SiteFeature } from '../../../domain/Site';
-import { SiteFilter } from '../../../domain/SiteFilter';
+import { SITE_STATES, SiteFilter } from '../../../domain/SiteFilter';
 import { TypeIcon } from '../../../ui/TypeIcon';
 import { SwitchRow } from '../../../ui/SwitchRow';
 
@@ -12,7 +12,7 @@ interface FilterTypeRowsProps {
   readonly sites: readonly SiteFeature[];
 }
 
-/** One switch per report type with its count in view, then "verified only". */
+/** One switch per report type with its count in view, then Verified and Unverified. */
 export function FilterTypeRows({ filter, onChange, sites }: FilterTypeRowsProps) {
   const { t } = useTranslation();
   const counts = useMemo(() => SiteFilter.countByType(sites), [sites]);
@@ -28,7 +28,9 @@ export function FilterTypeRows({ filter, onChange, sites }: FilterTypeRowsProps)
           leading={<TypeIcon type={type} size={24} />}
         />
       ))}
-      <SwitchRow label={t('filters.verifiedOnly')} checked={filter.verifiedOnly} onToggle={() => onChange(filter.toggleVerifiedOnly())} />
+      {SITE_STATES.map((state) => (
+        <SwitchRow key={state} label={t(`filters.${state}`)} checked={filter.showsState(state)} onToggle={() => onChange(filter.toggleState(state))} />
+      ))}
     </>
   );
 }

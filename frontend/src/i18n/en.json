@@ -36,13 +36,14 @@
     "close": "Close filters",
     "mapView": "Map view",
     "types": "Report types",
-    "verifiedOnly": "Verified only",
     "mode": {
       "auto": "Auto",
       "pins": "Pins",
       "heat": "Heat"
     },
-    "sampleNote": "Sample data: these are test sites, not live reports."
+    "sampleNote": "Sample data: these are test sites, not live reports.",
+    "verified": "Verified",
+    "unverified": "Unverified"
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -97,8 +98,8 @@
   },
   "verification": {
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
-    "rejected": "Rejected after a neighbour check"
+    "rejected": "Rejected after a neighbour check",
+    "unverified": "Unverified"
   },
   "actions": {
     "label": "Site actions",
@@ -414,9 +415,9 @@
     "queued": "In line for checking",
     "processing": "Checking the photo",
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
     "rejected": "Not accepted after checking",
-    "needs_review": "Needs a manual check"
+    "needs_review": "Needs a manual check",
+    "unverified": "Waiting for 10 people to confirm"
   },
   "scan": {
     "record": "Start recording",
@@ -463,6 +464,7 @@
     "thanks": "Thanks. Votes now: {{yes}} yes, {{no}} no.",
     "errors": {
       "own_site": "You reported this site, so your vote is not counted here.",
+      "site_rejected": "This site was hidden after a neighbour check, so it takes no more votes.",
       "too_far": "Votes count only within 1 km of the site. Go closer and try again.",
       "location": "Your location is needed to vote. Allow location in the browser settings.",
       "rate_limited": "Too many tries. Wait a little and try again.",
@@ -620,6 +622,12 @@
     "loadFailed": "Could not load the ranking.",
     "empty": "No areas of this type have reports in this city yet.",
     "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
+  },
+  "backers": {
+    "label": "{{count}} of {{needed}} people confirmed",
+    "detail": "{{photos}} by photo, {{votes}} by vote",
+    "done": "Verified by {{count}} people",
+    "badge": "{{count}}/{{needed}}"
   },
   "areaLetter": {
     "button": "Draft a letter about this area",
