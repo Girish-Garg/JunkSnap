@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import { Button } from '../../../ui/Button';
 import { GpsPanel } from '../../snap/components/GpsPanel';
 import type { CapturedPhoto } from '../../snap/hooks/usePhotoCapture';
@@ -14,6 +15,7 @@ interface CleanupReviewProps {
 export function CleanupReview({ photo, flow }: CleanupReviewProps) {
   const { t } = useTranslation();
   const preview = usePhotoPreview(photo.bytes);
+  const { sendable } = flow;
   return (
     <div className="snap-review">
       <div className="snap-review__top">
@@ -26,7 +28,7 @@ export function CleanupReview({ photo, flow }: CleanupReviewProps) {
         </p>
       )}
       <div className="snap-actions">
-        <Button onClick={flow.send} disabled={flow.busy}>
+        <Button onClick={sendable.tap(flow.send)} {...lookOf(sendable.availability)}>
           {t(flow.busy ? 'cleanup.sending' : 'cleanup.send')}
         </Button>
         <Button variant="text" onClick={flow.retake}>

@@ -4,19 +4,14 @@ import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
 import { mergeRadiusM, publishedPoint } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
-import {
-  AlreadyCleanedError,
-  InvalidTransitionError,
-  OwnSiteError,
-  SiteExpiredError,
-  SiteRejectedError,
-  SiteRemovedError,
-  SiteVerifiedError,
-  TooFarError,
-} from "./SiteErrors.js";
+import { AlreadyCleanedError, InvalidTransitionError, OwnSiteError, SiteExpiredError } from "./SiteErrors.js";
+import { SiteRejectedError, SiteRemovedError, SiteVerifiedError, TooFarError } from "./SiteErrors.js";
+import type { PhotoFlagState } from "../flags/PhotoFlag.js";
 import type { PhotoUrls, SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, VoteChoice, Voter, VoteResult } from "./SiteTypes.js";
 import { SiteAddition } from "./SiteAddition.js";
 import { SiteCleanup, type AfterPhoto, type SiteParts } from "./SiteCleanup.js";
+import { SitePhotoFlags, type PhotoFlagCount } from "./SitePhotoFlags.js";
+import { ReportedPhotoRemoval } from "./ReportedPhotoRemoval.js";
 import { SiteTemplate } from "./SiteTemplate.js";
 import { SiteWithdrawal } from "./SiteWithdrawal.js";
 import { reportedBy } from "./utils.js";
@@ -169,9 +164,17 @@ export class Site {
     if (ids.length > 0) {
       this.#adopt(withdrawal.apply());
       this.#resettle();
+      this.#adopt(new ReportedPhotoRemoval(this.snapshot()).apply(request.at));
     }
     const { site_id, status, verification, backers } = this.#props;
     return { site_id, withdrawn_report_ids: ids, site_removed: status === "removed", status, verification, backers };
+  }
+
+  // Decision 20261011-0310-hem-photo-flags: a photo many people reported is warned, then hidden; see SitePhotoFlags.
+  recordPhotoFlags(count: PhotoFlagCount): PhotoFlagState {
+    const flags = new SitePhotoFlags(this.snapshot(), count);
+    this.#adopt(flags.apply());
+    return flags.photo();
   }
 
   // Migration to decision 20261010-1530: recounts from the stored photos and votes, forgetting the old verdict.

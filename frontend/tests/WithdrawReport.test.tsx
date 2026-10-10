@@ -7,6 +7,7 @@ import { QueuedReport } from '../src/domain/QueuedReport';
 import type { ReportStatus } from '../src/domain/ReportStatus';
 import { ReportStatuses } from '../src/domain/ReportStatus';
 import { SiteListing } from '../src/domain/SiteListing';
+import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { MapNotice } from '../src/features/map/MapNotice';
 import { ReportProgress } from '../src/features/snap/ReportProgress';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
@@ -70,10 +71,16 @@ describe('withdraw my report refusals', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Ten people have verified this site, so your report stays.');
   });
 
-  it('is not offered on a verified site, even to its reporter', async () => {
-    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1', services: await signedIn([sentReport('site_jdh_1')]) });
-    await screen.findAllByText(/Jodhpur/);
-    expect(screen.queryByRole('button', { name: 'Withdraw my report' })).toBeNull();
+  it('stays off on a verified site for its reporter and says why when tapped', async () => {
+    const user = userEvent.setup();
+    const api = new FakeSiteActionsApi();
+    await renderApp(<><AppRoutes /><ToastHost /></>, { route: '/sites/site_jdh_1', services: await signedIn([sentReport('site_jdh_1')], api) });
+    const withdraw = await screen.findByRole('button', { name: 'Withdraw my report' });
+    expect(withdraw).toHaveAttribute('aria-disabled', 'true');
+    await user.click(withdraw);
+    expect(await screen.findByText('Ten people have verified this site, so your report stays.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Yes, withdraw' })).toBeNull();
+    expect(api.calls).toEqual([]);
   });
 
   it('is not offered to someone with no report on the site', async () => {
@@ -115,7 +122,7 @@ describe('withdrawal rules', () => {
   it('shows a withdrawn report as final and Withdrawn in Activity', () => {
     const report = sentReport('site_a').withdrawn();
     expect(ReportStatuses.isFinal('withdrawn')).toBe(true);
-    expect(ReportProgress.of(report)).toEqual({ key: 'withdrawn', tone: 'plain' });
+    expect(ReportProgress.of(report)).toEqual({ key: 'withdrawn', tone: 'muted' });
   });
 
   it('puts the toast before every other map notice', () => {

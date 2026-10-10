@@ -21,6 +21,7 @@ function refresher(writer: { save(siteId: string, community: Community): Promise
   const parts = {
     notes,
     reportNotes: new FixedReportNotes(),
+    photoReports: new FixedReportNotes(),
     sites: new FakeSites([siteWithoutCommunity()]),
     analyzer: new NoteAnalyzer(model, new WordingCheck(), logger),
     writer,

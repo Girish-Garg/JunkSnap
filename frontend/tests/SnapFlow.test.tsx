@@ -63,7 +63,7 @@ describe('Snap review and send', () => {
     await renderApp(<AppRoutes />, { services: await signedIn({ api, geolocation: gps.api() }) });
     await user.click(screen.getByRole('button', { name: 'Report' }));
     await shoot(user);
-    expect(await screen.findByRole('button', { name: 'Send report' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Send report' })).toHaveAttribute('aria-disabled', 'true');
     act(() => gps.emit({ lat: 26.3, lon: 73.1, accuracy_m: 3 }));
     await user.click(screen.getByRole('radio', { name: 'No bin or pickup' }));
     await user.click(screen.getByRole('radio', { name: 'Waste not picked up' }));

@@ -6,7 +6,10 @@ import type { QueuedReport } from '../../../domain/QueuedReport';
 import { Button } from '../../../ui/Button';
 import { ActivityDelete } from './ActivityDelete';
 
-/** What we checked, open the merged site, retry a waiting or refused report, or delete the row (decision 20261010-1700). */
+/**
+ * One compact row: What we checked (tonal, the main action), Open site when there is one, Try again for a
+ * waiting or refused report, and Delete as a small trash button with its confirm step (decision 20261010-1700).
+ */
 export function ActivityActions({ report }: { readonly report: QueuedReport }) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
@@ -15,19 +18,19 @@ export function ActivityActions({ report }: { readonly report: QueuedReport }) {
   const reportId = report.data.stage === 'sent' ? report.data.report_id : null;
   const waiting = report.data.problem !== null;
   return (
-    <div className="report-row__actions">
+    <div className="activity-card__actions">
       {reportId && (
-        <Button variant="text" onClick={() => sheets.open(feedbackPath(reportId))}>
+        <Button variant="tonal" size="small" onClick={() => sheets.open(feedbackPath(reportId))}>
           {t('feedback.open')}
         </Button>
       )}
       {siteId && (
-        <Button variant="text" onClick={() => sheets.open(sitePath(siteId))}>
+        <Button variant="text" size="small" onClick={() => sheets.open(sitePath(siteId))}>
           {t('activity.openSite')}
         </Button>
       )}
       {waiting && (
-        <Button variant="text" onClick={() => void snap.queue.retry((other) => other.id === report.id)}>
+        <Button variant="text" size="small" onClick={() => void snap.queue.retry((other) => other.id === report.id)}>
           {t('activity.retry')}
         </Button>
       )}

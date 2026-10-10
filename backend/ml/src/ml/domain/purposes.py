@@ -1,16 +1,42 @@
 """Verification purposes: does the photo show the reported waste, or is the site now clean."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from types import MappingProxyType
 from typing import override
 
 from ml.domain.errors import InvalidClaimError
-from ml.domain.verification import NOT_WASTE, Claim, JudgeVerdict, Outcome, Thresholds
+from ml.domain.judge_attributes import ClaimAnswer, TriState
+from ml.domain.verification import Claim, JudgeVerdict, Outcome, Thresholds
 from ml.domain.vetoes import REPORT_VETOES, VetoEvidence, VetoRule
 
-# The judge saw waste of another type than reported: neither support nor denial.
-OTHER_TYPE_SUPPORT = 0.5
+# An uncertain answer, or a claim never judged from a photo: neither support nor denial.
+UNSURE_SUPPORT = 0.5
+
+
+def sure_yes(confidence: float) -> float:
+    """A "yes" never weighs as a no: at least 0.5 on either reading of its confidence."""
+    return max(confidence, 1.0 - confidence)
+
+
+def sure_no(confidence: float) -> float:
+    """A "no" never supports the claim: at most 0.5 on either reading of its confidence.
+
+    Models read "confidence" as sure-of-the-answer or as chance-of-waste; on prod Nova Lite
+    said not_waste at 0.1, and 1 - 0.1 made it a 0.9 "yes" (decision 20261011-0230).
+    """
+    return min(confidence, 1.0 - confidence)
+
+
+SUPPORT: Mapping[ClaimAnswer, Callable[[float], float]] = MappingProxyType(
+    {
+        ClaimAnswer.YES: sure_yes,
+        ClaimAnswer.NO: sure_no,
+        ClaimAnswer.UNCERTAIN: lambda _: UNSURE_SUPPORT,
+        ClaimAnswer.NOT_JUDGED: lambda _: UNSURE_SUPPORT,
+        ClaimAnswer.UNUSABLE: lambda _: 0.0,  # an unusable photo supports no claim
+    }
+)
 
 
 class Purpose(ABC):
@@ -66,14 +92,12 @@ class ReportPurpose(Purpose):
 
     @override
     def judge_hint(self, claim: Claim) -> str:
-        return ""
+        """The judge answers user_verdict for the reporter's claim (decision 20261011-0305)."""
+        return f"The resident says this photo shows: {claim.describe()}."
 
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
-        if claim.matches(verdict.report_type):
-            return verdict.confidence
-        if claim.denies(verdict.report_type):
-            return 1.0 - verdict.confidence
-        return OTHER_TYPE_SUPPORT
+        support = SUPPORT[verdict.answer_for(claim)]
+        return support(verdict.attributes.user_verdict_confidence)
 
     @override
     def outcome(
@@ -113,14 +137,18 @@ class CleanupPurpose(Purpose):
     def judge_hint(self, claim: Claim) -> str:
         return (
             f"This is an after-cleanup photo of a site reported as {claim.report_type} "
-            f"({claim.context}). Set scene_fits_site accordingly."
+            f"({claim.context}). The reporter says the site is now clean: answer user_verdict "
+            "for that, and set scene_fits_site accordingly."
         )
 
     @override
     def judge_support(self, verdict: JudgeVerdict, claim: Claim) -> float:
-        if verdict.report_type != NOT_WASTE:
-            return 1.0 - verdict.confidence
-        return verdict.confidence if verdict.scene_fits_site else 0.0
+        """Only a usable photo of the right kind of place, with no garbage, can show it clean."""
+        found = verdict.attributes
+        shown = (found.photo_usable, found.garbage, found.user_verdict)
+        if shown != (TriState.YES, TriState.NO, TriState.YES) or not verdict.scene_fits_site:
+            return 0.0
+        return sure_yes(found.user_verdict_confidence)
 
     def outcome(
         self, probability: float, disagreement: bool, thresholds: Thresholds, judged: bool

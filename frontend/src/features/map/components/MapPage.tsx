@@ -16,7 +16,7 @@ export function MapPage() {
   const { listMode, fail } = useMapFallback();
   const { selection, filters } = page;
   const taps = useSheetMapTaps({ ...selection, ...page.layerBindings, loaded: page.loaded });
-  const classes = ['map-page', page.sheetOpen && 'map-page--sheet', selection.preview && 'map-page--card'];
+  const classes = ['map-page', page.sheetOpen && 'map-page--sheet', (selection.preview ?? page.areaCard.area) && 'map-page--card'];
   return (
     <main className={classes.filter(Boolean).join(' ')}>
       <div className="map-area">
@@ -27,7 +27,7 @@ export function MapPage() {
           {...taps}
           userLocation={page.location.position}
           camera={selection.camera}
-          onViewChange={page.setView}
+          onViewChange={page.onViewChange}
           onFail={fail}
           listMode={listMode}
           notice={page.notice}

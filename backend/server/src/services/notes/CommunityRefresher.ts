@@ -10,6 +10,8 @@ export const REFRESH_WINDOW_MS = 10 * 60 * 1000;
 export interface RefresherParts {
   readonly notes: NoteStore;
   readonly reportNotes: ReportNoteReader;
+  // Shown photo report descriptions: read only alongside notes, as neutral signals.
+  readonly photoReports: ReportNoteReader;
   readonly sites: SiteReader;
   readonly analyzer: NoteAnalyzer;
   readonly writer: CommunityWriter;
@@ -81,13 +83,13 @@ export class CommunityRefresher {
   }
 
   async refresh(siteId: string): Promise<void> {
-    const { notes, reportNotes, analyzer, writer, now } = this.#parts;
+    const { notes, reportNotes, photoReports, analyzer, writer, now } = this.#parts;
     const shown = [...(await notes.shownFor(siteId)), ...(await reportNotes.shownFor(siteId))];
     if (shown.length === 0) {
       return;
     }
     const people = CommunityRefresher.#people(shown);
-    const reading = await analyzer.analyze(shown, people);
+    const reading = await analyzer.analyze(shown, people, await photoReports.shownFor(siteId));
     if (reading === null) {
       return;
     }

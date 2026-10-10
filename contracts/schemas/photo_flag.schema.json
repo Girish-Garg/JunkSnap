@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/photo_flag.schema.json",
+  "title": "photo_flag",
+  "description": "Contracts v1.15, decision 20261011-0310-hem-photo-flags: the answer to POST /sites/{id}/photos/{photo}/flags, a resident's report that a site photo is unrelated, private, a duplicate or offensive. Never carries who reported it or their description: the notes table keeps only a hash of the user id and of the device.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["site_id", "photo_id", "reason", "text_status", "moderation", "photo", "site_status", "created_at"],
+  "properties": {
+    "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$" },
+    "photo_id": { "type": "string", "pattern": "^rpt_[a-z0-9_]{1,40}$", "description": "The report id of the photo, the file name of its photo_urls key." },
+    "reason": {
+      "enum": ["unrelated", "person_or_property", "duplicate", "offensive"],
+      "description": "unrelated: not this site or not waste. person_or_property: shows a person or private property. duplicate: the same photo again. offensive."
+    },
+    "text_status": {
+      "enum": ["none", "shown", "hidden"],
+      "description": "none without a description. shown: note moderation passed it; it feeds the site's community analysis as a neutral signal and is never shown or quoted. hidden: moderation removed it (toxic or personal data) or could not check it, and its text is not stored. The report counts either way."
+    },
+    "moderation": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["result", "reasons", "provider", "model", "version"],
+      "description": "Same shape and rules as site_note.moderation (Bedrock only); null without a description.",
+      "properties": {
+        "result": { "enum": ["clean", "removed"] },
+        "reasons": { "type": "array", "items": { "enum": ["toxic", "personal_data"] } },
+        "provider": { "enum": ["bedrock", "comprehend", "junksnap"] },
+        "model": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "photo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "warned", "hidden"],
+      "description": "The photo's entry in site.photo_flags after this report.",
+      "properties": {
+        "count": { "type": "integer", "minimum": 1 },
+        "warned": { "type": "boolean" },
+        "hidden": { "type": "boolean" }
+      }
+    },
+    "site_status": {
+      "enum": ["open", "cleaned", "reopened", "removed", "expired"],
+      "description": "site.status after this report; removed (removed_reason photos_reported) when it hid the last photo of an unverified site."
+    },
+    "created_at": { "type": "string", "format": "date-time", "description": "When this person's latest report of the photo was recorded." }
+  }
+}

@@ -1,5 +1,6 @@
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
+import { PilotCity } from '../../domain/PilotCity';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
@@ -14,7 +15,6 @@ import { SelectedPulse } from './SelectedPulse';
 
 // OpenFreeMap needs no key; its style carries the OpenStreetMap credit for the attribution control.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
-const JODHPUR: [number, number] = [73.02, 26.27];
 // MapLibre zooms use 512 px tiles (one below Google Maps); 12 shows about 6 km across a phone.
 const CITY_ZOOM = 12;
 const SITE_ZOOM = 14;
@@ -67,7 +67,8 @@ export class SiteMap {
     this.#layers = options.layers;
     this.#map = new MapLibreMap({
       container: options.container,
-      center: JODHPUR,
+      // Always the pilot city first; a location fix shows the dot but never moves the map on its own.
+      center: [...PilotCity.centre],
       zoom: CITY_ZOOM,
       minZoom: 4,
       maxZoom: MAX_ZOOM,
@@ -108,9 +109,19 @@ export class SiteMap {
     this.#boundaries.label(markers);
   }
 
-  /** Area id to fill colour for the boundary kind shown. */
+  /** Area id to score colour, for the areas that show a score. */
   paintAreas(colors: ReadonlyMap<string, string>): void {
     this.#boundaries.paint(colors);
+  }
+
+  /** Area id to neighbour tint slot, for every area. */
+  tintAreas(tints: ReadonlyMap<string, number>): void {
+    this.#boundaries.tint(tints);
+  }
+
+  /** The area to outline and label (tapped, open, or where the person stands), or null. */
+  focusArea(id: string | null): void {
+    this.#boundaries.focus(id);
   }
 
   setMode(mode: MapMode): void {
@@ -144,10 +155,10 @@ export class SiteMap {
     this.#boundaries.setDark(dark);
   }
 
+  /** Places the person's dot; moving there is a camera request ("Go to my location"), never automatic. */
   showUser(position: LonLat): void {
     this.#userMarker ??= new Marker({ element: SiteMap.#userDot() });
     this.#userMarker.setLngLat([...position]).addTo(this.#map);
-    this.moveTo([position]);
   }
 
   destroy(): void {

@@ -1,3 +1,4 @@
+import { PhotoId } from '../../domain/PhotoFlag';
 import type { SiteProperties } from '../../domain/Site';
 import { SiteLifecycle } from '../../domain/SiteLifecycle';
 import { UlidTime } from '../../domain/UlidTime';
@@ -15,6 +16,10 @@ export interface PhotoView {
   readonly altParams: Readonly<Record<string, number>>;
   /** When the photo was reported, from the ULID in its id; null when the URL carries none. */
   readonly reportedAt: string | null;
+  /** The report id residents can report this photo by; null for the after-photo. */
+  readonly photoId: string | null;
+  /** Several people reported it (decision 20261011-0310-hem-photo-flags): shown only after a tap. */
+  readonly warned: boolean;
 }
 
 export type PrimaryAction = 'confirm' | 'letter';
@@ -40,18 +45,21 @@ export class SitePresenter {
   /** Blurred public copies, newest first, then the last cleanup after-photo. */
   photos(): readonly PhotoView[] {
     const total = this.#site.photo_urls.length;
-    const reports = this.#site.photo_urls.map((url, index) => ({
-      url,
-      altKey: 'site.photoAlt',
-      altParams: { n: index + 1, total },
-      reportedAt: UlidTime.fromPhotoUrl(url),
-    }));
+    const warned = new Set((this.#site.photo_flags ?? []).filter((flags) => flags.warned).map((flags) => flags.photo_id));
+    const reports = this.#site.photo_urls.map((url, index) => {
+      const photoId = PhotoId.fromUrl(url);
+      const reportedAt = UlidTime.fromPhotoUrl(url);
+      return { url, altKey: 'site.photoAlt', altParams: { n: index + 1, total }, reportedAt, photoId, warned: photoId !== null && warned.has(photoId) };
+    });
     const cleanup = this.#site.cleanup_photo_url;
-    return cleanup ? [...reports, { url: cleanup, altKey: 'site.afterCleanup', altParams: {}, reportedAt: UlidTime.fromPhotoUrl(cleanup) }] : reports;
+    if (!cleanup) return reports;
+    return [...reports, { url: cleanup, altKey: 'site.afterCleanup', altParams: {}, reportedAt: UlidTime.fromPhotoUrl(cleanup), photoId: null, warned: false }];
   }
 
+  /** The newest photo nobody has covered; a warned photo never shows uncovered in a card or list row. */
   thumbnail(): string | null {
-    return this.#site.photo_urls[0] ?? null;
+    const warned = new Set(this.photos().flatMap((photo) => (photo.warned ? [photo.url] : [])));
+    return this.#site.photo_urls.find((url) => !warned.has(url)) ?? null;
   }
 
   /** An unverified site needs people to back it; a verified one is ready for a letter. */
@@ -67,6 +75,11 @@ export class SitePresenter {
   /** The api drafts a letter only for a verified site (10 people; decision 20261010-1530) that is still on the map. */
   letterReady(): boolean {
     return this.#site.verification === 'verified' && this.closedReason() === null;
+  }
+
+  /** The status chip says verified or waiting only for an open site; any other status spells it out beside the chip. */
+  showsVerification(): boolean {
+    return this.#site.status !== 'open';
   }
 
   /** "n of 10 people confirmed" means nothing once a site is off the map, unless it was verified first. */

@@ -3,12 +3,21 @@
 from dataclasses import replace
 
 import pytest
-from fakes import JUDGE_JSON, FakeDetector, FixedClock, make_case, provider_error, scripted_judge
-from model_fakes import FakeEmbedder, FakeObjectDetector, two_dim_heads
+from fakes import (
+    CLEAN_FIELDS,
+    JUDGE_FIELDS,
+    JUDGE_JSON,
+    FakeDetector,
+    FixedClock,
+    judge_json,
+    make_case,
+    provider_error,
+    scripted_judge,
+)
+from model_fakes import FakeEmbedder, FakeObjectDetector, meta_v2, two_dim_heads
 
 from ml.domain.case import VerificationResult
 from ml.domain.label_insights import LabelInsights
-from ml.domain.linear import MetaModel
 from ml.domain.verification import Claim, Thresholds
 from ml.ports.signal import Signal
 from ml.services.embedding_signal import EmbeddingSignal
@@ -18,25 +27,19 @@ from ml.services.stacked_verifier import StackedVerifier
 from ml.services.yolo_signal import YoloSignal
 
 FLYOVER = Claim("open_construction", "dusty_site")
-SIGNALS = ["rekognition_labels", "yolo", "embedding_classifier"]
 
 
-def meta_v2() -> MetaModel:
-    """meta-v2's shape and weights (docs/ml/eval.md); like the published file, no report_types."""
-    return MetaModel.from_json({
-        "version": "meta-v2",
-        "base": {"signals": SIGNALS, "weights": [0.25, 0.65, 1.27], "bias": 1.55},
-        "judged": {"signals": [*SIGNALS, "vision_judge"], "weights": [0.25, 0.65, 1.27, 0.17],
-                   "bias": 1.55},
-        "fallback": {"signals": ["rekognition_labels"], "weights": [1.20], "bias": -0.96},
-        "fallback_judged": {"signals": ["rekognition_labels", "vision_judge"],
-                            "weights": [0.68, 2.63], "bias": -2.84},
-    })
+SHOWN: dict[str, dict[str, object]] = {
+    "open_construction": {"garbage": "no", "construction_debris": "yes"},
+    "contaminated_water": {"garbage": "no", "water_contamination": "yes"},
+    "not_waste": CLEAN_FIELDS,
+}
 
 
-def answer(report_type: str, context: str, confidence: float) -> str:
-    return (JUDGE_JSON.replace('"waste_dump"', f'"{report_type}"')
-            .replace('"vacant_plot"', context).replace('0.9}', f'{confidence}}}'))
+def answer(shown: str, context: str | None, confidence: float) -> str:
+    fields = {**JUDGE_FIELDS, **SHOWN[shown], "context": context}
+    verdict = "no" if shown == "not_waste" else "yes"
+    return judge_json(fields, user_verdict=verdict, user_verdict_confidence=confidence)
 
 
 def signals(labels: dict[str, float]) -> list[Signal]:
@@ -61,7 +64,7 @@ def verify(
 
 def test_the_flyover_report_goes_to_the_judge_and_is_not_rejected() -> None:
     """rpt_01m4k31nm7x7s2je74va23tjzg: Rekognition 0.3113, YOLO 0, embeddings 0.5, rejected."""
-    result, asked = verify(FLYOVER, answer("open_construction", '"dusty_site"', 0.8),
+    result, asked = verify(FLYOVER, answer("open_construction", "dusty_site", 0.8),
                            {"Construction": 0.3113})
     scores = {s.name: s for s in result.signals}
     assert asked == 1 and result.judge is not None
@@ -76,14 +79,14 @@ def test_the_flyover_report_goes_to_the_judge_and_is_not_rejected() -> None:
 
 
 def test_a_sure_judge_and_matching_labels_auto_verify_an_untrained_type() -> None:
-    result, _ = verify(FLYOVER, answer("open_construction", '"dusty_site"', 0.95),
+    result, _ = verify(FLYOVER, answer("open_construction", "dusty_site", 0.95),
                        {"Construction Site": 0.9, "Rubble": 0.9})
     assert result.outcome.decision == "auto_verified"
 
 
 def test_contaminated_water_is_also_left_to_the_judge() -> None:
     claim = Claim("contaminated_water", "sewage")
-    result, asked = verify(claim, answer("contaminated_water", '"sewage"', 0.8), {"Water": 0.5})
+    result, asked = verify(claim, answer("contaminated_water", "sewage", 0.8), {"Water": 0.5})
     assert asked == 1 and result.combiner.kind == "fixed_weights"
     assert result.outcome.decision == "community_check"
 
@@ -102,7 +105,7 @@ def test_a_judge_outage_with_no_matching_label_keeps_the_detectors_veto() -> Non
 
 
 def test_a_confident_not_waste_still_vetoes_an_untrained_type() -> None:
-    result, _ = verify(FLYOVER, answer("not_waste", "null", 0.9), {"Construction": 0.3113})
+    result, _ = verify(FLYOVER, answer("not_waste", None, 0.9), {"Construction": 0.3113})
     assert result.outcome.decision == "rejected"
     assert result.outcome.veto is not None
     assert result.outcome.veto.reason == "judge_veto:not_waste"

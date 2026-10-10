@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { areaLetterPath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
+import { lookOf } from '../../../domain/ActionAvailability';
 import { Button } from '../../../ui/Button';
-import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
+import { useAreaLetterGate } from '../../actions/hooks/useAreaLetterGate';
 
 interface AreaLetterButtonProps {
   readonly kind: string;
   readonly areaId: string;
-  /** The area has the 10 verified reports the api needs; otherwise the button is off and says why. */
+  /** The area has the 10 verified reports the api needs; otherwise the button looks off and a tap says why. */
   readonly ready: boolean;
   /** The ranking list uses the short label. */
   readonly short?: boolean;
@@ -17,10 +18,10 @@ interface AreaLetterButtonProps {
 export function AreaLetterButton({ kind, areaId, ready, short = false }: AreaLetterButtonProps) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
-  const { requireAuth } = useAuthFlow();
+  const draft = useAreaLetterGate(ready);
   return (
     <div className={short ? 'area-letter area-letter--short' : 'area-letter'}>
-      <Button variant={short ? 'text' : 'primary'} disabled={!ready} onClick={() => requireAuth(() => sheets.open(areaLetterPath(kind, areaId)))}>
+      <Button variant={short ? 'text' : 'primary'} onClick={draft.tap(() => sheets.open(areaLetterPath(kind, areaId)))} {...lookOf(draft.availability)}>
         {t(short ? 'areaLetter.short' : 'areaLetter.button')}
       </Button>
       {!ready && <p className="area-letter__locked">{t(short ? 'areaLetter.lockedShort' : 'areaLetter.locked')}</p>}

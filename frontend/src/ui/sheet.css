@@ -173,3 +173,24 @@
     }
   }
 }
+
+/* Top of every sheet while the phone is offline. */
+.offline-line {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 var(--edge) var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-s);
+  background: var(--status-reopened-tint);
+  color: var(--text);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 600;
+}
+
+.offline-line svg {
+  flex: none;
+  color: var(--status-reopened);
+}

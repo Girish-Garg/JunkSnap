@@ -1,5 +1,8 @@
+import json
+
+import fakes
 import pytest
-from fakes import JUDGE_JSON, FakeDetector, make_case
+from fakes import FakeDetector, make_case
 from pydantic import ValidationError
 
 from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare
@@ -13,11 +16,10 @@ JUDGE = InsightSource("vision_judge", "bedrock", "apac.amazon.nova-pro-v1:0", "v
 
 
 def judge_json(hazards: str, burning: bool = False) -> str:
-    return JUDGE_JSON.replace('"burning": false', f'"burning": {str(burning).lower()}').replace(
-        '"confidence": 0.9}',
-        '"confidence": 0.9, "composition": [{"material": "plastic", "share": 0.6},'
-        ' {"material": "organic", "share": 0.2}], "size_class": "medium",'
-        f' "hazards": {hazards}, "count": 40}}',
+    return fakes.judge_json(
+        burning="yes" if burning else "no",
+        composition=[{"material": "plastic", "share": 0.6}, {"material": "organic", "share": 0.2}],
+        size_class="medium", hazards=json.loads(hazards), count=40,
     )
 
 
@@ -71,20 +73,26 @@ def test_judge_burning_comes_with_its_own_confidence() -> None:
     assert insights.hazards == (HazardSighting("burning", 0.8, JUDGE),)
 
 
+@pytest.mark.parametrize("hazards", ['[{"hazard": "e_waste"}]', '["e_waste"]'])
+def test_judge_hazards_without_their_own_confidence_are_invalid(hazards: str) -> None:
+    with pytest.raises(ValidationError):
+        JudgeAnswer.model_validate_json(judge_json(hazards))
+
+
 @pytest.mark.parametrize(
-    ("hazards", "burning"),
+    ("hazards", "burning", "settled"),
     [
-        ("[]", True),
-        ('[{"hazard": "burning", "confidence": 0.8}]', False),
-        ('[{"hazard": "e_waste"}]', False),
-        ('["e_waste"]', False),
+        ("[]", True, "uncertain"),  # a yes without its own confidence is not a yes
+        ('[{"hazard": "burning", "confidence": 0.8}]', False, "yes"),  # the listed hazard wins
+        ("[]", False, "no"),
     ],
 )
-def test_judge_hazards_without_their_own_confidence_are_invalid(
-    hazards: str, burning: bool
-) -> None:
-    with pytest.raises(ValidationError):
-        JudgeAnswer.model_validate_json(judge_json(hazards, burning))
+def test_burning_is_settled_by_the_listed_hazard(hazards: str, burning: bool, settled: str) -> None:
+    """Decision 0305: a mismatch falls back safely instead of failing the whole answer."""
+    verdict = JudgeAnswer.model_validate_json(judge_json(hazards, burning)).to_verdict()
+
+    assert verdict.attributes.burning == settled
+    assert verdict.burning is (settled == "yes")
 
 
 def test_judge_measurements_win_and_labels_fill_the_rest() -> None:

@@ -137,3 +137,16 @@
     cursor: auto;
   }
 }
+
+/* "Report this photo" under the caption: a quiet text button, light on the dark viewer. */
+.photo-viewer__report {
+  margin-top: var(--s-2);
+  padding: var(--s-1) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

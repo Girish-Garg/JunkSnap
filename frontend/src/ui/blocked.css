@@ -1,0 +1,56 @@
+/*
+  A blocked action (aria-disabled="true"): it looks off like a disabled one but still takes the tap, so the app can
+  say why (a toast, or the sign-in sheet with its reason). The press animation is off, so it never feels like it ran.
+*/
+.button[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.button--primary[aria-disabled='true'],
+.button--sun[aria-disabled='true'] {
+  box-shadow: none;
+}
+
+.button[aria-disabled='true']:active {
+  transform: none;
+}
+
+.button--text[aria-disabled='true']:hover {
+  background: transparent;
+}
+
+.button--secondary[aria-disabled='true']:hover {
+  border-color: var(--divider);
+}
+
+.button--tonal[aria-disabled='true']:hover {
+  background: var(--accent-tint);
+}
+
+.action-row__button[aria-disabled='true'] {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.action-row__button[aria-disabled='true'] .action-row__icon,
+.action-row__button[aria-disabled='true']:hover .action-row__icon,
+.action-row__button[aria-disabled='true']:active .action-row__icon {
+  border-style: dashed;
+  border-color: var(--divider);
+  background: var(--tile);
+  box-shadow: none;
+  color: var(--text-secondary);
+  transform: none;
+}
+
+.shutter[aria-disabled='true'],
+.record-button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shutter[aria-disabled='true']:active,
+.record-button[aria-disabled='true']:active {
+  transform: none;
+}

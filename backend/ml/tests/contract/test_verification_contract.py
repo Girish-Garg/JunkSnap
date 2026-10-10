@@ -5,12 +5,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fakes import JPEG, JUDGE_JSON, FakeBuilder, FakeDetector, FakeProvider, FixedClock, make_case
+from fakes import JPEG, FakeBuilder, FakeDetector, FakeProvider, FixedClock, judge_json, make_case
 from jsonschema import Draft202012Validator
 
 from ml.domain.case import CombinerInfo, VerificationCase, VerificationResult
 from ml.domain.images import BlurredImage
 from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare, SizeEstimate
+from ml.domain.judge_attributes import JudgeAttributes, TriState
 from ml.domain.label_insights import LabelInsights
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
@@ -33,16 +34,17 @@ from ml.services.vision_judge import VisionJudge
 CONTRACTS = Path(__file__).resolve().parents[4] / "contracts"
 SCHEMA = json.loads((CONTRACTS / "schemas" / "verification_result.schema.json").read_text("utf-8"))
 DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-JUDGE_ANSWER = JUDGE_JSON.replace(
-    '"confidence": 0.9}',
-    '"confidence": 0.9, "composition": [{"material": "organic", "share": 0.3}],'
-    ' "size_class": "large", "hazards": [{"hazard": "dead_animal", "confidence": 0.6}],'
-    ' "scene_fits_site": true}',
+JUDGE_ANSWER = judge_json(
+    composition=[{"material": "organic", "share": 0.3}], size_class="large",
+    hazards=[{"hazard": "dead_animal", "confidence": 0.6}], scene_fits_site=True,
 )
+# A cleanup photo the judge finds clean.
+CLEAN_ANSWER = judge_json(garbage="no", context=None, scene_fits_site=True)
 
 
 def produced(purpose: str, labels: dict[str, float]) -> dict[str, Any]:
-    judge = FakeProvider("global.anthropic.claude-sonnet-4-6", [JUDGE_ANSWER])
+    reply = JUDGE_ANSWER if purpose == "report" else CLEAN_ANSWER
+    judge = FakeProvider("global.anthropic.claude-sonnet-4-6", [reply])
     factory = ProviderFactory({"bedrock": FakeBuilder({judge.name: judge})})
     router = ProviderRouter({"judge": TaskConfig("bedrock", judge.name)}, factory, PriceTable())
     verifier = StackedVerifier(
@@ -75,8 +77,32 @@ def insights_from(data: dict[str, Any] | None) -> Insights:
     )
 
 
+def attributes_from(data: dict[str, Any] | None) -> JudgeAttributes:
+    """A fixture from before contracts v1.16 has none; the test drops these placeholders."""
+    raw = data or {
+        "garbage": "yes", "bin": "no", "bin_overflowing_or_broken": "no",
+        "water_contamination": "no", "construction_debris": "no", "burning": "no",
+        "photo_usable": "yes", "user_verdict": "yes", "user_verdict_confidence": 0.9,
+        "prompt": "judge_v0",
+    }
+    numbers = ("user_verdict_confidence", "prompt")
+    states = {key: TriState(value) for key, value in raw.items() if key not in numbers}
+    return JudgeAttributes(
+        **states, user_verdict_confidence=raw["user_verdict_confidence"], prompt=raw["prompt"]
+    )
+
+
+def verdict_from(judge: dict[str, Any] | None) -> JudgeVerdict | None:
+    if judge is None:
+        return None
+    fields = {key: value for key, value in judge.items() if key != "attributes"}
+    return JudgeVerdict(
+        **{**fields, "readable_brands": tuple(judge["readable_brands"])}, confidence=0.9,
+        scene_fits_site=None, attributes=attributes_from(judge.get("attributes")),
+    )
+
+
 def from_fixture(data: dict[str, Any]) -> VerificationResult:
-    judge = data["judge"]
     case = VerificationCase(
         data["report_id"], Purpose.named(data["purpose"]), BlurredImage("media/x.jpg", JPEG),
         Claim("waste_dump", "vacant_plot"), CaseFeatures(**data["features"]),
@@ -87,9 +113,7 @@ def from_fixture(data: dict[str, Any]) -> VerificationResult:
                         data["is_clean"]),
         thresholds=Thresholds(**data["thresholds"]),
         signals=tuple(SignalResult(**signal) for signal in data["signals"]),
-        judge=None if judge is None else JudgeVerdict(
-            **{**judge, "readable_brands": tuple(judge["readable_brands"])}, confidence=0.9
-        ),
+        judge=verdict_from(data["judge"]),
         combiner=CombinerInfo(**data["combiner"]),
         decided_at=datetime.fromisoformat(data["decided_at"]),
         embedding_key=data["embedding_key"],
@@ -140,5 +164,24 @@ def test_fixtures_exist() -> None:
 )
 def test_fixture_round_trips(path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
+    output = from_fixture(data).to_contract()
+    judge = output["judge"]
+    if isinstance(judge, dict) and "attributes" not in (data["judge"] or {}):
+        judge.pop("attributes")  # a producer from before contracts v1.16
 
-    assert from_fixture(data).to_contract() == data
+    assert output == data
+
+
+def test_a_report_carries_the_judges_structured_answer() -> None:
+    output = produced("report", {"Garbage": 0.95})
+    judge = output["judge"]
+
+    assert isinstance(judge, dict)
+    assert judge["attributes"] == {
+        "garbage": "yes", "bin_overflowing_or_broken": "no", "water_contamination": "no",
+        "construction_debris": "no", "bin": "no", "burning": "no", "photo_usable": "yes",
+        "user_verdict": "yes", "user_verdict_confidence": 0.9, "prompt": "judge_v1",
+    }
+    assert (judge["report_type"], judge["context"], judge["burning"]) == (
+        "waste_dump", "vacant_plot", False,
+    )

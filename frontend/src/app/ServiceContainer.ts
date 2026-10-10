@@ -3,14 +3,18 @@ import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
 import type { AreaApi } from '../services/AreaApi';
+import type { TaggedAreaApi } from '../services/TaggedAreaApi';
 import { areaFixtureLoaders } from '../services/areaFixtures';
 import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
 import { BoundaryCatalog } from '../services/BoundaryCatalog';
 import type { AuthService } from '../services/AuthService';
 import { crawlFixtureLoaders } from '../services/crawlFixtures';
-import { GeoLocator } from '../services/GeoLocator';
+import { GeoLocator, type PermissionQuery } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
+import { ExpiringCache } from '../services/ExpiringCache';
+import { SiteCaches } from '../services/SiteCaches';
+import { SystemClock } from '../services/SystemClock';
 import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockAreaApi } from '../services/MockAreaApi';
@@ -21,6 +25,10 @@ import { CapabilityProbe, type DeviceCapabilities } from '../services/Capability
 import { EdgeHints, type DetectorFactory } from '../services/EdgeHints';
 import { EdgeHintsPreference } from '../services/EdgeHintsPreference';
 import { Sharer, type ShareApi } from '../services/Sharer';
+import { ActionCooldowns } from '../services/ActionCooldowns';
+import { ErrorReporter } from '../services/ErrorReporter';
+import { Notifier } from '../services/Notifier';
+import { WINDOW_TIMER } from '../services/Timer';
 import { UnavailableAuthService } from '../services/UnavailableAuthService';
 import { siteFixtureLoaders } from '../services/siteFixtures';
 import type { ApiMode, AppConfig } from './AppConfig';
@@ -28,12 +36,12 @@ import { SnapServiceFactory, type SnapBrowserApis } from './SnapServiceFactory';
 import type { SnapServices } from './SnapServices';
 
 // A new API mode is a new entry here, not a new branch.
-const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiClient>> = {
+const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, caches: SiteCaches) => ApiClient>> = {
   mock: () => new MockApiClient(siteFixtureLoaders),
-  live: (config) => new HttpApiClient(config.requireApiUrl()),
+  live: (config, caches) => new HttpApiClient(config.requireApiUrl(), undefined, caches),
 };
 
-const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => AreaApi>> = {
+const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => TaggedAreaApi>> = {
   mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
   live: (config) => new HttpAreaApi(config.requireApiUrl()),
 };
@@ -49,6 +57,8 @@ export interface BrowserApis extends SnapBrowserApis {
   readonly share: ShareApi;
   /** The element that carries data-theme; absent in tests. */
   readonly root?: HTMLElement;
+  /** Lets the map read a location fix on open only when location is already allowed. */
+  readonly permissions?: PermissionQuery;
   /** What the startup probe reads and how to build the detector; absent means cloud mode. */
   readonly edge?: EdgeEnvironment;
 }
@@ -76,6 +86,10 @@ export interface Services {
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
   readonly edge: EdgeHints;
+  /** App-wide toasts, error reports and rate-limit memory; built here when not given (tests leave them out). */
+  readonly notifier?: Notifier;
+  readonly errors?: ErrorReporter;
+  readonly cooldowns?: ActionCooldowns;
 }
 
 /** Composition root: the only place that builds services. */
@@ -93,6 +107,9 @@ export class ServiceContainer implements Services {
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
   readonly edge: EdgeHints;
+  readonly notifier: Notifier;
+  readonly errors: ErrorReporter;
+  readonly cooldowns: ActionCooldowns;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -108,21 +125,27 @@ export class ServiceContainer implements Services {
     this.onboarding = services.onboarding;
     this.theme = services.theme;
     this.edge = services.edge;
+    this.notifier = services.notifier ?? new Notifier();
+    this.errors = services.errors ?? new ErrorReporter(console, () => navigator.onLine);
+    this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now());
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
     const auth = AUTH_BUILDERS[config.apiMode](config, browser.store);
+    const clock = new SystemClock();
+    // One set of site copies: the api reads into it, and site actions forget a site after writing to it.
+    const siteCaches = SiteCaches.standard(clock);
     return new ServiceContainer({
       config,
-      api: API_CLIENT_BUILDERS[config.apiMode](config),
-      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config)),
+      api: API_CLIENT_BUILDERS[config.apiMode](config, siteCaches),
+      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.POLICY, clock)),
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
       boundaries: new BoundaryCatalog(BoundaryCatalog.defaultBaseUrl()),
-      locator: new GeoLocator(browser.geolocation),
+      locator: new GeoLocator(browser.geolocation, browser.permissions),
       sharer: new Sharer(browser.share),
-      snap: SnapServiceFactory.build(config, browser, auth),
+      snap: SnapServiceFactory.build(config, browser, auth, siteCaches),
       onboarding: new OnboardingPreference(browser.store),
       theme: new ThemePreference(browser.store, browser.root ?? null),
       edge: ServiceContainer.#edge(browser),

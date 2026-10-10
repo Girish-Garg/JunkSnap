@@ -20,7 +20,7 @@ describe('ranking letter link', () => {
     expect(within(first!).getByRole('button', { name: 'Letter' })).toBeEnabled();
     expect(rest.length).toBeGreaterThan(0);
     for (const row of rest) {
-      expect(within(row).getByRole('button', { name: 'Letter' })).toBeDisabled();
+      expect(within(row).getByRole('button', { name: 'Letter' })).toHaveAttribute('aria-disabled', 'true');
       expect(row).toHaveTextContent('Opens at 10 verified reports');
     }
   });

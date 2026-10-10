@@ -6,6 +6,8 @@ import { FeedbackPolling, type FeedbackRead } from '../FeedbackPolling';
 export interface ReportFeedbackState {
   readonly view: ReportStatusView | null;
   readonly failed: boolean;
+  /** Shows a status an answer returned at once; reading again resumes while it is being checked. */
+  readonly replace: (view: ReportStatusView) => void;
 }
 
 /**
@@ -17,6 +19,7 @@ export function useReportFeedback(reportId: string): ReportFeedbackState {
   const [read, setRead] = useState<FeedbackRead | null>(null);
   const [round, setRound] = useState(0);
   const again = useCallback(() => setRound((count) => count + 1), []);
+  const replace = useCallback((view: ReportStatusView) => setRead(FeedbackPolling.succeeded(reportId, view)), [reportId]);
   useEffect(() => {
     let current = true;
     snap.tracker.read(reportId).then(
@@ -34,7 +37,7 @@ export function useReportFeedback(reportId: string): ReportFeedbackState {
   }, [snap.tracker, reportId, round]);
   const mine = read?.reportId === reportId ? read : null;
   useNextRead(mine, again);
-  return { view: mine?.view ?? null, failed: mine?.failed ?? false };
+  return { view: mine?.view ?? null, failed: mine?.failed ?? false, replace };
 }
 
 // Each finished read is a new object, so the wait restarts after every read, failed or not.

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import type { LetterLanguage } from '../../../domain/SiteActions';
 import { Button } from '../../../ui/Button';
 import { Segmented } from '../../../ui/Segmented';
@@ -13,6 +14,7 @@ const LANGUAGES: readonly { readonly value: LetterLanguage; readonly label: stri
 /** Before drafting: the letter's language and what happens next. */
 export function LetterChooser({ flow }: { readonly flow: LetterRequestFlow }) {
   const { t } = useTranslation();
+  const { draftable } = flow;
   return (
     <div className="form">
       <p className="sheet-text">{t('letter.intro')}</p>
@@ -22,7 +24,7 @@ export function LetterChooser({ flow }: { readonly flow: LetterRequestFlow }) {
           {flow.reason ?? t(`letter.errors.${flow.problem}`)}
         </p>
       )}
-      <Button onClick={flow.request} disabled={flow.busy}>
+      <Button onClick={draftable.tap(flow.request)} {...lookOf(draftable.availability)}>
         {t(flow.busy ? 'letter.drafting' : 'letter.draft')}
       </Button>
       {flow.busy && <LogoLoader text={t('letter.wait')} />}

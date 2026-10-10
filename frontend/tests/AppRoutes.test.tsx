@@ -24,7 +24,9 @@ describe('site routes', () => {
 
   it('says so when the site does not exist', async () => {
     await renderApp(<AppRoutes />, { route: '/sites/site_missing' });
-    expect(await screen.findByText('Could not load this site.')).toBeInTheDocument();
+    // A 404 is not a failure to retry: it says the site is gone and offers no Try again.
+    expect(await screen.findByText('This site is not on the map any more, or the link is wrong.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 });
 

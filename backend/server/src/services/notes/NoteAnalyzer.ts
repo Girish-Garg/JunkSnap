@@ -18,11 +18,14 @@ const SYSTEM = [
   'as people, for example "4 residents say the dump has been here about 3 months and is burnt most weeks."',
   "Never name or describe a person, never blame anyone, never use the words illegal or culprit, never quote a note, and never repeat",
   "a phone number, house number, vehicle number or any other personal detail.",
+  "The optional field photo_reports holds reasons residents gave for reporting one photo of the site (unrelated, private, duplicate or offensive).",
+  "Use them only as neutral signals about the site; never count them in people, never describe a photo or who took it, and never quote them.",
   'Reply with one JSON object: {"duration_days", "recurring", "burning", "smell", "blocked_drain", "animals", "near_school",',
   '"near_hospital", "access_issue", "summary_en", "summary_hi"} and nothing else.',
 ].join("\n");
 
 const MAX_NOTES = 40;
+const MAX_PHOTO_REPORTS = 20;
 const RECORDABLE_PROVIDER = "bedrock";
 const TEMPLATE = { provider: "junksnap", model: "community-template", version: "1" } as const;
 // Any digit run this long could be a phone, house or vehicle number copied from a note.
@@ -54,11 +57,11 @@ export class NoteAnalyzer {
   }
 
   // Null when the model gave no usable answer, so the caller keeps what it had.
-  async analyze(notes: readonly ShownNote[], people: number): Promise<CommunityReadingResult | null> {
+  async analyze(notes: readonly ShownNote[], people: number, photoReports: readonly ShownNote[] = []): Promise<CommunityReadingResult | null> {
     const request = new LlmRequest({
       task: "note_analysis",
       system: SYSTEM,
-      userText: JSON.stringify({ people, notes: notes.slice(0, MAX_NOTES).map((note) => note.text) }),
+      userText: NoteAnalyzer.#input(notes, people, photoReports),
       jsonSchemaName: "community_signals",
       maxTokens: 500,
     });
@@ -76,6 +79,13 @@ export class NoteAnalyzer {
       }
       throw error;
     }
+  }
+
+  // Photo reports go in their own field, only when there are any.
+  static #input(notes: readonly ShownNote[], people: number, photoReports: readonly ShownNote[]): string {
+    const reports = photoReports.slice(0, MAX_PHOTO_REPORTS).map((report) => report.text);
+    const texts = notes.slice(0, MAX_NOTES).map((note) => note.text);
+    return JSON.stringify({ people, notes: texts, ...(reports.length > 0 ? { photo_reports: reports } : {}) });
   }
 
   #checked(reading: CommunityReading, people: number, provenance: Pick<Community, "provider" | "model" | "version">): CommunityReadingResult {

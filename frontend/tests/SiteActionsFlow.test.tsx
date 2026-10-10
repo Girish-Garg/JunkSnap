@@ -37,14 +37,15 @@ describe('cleanup claim', () => {
   it('takes the after-photo in the app, sends it and shows that it is being checked', async () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
-    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1/cleanup', services: await signedIn(api) });
+    // site_jdh_1 already has a cleanup photo being checked, so its cleanup link is locked (issue 124); jdh_3 takes one.
+    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_3/cleanup', services: await signedIn(api) });
     const shutter = await screen.findByRole('button', { name: 'Take photo' });
     await waitFor(() => expect(shutter).toBeEnabled());
     await user.click(shutter);
     await user.click(await screen.findByRole('button', { name: 'Send cleanup photo' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'Cleanup photo sent' })).toBeInTheDocument();
     expect(screen.getByText('Being checked')).toBeInTheDocument();
-    expect(api.calls[0]).toMatchObject({ kind: 'cleanup', siteId: 'site_jdh_1' });
+    expect(api.calls[0]).toMatchObject({ kind: 'cleanup', siteId: 'site_jdh_3' });
   });
 });
 

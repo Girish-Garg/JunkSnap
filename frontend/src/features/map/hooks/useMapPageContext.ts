@@ -9,5 +9,6 @@ export function useMapPageContext(page: MapPageState): MapContext {
     sites: page.loaded,
     refreshSites: page.refreshSites,
     announce: page.announce,
+    areaTints: page.boundary.tints,
   };
 }

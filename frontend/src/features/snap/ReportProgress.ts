@@ -2,7 +2,8 @@ import type { QueuedReport } from '../../domain/QueuedReport';
 import { ReportRejection } from '../../domain/ReportRejection';
 import { ReportStatuses } from '../../domain/ReportStatus';
 
-export type ProgressTone = 'plain' | 'good' | 'alert';
+/** wait: still with the checks or the neighbours; muted: withdrawn. */
+export type ProgressTone = 'plain' | 'good' | 'alert' | 'wait' | 'muted';
 
 export interface ProgressView {
   /** Key under progress.* in the i18n files. */
@@ -11,13 +12,28 @@ export interface ProgressView {
 }
 
 const TONES: Readonly<Record<string, ProgressTone>> = {
+  sending: 'wait',
+  offline: 'wait',
+  server: 'wait',
+  rate_limited: 'wait',
+  queued: 'wait',
+  processing: 'wait',
+  unverified: 'wait',
+  community_check: 'wait',
+  needs_review: 'wait',
+  withdrawn: 'muted',
   verified: 'good',
   rejected: 'alert',
+  unclear: 'alert',
   not_waste: 'alert',
   unconfirmed: 'alert',
   refused: 'alert',
   sign_in: 'alert',
+  not_confirmed: 'alert',
 };
+
+// The check was unsure, so the reporter is asked; nothing to celebrate until they answer (contracts v1.16).
+const UNSURE: ReadonlySet<string> = new Set(['needs_confirmation', 'not_confirmed']);
 
 /** Steps shown after Send: saved, uploaded, sent, checked. */
 export const PROGRESS_STEPS = ['saved', 'uploaded', 'sent', 'checked'] as const;
@@ -36,10 +52,10 @@ export class ReportProgress {
     return status && !ReportStatuses.inPipeline(status.status) ? 4 : 3;
   }
 
-  /** Sent without a problem, and not turned down by the models. */
+  /** Sent without a problem, not turned down by the models, and not waiting for the reporter's answer. */
   static celebrates(report: QueuedReport): boolean {
     const { problem, stage, status } = report.data;
-    return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null;
+    return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null && !UNSURE.has(status?.status ?? '');
   }
 
   /** Sent, and the server has not finished its checks yet. */

@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../ui/Button';
 import { Celebration } from '../../../ui/Celebration';
+import { ReportNotices } from '../../activity/components/ReportNotices';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 import { useReportProgress } from '../hooks/useReportProgress';
 import { ReportProgress } from '../ReportProgress';
-import { RejectionNotice } from './RejectionNotice';
 import { ProgressBadge } from './ProgressBadge';
 import { ProgressSteps } from './ProgressSteps';
 import { ReportThumb } from './ReportThumb';
@@ -29,7 +29,7 @@ export function SentStage({ id, onAgain }: SentStageProps) {
       <p className="snap-sent__status" role="status">
         <ProgressBadge report={report} />
       </p>
-      <RejectionNotice report={report} />
+      <ReportNotices report={report} />
       {report.data.problem === 'sign_in' && (
         <Button variant="text" onClick={() => auth.go('signIn')}>
           {t('snap.signIn')}

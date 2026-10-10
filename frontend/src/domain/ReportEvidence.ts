@@ -47,15 +47,23 @@ export interface JudgeEvidence {
 }
 
 export interface VerificationEvidence {
-  readonly decision: 'auto_verified' | 'community_check' | 'rejected';
+  /** needs_confirmation: the judge was unsure, so the reporter is asked (contracts v1.16). */
+  readonly decision: 'auto_verified' | 'community_check' | 'rejected' | 'needs_confirmation';
   readonly judge: JudgeEvidence | null;
   readonly signals?: readonly SignalEvidence[];
   readonly features?: { readonly gps_accuracy_m: number };
+  /** version ends with `+<veto reason> by <models>` when a veto rejected the photo (decision 20261011-0230). */
+  readonly combiner?: { readonly version: string };
 }
 
 /** report_upload as the api echoes it back. */
 export interface UploadEvidence {
   readonly report_type: string;
   readonly capture_mode?: 'snap' | 'scan';
-  readonly gps?: { readonly accuracy_m: number };
+  readonly gps?: { readonly accuracy_m: number; readonly lat?: number; readonly lon?: number };
+  /** What GET /me/reports needs to rebuild an Activity row on a phone that never held the report. */
+  readonly context?: string;
+  readonly captured_at?: string;
+  /** The photo's SHA-256, which is also its Activity row id; a no-bin report without a photo has none. */
+  readonly sha256?: string;
 }

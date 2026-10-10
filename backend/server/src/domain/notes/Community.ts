@@ -22,6 +22,8 @@ export type SignalFlag = (typeof SIGNAL_FLAGS)[number];
 export interface ShownNote {
   readonly text: string;
   readonly authorHash: string;
+  // A photo report's description (decision 20261011-0310-hem-photo-flags): a neutral signal, never counted as a note.
+  readonly source?: "photo_report";
 }
 
 export interface StoredNote {

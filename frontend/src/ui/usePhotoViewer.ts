@@ -11,6 +11,8 @@ export interface PhotoViewerControl {
   readonly state: PhotoViewerState | null;
   readonly open: (photos: readonly ViewerPhoto[], index: number) => void;
   readonly close: () => void;
+  /** Closes, then runs after once the viewer's history entry is gone, so a sheet opened next keeps its own. */
+  readonly closeThen: (after: () => void) => void;
   readonly show: (index: number) => void;
 }
 
@@ -32,14 +34,18 @@ export function usePhotoViewer(): PhotoViewerControl {
     [push],
   );
 
-  const close = useCallback(() => {
-    setState(null);
-    pop();
-  }, [pop]);
+  const closeThen = useCallback(
+    (after?: () => void) => {
+      setState(null);
+      pop(after);
+    },
+    [pop],
+  );
+  const close = useCallback(() => closeThen(), [closeThen]);
 
   const show = useCallback((index: number) => {
     setState((current) => (current ? { ...current, index: clampIndex(index, current.photos.length) } : current));
   }, []);
 
-  return { state, open, close, show };
+  return { state, open, close, closeThen, show };
 }

@@ -229,6 +229,29 @@
   background: var(--accent-tint);
 }
 
+/* Tonal: a quiet filled action, softer than primary (the main action on a card). */
+.button--tonal {
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+}
+
+.button--tonal:hover {
+  background: var(--tile-hover);
+}
+
+/* Small: a compact card action that still keeps a 44 px touch target. */
+.button--small {
+  min-width: calc(var(--s-10) + var(--s-1));
+  min-height: calc(var(--s-10) + var(--s-1));
+  padding: 0 var(--s-4);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.button--text.button--small {
+  padding: 0 var(--s-3);
+}
+
 .form__row {
   display: flex;
   flex-wrap: wrap;

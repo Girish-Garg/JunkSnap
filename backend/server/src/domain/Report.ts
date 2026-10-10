@@ -6,9 +6,11 @@ import type {
   VerificationResult,
 } from "../contracts/index.gen.js";
 import { InternalDataError } from "./errors.js";
+import { ReportConfirmation, type AskedWindow, type ConfirmOutcome } from "./ReportConfirmation.js";
 import { ReportId } from "./ReportId.js";
 import { ReportPlacement } from "./ReportPlacement.js";
 import type {
+  ConfirmationRecord,
   MergeOutcome,
   ReportModerationRequest,
   ReportRecord,
@@ -28,6 +30,8 @@ const DECISION_STATUS: Readonly<Record<VerificationResult["decision"], ReportSta
   auto_verified: "unverified",
   community_check: "unverified",
   rejected: "rejected",
+  // Only once the reporter answered sure (finish checks): a backer photo, never auto-verified (contracts v1.16).
+  needs_confirmation: "unverified",
 };
 const UPLOAD_FIELDS = [
   "upload_id", "report_type", "context", "capture_mode", "sha256", "gps", "target",
@@ -97,7 +101,7 @@ export class Report {
     return this.#record.report_type !== "no_bin";
   }
 
-  // Rejected, needs_review and both verification outcomes end the pipeline.
+  // Rejected, needs_review, both verification outcomes and a question for the reporter end (or pause) the pipeline.
   isSettled(): boolean {
     return !OPEN_STATUSES.has(this.#record.status);
   }
@@ -126,12 +130,17 @@ export class Report {
   }
 
   // A scout frame takes on the type and context the models found; finding nothing rejects it.
-  recordVerification(verification: VerificationResult): void {
+  // An unsure judge asks a snap's reporter (window: when asked); a scan frame is never asked, so it is rejected.
+  recordVerification(verification: VerificationResult, window?: AskedWindow): void {
     const kind = this.#record.auto_claim;
     if (kind !== undefined) {
       AUTO_CLAIMS[kind].assertAnswered(verification);
     }
-    const rejected = verification.decision === "rejected";
+    if (verification.decision === "needs_confirmation" && this.#record.capture_mode === "snap") {
+      this.#set({ verification_result: verification, status: "needs_confirmation", confirmation: this.#ask(verification, window) });
+      return;
+    }
+    const rejected = verification.decision === "rejected" || verification.decision === "needs_confirmation";
     const found = rejected ? undefined : this.#found(verification);
     const status = rejected || found === null ? "rejected" : this.status;
     this.#set({ verification_result: verification, status, ...found });
@@ -158,7 +167,36 @@ export class Report {
     if (decision === undefined) {
       throw new InternalDataError(`report ${this.id} finished the pipeline without a verification`);
     }
+    if (decision === "needs_confirmation" && !this.isConfirmedByReporter()) {
+      throw new InternalDataError(`report ${this.id} finished the pipeline before its reporter confirmed it`);
+    }
     this.#set({ status: DECISION_STATUS[decision], updated_at: now });
+  }
+
+  // The reporter answered sure to the judge's doubt.
+  isConfirmedByReporter(): boolean {
+    return this.#record.confirmation?.answer === "sure";
+  }
+
+  // POST /reports/{id}/confirm; the caller saves the report when the outcome is recorded or expired.
+  answerConfirmation(sure: boolean, now: string): ConfirmOutcome {
+    const asked = this.#record.confirmation;
+    if (asked === undefined) {
+      return "closed";
+    }
+    const { outcome, changes } = ReportConfirmation.of(asked).answer(this.status, sure, now);
+    this.#set(changes);
+    return outcome;
+  }
+
+  // True when the window passed unanswered, so the report now reads as not_confirmed.
+  expireConfirmation(now: string): boolean {
+    const asked = this.#record.confirmation;
+    const changes = asked === undefined ? null : ReportConfirmation.of(asked).expiry(this.status, now);
+    if (changes !== null) {
+      this.#set(changes);
+    }
+    return changes !== null;
   }
 
   markNeedsReview(now: string): void {
@@ -204,6 +242,7 @@ export class Report {
       report: this.upload(),
       moderation: record.moderation_result ?? null,
       verification: record.verification_result ?? null,
+      confirmation: record.confirmation ?? null,
       received_at: record.received_at,
       updated_at: record.updated_at,
     };
@@ -215,6 +254,13 @@ export class Report {
       return null;
     }
     return `${publicBaseUrl}/${moderation.blurred_key}`;
+  }
+
+  #ask(verification: VerificationResult, window: AskedWindow | undefined): ConfirmationRecord {
+    if (window === undefined) {
+      throw new InternalDataError(`report ${this.id} needs its reporter's confirmation but no window was given`);
+    }
+    return ReportConfirmation.ask(this.#record.report_type, verification, window).toRecord();
   }
 
   #verifyClaim(): VerifyClaim {

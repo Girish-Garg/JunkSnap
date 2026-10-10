@@ -52,7 +52,9 @@ class ResultRow:
         if judge is None or result.judge is None:
             return "not run"
         verdict = result.judge
-        return f"{judge.model}: {verdict.report_type} {judge.score:.2f}. {verdict.rationale}"
+        answer = verdict.answer_for(result.case.claim)
+        named = f"{answer} ({verdict.report_type}) {judge.score:.2f}"
+        return f"{judge.model}: {named}. {verdict.rationale}"
 
     @staticmethod
     def _insights(result: VerificationResult) -> str:

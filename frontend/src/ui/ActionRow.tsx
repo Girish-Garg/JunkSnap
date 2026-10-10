@@ -1,11 +1,14 @@
 import { Icon, type IconName } from './Icon';
+import './blocked.css';
 
 export interface RowAction {
   readonly id: string;
   readonly icon: IconName;
   readonly label: string;
   readonly onClick: () => void;
-  /** Shown but not usable yet; the note says why. */
+  /** Shown but not usable now (aria-disabled); the tap still reaches onClick, which says why. */
+  readonly blocked?: boolean;
+  /** Off for a moment, e.g. while the action is on its way. */
   readonly disabled?: boolean;
 }
 
@@ -29,6 +32,7 @@ export function ActionRow({ label, actions, primaryId, note }: ActionRowProps) {
               className={action.id === primaryId ? 'action-row__button action-row__button--primary' : 'action-row__button'}
               onClick={action.onClick}
               disabled={action.disabled}
+              aria-disabled={action.blocked || undefined}
             >
               <span className="action-row__icon">
                 <Icon name={action.icon} size={20} />

@@ -25,6 +25,7 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   store: new BrowserStore(() => window.localStorage),
   root: document.documentElement,
   geolocation: navigator.geolocation,
+  permissions: navigator.permissions,
   share: navigator,
   mediaDevices: navigator.mediaDevices,
   crypto: window.crypto,
@@ -33,6 +34,8 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   orientation: window,
   edge: { capabilities: CapabilityProbe.read(globalThis), detector: browserDetectorFactory },
 });
+// Crashes nobody caught are logged with the same structured tag as handled ones; nothing leaves the phone.
+services.errors.watch(window);
 // Saved photos and videos start sending as soon as the app opens; the sign-in (if any) is read first.
 void services.auth.restore().finally(() => {
   new QueueTriggers([services.snap.queue, services.snap.scans], { window, document, auth: services.auth }).start();

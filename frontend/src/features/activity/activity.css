@@ -1,4 +1,110 @@
-/* Delete on an Activity row: the confirm step sits under the row's actions (decision 20261010-1700). Tokens only. */
+/* Activity: one card per photo or video, actions along the foot, Delete behind a trash button and a confirm step
+   (decision 20261010-1700). Tokens only; the same roles work in light and dark. */
+
+.activity-subtitle {
+  margin-top: var(--s-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-3);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+}
+
+.activity-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+/* 68 px, rounded, top-aligned with the title (beats .photo-open's full size). */
+.activity-card .activity-card__thumb {
+  display: block;
+  flex: none;
+  width: calc(var(--s-12) + var(--s-5));
+  height: calc(var(--s-12) + var(--s-5));
+  overflow: hidden;
+  border-radius: var(--radius-m);
+}
+
+.activity-card__thumb > .report-thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-m);
+}
+
+.activity-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.activity-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.activity-card__meta {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.activity-card .report-rejection {
+  margin: var(--s-3) 0 0;
+}
+
+.activity-card .report-rejection .notice {
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.activity-card .scan-frames {
+  margin-top: var(--s-3);
+}
+
+.activity-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--divider);
+}
+
+.activity-delete__trigger {
+  margin-left: auto;
+}
+
+.activity-delete__trigger .icon-button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .activity-delete {
   display: flex;
   flex-basis: 100%;
@@ -6,12 +112,18 @@
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-3);
-  border: var(--outline) solid var(--divider);
   border-radius: var(--radius-m);
+  background: var(--tile);
   animation: pop-in var(--dur-3) var(--spring);
 }
 
 .activity-delete__text {
   flex-basis: 100%;
   color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.activity-delete__error {
+  flex-basis: 100%;
 }

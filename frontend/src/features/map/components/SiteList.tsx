@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BBox } from '../../../domain/BBox';
+import { PilotCity } from '../../../domain/PilotCity';
 import type { SiteFeature } from '../../../domain/Site';
 import { Icon } from '../../../ui/Icon';
 import { useAppTextKey } from '../../../ui/useNativeBridge';
@@ -9,8 +10,8 @@ import type { MapView } from '../SiteMap';
 import { MapStatus } from './MapStatus';
 import { SiteListItem } from './SiteListItem';
 
-// Same opening view as SiteMap: Jodhpur, one API query wide.
-const FALLBACK_VIEW: MapView = { bbox: BBox.around([73.02, 26.27], 0.99) };
+// Same opening view as SiteMap: the pilot city, one API query wide.
+const FALLBACK_VIEW: MapView = { bbox: BBox.around(PilotCity.centre, 0.99) };
 
 interface SiteListProps {
   readonly sites: readonly SiteFeature[];

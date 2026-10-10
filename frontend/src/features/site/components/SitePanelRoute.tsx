@@ -13,7 +13,7 @@ export function SitePanelRoute() {
   const { siteId = '' } = useParams();
   const sheets = useSheetNavigation();
   const { userLocation, showSite, refreshSites } = useMapContext();
-  const { site, failed, reload } = useSite(siteId);
+  const { site, failed, missing, reload } = useSite(siteId);
   const close = useCallback(() => sheets.close('/'), [sheets]);
   // A vote can clear or reject the site, so the map fetches again too.
   const changed = useCallback(() => {
@@ -32,7 +32,7 @@ export function SitePanelRoute() {
       onClose={close}
       focusKey={site?.properties.site_id ?? failed}
     >
-      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={changed} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
+      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={changed} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} missing={missing} onRetry={reload} />}
     </BottomSheet>
   );
 }

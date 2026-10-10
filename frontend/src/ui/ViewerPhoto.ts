@@ -10,4 +10,8 @@ export interface ViewerPhoto {
   readonly alt: string;
   /** Only when the data says so; otherwise no date is shown. */
   readonly date: PhotoDate | null;
+  /** Several people reported it: covered until the viewer taps to see it. */
+  readonly warned?: boolean;
+  /** Residents may report this photo from the viewer. */
+  readonly reportable?: boolean;
 }

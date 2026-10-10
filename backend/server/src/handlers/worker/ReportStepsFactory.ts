@@ -12,6 +12,7 @@ import type { ReportMerger } from "../../ports/ReportMerger.js";
 import { BinLocator } from "../../services/BinLocator.js";
 import { BrandsStep } from "../../services/BrandsStep.js";
 import { ConditionalStep } from "../../services/ConditionalStep.js";
+import { ConfirmationWindow } from "../../services/ConfirmationWindow.js";
 import { LocateStep } from "../../services/LocateStep.js";
 import { MergeStep } from "../../services/MergeStep.js";
 import { ModerateStep } from "../../services/ModerateStep.js";
@@ -46,10 +47,11 @@ export class ReportStepsFactory {
     const location = LocationServiceFactory.fromEnv(core, env).create();
     const [located, places, bins] = await Promise.all([location, this.#places(), this.#bins()]);
     const wasteCheck = (report: Report) => report.hasPhoto() && report.needsWasteCheck();
+    const window = new ConfirmationWindow(new SystemClock(), this.#deps.settings.confirmTtlHours);
     return [
       // A no_bin report may have no photo, and a no_bin photo is never judged as waste (decision 20261010-1630).
       new ConditionalStep(new ModerateStep(new ServiceReportModerator(moderation)), (report) => report.hasPhoto()),
-      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder())), wasteCheck),
+      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder()), window), wasteCheck),
       new ConditionalStep(new BrandsStep(new LabellerBrandReader(buildBrandLabeller({ core, env, logger }))), wasteCheck),
       new LocateStep(new ServiceReportLocator(located)),
       new MergeStep(this.#merger(places, bins)),

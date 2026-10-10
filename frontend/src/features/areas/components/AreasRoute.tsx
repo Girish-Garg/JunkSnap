@@ -11,7 +11,7 @@ import { AreaDirectoryList } from './AreaDirectoryList';
 
 const TITLE_ID = 'areas-title';
 
-/** Pick a ward, assembly seat, Lok Sabha seat or district of the pilot city or the map's own districts. */
+/** Pick any seat or the district of the pilot city, reported or not, or a reported area of the map's own districts. */
 export function AreasRoute() {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
@@ -24,6 +24,7 @@ export function AreasRoute() {
         {t('areas.title')}
       </h2>
       <p className="sheet-text">{t('areas.intro')}</p>
+      <p className="area-pilot-note">{t('areas.pilotNote')}</p>
       <SheetLink className="area-back" to={RANKING_PATH}>
         {t('ranking.open')}
       </SheetLink>
