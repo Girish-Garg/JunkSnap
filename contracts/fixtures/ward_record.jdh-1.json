@@ -33,8 +33,8 @@
   "disposal_points": null,
   "review_status": "unreviewed",
   "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
   }
 }

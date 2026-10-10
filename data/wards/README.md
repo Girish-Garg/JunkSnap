@@ -25,6 +25,6 @@ How facts are read:
 
 `map_layers` holds city-wide OpenStreetMap layers with coordinates, for checks such as "dump within 100 m of a drain". Map data (c) OpenStreetMap contributors, ODbL 1.0.
 
-Layers fetched on 10 Oct 2026: Jodhpur has disposal (0 points mapped in OSM, an empty layer), school 27, hospital 96 and water 41. Its **drain layer is missing, not empty**: every Overpass mirror was busy, and an earlier run that day fetched 17 drain, ditch and stream ways. Jaipur has disposal 3, school 81, hospital 435, water 62 and drain 65. A layer absent from `map_layers` was not fetched; see `sources` for the error.
+Layers fetched on 10 Oct 2026: Jodhpur has disposal (0 points mapped in OSM, an empty layer), school 27, water 41 and drain 17. Its **hospital layer is missing, not empty**: every Overpass mirror was busy, and an earlier run that day fetched 96. Jaipur has disposal 3, hospital 435, water 62 and drain 65. Its **school layer is missing, not empty** for the same reason; an earlier run fetched 81. A layer absent from `map_layers` was not fetched; see `sources` for the error.
 
 No personal names, personal phone numbers or party fields.

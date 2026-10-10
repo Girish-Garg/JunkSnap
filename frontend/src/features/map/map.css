@@ -1,0 +1,209 @@
+.app {
+  position: fixed;
+  inset: 0;
+}
+
+.map-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.map-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #f4f4f2;
+}
+
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.search-area {
+  position: absolute;
+  top: calc(var(--space-1) + env(safe-area-inset-top));
+  right: var(--edge);
+  left: var(--edge);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.searchbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 48px;
+  padding: 0 4px 0 var(--edge);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.searchbar__icon {
+  flex: none;
+  margin-right: 8px;
+  color: var(--text-secondary);
+}
+
+.searchbar__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  outline-offset: -2px;
+}
+
+.searchbar__input::placeholder {
+  color: var(--text-secondary);
+}
+
+.search-results {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-1) 0;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  list-style: none;
+}
+
+.search-results--empty {
+  padding: 12px var(--space-2);
+  color: var(--text-secondary);
+}
+
+.search-results__item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--target);
+  padding: 6px var(--space-2);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-results__item:hover {
+  background: var(--tile);
+}
+
+.search-results__meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.lang-toggle {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--tile);
+}
+
+.lang-toggle__option {
+  min-width: var(--target);
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lang-toggle__option[aria-pressed='true'] {
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
+}
+
+/* The status toast: one slim line, never a card. */
+.map-status .notice {
+  max-width: 100%;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.map-status .notice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filters__label {
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.map-controls {
+  position: absolute;
+  right: var(--edge);
+  bottom: var(--edge);
+  z-index: 2;
+}
+
+.user-dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 6px rgb(11 110 99 / 0.2);
+}
+
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.map-page--card .map-controls {
+  bottom: calc(104px + 2 * var(--edge));
+}
+
+/* The sign-in sheet covers everything but the search field. */
+.app > .sheet {
+  z-index: 7;
+}
+
+@media (max-width: 767px) {
+  .map-page--sheet .map-controls,
+  .map-page--sheet .preview-card,
+  .map-page--sheet .search-area .pill,
+  .map-page--sheet .map-status,
+  .map-page--card .maplibregl-ctrl-bottom-left,
+  .app:has(> .sheet) .search-area .pill {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .map-page {
+    flex-direction: row;
+  }
+
+  .search-area {
+    top: var(--edge);
+    right: auto;
+    width: 368px;
+  }
+
+  /* The auth sheet sits beside the navigation rail. */
+  .app > .sheet {
+    left: 80px;
+  }
+}

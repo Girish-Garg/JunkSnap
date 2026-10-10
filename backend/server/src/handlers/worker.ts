@@ -1,16 +1,20 @@
 import type { EventEmitter } from "node:events";
-import { IdleQueuePoller } from "../adapters/IdleQueuePoller.js";
+import type { QueuePoller } from "../ports/QueuePoller.js";
 import { WorkerLoop } from "../services/WorkerLoop.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
+import { buildReportQueuePoller } from "./reportWorker.js";
 
-const LONG_POLL_MS = 20_000;
 const STOP_SIGNALS = ["SIGTERM", "SIGINT"] as const;
 
+export type PollerFactory = (context: EntryContext) => QueuePoller;
+
 export async function runWorker(
-  { logger }: EntryContext,
+  context: EntryContext,
   signals: Pick<EventEmitter, "once"> = process,
+  buildPoller: PollerFactory = buildReportQueuePoller,
 ): Promise<void> {
-  const loop = new WorkerLoop(new IdleQueuePoller(LONG_POLL_MS), logger);
+  const { logger } = context;
+  const loop = new WorkerLoop(buildPoller(context), logger);
   for (const signal of STOP_SIGNALS) {
     signals.once(signal, () => {
       loop.stop(signal);

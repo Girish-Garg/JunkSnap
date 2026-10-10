@@ -1,7 +1,7 @@
 {
  "city": "jodhpur",
  "state": "Rajasthan",
- "generated_at": "2026-10-09T22:03:51Z",
+ "generated_at": "2026-10-09T22:42:09Z",
  "review_status": "unreviewed",
  "note": "Ward numbers follow the January 2020 ward formation of the two corporations, Nagar Nigam Jodhpur Uttar (80 wards) and Dakshin (80 wards). In 2025 the state merged them into one Nagar Nigam Jodhpur with 100 wards; that gazette was not found on an official host on 10 Oct 2026, so these records describe the 2020-2025 wards.",
  "attribution": "Map layers: (c) OpenStreetMap contributors, ODbL 1.0, openstreetmap.org/copyright",
@@ -10,7 +10,7 @@
    "url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20north.pdf",
    "holds": "Rajasthan Gazette, 6 Jan 2020, LSG order F.10 (Elec) LSG/20/3: ward formation of Municipal Corporation Jodhpur North. One row per new ward: serial, ward number, a column headed assembly name that only repeats the corporation name (not a seat), population, boundary description and localities. Hindi text, some letters garbled by PDF extraction.",
    "status": "fetched",
-   "detail": "44 of 44 chunk(s) read; model proposed 79 ward(s); 80 kept in all; filled by the row pattern: 1, 4, 8, 25, 32, 43, 59, 60, 61, 69, 70, 71, 72, 73, 77, 78",
+   "detail": "44 of 44 chunk(s) read; model proposed 77 ward(s); 80 kept in all; filled by the row pattern: 8, 18, 19, 20, 32, 43, 51, 52, 53, 54, 60, 61, 75, 76, 78, 79, 80",
    "wards_found": 80,
    "fetched_at": "2026-10-09T20:15:37Z",
    "page_sha256": "ddb949bc7b3ff91c8e5abc165ff9bbb71aa4b9c60a89b12cb7b0ea0babf74e17"
@@ -19,7 +19,7 @@
    "url": "https://lsg.urban.rajasthan.gov.in/content/dam/raj/udh/lsgs/lsg-jaipur/Order/order_2020/Jan/nagar%20nigam%20jodhpur%20new%20south.pdf",
    "holds": "Rajasthan Gazette, January 2020, LSG order: ward formation of Municipal Corporation Jodhpur South. One row per new ward: serial, ward number, a column headed assembly name that only repeats the corporation name (not a seat), population, boundary description and localities. Hindi text, some letters garbled by PDF extraction.",
    "status": "fetched",
-   "detail": "38 of 38 chunk(s) read; model proposed 80 ward(s); 80 kept in all; filled by the row pattern: 13, 14, 15, 17, 23, 29, 30, 31, 36, 49, 50, 51, 52, 53, 60, 61, 62, 63, 78, 79",
+   "detail": "38 of 38 chunk(s) read; model proposed 79 ward(s); 80 kept in all; filled by the row pattern: 2, 13, 14, 15, 17, 32, 36, 49, 60, 61, 62, 63, 78, 79",
    "wards_found": 80,
    "fetched_at": "2026-10-09T20:16:47Z",
    "page_sha256": "aabba1fa2bb1adc5feabc43f27c0fd5525a24ab0a4298c4facfd7852dfe6fcea"
@@ -34,7 +34,7 @@
    "page_sha256": null
   },
   {
-   "url": "https://overpass.kumi.systems/api/interpreter",
+   "url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
    "holds": "OpenStreetMap layer school: nwr[\"amenity\"=\"school\"]",
    "status": "fetched",
    "detail": "27 feature(s) in the city box",
@@ -45,8 +45,8 @@
   {
    "url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
    "holds": "OpenStreetMap layer hospital: nwr[\"amenity\"=\"hospital\"]",
-   "status": "fetched",
-   "detail": "96 feature(s) in the city box",
+   "status": "unreachable",
+   "detail": "https://overpass.kumi.systems/api/interpreter: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://overpass.kumi.systems/api/interpreter'; https://maps.mail.ru/osm/tools/overpass/api/interpreter: HTTPStatusError: Server error '504 Gateway Timeout' for url 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'; https://overpass-api.de/api/interpreter: ConnectTimeout: timed out; https://overpass.kumi.systems/api/interpreter: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://overpass.kumi.systems/api/interpreter'; https://maps.mail.ru/osm/tools/overpass/api/interpreter: HTTPStatusError: Server error '504 Gateway Time-out' for url 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'",
    "wards_found": 0,
    "fetched_at": null,
    "page_sha256": null
@@ -63,8 +63,8 @@
   {
    "url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
    "holds": "OpenStreetMap layer drain: way[\"waterway\"=\"drain\"] or way[\"waterway\"=\"ditch\"] or way[\"waterway\"=\"stream\"]",
-   "status": "unreachable",
-   "detail": "https://overpass.kumi.systems/api/interpreter: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://overpass.kumi.systems/api/interpreter'; https://maps.mail.ru/osm/tools/overpass/api/interpreter: HTTPStatusError: Server error '504 Gateway Time-out' for url 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'; https://overpass-api.de/api/interpreter: ConnectTimeout: timed out; https://overpass.kumi.systems/api/interpreter: HTTPStatusError: Server error '500 Internal Server Error' for url 'https://overpass.kumi.systems/api/interpreter'; https://maps.mail.ru/osm/tools/overpass/api/interpreter: HTTPStatusError: Server error '504 Gateway Timeout' for url 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'",
+   "status": "fetched",
+   "detail": "17 feature(s) in the city box",
    "wards_found": 0,
    "fetched_at": null,
    "page_sha256": null
@@ -146,9 +146,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -986,9 +986,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -1226,9 +1226,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -1266,9 +1266,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -1306,9 +1306,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -1346,9 +1346,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -2066,9 +2066,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -2106,9 +2106,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -2146,9 +2146,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -2186,9 +2186,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -3306,9 +3306,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -3426,9 +3426,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -3986,9 +3986,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -4026,9 +4026,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -4066,9 +4066,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -4266,9 +4266,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -5306,9 +5306,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -5346,9 +5346,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -5386,9 +5386,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -5426,9 +5426,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -5626,9 +5626,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6026,9 +6026,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6066,9 +6066,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6106,9 +6106,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6146,9 +6146,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6186,9 +6186,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6266,9 +6266,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -6306,9 +6306,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -6346,9 +6346,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "junksnap",
-    "model": "row-pattern",
-    "version": "d9fec18ab956"
+    "provider": "bedrock",
+    "model": "apac.amazon.nova-pro-v1:0",
+    "version": "amazon.nova-pro-v1:0"
    }
   },
   {
@@ -6426,9 +6426,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   },
   {
@@ -6466,9 +6466,9 @@
    "disposal_points": null,
    "review_status": "unreviewed",
    "extracted_by": {
-    "provider": "bedrock",
-    "model": "apac.amazon.nova-pro-v1:0",
-    "version": "amazon.nova-pro-v1:0"
+    "provider": "junksnap",
+    "model": "row-pattern",
+    "version": "d9fec18ab956"
    }
   }
  ],
@@ -6478,16 +6478,16 @@
    "kind": "disposal",
    "count": 0,
    "source_url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28nwr%5B%22amenity%22%3D%22waste_disposal%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3Bnwr%5B%22amenity%22%3D%22recycling%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3Bnwr%5B%22amenity%22%3D%22waste_transfer_station%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20center%3B",
-   "fetched_at": "2026-10-09T21:59:59Z",
-   "page_sha256": "815ef3fd9fd6f3d93d18e81dfdb7ce15da1b22cc9e5ce7f5b3863a0f4040ac7b",
+   "fetched_at": "2026-10-09T22:37:33Z",
+   "page_sha256": "28fa355fc48f8977e5c83db6be6f7a407c1120e0fb541c359e0247cc22e0947c",
    "features": []
   },
   {
    "kind": "school",
    "count": 27,
-   "source_url": "https://overpass.kumi.systems/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28nwr%5B%22amenity%22%3D%22school%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20center%3B",
-   "fetched_at": "2026-10-09T22:00:00Z",
-   "page_sha256": "471aba377a3f59ff212dff22d62fb0f5a8cd18d7e1e680976f4e2f615f6d4e63",
+   "source_url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28nwr%5B%22amenity%22%3D%22school%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20center%3B",
+   "fetched_at": "2026-10-09T22:37:50Z",
+   "page_sha256": "aa6353df1dff00368d51eb0c6d8e9c7d1259bb820b974aea3dacfb8c85bd847d",
    "features": [
     {
      "ref": "osm:node/1296898947",
@@ -6735,884 +6735,11 @@
    ]
   },
   {
-   "kind": "hospital",
-   "count": 96,
-   "source_url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28nwr%5B%22amenity%22%3D%22hospital%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20center%3B",
-   "fetched_at": "2026-10-09T22:00:57Z",
-   "page_sha256": "ce9712a7d8a4cc71ea852f44ee0c3de58ea8d9728495262f985bf43d1e7802f7",
-   "features": [
-    {
-     "ref": "osm:node/354966706",
-     "coords": [
-      [
-       26.28313,
-       73.01856
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/1746412549",
-     "coords": [
-      [
-       26.26985,
-       72.97368
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/2328794088",
-     "coords": [
-      [
-       26.29467,
-       73.03922
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/3125264919",
-     "coords": [
-      [
-       26.27336,
-       72.98555
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/3345457720",
-     "coords": [
-      [
-       26.30229,
-       73.06036
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/4584884493",
-     "coords": [
-      [
-       26.26673,
-       72.99012
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/5054364991",
-     "coords": [
-      [
-       26.28453,
-       73.02793
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/5657694668",
-     "coords": [
-      [
-       26.33319,
-       73.0443
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/5657833975",
-     "coords": [
-      [
-       26.27321,
-       72.98685
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/5701190001",
-     "coords": [
-      [
-       26.30037,
-       73.05849
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/6106477593",
-     "coords": [
-      [
-       26.23389,
-       73.0088
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/6888422086",
-     "coords": [
-      [
-       26.26602,
-       73.00914
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7023548944",
-     "coords": [
-      [
-       26.27239,
-       73.00817
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7023548948",
-     "coords": [
-      [
-       26.31037,
-       73.03898
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7023548950",
-     "coords": [
-      [
-       26.30958,
-       73.03812
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7025389381",
-     "coords": [
-      [
-       26.27434,
-       73.02283
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7030584197",
-     "coords": [
-      [
-       26.27609,
-       73.00759
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7030726203",
-     "coords": [
-      [
-       26.24342,
-       72.97256
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7030909247",
-     "coords": [
-      [
-       26.27622,
-       73.00755
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7034860734",
-     "coords": [
-      [
-       26.27245,
-       73.00428
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7035021140",
-     "coords": [
-      [
-       26.28491,
-       73.01984
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7035037397",
-     "coords": [
-      [
-       26.26766,
-       72.9937
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7035165282",
-     "coords": [
-      [
-       26.29978,
-       73.0379
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7035249238",
-     "coords": [
-      [
-       26.27114,
-       73.03775
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7036871360",
-     "coords": [
-      [
-       26.25696,
-       72.98359
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7037221616",
-     "coords": [
-      [
-       26.26105,
-       72.97049
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7037503284",
-     "coords": [
-      [
-       26.27241,
-       72.99675
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7037514348",
-     "coords": [
-      [
-       26.27239,
-       72.98732
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7038021108",
-     "coords": [
-      [
-       26.28849,
-       73.02274
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7038297908",
-     "coords": [
-      [
-       26.29266,
-       73.01835
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7038935611",
-     "coords": [
-      [
-       26.26608,
-       72.97856
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7039447412",
-     "coords": [
-      [
-       26.24898,
-       73.01556
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7039595859",
-     "coords": [
-      [
-       26.28706,
-       72.99209
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7039997998",
-     "coords": [
-      [
-       26.32643,
-       73.04454
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040014295",
-     "coords": [
-      [
-       26.26336,
-       72.98999
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040015635",
-     "coords": [
-      [
-       26.27768,
-       73.00629
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040031233",
-     "coords": [
-      [
-       26.27283,
-       73.03231
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040038838",
-     "coords": [
-      [
-       26.30126,
-       73.03802
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040112698",
-     "coords": [
-      [
-       26.33993,
-       73.05041
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040114485",
-     "coords": [
-      [
-       26.23994,
-       73.00679
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040148000",
-     "coords": [
-      [
-       26.22915,
-       73.01798
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040171023",
-     "coords": [
-      [
-       26.29215,
-       72.99052
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040276990",
-     "coords": [
-      [
-       26.29809,
-       73.03888
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040324746",
-     "coords": [
-      [
-       26.26983,
-       73.00784
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040325921",
-     "coords": [
-      [
-       26.23388,
-       73.01645
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040325932",
-     "coords": [
-      [
-       26.25886,
-       72.98674
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7040446712",
-     "coords": [
-      [
-       26.31791,
-       73.10377
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7042786479",
-     "coords": [
-      [
-       26.27151,
-       73.0036
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741327",
-     "coords": [
-      [
-       26.33497,
-       73.03383
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741337",
-     "coords": [
-      [
-       26.27491,
-       73.03174
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741349",
-     "coords": [
-      [
-       26.28601,
-       72.99653
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741375",
-     "coords": [
-      [
-       26.27446,
-       73.02122
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741388",
-     "coords": [
-      [
-       26.28384,
-       73.01696
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741396",
-     "coords": [
-      [
-       26.29544,
-       73.08379
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741407",
-     "coords": [
-      [
-       26.28055,
-       72.98776
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741410",
-     "coords": [
-      [
-       26.27139,
-       72.98519
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741470",
-     "coords": [
-      [
-       26.30036,
-       73.02962
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7273741485",
-     "coords": [
-      [
-       26.26558,
-       72.97323
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424033",
-     "coords": [
-      [
-       26.33332,
-       73.04454
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424034",
-     "coords": [
-      [
-       26.27308,
-       72.98591
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424039",
-     "coords": [
-      [
-       26.23175,
-       73.02105
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424041",
-     "coords": [
-      [
-       26.32035,
-       73.10975
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424052",
-     "coords": [
-      [
-       26.31416,
-       73.10869
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424053",
-     "coords": [
-      [
-       26.22549,
-       72.96183
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424054",
-     "coords": [
-      [
-       26.33707,
-       73.14402
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424058",
-     "coords": [
-      [
-       26.29299,
-       73.01395
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424060",
-     "coords": [
-      [
-       26.32168,
-       73.11223
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424064",
-     "coords": [
-      [
-       26.33558,
-       73.06087
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424066",
-     "coords": [
-      [
-       26.23152,
-       72.99719
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424073",
-     "coords": [
-      [
-       26.26319,
-       72.96793
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424075",
-     "coords": [
-      [
-       26.23325,
-       73.01788
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424082",
-     "coords": [
-      [
-       26.32137,
-       73.11163
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424083",
-     "coords": [
-      [
-       26.21437,
-       73.02353
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424088",
-     "coords": [
-      [
-       26.26916,
-       72.9881
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424090",
-     "coords": [
-      [
-       26.26195,
-       72.98203
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424092",
-     "coords": [
-      [
-       26.28728,
-       72.99046
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424093",
-     "coords": [
-      [
-       26.29606,
-       73.02489
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424097",
-     "coords": [
-      [
-       26.25843,
-       72.9668
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424098",
-     "coords": [
-      [
-       26.32746,
-       73.12351
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424100",
-     "coords": [
-      [
-       26.25732,
-       72.98518
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424107",
-     "coords": [
-      [
-       26.24914,
-       72.97153
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424108",
-     "coords": [
-      [
-       26.22955,
-       73.01571
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424109",
-     "coords": [
-      [
-       26.19181,
-       73.04346
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424111",
-     "coords": [
-      [
-       26.2484,
-       72.9728
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424112",
-     "coords": [
-      [
-       26.25373,
-       72.96488
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424114",
-     "coords": [
-      [
-       26.27077,
-       72.98033
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424117",
-     "coords": [
-      [
-       26.2668,
-       72.97462
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/7682424118",
-     "coords": [
-      [
-       26.31129,
-       73.04931
-      ]
-     ]
-    },
-    {
-     "ref": "osm:node/11717250789",
-     "coords": [
-      [
-       26.31221,
-       73.09401
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/250264433",
-     "coords": [
-      [
-       26.26423,
-       73.00805
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/380917131",
-     "coords": [
-      [
-       26.26969,
-       72.98291
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/380917219",
-     "coords": [
-      [
-       26.27103,
-       72.98675
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/380917309",
-     "coords": [
-      [
-       26.2708,
-       72.98688
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/380917611",
-     "coords": [
-      [
-       26.27438,
-       72.98168
-      ]
-     ]
-    },
-    {
-     "ref": "osm:way/1211744310",
-     "coords": [
-      [
-       26.24141,
-       73.00439
-      ]
-     ]
-    },
-    {
-     "ref": "osm:relation/5552640",
-     "coords": [
-      [
-       26.28474,
-       73.01017
-      ]
-     ]
-    }
-   ]
-  },
-  {
    "kind": "water",
    "count": 41,
    "source_url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28nw%5B%22natural%22%3D%22water%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20geom%3B",
-   "fetched_at": "2026-10-09T22:01:38Z",
-   "page_sha256": "e301888fe54b3d71825c271bad15a610549fed349c84d65ae5c883ff9379c6c4",
+   "fetched_at": "2026-10-09T22:40:31Z",
+   "page_sha256": "8fea48015784b8ec76bf2be9c0c3429bf8c57dd6d5aa36cf93eeb61e44de64e1",
    "features": [
     {
      "ref": "osm:node/4780793520",
@@ -13760,6 +12887,728 @@
       [
        26.30025,
        73.03316
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "drain",
+   "count": 17,
+   "source_url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A60%5D%3B%28way%5B%22waterway%22%3D%22drain%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3Bway%5B%22waterway%22%3D%22ditch%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3Bway%5B%22waterway%22%3D%22stream%22%5D%2826.15%2C72.9%2C26.4%2C73.15%29%3B%29%3Bout%20skel%20geom%3B",
+   "fetched_at": "2026-10-09T22:42:09Z",
+   "page_sha256": "c98a7f0eab2b431cde73bf76d8fcaa1837e881fc3d5381f7053228a9f9634c5d",
+   "features": [
+    {
+     "ref": "osm:way/373399688",
+     "coords": [
+      [
+       26.31287,
+       73.05299
+      ],
+      [
+       26.31357,
+       73.05288
+      ],
+      [
+       26.31362,
+       73.05285
+      ],
+      [
+       26.31369,
+       73.05281
+      ],
+      [
+       26.31414,
+       73.05247
+      ],
+      [
+       26.31433,
+       73.0519
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/373399725",
+     "coords": [
+      [
+       26.31265,
+       73.05417
+      ],
+      [
+       26.31234,
+       73.05439
+      ],
+      [
+       26.31214,
+       73.05446
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/490575360",
+     "coords": [
+      [
+       26.27772,
+       72.93229
+      ],
+      [
+       26.27766,
+       72.93356
+      ],
+      [
+       26.27759,
+       72.93439
+      ],
+      [
+       26.27748,
+       72.93497
+      ],
+      [
+       26.27723,
+       72.93541
+      ],
+      [
+       26.27687,
+       72.93586
+      ],
+      [
+       26.27661,
+       72.93624
+      ],
+      [
+       26.27622,
+       72.93659
+      ],
+      [
+       26.27583,
+       72.937
+      ],
+      [
+       26.27527,
+       72.93716
+      ],
+      [
+       26.2747,
+       72.93737
+      ],
+      [
+       26.27403,
+       72.93759
+      ],
+      [
+       26.27342,
+       72.93764
+      ],
+      [
+       26.27302,
+       72.93748
+      ],
+      [
+       26.27256,
+       72.93743
+      ],
+      [
+       26.27184,
+       72.93743
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604206597",
+     "coords": [
+      [
+       26.31012,
+       73.0558
+      ],
+      [
+       26.31002,
+       73.05584
+      ],
+      [
+       26.30931,
+       73.05598
+      ],
+      [
+       26.30912,
+       73.05603
+      ],
+      [
+       26.30909,
+       73.05607
+      ],
+      [
+       26.30908,
+       73.05613
+      ],
+      [
+       26.30909,
+       73.05625
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214111",
+     "coords": [
+      [
+       26.3124,
+       73.05355
+      ],
+      [
+       26.31235,
+       73.05405
+      ],
+      [
+       26.31232,
+       73.05432
+      ],
+      [
+       26.31234,
+       73.05439
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214112",
+     "coords": [
+      [
+       26.31282,
+       73.05368
+      ],
+      [
+       26.31265,
+       73.05417
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214114",
+     "coords": [
+      [
+       26.31204,
+       73.05456
+      ],
+      [
+       26.31187,
+       73.05474
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214115",
+     "coords": [
+      [
+       26.31214,
+       73.05446
+      ],
+      [
+       26.31204,
+       73.05456
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214118",
+     "coords": [
+      [
+       26.31176,
+       73.05488
+      ],
+      [
+       26.31162,
+       73.05508
+      ],
+      [
+       26.31112,
+       73.0554
+      ],
+      [
+       26.31012,
+       73.0558
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/604214119",
+     "coords": [
+      [
+       26.31187,
+       73.05474
+      ],
+      [
+       26.31176,
+       73.05488
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/916267932",
+     "coords": [
+      [
+       26.27183,
+       73.03579
+      ],
+      [
+       26.2722,
+       73.03503
+      ],
+      [
+       26.27304,
+       73.03395
+      ],
+      [
+       26.2735,
+       73.03384
+      ],
+      [
+       26.27452,
+       73.03367
+      ],
+      [
+       26.27565,
+       73.03406
+      ],
+      [
+       26.27607,
+       73.03458
+      ],
+      [
+       26.27638,
+       73.0348
+      ],
+      [
+       26.27666,
+       73.03497
+      ],
+      [
+       26.27687,
+       73.035
+      ],
+      [
+       26.27724,
+       73.03503
+      ],
+      [
+       26.2775,
+       73.03509
+      ],
+      [
+       26.27772,
+       73.03516
+      ],
+      [
+       26.2785,
+       73.03541
+      ],
+      [
+       26.27895,
+       73.03544
+      ],
+      [
+       26.27953,
+       73.03564
+      ],
+      [
+       26.28047,
+       73.03606
+      ],
+      [
+       26.2806,
+       73.03607
+      ],
+      [
+       26.2807,
+       73.03602
+      ],
+      [
+       26.28086,
+       73.03597
+      ],
+      [
+       26.28098,
+       73.03591
+      ],
+      [
+       26.2816,
+       73.03541
+      ],
+      [
+       26.28305,
+       73.03437
+      ],
+      [
+       26.28385,
+       73.03379
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1302092008",
+     "coords": [
+      [
+       26.30324,
+       73.01843
+      ],
+      [
+       26.30309,
+       73.0181
+      ],
+      [
+       26.30293,
+       73.01799
+      ],
+      [
+       26.30284,
+       73.01793
+      ],
+      [
+       26.30259,
+       73.0178
+      ],
+      [
+       26.30244,
+       73.01774
+      ],
+      [
+       26.30222,
+       73.01769
+      ],
+      [
+       26.30205,
+       73.01765
+      ],
+      [
+       26.30195,
+       73.01765
+      ],
+      [
+       26.3019,
+       73.01772
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1302092011",
+     "coords": [
+      [
+       26.30209,
+       73.01835
+      ],
+      [
+       26.30209,
+       73.0182
+      ],
+      [
+       26.30201,
+       73.01806
+      ],
+      [
+       26.30204,
+       73.01793
+      ],
+      [
+       26.30204,
+       73.01789
+      ],
+      [
+       26.30196,
+       73.01778
+      ],
+      [
+       26.3019,
+       73.01772
+      ],
+      [
+       26.30181,
+       73.01763
+      ],
+      [
+       26.30174,
+       73.01757
+      ],
+      [
+       26.3017,
+       73.01741
+      ],
+      [
+       26.30168,
+       73.01724
+      ],
+      [
+       26.30163,
+       73.01701
+      ],
+      [
+       26.3016,
+       73.01688
+      ],
+      [
+       26.30157,
+       73.01679
+      ],
+      [
+       26.30148,
+       73.01664
+      ],
+      [
+       26.30139,
+       73.01645
+      ],
+      [
+       26.30122,
+       73.01627
+      ],
+      [
+       26.30114,
+       73.01622
+      ],
+      [
+       26.30097,
+       73.01619
+      ],
+      [
+       26.30077,
+       73.01616
+      ],
+      [
+       26.30065,
+       73.0161
+      ],
+      [
+       26.30054,
+       73.01603
+      ],
+      [
+       26.30042,
+       73.01601
+      ],
+      [
+       26.30031,
+       73.01606
+      ],
+      [
+       26.30022,
+       73.01616
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1307305291",
+     "coords": [
+      [
+       26.35261,
+       73.03332
+      ],
+      [
+       26.35224,
+       73.0339
+      ],
+      [
+       26.35209,
+       73.03413
+      ],
+      [
+       26.35208,
+       73.03417
+      ],
+      [
+       26.35207,
+       73.03421
+      ],
+      [
+       26.35206,
+       73.03427
+      ],
+      [
+       26.35205,
+       73.03437
+      ],
+      [
+       26.35204,
+       73.03443
+      ],
+      [
+       26.352,
+       73.03471
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1307305292",
+     "coords": [
+      [
+       26.35506,
+       73.03326
+      ],
+      [
+       26.35483,
+       73.03327
+      ],
+      [
+       26.35444,
+       73.03343
+      ],
+      [
+       26.35395,
+       73.03452
+      ],
+      [
+       26.35365,
+       73.03476
+      ],
+      [
+       26.3536,
+       73.03478
+      ],
+      [
+       26.35356,
+       73.03479
+      ],
+      [
+       26.35276,
+       73.03473
+      ],
+      [
+       26.352,
+       73.03471
+      ],
+      [
+       26.35127,
+       73.03552
+      ],
+      [
+       26.35083,
+       73.03645
+      ],
+      [
+       26.3506,
+       73.03682
+      ],
+      [
+       26.3504,
+       73.03699
+      ],
+      [
+       26.34985,
+       73.03704
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1307305312",
+     "coords": [
+      [
+       26.35872,
+       73.02767
+      ],
+      [
+       26.35878,
+       73.02783
+      ],
+      [
+       26.35873,
+       73.0282
+      ],
+      [
+       26.35861,
+       73.02846
+      ],
+      [
+       26.35857,
+       73.02862
+      ],
+      [
+       26.35859,
+       73.02883
+      ],
+      [
+       26.35847,
+       73.02908
+      ],
+      [
+       26.35827,
+       73.02948
+      ],
+      [
+       26.35834,
+       73.02954
+      ],
+      [
+       26.35829,
+       73.02971
+      ],
+      [
+       26.35833,
+       73.02976
+      ],
+      [
+       26.35829,
+       73.02992
+      ],
+      [
+       26.35831,
+       73.02997
+      ],
+      [
+       26.3584,
+       73.03011
+      ],
+      [
+       26.35838,
+       73.03021
+      ],
+      [
+       26.35835,
+       73.03024
+      ],
+      [
+       26.35833,
+       73.03038
+      ],
+      [
+       26.35839,
+       73.03043
+      ],
+      [
+       26.35834,
+       73.03054
+      ],
+      [
+       26.3583,
+       73.03067
+      ]
+     ]
+    },
+    {
+     "ref": "osm:way/1307305313",
+     "coords": [
+      [
+       26.35716,
+       73.02916
+      ],
+      [
+       26.35747,
+       73.02935
+      ],
+      [
+       26.35757,
+       73.02978
+      ],
+      [
+       26.35763,
+       73.03035
+      ],
+      [
+       26.3576,
+       73.03053
+      ],
+      [
+       26.35768,
+       73.03064
+      ],
+      [
+       26.35795,
+       73.03091
       ]
      ]
     }
