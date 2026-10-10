@@ -52,6 +52,21 @@ def test_cleanup_support_is_mapped_to_waste_and_back() -> None:
     assert combiner().needs_judge(clean, CLEANUP)
 
 
+def test_without_every_trained_signal_the_rekognition_fallback_decides() -> None:
+    raw = {
+        "version": "m",
+        "base": {"signals": ["rekognition_labels", "yolo"], "weights": [1.0, 1.0], "bias": 3.0},
+        "judged": {"signals": ["yolo"], "weights": [1.0], "bias": 0.0},
+        "fallback": {"signals": ["rekognition_labels"], "weights": [2.0], "bias": -1.0},
+        "fallback_judged": {"signals": ["rekognition_labels"], "weights": [1.0], "bias": 0.0},
+    }
+    model = MetaModel.from_json(raw)
+    assert model.pick(frozenset({"rekognition_labels"}), judged=False) is model.fallback
+    assert model.pick(frozenset({"rekognition_labels", "yolo"}), judged=False) is model.base
+    only_labels = MetaLearnerCombiner(model, Thresholds())
+    assert only_labels.probability(signals(0.5), REPORT) == pytest.approx(Logistic.sigmoid(-1.0))
+
+
 def test_missing_signals_add_nothing() -> None:
     model = SignalLogistic(("yolo", "vision_judge"), (2.0, 2.0), 0.0)
     assert model.probability({"yolo": 0.5}) == pytest.approx(0.5)

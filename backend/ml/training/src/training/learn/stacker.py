@@ -14,6 +14,7 @@ from training.domain import ConfigError
 from training.learn.ports import LinearFitter
 
 SIGNALS = ("rekognition_labels", "yolo", "embedding_classifier")
+FALLBACK = ("rekognition_labels",)
 JUDGE = "vision_judge"
 CLIP = 0.01  # same clip as ml.domain.linear before the logit
 # The fixed weights the meta-learner replaces (ml.services.combiner, fw-v0).
@@ -106,10 +107,14 @@ class MetaLearner:
     version: str
     base: LogitModel
     judged: LogitModel
+    fallback: LogitModel  # Rekognition only, for claims the trained signals cannot see
+    fallback_judged: LogitModel
 
     def to_json(self, fitted_on: dict[str, int]) -> dict[str, Any]:
-        return {"version": self.version, "base": self.base.to_json(),
-                "judged": self.judged.to_json(), "fitted_on": fitted_on}
+        models = {"base": self.base, "judged": self.judged, "fallback": self.fallback,
+                  "fallback_judged": self.fallback_judged}
+        return {"version": self.version, **{k: m.to_json() for k, m in models.items()},
+                "fitted_on": fitted_on}
 
 
 class StackerTrainer:
@@ -124,6 +129,8 @@ class StackerTrainer:
             version,
             self._fit(val, SIGNALS, "base"),
             self._fit(judged, (*SIGNALS, JUDGE), "judged"),
+            self._fit(val, FALLBACK, "fallback"),
+            self._fit(judged, (*FALLBACK, JUDGE), "fallback_judged"),
         )
 
     def _fit(self, photos: list[ScoredPhoto], signals: tuple[str, ...], name: str) -> LogitModel:

@@ -1,6 +1,6 @@
 # Model evaluation (A2, issue 50)
 
-All numbers are measured on the **public test split** (hash split, seed 26; nothing here was trained on it), not on Jodhpur field photos, which are not imported yet (decision 20261010-1030). Rerun with the field `holdout` once they are. Measured on 10 Oct 2026.
+All numbers are measured on the **public test split** (hash split, seed 26; nothing here was trained on it). Models are trained and evaluated on openly licensed public data only; field photos are never imported, labelled for training or held out (decisions 20261010-1030 and 20261010-1245-hem-ml-public-data-only). Measured on 10 Oct 2026.
 
 **Boxes made by a model, not by people:** every `waste_pile` and `bin` box comes from an OWLv2 teacher (`google/owlv2-large-patch14-ensemble`, Apache-2.0) run on the QR4Change photos; for those two classes the detector table measures agreement with the teacher, not with human labels. No human-drawn pile or bin boxes exist yet. All other boxes (`waste_item`, `bag`, `burning`) and every image label below are from the datasets' human annotators.
 
@@ -26,7 +26,7 @@ YOLO26s (Ultralytics 8.4.175, COCO-pretrained), 80 epochs at 640 px on the RTX 5
 | waste_item | 8,251 | people (TACO, garbage_od) | 0.788 | 0.603 | 0.685 | 0.436 |
 | all | 8,713 | | 0.761 | 0.466 | 0.537 | 0.363 |
 
-`bag` has 26 boxes in all and 5 in test, so its row is noise. The `waste_pile` and `bin` rows say how well the detector reproduces the teacher, not how well it finds piles; the field audit's hand-drawn boxes will replace them.
+`bag` has 26 boxes in all and 5 in test, so its row is noise. The `waste_pile` and `bin` rows say how well the detector reproduces the teacher, not how well it finds piles; no human-drawn pile or bin boxes exist in the open data we use.
 
 Teacher settings (`training/learn/teacher.py`): queries "a pile of garbage", "a heap of rubbish", "garbage dumped on the ground" for piles, kept at score 0.3 or above (or the single best box at 0.15 or above where people labelled the photo garbage), only on photos people labelled garbage; "a garbage bin", "a dustbin", "a dumpster" at 0.3 or above on every QR4Change photo; boxes inside a kept box dropped. 1,295 pile and 1,429 bin boxes over 1,967 photos; 15 photos were checked by eye, not every box.
 
@@ -48,7 +48,7 @@ Desktop CPU timings stand in for a phone; expect several times slower on a mid-r
 
 ## Embedding classifier
 
-Logistic heads on an image embedding. The report-type head learns from QR4Change only (TACO has no report type), the material heads from TACO and garbage_od, the burning head from every photo (D-Fire gives the fires). Materials with fewer than 40 training photos (textile, e-waste, construction debris, medical) get no head; their share comes from the judge or Rekognition labels.
+Logistic heads on an image embedding. The report-type head learns from QR4Change only (TACO has no report type), the material heads from TACO and garbage_od, the burning head from every photo (D-Fire gives the fires). Materials with fewer than 40 training photos (textile, e-waste, construction debris, medical) get no head.
 
 Benchmark on one fixed sample (at most 800 photos per source and split, the same rows for both), regularisation picked on val:
 
@@ -69,11 +69,11 @@ They tie on accuracy, so **SigLIP 2 is used**: no per-photo cost, no Bedrock quo
 | materials:metal | 230 | 0.861 | 0.835 | 0.848 |
 | hazards:burning | 96 | 0.964 | 0.844 | 0.900 |
 
-The waste head is the `embedding_classifier` signal; materials above 0.5 become composition shares (normalised over the materials seen, not measured areas); burning above 0.5 becomes a hazard.
+The waste head is the `embedding_classifier` signal and burning above 0.5 becomes a hazard. The material heads give presence, not measured shares, so they do not fill `composition` (decision 20261010-0202); composition comes from the judge's measured shares, and the material heads stay as evaluated models for later use.
 
 ## Signals and the stacker
 
-The verifier's question for every photo below is "does it show the claimed `waste_dump`?", checked against people's labels: the 184 QR4Change test photos (65 garbage, 119 not). The meta-learner was fitted on the 193 QR4Change val photos (81 garbage), each signal scored by the ml service's own code (`ml.handlers.score_cli`), the judge being Nova Pro.
+The verifier's question for every photo below is "does it show the claimed `waste_dump`?", checked against people's labels: the 184 QR4Change test photos (65 garbage, 119 not). The meta-learner was fitted on the 193 QR4Change val photos (81 garbage), each signal scored by the ml service's own code (`ml.handlers.score_cli`), the judge being Nova Lite (now ahead of Nova Pro in the judge order; Claude is refused for this account).
 
 Each signal alone (support at 0.5 or more counts as yes):
 
@@ -82,20 +82,38 @@ Each signal alone (support at 0.5 or more counts as yes):
 | rekognition_labels | 184 | 0.667 | 0.954 | 0.785 | 0.113 |
 | yolo | 184 | 0.933 | 0.646 | 0.764 | 0.150 |
 | embedding_classifier | 184 | 0.984 | 0.954 | 0.969 | 0.018 |
-| vision_judge | 183 | 0.564 | 0.969 | 0.713 | 0.142 |
+| vision_judge | 176 | 0.471 | 0.983 | 0.637 | 0.207 |
 
 `vision_judge` precision is low because an answer of another report type (often `no_bin` for a photo of a street bin) gives a neutral 0.5, which counts as yes here; in the stack it carries little weight.
 
-The meta-learner (`meta-v1`) is two logistic regressions over the signals' logits, fitted on val: one before the judge and one after it. Weights before the judge: Rekognition 0.25, YOLO 0.65, embedding classifier 1.27, bias 1.55; after it the judge adds 0.21. Logistic regression is calibrated on the data it is fitted on, so no separate calibration step was added; the test ECE below checks it. Both combiners are replayed end to end on test with the service's rules: auto-verify at 0.85 or more, reject under 0.5, community check in between or when two signals differ by 0.5 or more, and the judge only for those last two cases.
+The meta-learner (`meta-v2`) is logistic regression over the signals' logits, fitted on val: one model before the judge and one after it. Weights before the judge: Rekognition 0.25, YOLO 0.65, embedding classifier 1.27, bias 1.55; after it the judge adds 0.17. Logistic regression is calibrated on the data it is fitted on, so no separate calibration step was added; the test ECE below checks it.
+
+The full model's bias assumes every trained signal spoke; with YOLO and the embedding classifier silent its probability would sit near sigmoid(1.55) = 0.82. So `meta-v2` also carries a Rekognition-only fallback (weight 1.20, bias -0.96; after the judge 0.68 and 2.63, bias -2.84), used whenever a trained signal is missing or neutral, for example for `contaminated_water` claims, which neither YOLO nor the embedding heads can see.
+
+Both models are replayed end to end on test with the service's rules: auto-verify at 0.85 or more, reject under 0.5, community check in between or when two signals differ by 0.5 or more, and the judge only for those last two cases. The fallback row replays the same photos with Rekognition (and the judge) only.
 
 | combiner | photos | accuracy | Brier | ECE | judge called | auto-verified (right) | rejected (right) | community check | judge cost |
 |---|---|---|---|---|---|---|---|---|---|
-| fixed weights (fw-v0) | 184 | 0.978 | 0.045 | 0.110 | 36% | 34 (34) | 89 (86) | 61 | $0.164 |
-| meta-learner (meta-v1) | 184 | 0.978 | 0.020 | 0.019 | 28% | 43 (42) | 89 (86) | 52 | $0.127 |
+| fixed weights (fw-v0) | 184 | 0.978 | 0.047 | 0.115 | 34% | 32 (32) | 89 (86) | 63 | $0.013 |
+| meta-learner (meta-v2) | 184 | 0.978 | 0.020 | 0.019 | 27% | 43 (42) | 89 (86) | 52 | $0.010 |
+| its Rekognition-only fallback (meta-v2) | 184 | 0.946 | 0.040 | 0.060 | 31% | 35 (35) | 96 (87) | 53 | $0.011 |
 
-Same accuracy, but the meta-learner's probabilities are honest (ECE 0.019 against 0.110), it auto-verifies 43 instead of 34 photos, asks the judge on 28% of photos instead of 36%, and costs less. Wrong automatic decisions: meta-learner 4 (1 clean photo auto-verified, 3 garbage photos rejected), fixed weights 3 (3 garbage photos rejected).
+Same accuracy as the fixed weights, but the meta-learner's probabilities are honest (ECE 0.019 against 0.115), it auto-verifies 43 instead of 32 photos and asks the judge less often. Wrong automatic decisions: meta-learner 4 (1 clean photo auto-verified, 3 garbage photos rejected), fixed weights 3 (3 garbage photos rejected).
 
-The 52 community checks are the 52 photos where two signals are 0.5 or more apart; the disagreement rule sends them to people whatever the meta-learner says: 30 clean photos where Rekognition labels say waste and YOLO finds none, and 18 garbage photos where YOLO finds no waste box but the embedding classifier is sure. A learned disagreement rule, or the gap applied to the meta-learner's own confidence, would cut community checks sharply; that changes the contract's decision rule, so it is left for a decision.
+The 52 community checks are the photos where two signals are 0.5 or more apart; the disagreement rule sends them to people whatever the meta-learner says: 30 clean photos where Rekognition labels say waste and YOLO finds none, and 18 garbage photos where YOLO finds no waste box but the embedding classifier is sure. A learned disagreement rule would cut community checks sharply; that changes the contract's decision rule, so it is left for a decision.
+
+## Site merging threshold
+
+`backend/server` merges a report into a site within 40 m only when the two photos' SigLIP 2 vectors have cosine 0.88 or more (`MergeTargetPicker`). Measured on the 65 QR4Change test dump photos and a simulated second shot of each (crop to 70 to 90%, tilt up to 8 degrees, brightness and contrast changes, sometimes mirrored), against all 2,080 pairs of different dumps:
+
+| threshold | second shots of the same pile kept | different piles merged |
+|---|---|---|
+| 0.75 (the old Titan value) | 100% | 79% |
+| 0.85 | 100% | 30% |
+| 0.88 | 95% | 15% |
+| 0.90 | 85% | 8% |
+
+SigLIP 2 vectors of any two dump photos are close (median 0.81), so the 40 m radius does most of the work and the embedding check only separates neighbouring piles. Real repeat photos of one pile may differ more than the simulated ones. Vectors of different sizes (an old 1,024-dim Titan vector against a 768-dim SigLIP vector) never merge.
 
 ## Bedrock vision judge
 
@@ -107,13 +125,13 @@ The judge (prompt `judge_v0`) on a fixed sample: the 184 QR4Change test photos (
 | Nova Pro (apac.amazon.nova-pro-v1:0) | 224 | 223 | 0.908 (n=184) | 0.650 (n=40) | 1.8 s | 2.6 s | 2.24 |
 | Nova 2 Lite (global.amazon.nova-2-lite-v1:0) | 224 | 206 | 0.864 (n=184) | 0.750 (n=40) | 1.8 s | 2.7 s | 0.59 |
 
-Claude Sonnet 4.6 and Haiku 4.5 were not run: Bedrock refuses them for this account until the Anthropic use-case form is submitted, so today the judge falls through to Nova Pro. Nova Pro's misses: 7 clean photos called a dump, and 10 dump photos called `no_bin`, `contaminated_water` or clean, or left unanswered. On this sample Nova Lite is both the most accurate and the cheapest; it is worth trying ahead of Nova Pro in the judge's fallback order (decision 20261010-0133 is unchanged here).
+Claude Sonnet 4.6 and Haiku 4.5 were not run: Bedrock refuses them for this account until the Anthropic use-case form is submitted, so the judge order now tries Nova Lite before Nova Pro. Nova Pro's misses: 7 clean photos called a dump, and 10 dump photos called `no_bin`, `contaminated_water` or clean, or left unanswered. On this sample Nova Lite is both the most accurate and the cheapest, so `backend/ml` now tries it before Nova Pro (`settings/llm.py`; decision 20261010-0133 still lists the order).
 
 ## Gaps and what would change these numbers
 
-- No Jodhpur field photos yet: every number above is on public photos, and QR4Change's clean photos include street scenes from outside India. The field holdout (grouped by scan and site) replaces this table once imported.
+- Public data only: no Jodhpur photo is trained on or evaluated, and QR4Change's clean photos include street scenes from outside India, so real-world accuracy in Jodhpur is not measured here.
 - No human pile or bin boxes; no boxes at all for construction debris, medical waste, dead animals or chemicals. No size labels, so `YoloSignal`'s size class (share of the photo under waste boxes: under 10% small, under 35% medium, else large) is a rule, not a trained estimate.
-- Material shares are presence probabilities normalised over the materials seen, not measured areas. Textile, e-waste, construction debris and medical have no head.
-- Only `waste_dump` claims have labelled photos; `YoloSignal` and `EmbeddingSignal` are neutral for claims they cannot see (`contaminated_water`; the embedding head also for `open_construction`), and combiners skip neutral signals.
-- The after-judge model was fitted on Nova Pro answers; refit it if the judge moves to Claude or Nova Lite.
+- The material heads measure presence only and are not used for composition. Textile, e-waste, construction debris and medical have no head.
+- Only `waste_dump` claims have labelled photos; `YoloSignal` and `EmbeddingSignal` are neutral for claims they cannot see (`contaminated_water`; the embedding head also for `open_construction`), combiners skip neutral signals, and the meta-learner then uses its Rekognition-only fallback.
+- The after-judge models were fitted on Nova Lite answers; refit them if the judge moves to Claude.
 - Reproduce: `backend/ml/training` `learn` commands (`teacher`, `detector-data`, `detector-train`, `detector-eval`, `detector-export`, `embed`, `heads`, `cases`, `stacker`, `bench`, `publish`) and `backend/ml` `ml.handlers.score_cli`; scored files and runs stay outside the repo.

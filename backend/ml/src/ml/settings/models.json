@@ -26,10 +26,10 @@
       "version": "clf-1"
     },
     "meta": {
-      "key": "models/meta/390bd77732ce-meta-v1.json",
-      "sha256": "390bd77732ceeadc43a6c7d50becd0dffb726ba0fc9878e80da2d9550c302c42",
-      "size_bytes": 583,
-      "version": "meta-v1"
+      "key": "models/meta/883f416b1cb7-meta-v2.json",
+      "sha256": "883f416b1cb709a345c47e44ceb55800bf8c4a4ac1b9178c6032962eddaa794a",
+      "size_bytes": 920,
+      "version": "meta-v2"
     },
     "yolo": {
       "key": "models/yolo/e6d1e36abb41-best-640-fp32.onnx",

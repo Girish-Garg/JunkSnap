@@ -41,6 +41,9 @@ class StackReport:
             Cascade(self._meta.base, self._meta.judged).evaluate(
                 f"meta-learner ({self._meta.version})", photos
             ),
+            Cascade(self._meta.fallback, self._meta.fallback_judged).evaluate(
+                f"its Rekognition-only fallback ({self._meta.version})", photos
+            ),
         ]
 
     def table(self, photos: list[ScoredPhoto]) -> str:

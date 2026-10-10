@@ -98,16 +98,30 @@ class SignalLogistic:
 
 @dataclass(frozen=True)
 class MetaModel:
-    """Fitted on the val split: `base` before the judge, `judged` once the judge has answered."""
+    """Fitted on val: `base` before the judge, `judged` after it, each with a fallback."""
 
     version: str
     base: SignalLogistic
     judged: SignalLogistic
+    fallback: SignalLogistic | None = None  # Rekognition only, for claims our models cannot see
+    fallback_judged: SignalLogistic | None = None
+
+    def pick(self, present: frozenset[str], judged: bool) -> SignalLogistic:
+        """The full model needs every one of its signals; its bias assumes they all spoke."""
+        full = self.judged if judged else self.base
+        spare = self.fallback_judged if judged else self.fallback
+        if spare is None or set(full.signals) <= present:
+            return full
+        return spare
 
     @staticmethod
     def from_json(raw: Mapping[str, Any]) -> "MetaModel":
+        spare = {k: SignalLogistic.from_json(raw[k]) for k in ("fallback", "fallback_judged")
+                 if k in raw}
         return MetaModel(
             raw["version"],
             SignalLogistic.from_json(raw["base"]),
             SignalLogistic.from_json(raw["judged"]),
+            spare.get("fallback"),
+            spare.get("fallback_judged"),
         )
