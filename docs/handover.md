@@ -57,7 +57,7 @@ Decisions 6, 7 and 14 include the changes of the night of 10 Oct, recorded in `d
 
 Done: T0 tooling (PR 6), C1 contracts v1 (PR 14), S1 Python skeletons (PR 15; `backend/pipeline` is now retired), the comment rule (PR 17), S2 server skeleton (PR 28: TypeScript 6.0.3, Fastify 5, entry files `web.ts`, `worker.ts`, `scores.ts`, generated contract types), C2 contracts v1.1 for insights, scans, accounts and ward records (issue 25).
 
-Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 need the field data (Saturday morning). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
+Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their inputs merge. A2 and A5 train and evaluate on public data only (decision 1245). After any schema change, regenerate `backend/server/src/contracts/*.gen.ts` in the same PR.
 
 **TypeScript, `backend/server`**
 - P1 intake and worker (issue 11): presign (regional S3 endpoint), `POST /reports`, `GET /reports/{id}`, the SQS consumer and `ReportPipeline` with `needs_review` on the last receive; calls `ml` at `ML_URL`.
@@ -94,7 +94,7 @@ Order: P1, AU1, SC1, D1, L1, A1, I1 and F1 in parallel, and the rest as their in
 - Field audit: all three humans take 50+ real Jodhpur reports across 3–4 wards (dumps and no-bin spots); friends in other cities send a few each.
 
 **Saturday afternoon and Sunday**
-- A2 and A5 on the field data; F3 Scan.
+- A2 and A5 on the public data; F3 Scan.
 - Deploy `demo` (human's OK, clean `main`); connect Amplify (human).
 - Satellite history for Keru, if time allows.
 - Humans record, upload and submit.
