@@ -21,6 +21,10 @@ import { CapabilityProbe, type DeviceCapabilities } from '../services/Capability
 import { EdgeHints, type DetectorFactory } from '../services/EdgeHints';
 import { EdgeHintsPreference } from '../services/EdgeHintsPreference';
 import { Sharer, type ShareApi } from '../services/Sharer';
+import { ActionCooldowns } from '../services/ActionCooldowns';
+import { ErrorReporter } from '../services/ErrorReporter';
+import { Notifier } from '../services/Notifier';
+import { WINDOW_TIMER } from '../services/Timer';
 import { UnavailableAuthService } from '../services/UnavailableAuthService';
 import { siteFixtureLoaders } from '../services/siteFixtures';
 import type { ApiMode, AppConfig } from './AppConfig';
@@ -76,6 +80,10 @@ export interface Services {
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
   readonly edge: EdgeHints;
+  /** App-wide toasts, error reports and rate-limit memory; built here when not given (tests leave them out). */
+  readonly notifier?: Notifier;
+  readonly errors?: ErrorReporter;
+  readonly cooldowns?: ActionCooldowns;
 }
 
 /** Composition root: the only place that builds services. */
@@ -93,6 +101,9 @@ export class ServiceContainer implements Services {
   readonly onboarding: OnboardingPreference;
   readonly theme: ThemePreference;
   readonly edge: EdgeHints;
+  readonly notifier: Notifier;
+  readonly errors: ErrorReporter;
+  readonly cooldowns: ActionCooldowns;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -108,6 +119,9 @@ export class ServiceContainer implements Services {
     this.onboarding = services.onboarding;
     this.theme = services.theme;
     this.edge = services.edge;
+    this.notifier = services.notifier ?? new Notifier();
+    this.errors = services.errors ?? new ErrorReporter(console, () => navigator.onLine);
+    this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now());
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {

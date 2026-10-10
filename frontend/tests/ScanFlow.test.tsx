@@ -71,7 +71,7 @@ describe('Scan mode for no bin', () => {
     await user.click(screen.getByRole('button', { name: 'Video' }));
     await user.click(await screen.findByRole('radio', { name: 'No bin or pickup' }));
     expect(screen.queryByRole('radio', { name: 'Auto' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start recording' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start recording' })).toHaveAttribute('aria-disabled', 'true'));
   });
 });
 

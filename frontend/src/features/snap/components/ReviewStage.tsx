@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CAPTURE_GATES } from '../../../domain/CaptureGates';
 import { NOTE_MAX_LENGTH } from '../../../domain/ReportUpload';
 import { TextArea } from '../../../ui/TextArea';
 import type { CapturedPhoto } from '../hooks/usePhotoCapture';
@@ -33,8 +34,8 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
     setSending(true);
     void flow.send(photo, target ? { ...report.choice, target } : report.choice).finally(() => setSending(false));
   };
-  const note = t('snap.noteHint', { left: report.noteLeft });
   const notice = report.gpsTooVague ? t('nobin.photoTooVague', { metres: Math.round(photo.gps.accuracy_m) }) : null;
+  const sendable = CAPTURE_GATES.send.decide({ busy: sending, chosen: report.choice !== null, vagueM: report.gpsTooVague ? photo.gps.accuracy_m : null });
   return (
     <div className="snap-review">
       <div className="snap-review__top">
@@ -44,8 +45,8 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
       <TypePicker value={report.type} onChange={report.chooseType} />
       <ContextPicker options={report.contexts} value={report.context} onChange={report.setContext} />
       {longRange && <PlaceStep place={place} />}
-      <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={note} />
-      <SendActions canSend={report.choice !== null && !sending} saveFailed={flow.saveFailed} notice={notice} onSend={send} onRetake={flow.retake} />
+      <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={t('snap.noteHint', { left: report.noteLeft })} />
+      <SendActions send={sendable} saveFailed={flow.saveFailed} notice={notice} onSend={send} onRetake={flow.retake} />
     </div>
   );
 }

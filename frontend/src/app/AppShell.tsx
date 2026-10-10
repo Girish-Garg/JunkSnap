@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
+import { ToastHost } from '../features/actions/components/ToastHost';
+import { useConnectionToasts } from '../features/actions/hooks/useConnectionToasts';
 import { AuthFlowProvider } from '../features/auth/components/AuthFlowProvider';
 import { SplashScreen } from '../features/brand/components/SplashScreen';
 import { SplashSession } from '../features/brand/SplashSession';
@@ -17,6 +19,7 @@ export function AppShell() {
   const { pathname } = useLocation();
   const [session] = useState(() => new SplashSession(() => window.sessionStorage));
   const [splash, setSplash] = useState(() => session.due());
+  useConnectionToasts();
   useEffect(() => {
     // Screen readers and the :lang(hi) font rule read this.
     document.documentElement.lang = i18n.language;
@@ -33,6 +36,7 @@ export function AppShell() {
         <AppRoutes />
       </AuthFlowProvider>
       <RejectionToast />
+      <ToastHost />
       {splash && <SplashScreen onDone={afterSplash} />}
     </div>
   );

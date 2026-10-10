@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LetterLanguage } from '../../../domain/SiteActions';
-import { ActionProblem } from '../../site/ActionProblem';
+import { useActionErrors } from '../../actions/hooks/useActionErrors';
 import { LetterRefusal } from '../LetterRefusal';
 
 /** Which route the letter is for: the 409 not_verified reads differently for a site and an area. */
@@ -10,14 +10,13 @@ export type LetterScope = 'site' | 'area';
 // Error codes from the letter routes with their own message.
 const KNOWN_ERRORS: ReadonlySet<string> = new Set(['not_verified', 'no_local_body', 'rate_limited', 'not_found', 'area_not_found']);
 
-const problemOf = (error: unknown, scope: LetterScope) => {
-  const problem = ActionProblem.of(error, KNOWN_ERRORS);
-  return problem === 'not_verified' && scope === 'area' ? 'not_verified_area' : problem;
-};
+const forScope = (problem: string, scope: LetterScope) => (problem === 'not_verified' && scope === 'area' ? 'not_verified_area' : problem);
 
 /** Pick the letter language (the app's by default), then ask the api for a cited draft of a site or an area. */
 export function useLetterRequest<Draft>(send: (language: LetterLanguage) => Promise<Draft>, scope: LetterScope = 'site') {
   const { t, i18n } = useTranslation();
+  // Site and area letters share the api's 5 letters an hour, so one cooldown.
+  const handle = useActionErrors('letter', KNOWN_ERRORS);
   const [language, setLanguage] = useState<LetterLanguage>(i18n.language === 'hi' ? 'hi' : 'en');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,7 +29,7 @@ export function useLetterRequest<Draft>(send: (language: LetterLanguage) => Prom
     try {
       setDraft(await send(language));
     } catch (error) {
-      setProblem(problemOf(error, scope));
+      setProblem(forScope(handle(error, () => void request()), scope));
       setRefusal(LetterRefusal.lines(error));
     }
     setBusy(false);

@@ -1,21 +1,25 @@
-import { ApiError } from '../../domain/ApiError';
-import { AuthError } from '../../domain/AuthError';
-import { LocationError } from '../../domain/LocationError';
+import { ErrorClassifier, type ClassifiedError, type ErrorCategory } from '../../domain/ErrorClassifier';
 
-/** Turns a failed vote, cleanup claim or letter into the key of a plain message. */
+// Every action namespace (vote, cleanup, letter, notes, withdraw, activityDelete) has these three under errors.*.
+const BY_CATEGORY: Readonly<Partial<Record<ErrorCategory, string>>> = {
+  offline: 'offline',
+  network: 'offline',
+  auth_expired: 'sign_in',
+};
+
+/**
+ * Turns a failed vote, cleanup claim, note, withdrawal or letter into the key of a plain message under the action's
+ * errors.*: the api code when the action words it itself, else offline, sign_in or failed. Never the server's text.
+ */
 export class ActionProblem {
-  /** known: the api error codes this action explains on its own. */
-  static of(error: unknown, known: ReadonlySet<string>): string {
-    if (error instanceof LocationError) return 'location';
-    if (error instanceof AuthError) return error.problem === 'network' ? 'offline' : 'sign_in';
-    if (error instanceof ApiError) return ActionProblem.#api(error, known);
-    return 'failed';
+  /** known: the codes this action words itself; add location only where the action has its own line for it. */
+  static of(error: unknown, known: ReadonlySet<string>, online = true): string {
+    return ActionProblem.from(ErrorClassifier.classify(error, online), known);
   }
 
-  // A 401 here already survived one forced token refresh, so the session is over.
-  static #api(error: ApiError, known: ReadonlySet<string>): string {
-    if (error.status === 0) return 'offline';
-    if (error.status === 401) return 'sign_in';
-    return known.has(error.code) ? error.code : 'failed';
+  // A 401 here already survived one forced token refresh (SignedInStep), so the session is over.
+  static from(error: ClassifiedError, known: ReadonlySet<string>): string {
+    if (known.has(error.code)) return error.code;
+    return BY_CATEGORY[error.category] ?? 'failed';
   }
 }

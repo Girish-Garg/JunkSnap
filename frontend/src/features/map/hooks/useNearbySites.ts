@@ -16,7 +16,7 @@ const NONE: readonly SiteFeature[] = [];
  * null while still looking, so "No reports here yet" never shows before the search around it is done.
  */
 export function useNearbySites(view: MapView | null, empty: boolean): readonly SiteFeature[] | null {
-  const { api } = useServices();
+  const { api, errors } = useServices();
   const [found, setFound] = useState<Found | null>(null);
   const reach = useMemo(() => (view && empty ? NearestSites.reach(view.bbox) : null), [view, empty]);
   useEffect(() => {
@@ -26,14 +26,14 @@ export function useNearbySites(view: MapView | null, empty: boolean): readonly S
     api.listSites(reach).then(
       (sites) => keep(NearestSites.of(sites, view.bbox.center())),
       (error: unknown) => {
-        console.error('Could not look for sites near the view', error);
+        errors.report('nearby', error);
         keep(NONE);
       },
     );
     return () => {
       current = false;
     };
-  }, [api, view, reach]);
+  }, [api, errors, view, reach]);
   if (!view || !empty || !reach) return NONE;
   return found?.view === view ? found.sites : null;
 }

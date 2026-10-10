@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
+import { ACTIVITY_DELETE_GATE } from '../../../domain/SiteActionGates';
 import { Button } from '../../../ui/Button';
+import { useGate } from '../../actions/hooks/useGate';
+import { useSessionFacts } from '../../actions/hooks/useSessionFacts';
 import { useActivityDelete, type ActivityTarget } from '../hooks/useActivityDelete';
 import '../activity.css';
 
@@ -7,6 +11,8 @@ import '../activity.css';
 export function ActivityDelete({ target }: { readonly target: ActivityTarget }) {
   const { t } = useTranslation();
   const remove = useActivityDelete(target);
+  const gate = useGate();
+  const confirmable = ACTIVITY_DELETE_GATE.decide({ ...useSessionFacts(), busy: remove.busy, withdraws: remove.plan === 'withdraw' });
   return (
     <>
       {remove.plan === null ? (
@@ -16,7 +22,7 @@ export function ActivityDelete({ target }: { readonly target: ActivityTarget }) 
       ) : (
         <div className="activity-delete" role="group" aria-label={t('activityDelete.action')}>
           <p className="activity-delete__text">{t(`activityDelete.confirm_${remove.plan}`)}</p>
-          <Button variant="secondary" onClick={remove.confirm} disabled={remove.busy}>
+          <Button variant="secondary" onClick={gate(confirmable, remove.confirm)} {...lookOf(confirmable)}>
             {t(remove.busy ? 'activityDelete.busy' : 'activityDelete.yes')}
           </Button>
           <Button variant="text" onClick={remove.cancel} disabled={remove.busy}>

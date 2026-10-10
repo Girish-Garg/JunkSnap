@@ -1,4 +1,5 @@
 import type { LonLat, SiteFeature } from '../../../domain/Site';
+import { useSiteFacts } from '../../actions/hooks/useSiteFacts';
 import { SiteNotes } from '../../community/components/SiteNotes';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import '../site.css';
@@ -32,6 +33,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
   const details = site.properties;
   const presenter = useSitePresenter(details);
   const closed = presenter.closedReason();
+  const facts = useSiteFacts(site, userLocation);
   const changed = () => onChanged?.();
   return (
     <article className="site-panel">
@@ -41,16 +43,16 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
         <SiteClosedNote reason={closed} />
       ) : (
         <>
-          <SiteClearance site={details} onChanged={changed} />
+          <SiteClearance site={details} facts={facts} onChanged={changed} />
           <SiteExpiryNote site={details} />
-          <SiteOpenActions site={site} presenter={presenter} onChanged={changed} />
+          <SiteOpenActions site={site} presenter={presenter} facts={facts} onChanged={changed} />
         </>
       )}
       <SitePhotoStrip photos={presenter.photos()} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
       <SiteReporters site={details} />
-      {!closed && <SiteNotes siteId={details.site_id} community={details.community} onChanged={changed} />}
+      {!closed && <SiteNotes siteId={details.site_id} community={details.community} facts={facts} onChanged={changed} />}
       <SiteLocationFacts location={details.location} />
       <SiteBrands brands={details.brands} />
       <SiteHistoryFacts site={details} />

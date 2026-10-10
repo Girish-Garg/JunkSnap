@@ -1,7 +1,9 @@
 import { useRef, type RefObject } from 'react';
+import { CAPTURE_GATES } from '../../../domain/CaptureGates';
 import { EDGE_MODEL } from '../../../domain/EdgeModel';
 import type { CaptureProblem } from '../../../domain/CaptureError';
 import { ScanHintLog } from '../../../services/ScanHintLog';
+import { useInAppKey } from '../../../ui/useNativeBridge';
 import { useCamera, type CameraState } from './useCamera';
 import { useEdgeHints } from './useEdgeHints';
 import type { GpsState } from './useGpsFix';
@@ -24,7 +26,15 @@ export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: Sn
   const hintLog = useRef<ScanHintLog | null>(null);
   const hints = useEdgeHints(video, camera.state === 'live', (frame) => hintLog.current?.add(frame));
   const choice = report.choice;
-  const canStart = camera.state === 'live' && recorder.supported && gps.fix !== null && choice !== null;
+  const gpsNeededReason = useInAppKey('snap.gpsNeeded', 'snap.gpsNeededApp');
+  const canStart = CAPTURE_GATES.record.decide({
+    camera: camera.state,
+    fix: gps.fix,
+    gpsDenied: gps.problem === 'denied',
+    gpsNeededReason,
+    recorderSupported: recorder.supported,
+    chosen: choice !== null,
+  });
   const start = () => {
     if (!choice || !gps.fix) return;
     hintLog.current = hints.state === 'live' ? new ScanHintLog(EDGE_MODEL.version) : null;

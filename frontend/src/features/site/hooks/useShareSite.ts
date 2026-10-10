@@ -14,7 +14,7 @@ const COPIED_MS = 2500;
  */
 export function useShareSite(site: SiteFeature) {
   const { t } = useTranslation();
-  const { config, sharer } = useServices();
+  const { config, sharer, errors, notifier } = useServices();
   const native = useMemo(() => new NativeBridge(window), []);
   const [copied, setCopied] = useState(false);
   const { site_id: siteId, report_type: type } = site.properties;
@@ -31,8 +31,11 @@ export function useShareSite(site: SiteFeature) {
       : sharer.share(title, url);
     shared.then(
       (result) => setCopied(result === 'copied'),
-      (error: unknown) => console.error('Could not share the site', error),
+      // Closing the share sheet is not a failure; anything else says so.
+      (error: unknown) => {
+        if (errors.report('share', error).category !== 'aborted') notifier.push({ key: 'actions.shareFailed', tone: 'alert' });
+      },
     );
-  }, [config, native, sharer, siteId, type, t]);
+  }, [config, native, sharer, siteId, type, t, errors, notifier]);
   return { share, copied };
 }

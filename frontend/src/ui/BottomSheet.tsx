@@ -1,4 +1,5 @@
 import { useCallback, useRef, type CSSProperties, type ReactNode } from 'react';
+import { OfflineLine } from './OfflineLine';
 import './sheet.css';
 import { SheetBar } from './SheetBar';
 import { SheetDetents, type Detent } from './SheetDetents';
@@ -47,6 +48,7 @@ export function BottomSheet({ labelledBy, closeLabel, resizeLabel, onClose, chil
       {...escapeLayer}
     >
       <SheetBar sheet={sheet} closeLabel={closeLabel} resizeLabel={resizeLabel} onClose={exit.close} />
+      <OfflineLine />
       <div className="sheet__body" {...sheet.bodyProps}>
         {children}
       </div>

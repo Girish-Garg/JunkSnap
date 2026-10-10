@@ -4,6 +4,9 @@ import type { RequestIdentity } from './ReportApi';
 
 type Fetch = typeof fetch;
 
+// A letter drafts for up to 60 s (contracts/README.md); past this the call is given up and said to have timed out.
+export const REQUEST_TIMEOUT_MS = 75_000;
+
 /** JSON calls to the api with the caller's tokens, and PUTs to presigned S3 URLs. */
 export class HttpTransport {
   readonly #baseUrl: string;
@@ -24,7 +27,7 @@ export class HttpTransport {
     const headers = { Accept: 'application/json', ...(await this.#identityHeaders()), ...init.headers };
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`, { ...init, headers });
+      response = await this.#fetch(`${this.#baseUrl}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     } catch (cause) {
       throw HttpErrors.network(`Request to ${path}`, cause);
     }

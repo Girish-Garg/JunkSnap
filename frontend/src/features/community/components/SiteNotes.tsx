@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import type { SiteCommunity } from '../../../domain/Community';
+import { SITE_GATES, type SiteActionFacts } from '../../../domain/SiteActionGates';
 import { Button } from '../../../ui/Button';
+import { useGate } from '../../actions/hooks/useGate';
 import { CommunityPresenter } from '../CommunityPresenter';
 import { SiteNoteForm } from './SiteNoteForm';
 import '../community.css';
@@ -9,14 +12,17 @@ import '../community.css';
 interface SiteNotesProps {
   readonly siteId: string;
   readonly community: SiteCommunity | null | undefined;
+  readonly facts: SiteActionFacts;
   readonly onChanged: () => void;
 }
 
 const TITLE_ID = 'site-notes-title';
 
 /** Notes from residents: a neutral summary and signal chips from moderated notes; never a note's author. */
-export function SiteNotes({ siteId, community, onChanged }: SiteNotesProps) {
+export function SiteNotes({ siteId, community, facts, onChanged }: SiteNotesProps) {
   const { t, i18n } = useTranslation();
+  const gate = useGate();
+  const add = SITE_GATES.note.decide(facts);
   const [adding, setAdding] = useState(false);
   const presenter = community ? new CommunityPresenter(community) : null;
   return (
@@ -36,9 +42,9 @@ export function SiteNotes({ siteId, community, onChanged }: SiteNotesProps) {
         <p className="site-notes__meta">{t('notes.empty')}</p>
       )}
       {adding ? (
-        <SiteNoteForm siteId={siteId} onAdded={onChanged} />
+        <SiteNoteForm siteId={siteId} facts={facts} onAdded={onChanged} />
       ) : (
-        <Button variant="text" onClick={() => setAdding(true)}>{t('notes.add')}</Button>
+        <Button variant="text" onClick={gate(add, () => setAdding(true))} blocked={lookOf(add).blocked}>{t('notes.add')}</Button>
       )}
     </section>
   );

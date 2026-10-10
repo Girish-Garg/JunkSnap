@@ -1,0 +1,94 @@
+/*
+  The app toast: why a tapped action is off, a lost or returning connection. It floats at the top, clear of the
+  sheets and the keyboard, and above every sheet; the rejection toast keeps the bottom.
+*/
+.app-toast-region {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--s-3));
+  right: var(--edge);
+  left: var(--edge);
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.app-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  width: 100%;
+  max-width: var(--panel-width);
+  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-4);
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  box-shadow: var(--shadow-sticker), var(--shadow-float);
+  color: var(--text);
+  pointer-events: auto;
+  animation: app-toast-in var(--dur-spring) var(--spring-bouncy);
+}
+
+.app-toast__icon {
+  display: inline-grid;
+  flex: none;
+  padding-top: var(--s-3);
+  color: var(--accent-ink);
+}
+
+.app-toast--alert .app-toast__icon {
+  color: var(--error);
+}
+
+.app-toast__text {
+  flex: 1;
+  margin: 0;
+  padding: var(--s-3) 0;
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 600;
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--s-6))) scale(0.96);
+  }
+}
+
+/* A sheet whose content crashed: the sheet stays, says so and offers to try again. */
+.sheet-crash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) 0 var(--s-6);
+  text-align: center;
+}
+
+.sheet-crash__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.sheet-crash__text {
+  margin: 0;
+  max-width: 32ch;
+  color: var(--text-secondary);
+}
+
+.sheet-crash__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-toast {
+    animation: none;
+  }
+}

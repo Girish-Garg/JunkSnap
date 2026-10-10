@@ -3,6 +3,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 interface ErrorBoundaryProps {
   readonly children: ReactNode;
   readonly onError: (error: unknown) => void;
+  /** What to show instead; retry renders the children again. Without it the part simply disappears. */
+  readonly fallback?: (retry: () => void) => ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -18,11 +20,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
-    console.error('Map view failed', error, info.componentStack);
+    console.warn('[junksnap:boundary]', info.componentStack);
     this.props.onError(error);
   }
 
+  readonly retry = (): void => {
+    this.setState({ failed: false });
+  };
+
   render(): ReactNode {
-    return this.state.failed ? null : this.props.children;
+    if (!this.state.failed) return this.props.children;
+    return this.props.fallback ? this.props.fallback(this.retry) : null;
   }
 }

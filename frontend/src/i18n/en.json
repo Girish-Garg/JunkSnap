@@ -140,7 +140,8 @@
     "share": "Share",
     "copied": "Copied",
     "metooThanks": "Thanks. Your yes vote backs this site.",
-    "letterLocked": "Letters open once 10 people confirm this site."
+    "letterLocked": "Letters open once 10 people confirm this site.",
+    "shareFailed": "Could not share. Copy the address from the browser instead."
   },
   "site": {
     "close": "Close site details",
@@ -199,7 +200,8 @@
       "cleanedByPhoto": "Three people said it's cleared, at least one with a cleanup photo, so it left the map. If the waste is back, report it with a new photo.",
       "binNow": "A bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
       "other": "This site is no longer on the map, so it takes no more votes or letters."
-    }
+    },
+    "missing": "This site is not on the map any more, or the link is wrong."
   },
   "snap": {
     "title": "Report a waste site",
@@ -1086,5 +1088,33 @@
     "pin": "Pin: one reported site; colour and icon show the type",
     "unverified": "Dashed pin: not verified yet; 1/10 counts the people backing it",
     "stack": "Stacked pin: several sites at one spot"
+  },
+  "gate": {
+    "busy": "One moment, it is on its way.",
+    "offline": "You're offline. Try again once you're connected.",
+    "tooFarCleanup": "Go within 50 m of the site to send a cleanup photo.",
+    "noteEmpty": "Write your note first.",
+    "pickPlace": "Pick where it is first.",
+    "sessionExpired": "Your sign-in has expired. Sign in again and we'll finish what you started.",
+    "signIn": {
+      "vote": "Sign in to vote.",
+      "cleanup": "Sign in to send a cleanup photo.",
+      "letter": "Sign in to draft a letter.",
+      "withdraw": "Sign in to withdraw your report.",
+      "note": "Sign in to add a note."
+    }
+  },
+  "toast": {
+    "dismiss": "Dismiss"
+  },
+  "connection": {
+    "offline": "You're offline. Photos wait on this phone; votes, notes and letters need a connection.",
+    "back": "Back online."
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "text": "This part of the app hit a problem. The map and everything else still work.",
+    "retry": "Try again",
+    "close": "Close"
   }
 }
