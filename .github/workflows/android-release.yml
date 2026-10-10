@@ -180,7 +180,6 @@ jobs:
             echo
             echo "Install: copy the APK to the phone and open it (allow installs from that app), or \`adb install -r $name\`."
           } > notes.md
-          echo "name=$name" >> "$GITHUB_OUTPUT"
           cat notes.md
 
       - name: Remove the keystore
@@ -215,6 +214,7 @@ jobs:
           name: JunkSnap Android ${{ needs.apk.outputs.version }}
           body_path: dist-apk/notes.md
           prerelease: ${{ needs.apk.outputs.signed != 'true' }}
+          fail_on_unmatched_files: true
           files: |
             dist-apk/*.apk
             dist-apk/*.apk.sha256
