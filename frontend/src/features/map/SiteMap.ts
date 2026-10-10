@@ -132,6 +132,7 @@ export class SiteMap {
   /** Switches the basemap between its light and dark colours in place, keeping the site layers. */
   setDark(dark: boolean): void {
     this.#basemap.setDark(dark);
+    this.#boundaries.setDark(dark);
   }
 
   showUser(position: LonLat): void {
