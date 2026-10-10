@@ -11,11 +11,13 @@ import { ScanStatusLine } from './ScanStatusLine';
 
 interface ScanSentStageProps {
   readonly id: string;
+  /** The camera froze and ended the recording early; the clip up to then was saved. */
+  readonly cameraStopped: boolean;
   readonly onAgain: () => void;
 }
 
 /** The recording's journey, live, ending with how many frame reports the worker made. */
-export function ScanSentStage({ id, onAgain }: ScanSentStageProps) {
+export function ScanSentStage({ id, cameraStopped, onAgain }: ScanSentStageProps) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
   const auth = useAuthFlow();
@@ -23,6 +25,11 @@ export function ScanSentStage({ id, onAgain }: ScanSentStageProps) {
   if (!scan) return null;
   return (
     <div className="snap-sent">
+      {cameraStopped && (
+        <p className="form__note" role="status">
+          {t('scan.cameraStopped')}
+        </p>
+      )}
       {scan.data.problem === null && scan.data.stage !== 'failed' && <Celebration />}
       <ProgressSteps done={ScanProgress.stepsDone(scan)} steps={SCAN_STEPS} keyPrefix="scan.steps" />
       <ScanStatusLine scan={scan} />

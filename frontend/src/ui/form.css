@@ -218,6 +218,7 @@
 }
 
 .button--text {
+  min-width: var(--target);
   min-height: var(--target);
   padding: 0 var(--s-3);
   background: transparent;

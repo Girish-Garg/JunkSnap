@@ -29,13 +29,22 @@ export class AreaMarkerSource {
     if (!points) return EMPTY;
     const features = points.features.map((point): Feature => {
       const marker = markers.get(point.properties.id);
-      const value = marker?.value ? { marker_value: marker.value } : {};
-      const basis = marker?.basis ? { marker_basis: marker.basis } : {};
-      const tooltip = marker ? { marker_tooltip: marker.tooltip } : {};
-      const rank = marker?.rank ?? 9999;
-      return { ...point, properties: { ...point.properties, ...value, ...basis, ...tooltip, marker_rank: rank } };
+      const flat = marker ? AreaMarkerSource.#flat(marker) : {};
+      return { ...point, properties: { ...point.properties, ...flat, marker_rank: marker?.rank ?? 9999 } };
     });
     return { type: 'FeatureCollection', features };
+  }
+
+  // Only the fields a marker has, so `has` in the layer's expressions tells which text to draw.
+  static #flat(marker: AreaMarker): Readonly<Record<string, string | boolean>> {
+    const entries: [string, string | boolean | null][] = [
+      ['marker_value', marker.value],
+      ['marker_basis', marker.basis],
+      ['marker_count', marker.count],
+      ['marker_pilot', marker.pilot || null],
+      ['marker_tooltip', marker.tooltip],
+    ];
+    return Object.fromEntries(entries.filter((entry): entry is [string, string | boolean] => Boolean(entry[1])));
   }
 
   /** Starts loading the points; an older load that finishes late is ignored. */

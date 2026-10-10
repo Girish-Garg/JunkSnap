@@ -62,3 +62,19 @@
 .scan-frame--failed .scan-frame__result {
   color: var(--status-open);
 }
+
+/* A frame opens its own "What we checked". */
+.scan-frame__open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

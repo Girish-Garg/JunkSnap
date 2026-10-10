@@ -90,3 +90,9 @@
   display: grid;
   gap: var(--s-3);
 }
+
+/* Pilot-city data, flagged beside the score as on the area page. */
+.ranking-row__pilot {
+  align-self: flex-start;
+  margin-top: var(--s-1);
+}

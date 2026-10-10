@@ -3,7 +3,7 @@ import { Report } from "../../domain/Report.js";
 import type { MergeOutcome, ReportRecord } from "../../domain/ReportRecord.js";
 import type { MergeEvidence } from "../../domain/sites/MergeableReport.js";
 import type { ReportMerger } from "../../ports/ReportMerger.js";
-import { GeoPoint } from "../../domain/sites/GeoPoint.js";
+import { ReportPlacement } from "../../domain/ReportPlacement.js";
 import type { BinLocator } from "../BinLocator.js";
 import type { NearPlacesFinder } from "../NearPlacesFinder.js";
 import type { SiteMerger } from "../sites/SiteMerger.js";
@@ -34,8 +34,9 @@ export class SiteReportMerger implements ReportMerger {
     const moderation = moderation_result ?? null;
     const verification = verification_result ?? null;
     const upload = Report.fromRecord(record).upload();
-    const near = this.#places.near(upload.gps.lat, upload.gps.lon);
-    const bin = this.#bins.measure(new GeoPoint(upload.gps.lat, upload.gps.lon), location.town);
+    const { spot: site } = ReportPlacement.of(upload);
+    const near = this.#places.near(site.lat, site.lon);
+    const bin = this.#bins.measure(site, location.town);
     const spot = record.scan_spot === undefined ? {} : { scanSpot: record.scan_spot };
     return { upload, moderation, verification, location, near, bin, brands: record.brand_labels ?? [], ...spot };
   }

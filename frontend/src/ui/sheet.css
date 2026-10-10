@@ -1,4 +1,8 @@
-/* Phones: bottom sheet. Heights come from SheetDetents via --sheet-height; it springs up and slides away. */
+/*
+  Phones: bottom sheet. Heights come from SheetDetents via --sheet-height; it springs up and slides away.
+  While a finger drags it (SheetDrag), --sheet-drag-height follows the finger and --sheet-drag-offset pushes it
+  below its lowest height; on release both go and the sheet springs to its detent, or slides away from there.
+*/
 .sheet {
   position: absolute;
   right: 0;
@@ -9,10 +13,13 @@
   flex-direction: column;
   height: var(--sheet-drag-height, var(--sheet-height));
   margin: 0 auto;
+  transform: translateY(var(--sheet-drag-offset, 0px));
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--surface);
   box-shadow: var(--shadow-sheet);
-  transition: height var(--dur-spring) var(--spring);
+  transition:
+    height var(--dur-spring) var(--spring),
+    transform var(--dur-spring) var(--spring);
   animation: sheet-in var(--dur-spring) var(--spring);
 }
 
@@ -22,6 +29,7 @@
 
 .sheet--dragging {
   transition: none;
+  user-select: none;
 }
 
 @keyframes sheet-in {
@@ -41,8 +49,9 @@
   display: flex;
   flex: none;
   justify-content: flex-end;
-  height: 44px;
-  padding: var(--s-2) var(--s-2) 0;
+  height: var(--target);
+  padding: var(--s-1) var(--s-2) 0;
+  /* The bar is all drag: the browser neither scrolls nor zooms on it. */
   touch-action: none;
   cursor: grab;
 }
@@ -76,18 +85,18 @@
 .sheet__body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  padding: 0 var(--edge) calc(var(--s-10) + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* The raised Report button overlaps the sheet's foot: the last line and a focused field stay clear of it. */
+  padding: 0 var(--edge) calc(var(--report-overhang) + var(--s-6) + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(var(--report-overhang) + var(--s-2));
+  /* Content scrolls at every height; a drag down from the top moves the sheet instead (useSheet). */
+  touch-action: pan-x pan-y;
 }
 
 /* Content arrives a beat after the sheet, so the eye follows the sheet first. */
 .sheet__body > * {
   animation: rise var(--dur-3) var(--ease-out) 60ms both;
-}
-
-.sheet--full .sheet__body {
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .sheet-title {
@@ -122,6 +131,7 @@
     border-top: 1px solid var(--divider);
     border-radius: 0;
     box-shadow: none;
+    transform: none;
     animation: panel-in var(--dur-3) var(--ease-out);
   }
 

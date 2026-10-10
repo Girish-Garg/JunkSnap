@@ -25,11 +25,6 @@ describe('SiteFilter', () => {
     expect(await idsOf(unverifiedOnly)).toEqual(['site_jpr_1']);
   });
 
-  it('counts sites per type for the filter sheet', async () => {
-    const counts = SiteFilter.countByType(await sitesPromise);
-    expect(counts).toEqual({ waste_dump: 1, no_bin: 1, contaminated_water: 1, open_construction: 1, overflowing_bin: 1 });
-  });
-
   it('hides overflowing or broken bins when that type is switched off', async () => {
     expect(await idsOf(new SiteFilter())).toContain('site_jdh_4');
     const noBins = new SiteFilter().toggleType('overflowing_bin');

@@ -22,11 +22,13 @@ describe('Map areas', () => {
     await renderApp(<AppRoutes />);
     // The honesty pill stays visible beside the Legend chip; the legend opens from the chip.
     expect(await screen.findByText('Scores show after 10 verified reports')).toBeInTheDocument();
+    await waitFor(() => expect(seen.last?.areaMarkers.size).toBeGreaterThan(0));
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
-    const legend = await screen.findByRole('region', { name: 'Map colours' });
+    const legend = await screen.findByRole('region', { name: 'Map legend' });
     expect(within(legend).getByText(/Seats coloured by score/)).toBeInTheDocument();
-    expect(within(legend).getByText('Marker: score out of 100')).toBeInTheDocument();
+    expect(within(legend).getByText('Marker: score out of 100, then its verified reports')).toBeInTheDocument();
     expect(within(legend).getByText('Marker: number of verified reports')).toBeInTheDocument();
+    expect(within(legend).getByText('Flag: pilot city data')).toBeInTheDocument();
     expect(within(legend).queryByText(/ward/i)).not.toBeInTheDocument();
     expect(within(legend).getByText('Dashed outline: seat boundary out of date')).toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
@@ -38,6 +40,9 @@ describe('Map areas', () => {
     expect(seen.last?.areaMarkers.get('s20-ac-127')?.value).toBe('4');
   });
 
+});
+
+describe('Map areas controls', () => {
   it('has no layer switcher; the ranking is one tap away', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />);
@@ -59,5 +64,25 @@ describe('Map fill when a list fails to load', () => {
     };
     await renderApp(<AppRoutes />, { services: new ServiceContainer({ ...base, areas }) });
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
+  });
+});
+
+describe('Map legend before any score', () => {
+  it('explains the pins and the n/10 sticker, and leaves out score entries no seat shows', async () => {
+    const base = testServices();
+    const areas: AreaApi = {
+      scores: (kind, id) => base.areas.scores(kind, id),
+      list: async (kind, within, limit) => ({ kind, within, total: 0, limit, areas: [] }),
+      crawl: (districtId) => base.areas.crawl(districtId),
+    };
+    await renderApp(<AppRoutes />, { services: new ServiceContainer({ ...base, areas }) });
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
+    const legend = await screen.findByRole('region', { name: 'Map legend' });
+    expect(within(legend).getByText(/^Pin: one reported site/)).toBeInTheDocument();
+    expect(within(legend).getByText(/^Dashed pin: not verified yet; 1\/10/)).toBeInTheDocument();
+    expect(within(legend).getByText('Stacked pin: several sites at one spot')).toBeInTheDocument();
+    expect(within(legend).queryByText(/^Marker:/)).not.toBeInTheDocument();
+    expect(within(legend).queryByText(/Seats coloured by score/)).not.toBeInTheDocument();
+    expect(within(legend).queryByText('Flag: pilot city data')).not.toBeInTheDocument();
   });
 });

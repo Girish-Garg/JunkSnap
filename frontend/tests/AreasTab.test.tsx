@@ -10,7 +10,7 @@ const COLLECTING = /We're collecting official ward data for this area/;
 vi.mock('../src/features/map/components/SiteMapView', async () => {
   const { useEffect } = await import('react');
   const { BBox } = await import('../src/domain/BBox');
-  const view = { bbox: BBox.around([73.02, 26.27], 0.99), clamped: false };
+  const view = { bbox: BBox.around([73.02, 26.27], 0.99) };
   return {
     SiteMapView: ({ onViewChange }: { onViewChange: (next: typeof view) => void }) => {
       useEffect(() => onViewChange(view), [onViewChange]);
@@ -20,14 +20,15 @@ vi.mock('../src/features/map/components/SiteMapView', async () => {
 });
 
 describe('Areas list', () => {
-  it('lists the areas of the sites on the map by kind and filters them by name', async () => {
+  it('lists the reported areas by kind from the area list route and filters them by name', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/areas' });
     expect(await screen.findByRole('link', { name: /Sardarpura/ })).toHaveAttribute('href', '/areas/assembly/s20-ac-127');
     expect(screen.getByRole('heading', { name: 'Lok Sabha seats' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Districts' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Find an area'), 'sard');
-    expect(screen.getAllByRole('link', { name: /Sites on the map/ })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: /verified reports/ })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /Sardarpura/ })).toHaveTextContent('Sites: 3 · verified reports: 4');
     expect(screen.getByRole('link', { name: 'City ranking' })).toHaveAttribute('href', '/ranking');
   });
 
@@ -46,7 +47,7 @@ describe('Area page', () => {
     expect(screen.getByText('Pilot city')).toBeInTheDocument();
     expect(screen.getByText('Too few bins')).toBeInTheDocument();
     expect(screen.getByText('48.2%')).toBeInTheDocument();
-    expect(screen.getByText('16.7% · 1 of 6 sites')).toBeInTheDocument();
+    expect(screen.getByText('16.7% · 1 of 6 verified sites')).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Waste dump/ })).toHaveAttribute('href', '/sites/site_jdh_1');
   });
 
@@ -61,6 +62,14 @@ describe('Area page', () => {
   it('says so when an area has no reports', async () => {
     await renderApp(<AppRoutes />, { route: '/areas/ward/jodhpur-mc-w99' });
     expect(await screen.findByText('No reports in this area yet.')).toBeInTheDocument();
+  });
+});
+
+describe('Area page letter', () => {
+  it('keeps the letter off below 10 verified reports and says why, instead of a 409 after sign-in', async () => {
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-54' });
+    expect(await screen.findByRole('button', { name: 'Draft a letter about this area' })).toBeDisabled();
+    expect(screen.getByText('Letters open once this area has 10 verified reports.')).toBeInTheDocument();
   });
 });
 

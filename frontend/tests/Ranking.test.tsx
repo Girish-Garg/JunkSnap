@@ -15,9 +15,12 @@ describe('City ranking', () => {
     expect(first).toHaveAttribute('href', '/areas/assembly/s20-ac-128');
     expect(first).toHaveTextContent('Mean of 3 shown scores · 14 verified reports');
     expect(within(first!).getByText('44')).toBeInTheDocument();
+    expect(within(first!).getByText('Pilot city')).toBeInTheDocument();
     expect(rest.length).toBeGreaterThan(0);
     for (const row of rest) {
-      expect(row).toHaveTextContent(/Not enough reports \(\d+ of 10\)/);
+      expect(row).toHaveTextContent(/Not enough verified reports \(\d+ of 10\)/);
+      // The note already gives the count; it is never repeated as "n verified reports".
+      expect(row).not.toHaveTextContent(/\d verified reports/);
       expect(row).toHaveTextContent('No score yet');
     }
   });

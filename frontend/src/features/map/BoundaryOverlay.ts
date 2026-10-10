@@ -1,5 +1,5 @@
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import { AreaMarkerLayer, BADGE_IMAGES, markerText } from '../../layers/boundaries/AreaMarkerLayer';
+import { AreaMarkerLayer, BADGE_IMAGES, INLINE_IMAGES, markerText } from '../../layers/boundaries/AreaMarkerLayer';
 import { BoundaryFillLayer } from '../../layers/boundaries/BoundaryFillLayer';
 import type { BoundaryContext, BoundaryLayer } from '../../layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../../layers/boundaries/BoundaryLineLayer';
@@ -7,7 +7,7 @@ import { OutdatedLineLayer } from '../../layers/boundaries/OutdatedLineLayer';
 import type { AreaMarker } from './AreaMarkers';
 import { AreaMarkerSource, type LabelLoader } from './AreaMarkerSource';
 import { BadgeArt } from './BadgeArt';
-import type { BadgeKind } from './BadgeIcons';
+import type { BadgeKind, InlineGlyph } from './BadgeIcons';
 import { MarkerTooltip } from './MarkerTooltip';
 import type { MapAreaKind } from '../../services/BoundaryCatalog';
 
@@ -93,6 +93,11 @@ export class BoundaryOverlay {
       const badge = BadgeArt.create(kind, this.#dark);
       if (this.#map.hasImage(name)) this.#map.updateImage(name, badge);
       else this.#map.addImage(name, badge, badge.options);
+    }
+    for (const [kind, name] of Object.entries(INLINE_IMAGES) as [InlineGlyph, string][]) {
+      const glyph = BadgeArt.inline(kind, this.#dark);
+      if (this.#map.hasImage(name)) this.#map.updateImage(name, glyph);
+      else this.#map.addImage(name, glyph, glyph.options);
     }
   }
 

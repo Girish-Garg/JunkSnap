@@ -41,7 +41,7 @@ export type ModerationResult = {
     model: string;
     version: string;
     /**
-     * Optional (v1.11). Every region blurred, by kind. faces and plates: detector boxes. heads: the top of a person box with no face found in it. plate_zones: the lower part of a vehicle box with no plate found in it. people and vehicles: whole DetectLabels boxes, blurred when the photo is dark, the detection is unsure, the box is small or the person is not upright. band: 1 when a dark photo had no face, plate, person or vehicle found, so the lower 45% of the image was blurred. Absent on rows written before v1.11.
+     * Optional (v1.13). Every region blurred, by kind. faces and plates: detector boxes. heads: the top of a person box with no face found in it. plate_zones: the lower part of a vehicle box with no plate found in it. people and vehicles: whole DetectLabels boxes, blurred when the photo is dark, the detection is unsure, the box is small or the person is not upright. band: 1 when a dark photo had no face, plate, person or vehicle found, so the lower 45% of the image was blurred. Absent on rows written before v1.13.
      */
     regions?: {
       faces: number;
@@ -53,7 +53,7 @@ export type ModerationResult = {
       band: number;
     };
     /**
-     * Optional (v1.11). True when the photo was too dark to trust a found-nothing answer from the face and plate detectors, so every person and vehicle box was blurred whole.
+     * Optional (v1.13). True when the photo was too dark to trust a found-nothing answer from the face and plate detectors, so every person and vehicle box was blurred whole.
      */
     low_light?: boolean;
   };
@@ -217,7 +217,7 @@ export const moderationResultSchema = {
                 "vehicles",
                 "band"
               ],
-              "description": "Optional (v1.11). Every region blurred, by kind. faces and plates: detector boxes. heads: the top of a person box with no face found in it. plate_zones: the lower part of a vehicle box with no plate found in it. people and vehicles: whole DetectLabels boxes, blurred when the photo is dark, the detection is unsure, the box is small or the person is not upright. band: 1 when a dark photo had no face, plate, person or vehicle found, so the lower 45% of the image was blurred. Absent on rows written before v1.11.",
+              "description": "Optional (v1.13). Every region blurred, by kind. faces and plates: detector boxes. heads: the top of a person box with no face found in it. plate_zones: the lower part of a vehicle box with no plate found in it. people and vehicles: whole DetectLabels boxes, blurred when the photo is dark, the detection is unsure, the box is small or the person is not upright. band: 1 when a dark photo had no face, plate, person or vehicle found, so the lower 45% of the image was blurred. Absent on rows written before v1.13.",
               "properties": {
                 "faces": {
                   "type": "integer",
@@ -252,7 +252,7 @@ export const moderationResultSchema = {
             },
             "low_light": {
               "type": "boolean",
-              "description": "Optional (v1.11). True when the photo was too dark to trust a found-nothing answer from the face and plate detectors, so every person and vehicle box was blurred whole."
+              "description": "Optional (v1.13). True when the photo was too dark to trust a found-nothing answer from the face and plate detectors, so every person and vehicle box was blurred whole."
             }
           }
         }

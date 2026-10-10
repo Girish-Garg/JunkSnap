@@ -1,17 +1,17 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router';
 import { areaPath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { SiteFeature } from '../../../domain/Site';
 import type { AreaHit } from '../BoundaryOverlay';
 
 /** A tap on an area opens its page; while a preview card is up, the tap only dismisses the card. */
 export function useAreaPick(preview: SiteFeature | null, dismiss: () => void) {
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   return useCallback(
     (area: AreaHit) => {
       if (preview) dismiss();
-      else navigate(areaPath(area.kind, area.id));
+      else sheets.open(areaPath(area.kind, area.id));
     },
-    [preview, dismiss, navigate],
+    [preview, dismiss, sheets],
   );
 }

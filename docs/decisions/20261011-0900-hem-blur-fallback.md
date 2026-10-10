@@ -14,7 +14,7 @@ Decision:
 - A face or plate covers a subject only when its centre is in that subject's own head band or plate zone, never a neighbour's.
 - A whole person or vehicle box is blurred when the photo is dark (mean grey below 0.3), the instance confidence is below 70, the box is under 20% of the image height, or a person's box is wider than 0.7 of its height (bent over or crouching). Over-blurring beats leaking.
 - A dark photo where nothing at all is found (no face, plate, person or vehicle) gets the lower 45% of the image blurred, where kerb-level plates and nearby faces usually are; the record says `low_light: true` and `regions.band: 1`.
-- Contracts v1.11, additive: optional `blur.regions` (counts by kind, `band` included) and `blur.low_light`. `faces` and `plates` keep their meaning. Public copies carry S3 metadata `blur-policy` (`subjects-2`).
+- Contracts v1.13, additive: optional `blur.regions` (counts by kind, `band` included) and `blur.low_light`. `faces` and `plates` keep their meaning. Public copies carry S3 metadata `blur-policy` (`subjects-2`).
 - `backend/server/scripts/reblurPublic.ts` re-blurs existing public copies of one stage from their originals; the lead runs it.
 
 Consequences for other lanes: none for the app or ml; the blurred photo shows more blur on night and crowded photos. CloudFront caches `/media/*` for a day, so a re-blur needs an invalidation.

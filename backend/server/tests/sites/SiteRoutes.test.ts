@@ -15,7 +15,7 @@ import { VoteService } from "../../src/services/sites/VoteService.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { LogSink } from "../LogSink.js";
-import { DEVICE_A, DEVICE_B, report, siteFixture, userOf } from "./builders.js";
+import { DEVICE_A, DEVICE_B, report, shown, siteFixture, userOf } from "./builders.js";
 import {
   FakeCleanups,
   FakeQueue,
@@ -78,7 +78,7 @@ async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance>
   cleanups = new FakeCleanups();
   rig = withdrawalRig(sites);
   const routes = new SiteRoutes({
-    finder: new SiteFinder(sites, new NgeohashCells()),
+    finder: new SiteFinder(sites, new NgeohashCells(), clock),
     votes: new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry }),
     cleanups: new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry }),
     withdrawals: rig.service,
@@ -98,7 +98,7 @@ describe("GET /sites?bbox", () => {
     expect(body.type).toBe("FeatureCollection");
     expect(body.features.map((feature) => feature.properties.site_id)).toEqual(["site_jdh_2", "site_jdh_3", "site_jdh_1"]);
     body.features.forEach((feature) => validateSite(feature));
-    expect(body.features[2]).toEqual(siteFixture("jdh-1"));
+    expect(body.features[2]).toEqual(shown(siteFixture("jdh-1")));
   });
 
   it("leaves out rejected sites", async () => {

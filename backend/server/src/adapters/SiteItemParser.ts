@@ -3,6 +3,7 @@ import type { AreaKind, AreaRef } from "../domain/AreaKey.js";
 import { AreaSite } from "../domain/AreaSite.js";
 import { InternalDataError } from "../domain/errors.js";
 import { GeoPoint } from "../domain/GeoPoint.js";
+import { expiryOf } from "../domain/SiteExpiry.js";
 import { LegacySiteFields } from "./sites/LegacySiteFields.js";
 
 type Location = Site["properties"]["location"];
@@ -38,6 +39,7 @@ export class SiteItemParser {
       verifiedCount: site.verified_count,
       firstReportedAt: site.first_reported_at,
       cleanedAt: site.cleaned_at,
+      expiresAt: expiryOf(site),
       pilot: site.pilot,
       burning: site.burning,
       point: new GeoPoint(lat, lon),

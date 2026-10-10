@@ -8,7 +8,15 @@ export interface MapNoticeInput {
   readonly loaded: boolean;
   readonly loadedCount: number;
   readonly shownCount: number;
+  /** The view is wider than the map loads at once, so only its middle has sites. */
   readonly clamped: boolean;
+  /** A GET /sites query hit its 500 cap, so older sites are missing. */
+  readonly truncated?: boolean;
+  /**
+   * For an empty view: whether sites lie just off screen; null while that is still being looked up, and
+   * left out when nobody looks (then the view is simply empty).
+   */
+  readonly nearby?: boolean | null;
   /** A toast's i18n key; it shows before every other notice while it lasts. */
   readonly flash?: string | null;
 }
@@ -17,6 +25,8 @@ export interface MapNoticeView {
   readonly icon: IconName;
   readonly key: string;
   readonly tone: 'info' | 'alert';
+  /** A button beside the text: move to the nearest sites off screen. */
+  readonly action?: 'nearest';
 }
 
 type Rule = readonly [(input: MapNoticeInput) => boolean, MapNoticeView];
@@ -29,7 +39,10 @@ const RULES: readonly Rule[] = [
   [(s) => s.locationProblem === 'unavailable', { icon: 'locate', key: 'notice.locationUnavailable', tone: 'info' }],
   [(s) => s.loadedCount > 0 && s.shownCount === 0, { icon: 'info', key: 'notice.filteredEmpty', tone: 'info' }],
   [(s) => s.clamped, { icon: 'search', key: 'notice.zoomIn', tone: 'info' }],
-  [(s) => s.loaded && s.loadedCount === 0, { icon: 'info', key: 'notice.empty', tone: 'info' }],
+  [(s) => s.truncated === true, { icon: 'search', key: 'notice.capped', tone: 'info' }],
+  [(s) => s.loaded && s.loadedCount === 0 && s.nearby === true, { icon: 'info', key: 'notice.offScreen', tone: 'info', action: 'nearest' }],
+  // Never "no reports" while the search around the view is still on its way.
+  [(s) => s.loaded && s.loadedCount === 0 && s.nearby !== null, { icon: 'info', key: 'notice.empty', tone: 'info' }],
 ];
 
 export class MapNotice {

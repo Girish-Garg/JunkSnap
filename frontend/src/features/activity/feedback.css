@@ -1,0 +1,230 @@
+/* "What we checked" for the reporter's own report. Tokens only. */
+.feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin: var(--s-3) 0 var(--s-4);
+}
+
+.feedback-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+/* Outcome: the blurred thumbnail beside a rounded headline and one plain sentence. */
+.feedback-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--radius-l);
+  background: var(--status-check-tint);
+}
+
+.feedback-outcome--good {
+  background: var(--status-cleaned-tint);
+}
+
+.feedback-outcome--alert {
+  background: var(--status-open-tint);
+}
+
+.feedback-outcome__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.feedback-outcome__headline {
+  margin: 0;
+  color: var(--status-check);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 800;
+}
+
+.feedback-outcome--good .feedback-outcome__headline {
+  color: var(--status-cleaned);
+}
+
+.feedback-outcome--alert .feedback-outcome__headline {
+  color: var(--status-open);
+}
+
+.feedback-outcome__explain {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+/* The AI check's reason: a quote card with the model named above it. */
+.feedback-judge {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+}
+
+.feedback-judge__label {
+  color: var(--accent-ink);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.feedback-judge__quote {
+  margin: var(--s-2) 0 0;
+  color: var(--text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  quotes: "\201C" "\201D";
+}
+
+.feedback-judge__quote::before {
+  content: open-quote;
+}
+
+.feedback-judge__quote::after {
+  content: close-quote;
+}
+
+.feedback-judge__small {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+  margin: var(--s-2) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.feedback-judge__model {
+  overflow-wrap: anywhere;
+}
+
+/* Checklist: one row per check with a round mark and, for model checks, a strength pill. */
+.feedback-checks__title {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 800;
+}
+
+.feedback-checks__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feedback-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--target);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-m);
+  background: var(--tile);
+}
+
+.feedback-check__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.feedback-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--s-6);
+  height: var(--s-6);
+  border-radius: var(--radius-pill);
+  background: var(--status-check-tint);
+  color: var(--status-check);
+}
+
+.feedback-mark--pass {
+  background: var(--status-cleaned-tint);
+  color: var(--status-cleaned);
+}
+
+.feedback-mark--fail {
+  background: var(--status-open-tint);
+  color: var(--status-open);
+}
+
+.feedback-mark__dash {
+  display: block;
+  width: var(--s-3);
+  height: var(--outline);
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.feedback-band {
+  flex: none;
+  padding: 0 var(--s-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.feedback-band--strong {
+  color: var(--accent-ink);
+}
+
+/* Next step: share the site, or tips for a better photo. */
+.feedback-next {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.feedback-next__note {
+  margin: 0;
+  color: var(--accent-ink);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.feedback-tips {
+  padding: var(--s-3) var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+}
+
+.feedback-tips__summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  color: var(--accent-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.feedback-tips__text {
+  margin: var(--s-1) 0 var(--s-2);
+  color: var(--text-secondary);
+}
+
+.feedback-tips__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding-left: var(--s-5);
+}

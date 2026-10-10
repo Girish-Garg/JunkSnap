@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import { HistoryLayers } from '../ui/HistoryLayers';
 import { SheetHistory } from './SheetHistory';
 
 export interface SheetNavigation {
@@ -15,19 +16,44 @@ export interface SheetNavigation {
   readonly linkState: { readonly depth: number };
 }
 
+// A second tap within this time on the same screen is the same request (a double tap on close, or a close
+// fired by both the exit animation and its fallback timer); running it twice would pop two levels.
+const REPEAT_MS = 600;
+
+// Runs a sheet change once per screen: open layers (Filters, the stack list, the preview card) come off the
+// stack first, so the next sheet replaces them instead of leaving them underneath.
+function useOnce(key: string): (change: () => void) => void {
+  const last = useRef({ key: '', at: 0 });
+  return useCallback(
+    (change: () => void) => {
+      const now = performance.now();
+      if (last.current.key === key && now - last.current.at < REPEAT_MS) return;
+      last.current = { key, at: now };
+      HistoryLayers.unwind(change);
+    },
+    [key],
+  );
+}
+
+/**
+ * The one model for sheets: each open sheet is one history level. Opening stacks one level (tabs swap), and
+ * close, back, Escape, a drag down and a map tap each pop exactly one.
+ */
 export function useSheetNavigation(): SheetNavigation {
   const navigate = useNavigate();
-  const depth = SheetHistory.depth(useLocation().state);
-  const open = useCallback((path: string) => void navigate(path, { state: SheetHistory.above(depth) }), [navigate, depth]);
+  const location = useLocation();
+  const depth = SheetHistory.depth(location.state);
+  const once = useOnce(location.key);
+  const open = useCallback((path: string) => once(() => void navigate(path, { state: SheetHistory.above(depth) })), [once, navigate, depth]);
   const swap = useCallback(
-    (path: string) => void navigate(path, { replace: true, state: SheetHistory.at(depth) }),
-    [navigate, depth],
+    (path: string) => once(() => void navigate(path, { replace: true, state: SheetHistory.at(depth) })),
+    [once, navigate, depth],
   );
   const close = useCallback(
-    (fallback = '/') => void (depth > 0 ? navigate(-1) : navigate(fallback, { replace: true })),
-    [navigate, depth],
+    (fallback = '/') => once(() => void (depth > 0 ? navigate(-1) : navigate(fallback, { replace: true }))),
+    [once, navigate, depth],
   );
-  const home = useCallback(() => void (depth > 0 ? navigate(-depth) : navigate('/', { replace: true })), [navigate, depth]);
+  const home = useCallback(() => once(() => void (depth > 0 ? navigate(-depth) : navigate('/', { replace: true }))), [once, navigate, depth]);
   return useMemo(
     () => ({ open, swap, close, home, linkState: SheetHistory.above(depth) }),
     [open, swap, close, home, depth],

@@ -20,17 +20,30 @@ const TEXT_COLORS = {
   dark: { name: '#f7f0e4', value: '#c9bdaa' },
 } as const;
 
-/** Name, then the shown score or report count as a bare number (the badge glyph says which); else the name. */
+/** Images drawn inside a marker's text after a shown score: the photo glyph of its count, and the pilot flag. */
+export const INLINE_IMAGES = { count: 'area-glyph-count', pilot: 'area-glyph-pilot' } as const;
+
+/**
+ * Name, then the shown score or report count as a bare number (the badge glyph says which). A shown score also
+ * carries its verified report count and, on pilot-city data, the pilot flag. Else the name alone.
+ */
 export function markerText(dark: boolean): ExpressionSpecification {
   const colors = TEXT_COLORS[dark ? 'dark' : 'light'];
   const bold: ExpressionSpecification = ['literal', ['Noto Sans Bold']];
-  const name = { 'text-font': bold, 'text-color': colors.name };
+  const head = [['get', 'name'], { 'text-font': bold, 'text-color': colors.name }, '\n', {}];
+  const value = { 'font-scale': 0.9, 'text-color': colors.value };
+  const scored = [...head, ['get', 'marker_value'], value, '  ', {}, ['image', INLINE_IMAGES.count], {}, ['get', 'marker_count'], value];
+  const pilot = [' ', {}, ['image', INLINE_IMAGES.pilot], {}];
   return [
     'case',
+    ['all', ['has', 'marker_count'], ['has', 'marker_pilot']],
+    ['format', ...scored, ...pilot],
+    ['has', 'marker_count'],
+    ['format', ...scored],
     ['has', 'marker_value'],
-    ['format', ['get', 'name'], name, '\n', {}, ['get', 'marker_value'], { 'font-scale': 0.9, 'text-color': colors.value }],
-    ['format', ['get', 'name'], name],
-  ];
+    ['format', ...head, ['get', 'marker_value'], value],
+    ['format', ['get', 'name'], { 'text-font': bold, 'text-color': colors.name }],
+  ] as ExpressionSpecification;
 }
 
 /**

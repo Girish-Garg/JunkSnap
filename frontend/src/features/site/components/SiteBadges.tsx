@@ -12,7 +12,7 @@ export function SiteBadges({ badges }: SiteBadgesProps) {
     <ul className="badges">
       {badges.map((badge) => (
         <li key={badge.key} className={badge.tone === 'alert' ? 'badge badge--alert' : 'badge'}>
-          {t(badge.key)}
+          {t(badge.key, badge.params)}
         </li>
       ))}
     </ul>

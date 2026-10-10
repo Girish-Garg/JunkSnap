@@ -14,21 +14,25 @@ import {
 } from "../../src/domain/sites/SiteErrors.js";
 import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import {
+  afterPhoto,
   BASE_LAT,
   BASE_LON,
   BASE_URL,
+  clearByPhotos,
   DEVICE_A,
   DEVICE_B,
   DEVICE_C,
   DEVICE_D,
   evidence,
+  NO_VOTES,
   northOf,
   report,
   userOf,
 } from "./builders.js";
 
-const CLEANED_AT = "2026-10-10T05:00:00Z";
-const AFTER_PHOTO = `${BASE_URL}/media/cleanups/cln_x.jpg`;
+const CLEANED_AT = "2026-10-10T05:00:00.000Z";
+const AT = new Date(CLEANED_AT);
+const AFTER_PHOTO = `${BASE_URL}/media/cleanups/cln_cleaner-3.jpg`;
 
 // Nine yes votes plus the founding photo make the ten backers that verify a site.
 function verified(site: Site): Site {
@@ -38,8 +42,7 @@ function verified(site: Site): Site {
 
 function cleanedSite(): Site {
   const site = Site.found(report());
-  site.startCleanup("cln_x");
-  site.acceptCleanup("cln_x", AFTER_PHOTO, CLEANED_AT);
+  clearByPhotos(site, CLEANED_AT);
   return site;
 }
 
@@ -188,10 +191,10 @@ describe("Site votes", () => {
     const site = Site.found(report());
     const far = new GeoPoint(BASE_LAT + 0.02, BASE_LON);
     const voter = (deviceToken: string, userId: string | null) => ({ deviceToken, userId });
-    expect(() => site.admitVoter(voter(DEVICE_A, null), far)).toThrow(OwnSiteError);
-    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_A)), far)).toThrow(OwnSiteError);
-    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_B)), far)).toThrow(TooFarError);
-    expect(() => site.admitVoter(voter(DEVICE_B, null), new GeoPoint(northOf(990), BASE_LON))).not.toThrow();
+    expect(() => site.admitVoter(voter(DEVICE_A, null), far, "confirm", AT)).toThrow(OwnSiteError);
+    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_A)), far, "confirm", AT)).toThrow(OwnSiteError);
+    expect(() => site.admitVoter(voter(DEVICE_B, userOf(DEVICE_B)), far, "confirm", AT)).toThrow(TooFarError);
+    expect(() => site.admitVoter(voter(DEVICE_B, null), new GeoPoint(northOf(990), BASE_LON), "confirm", AT)).not.toThrow();
   });
 
   it("counts every waiting report as verified once votes confirm the site, and merges their insights", () => {
@@ -222,7 +225,7 @@ describe("Site votes", () => {
 });
 
 describe("Site cleanup", () => {
-  it("goes checking, then accepted with the after-photo and time", () => {
+  it("is cleaned by the third person's after-photo, with that photo and time", () => {
     const site = cleanedSite();
     expect(site.toFeature().properties).toMatchObject({
       status: "cleaned",
@@ -230,23 +233,23 @@ describe("Site cleanup", () => {
       cleanup_photo_url: AFTER_PHOTO,
       cleaned_at: CLEANED_AT,
     });
-    expect(() => site.startCleanup("cln_y")).toThrow(AlreadyCleanedError);
+    expect(() => site.startCleanup("cln_y", AT)).toThrow(AlreadyCleanedError);
   });
 
   it("allows one after-photo at a time and repeats the same one quietly", () => {
     const site = Site.found(report());
-    site.startCleanup("cln_x");
-    expect(() => site.startCleanup("cln_x")).not.toThrow();
-    expect(() => site.startCleanup("cln_y")).toThrow(CleanupPendingError);
+    site.startCleanup("cln_x", AT);
+    expect(() => site.startCleanup("cln_x", AT)).not.toThrow();
+    expect(() => site.startCleanup("cln_y", AT)).toThrow(CleanupPendingError);
     site.rejectCleanup("cln_x");
     expect(site.toFeature().properties).toMatchObject({ status: "open", cleanup_status: "rejected" });
-    expect(() => site.startCleanup("cln_y")).not.toThrow();
+    expect(() => site.startCleanup("cln_y", AT)).not.toThrow();
   });
 
   it("refuses to settle a cleanup it is not waiting for", () => {
     const site = Site.found(report());
-    expect(() => site.acceptCleanup("cln_x", AFTER_PHOTO, CLEANED_AT)).toThrow(InvalidTransitionError);
-    site.startCleanup("cln_x");
+    expect(() => site.acceptCleanup(afterPhoto("cleaner-1", CLEANED_AT, "cln_x"), NO_VOTES)).toThrow(InvalidTransitionError);
+    site.startCleanup("cln_x", AT);
     expect(() => site.rejectCleanup("cln_other")).toThrow(InvalidTransitionError);
   });
 });

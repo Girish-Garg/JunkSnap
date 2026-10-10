@@ -6,8 +6,8 @@ import type { Timer } from './Timer';
 
 export type CameraState = 'starting' | 'live' | CaptureProblem;
 
-/** Why the stream was opened again; logged so a field report can tell them apart. */
-export type CameraEvent = 'stalled' | 'ended' | 'gave_up';
+/** Why the stream was opened again (or a recording cut short); logged so a field report can tell them apart. */
+export type CameraEvent = 'stalled' | 'ended' | 'gave_up' | 'recording_cut';
 
 /** What LiveCamera needs from the <video> element. */
 export interface CameraScreen {
@@ -24,10 +24,14 @@ export interface LiveCameraPorts {
 
 export interface LiveCameraView {
   readonly screen: CameraScreen;
-  /** Null where the browser cannot report frames: then only an ended track restarts the camera. */
+  /** Null where the browser cannot report frames: then a track muted for STALL_MS counts as frozen. */
   readonly frames: FrameCounter | null;
   readonly onState: (state: CameraState) => void;
   readonly onEvent?: (event: CameraEvent, restarts: number) => void;
+  /** True while a recording uses the stream: a frozen camera then ends the recording, never reopens under it. */
+  readonly holding?: () => boolean;
+  /** The camera froze during a recording; the recording should stop and keep its clip. Called once per freeze. */
+  readonly onLost?: () => void;
 }
 
 /** A visible viewfinder with no new frame for this long is frozen. */
@@ -41,6 +45,7 @@ export const MAX_RESTARTS = 5;
  * good, for example when another app had the camera while JunkSnap was in the background: the
  * video then shows its last frame forever. A watchdog opens the stream again when no frame
  * arrives for STALL_MS while the page is visible, or when the track ends; tries back off.
+ * During a Scan recording it does not reopen; it asks the recording to stop, then reopens.
  */
 export class LiveCamera {
   readonly #ports: LiveCameraPorts;
@@ -50,6 +55,7 @@ export class LiveCamera {
   #stopped = false;
   #opening = false;
   #ended = false;
+  #cut = false;
   #seen = -1;
   #quietSince = 0;
   #restarts = 0;
@@ -92,7 +98,7 @@ export class LiveCamera {
     this.#release();
     this.#stream = stream;
     this.#view.screen.srcObject = stream;
-    for (const track of LiveCamera.#videoTracks(stream)) track.addEventListener('ended', () => (this.#ended = true));
+    for (const track of stream.getVideoTracks()) track.addEventListener('ended', () => (this.#ended = true));
     this.#play();
     this.#quietSince = this.#ports.now();
     this.#set('live');
@@ -114,9 +120,19 @@ export class LiveCamera {
 
   #tick(): void {
     this.#schedule();
-    if (!this.#ports.page.visible() || this.#sawFrame()) return;
-    if (this.#ended) return this.#restart('ended');
-    if (this.#waiting() && this.#due()) this.#restart('stalled');
+    if (!this.#ports.page.visible()) return;
+    const moving = this.#progressing();
+    if (this.#ended) return this.#lost('ended');
+    if (!moving && this.#waiting() && this.#due()) this.#lost('stalled');
+  }
+
+  // A recording keeps the stream it started with: end the recording (once), reopen after it.
+  #lost(event: CameraEvent): void {
+    if (!this.#view.holding?.()) return this.#restart(event);
+    if (this.#cut) return;
+    this.#cut = true;
+    this.#view.onEvent?.('recording_cut', this.#restarts);
+    this.#view.onLost?.();
   }
 
   // Live, or between failed reopens; not while a getUserMedia call is still pending.
@@ -125,25 +141,32 @@ export class LiveCamera {
     return this.#state === 'live' || (this.#state === 'starting' && this.#restarts > 0);
   }
 
-  // A new frame proves the stream works: the quiet clock and the restart count start over.
-  #sawFrame(): boolean {
+  // A new frame (or, without a frame counter, an unmuted track) proves the stream works:
+  // the quiet clock and the restart count start over.
+  #progressing(): boolean {
     const counter = this.#view.frames;
-    if (!counter || counter.count === this.#seen) return false;
-    this.#seen = counter.count;
+    const moving = counter ? counter.count !== this.#seen : this.#unmuted();
+    if (!moving) return false;
+    if (counter) this.#seen = counter.count;
+    this.#cut = false;
     this.#quietSince = this.#ports.now();
     if (this.#state === 'live') this.#restarts = 0;
-    return !this.#ended;
+    return true;
   }
 
-  // Without a frame counter only an ended track counts; otherwise 2 s, then 4, 8 and 16 s between tries.
+  #unmuted(): boolean {
+    return this.#stream !== null && this.#stream.getVideoTracks().every((track) => !track.muted);
+  }
+
+  // 2 s without progress, then 4, 8 and 16 s between tries.
   #due(): boolean {
-    if (!this.#view.frames) return false;
     const wait = STALL_MS * 2 ** Math.min(this.#restarts, 3);
     return this.#ports.now() - this.#quietSince >= wait;
   }
 
   #restart(event: CameraEvent): void {
     this.#ended = false;
+    this.#cut = false;
     this.#restarts += 1;
     this.#release();
     this.#quietSince = this.#ports.now();
@@ -179,9 +202,5 @@ export class LiveCamera {
     if (this.#stopped || state === this.#state) return;
     this.#state = state;
     this.#view.onState(state);
-  }
-
-  static #videoTracks(stream: MediaStream): readonly MediaStreamTrack[] {
-    return typeof stream.getVideoTracks === 'function' ? stream.getVideoTracks() : [];
   }
 }

@@ -1,9 +1,6 @@
 import type { VoteChoice } from "./SiteTypes.js";
 import { personOf } from "./utils.js";
 
-// Decision 20261010-1700: cleared once 3 more people say cleared than say still there, like the no-vote valve.
-const CLEARED_MARGIN = 3;
-
 export interface Vote {
   readonly siteId: string;
   readonly deviceToken: string;
@@ -47,17 +44,15 @@ export class VoteTally {
     return this.#people("cleaned").length;
   }
 
-  // Cleared votes count after the newest photo (a reopened site needs fresh ones); yes votes after the first of them dispute it.
-  // Returns the deciding vote's time, or null until cleared voters lead by the margin.
-  clearedAt(since: string): string | null {
-    const times = this.#latest
-      .filter((vote) => vote.choice === "cleaned" && Date.parse(vote.votedAt) > Date.parse(since))
-      .map((vote) => Date.parse(vote.votedAt))
-      .sort((a, b) => a - b);
-    const first = times[0] ?? Infinity;
-    const stillThere = this.#latest.filter((vote) => vote.choice === "confirm" && Date.parse(vote.votedAt) > first).length;
-    const last = times.at(-1);
-    return last === undefined || times.length - stillThere < CLEARED_MARGIN ? null : new Date(last).toISOString();
+  // Each person's latest vote, for the clearance count (decision 20261010-1855).
+  latest(): readonly Vote[] {
+    return this.#latest;
+  }
+
+  // The newest vote's time, which refreshes the site's expiry; null with no votes.
+  lastVotedAt(): string | null {
+    const times = this.#latest.map((vote) => Date.parse(vote.votedAt));
+    return times.length === 0 ? null : new Date(Math.max(...times)).toISOString();
   }
 
   #people(choice: VoteChoice): string[] {

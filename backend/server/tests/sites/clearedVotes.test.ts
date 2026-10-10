@@ -35,7 +35,7 @@ function setup() {
   sites.put(Site.found(report()));
   const reports = new FakeReportStatus();
   const service = new VoteService({ sites, votes: new FakeVoteRepository(), reports, clock: new SteppingClock(), retry: new ConflictRetry() });
-  const finder = new SiteFinder(sites, new NgeohashCells());
+  const finder = new SiteFinder(sites, new NgeohashCells(), new SteppingClock());
   let next = 1;
   const cast = async (choice: VoteChoice, count = 1) => {
     let result;

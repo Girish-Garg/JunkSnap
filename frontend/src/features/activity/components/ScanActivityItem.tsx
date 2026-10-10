@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { feedbackPath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
 import type { QueuedScan } from '../../../domain/QueuedScan';
 import { AUTO } from '../../../domain/ScanUpload';
@@ -23,6 +25,7 @@ function useScanLines(draft: QueuedScan['data']['draft']) {
 export function ScanActivityItem({ scan }: { readonly scan: QueuedScan }) {
   const { t } = useTranslation();
   const { snap } = useServices();
+  const sheets = useSheetNavigation();
   const { draft, problem, stage } = scan.data;
   const lines = useScanLines(draft);
   return (
@@ -34,7 +37,7 @@ export function ScanActivityItem({ scan }: { readonly scan: QueuedScan }) {
         <p className="report-row__title">{lines.title}</p>
         <p className="report-row__meta">{lines.meta}</p>
         <ScanStatusLine scan={scan} />
-        <ScanFrameStrip frames={ScanProgress.frames(scan)} />
+        <ScanFrameStrip frames={ScanProgress.frames(scan)} onOpen={(reportId) => sheets.open(feedbackPath(reportId))} />
         <div className="report-row__actions">
           {(problem !== null || stage === 'failed') && (
             <Button variant="text" onClick={() => void snap.scans.retry((other) => other.id === scan.id)}>

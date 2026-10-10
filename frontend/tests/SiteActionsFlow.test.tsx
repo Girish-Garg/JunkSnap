@@ -20,7 +20,7 @@ describe('community vote', () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn() });
     await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
-    expect(await screen.findByText('Thanks. Votes now: 3 yes, 1 no.')).toBeInTheDocument();
+    expect(await screen.findByText('Thanks. Votes now: 3 yes, 1 no, 2 cleared.')).toBeInTheDocument();
   });
 
   it('says plainly when the voter reported the site or is too far away', async () => {

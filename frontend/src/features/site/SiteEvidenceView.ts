@@ -13,15 +13,16 @@ export interface EvidenceLine {
 /** The site sheet's evidence lines: people who reported, the no-bin threshold and the nearest bin. */
 export class SiteEvidenceView {
   static lines(site: SiteProperties): readonly EvidenceLine[] {
-    return [...SiteEvidenceView.#reporters(site), ...SiteEvidenceView.#bin(site)];
+    return [...SiteEvidenceView.reporters(site), ...SiteEvidenceView.bin(site)];
   }
 
   // A no-bin zone's "n of 10" is the backers bar (decision 20261010-1630).
-  static #reporters({ reporters }: SiteProperties): readonly EvidenceLine[] {
+  static reporters({ reporters }: SiteProperties): readonly EvidenceLine[] {
     return reporters === undefined ? [] : [{ key: 'reporters', count: reporters }];
   }
 
-  static #bin({ report_type, insights }: SiteProperties): readonly EvidenceLine[] {
+  /** The nearest known bin, under its own heading on the sheet. */
+  static bin({ report_type, insights }: SiteProperties): readonly EvidenceLine[] {
     const measure = report_type === 'no_bin' ? BinAccess.zoneLine : BinAccess.line;
     const line = BinAccess.applies(report_type) ? measure(insights?.nearest_bin, insights?.no_bin_within_3km) : null;
     if (!line) return [];

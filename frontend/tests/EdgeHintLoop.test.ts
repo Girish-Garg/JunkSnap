@@ -46,6 +46,18 @@ it('EdgeHintLoop: analyses each new viewfinder frame once, so a frozen video cos
   test.loop.stop();
 });
 
+it('EdgeHintLoop: waits for the first presented frame', async () => {
+  const test = rig();
+  test.loop.start();
+  await turn(test, 0);
+  await turn(test);
+  expect(test.state.detects).toBe(0);
+  test.state.frames = 1;
+  await turn(test);
+  expect(test.state.detects).toBe(1);
+  test.loop.stop();
+});
+
 it('EdgeHintLoop: grabs nothing while the page is hidden', async () => {
   const test = rig();
   test.state.visible = false;

@@ -28,6 +28,12 @@ export interface VoteResult {
   readonly verification: Verification;
 }
 
+// One person's accepted after-photo (decision 20261010-1855): person is the user id, else the device token; at is when it was sent.
+export interface CleanupConfirmation {
+  readonly person: string;
+  readonly at: string;
+}
+
 // verified: the report belongs to a verified site (decision 20261010-1530).
 export interface MergedReport {
   readonly reportId: string;
@@ -54,6 +60,8 @@ export interface SiteInternals {
   readonly meTooCount: number;
   readonly embeddingKey: string | null;
   readonly pendingCleanupId: string | null;
+  // Uploaders of accepted after-photos; each says cleared once (decision 20261010-1855).
+  readonly cleanupPeople: readonly CleanupConfirmation[];
   // Reports their reporter withdrew (decision 20261010-1700): kept for the audit trail, never counted.
   readonly withdrawnReports: readonly string[];
   readonly version: number;

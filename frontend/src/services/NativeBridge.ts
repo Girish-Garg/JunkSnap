@@ -26,6 +26,11 @@ export class NativeBridge {
     this.#host = host;
   }
 
+  /** Running inside the Android app's WebView, where browser settings do not apply. */
+  inApp(): boolean {
+    return this.#host.__TAURI__ !== undefined || this.#host.JunkSnapAndroid !== undefined;
+  }
+
   /** The native share sheet exists only inside the app. */
   canShareText(): boolean {
     return this.#host.__TAURI__ !== undefined;

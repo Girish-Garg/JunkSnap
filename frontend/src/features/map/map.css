@@ -93,7 +93,8 @@
 .searchbar__input {
   flex: 1;
   min-width: 0;
-  height: 40px;
+  /* The whole 48 px bar is the field's tap target. */
+  height: 100%;
   padding: 0;
   line-height: 40px;
   border: 0;
@@ -207,6 +208,10 @@
 
 .filters__label {
   margin: var(--s-6) 0 var(--s-2);
+}
+
+.filters__scope {
+  margin: 0 0 var(--s-2);
 }
 
 .map-controls {
@@ -389,4 +394,29 @@
   .site-list {
     left: var(--panel-width);
   }
+}
+
+/* The toast's one action ("Show the nearest report"), beside it or on the line below on narrow phones. */
+.map-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.map-status__action {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* List mode: Filters and the language toggle share the top row. */
+.search-area__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.search-area__row .lang-toggle {
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
 }

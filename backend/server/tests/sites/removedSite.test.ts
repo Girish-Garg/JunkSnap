@@ -9,12 +9,12 @@ import { CleanupIntake } from "../../src/services/sites/CleanupIntake.js";
 import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
-import { BASE_URL, DEVICE_A, DEVICE_B, fixture, northOf, report, userOf } from "./builders.js";
-import { FakeCleanups, FakeQueue, FixedClock } from "./fakes.js";
+import { acceptPhoto, afterPhoto, BASE_URL, DEVICE_A, DEVICE_B, fixture, northOf, report, userOf } from "./builders.js";
+import { FakeCleanups, FakeQueue, FakeVoteRepository, FixedClock } from "./fakes.js";
 import { withdrawalRig } from "./withdrawalFakes.js";
 
 const SITE = "site_jdh_1";
-const LATER = "2026-10-10T03:00:00Z";
+const LATER = "2026-10-10T03:00:00.000Z";
 const AFTER_PHOTO = `${BASE_URL}/media/cleanups/cln_x.jpg`;
 const requester = (device: string) => ({ userId: userOf(device), deviceToken: device });
 const CLEANUP = {
@@ -39,11 +39,10 @@ function soleReporter() {
 describe("a removed site", () => {
   it("shows neither its photos nor its last after-photo, while the stored row keeps both", async () => {
     const { rig, site } = soleReporter();
-    site.startCleanup("cln_x");
-    site.acceptCleanup("cln_x", AFTER_PHOTO, LATER);
+    acceptPhoto(site, afterPhoto("cleaner-1", LATER, "cln_x"));
     rig.sites.put(site);
     await rig.service.withdraw(SITE, requester(DEVICE_A));
-    const shown = validateSite(await new SiteFinder(rig.sites, new NgeohashCells()).byId(SITE)).properties;
+    const shown = validateSite(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties;
     expect(shown).toMatchObject({ status: "removed", photo_urls: [], cleanup_photo_url: null });
     expect(rig.sites.feature(SITE).properties.cleanup_photo_url).toBe(AFTER_PHOTO);
   });
@@ -55,7 +54,7 @@ describe("a removed site", () => {
     const retry = new ConflictRetry();
     await new CleanupIntake({ sites: rig.sites, cleanups, queue: new FakeQueue(), clock: new FixedClock(), retry }).submit(SITE, CLEANUP, null);
     await rig.service.withdraw(SITE, requester(DEVICE_A));
-    const service = new CleanupService({ sites: rig.sites, cleanups, media: new PublicMedia(BASE_URL), retry });
+    const service = new CleanupService({ sites: rig.sites, cleanups, votes: new FakeVoteRepository(), media: new PublicMedia(BASE_URL), retry });
     expect(await service.apply("cln_jdh_3c", PASSED)).toBe("rejected");
     expect(cleanups.records.get("cln_jdh_3c")?.status).toBe("rejected");
     expect(rig.sites.feature(SITE).properties.status).toBe("removed");

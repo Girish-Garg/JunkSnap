@@ -1,5 +1,4 @@
-import { Link } from 'react-router';
-import { useSheetNavigation } from '../app/useSheetNavigation';
+import { SheetLink } from '../app/SheetLink';
 
 export interface Fact {
   readonly label: string;
@@ -14,7 +13,6 @@ interface FactListProps {
 }
 
 export function FactList({ title, facts }: FactListProps) {
-  const { linkState } = useSheetNavigation();
   return (
     <section className="facts">
       <h3 className="facts__title">{title}</h3>
@@ -22,7 +20,7 @@ export function FactList({ title, facts }: FactListProps) {
         {facts.map((fact) => (
           <div key={fact.label} className="facts__row">
             <dt>{fact.label}</dt>
-            <dd>{fact.to ? <Link to={fact.to} state={linkState}>{fact.value}</Link> : fact.value}</dd>
+            <dd>{fact.to ? <SheetLink to={fact.to}>{fact.value}</SheetLink> : fact.value}</dd>
           </div>
         ))}
       </dl>

@@ -94,6 +94,33 @@
   color: var(--text-secondary);
 }
 
+.boundary-legend__line {
+  margin: var(--s-1) 0 0;
+}
+
+/* Pins in the legend: the map's own images, with the sun "n/10" sticker under the dashed one. */
+.pin-key__pin {
+  flex: none;
+}
+
+.pin-key__unverified {
+  display: inline-grid;
+  flex: none;
+  justify-items: center;
+  width: 24px;
+}
+
+.pin-key__badge {
+  margin-top: calc(-1 * var(--s-1));
+  padding: 0 2px;
+  border-radius: var(--radius-xs);
+  background: var(--sun);
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 12px;
+}
+
 /* Hover tooltip on area markers (MapLibre popup). */
 .area-tooltip .maplibregl-popup-content {
   padding: var(--s-1) var(--s-3);

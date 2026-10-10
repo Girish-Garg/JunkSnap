@@ -17,7 +17,7 @@ import { Site } from "../../src/domain/sites/Site.js";
 import type { SiteFeature } from "../../src/domain/sites/SiteTypes.js";
 import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { ZeroScoreRows } from "../../src/domain/sites/ZeroScoreRows.js";
-import { BASE_URL, DEVICE_A, fixture, siteFixture, userOf } from "./builders.js";
+import { BASE_URL, DEVICE_A, fixture, shown, siteFixture, userOf } from "./builders.js";
 import { NOW, RecordingLogger } from "./fakes.js";
 
 const SAMPLES = ["jdh-1", "jdh-2", "jdh-3", "jpr-1"];
@@ -47,7 +47,7 @@ describe("site fixtures round-trip", () => {
   it.each(SAMPLES)("site.%s goes item -> Site -> Feature unchanged and valid", (sample) => {
     const feature = siteFixture(sample);
     const site = mapper.toSite(itemOf(feature));
-    expect(validateSite(site.toFeature())).toEqual(feature);
+    expect(validateSite(site.toFeature())).toEqual(shown(feature));
   });
 
   it.each(SAMPLES)("site.%s goes Site -> item -> Site with the next version and its geohash4", (sample) => {
@@ -56,7 +56,7 @@ describe("site fixtures round-trip", () => {
     const [lon, lat] = feature.geometry.coordinates;
     expect(item).toMatchObject({ version: 4, lat, lon, geohash4: cells.cellOf(new GeoPoint(lat, lon)) });
     expect(item).toMatchObject({ reporter_devices: [DEVICE_A], reporter_users: [userOf(DEVICE_A)] });
-    expect(mapper.toSite(item).toFeature()).toEqual(feature);
+    expect(mapper.toSite(item).toFeature()).toEqual(shown(feature));
   });
 
   it("refuses a stored item that breaks the site contract or lacks its internals", () => {
@@ -100,7 +100,8 @@ describe("merging the jpr-1 report fixtures", () => {
         brands: [],
       }),
     );
-    const vote = { siteId: "site_jpr_1", deviceToken: "d", userId: null, choice: "confirm" as const, weight: 1, votedAt: NOW };
+    // Cast at the report's own time, so the expiry stays 90 days after the last report, as in the fixture.
+    const vote = { siteId: "site_jpr_1", deviceToken: "d", userId: null, choice: "confirm" as const, weight: 1, votedAt: "2026-10-10T04:02:10Z" };
     site.recordVotes(VoteTally.of([vote]));
     const expected = siteFixture("jpr-1");
     const built = validateSite(site.toFeature());

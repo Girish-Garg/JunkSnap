@@ -8,7 +8,7 @@ import { useLetterRequest } from './useLetterRequest';
 export function useAreaLetter(kind: AreaKind, id: string) {
   const { snap } = useServices();
   const [issue, setIssue] = useState<AreaIssue>('waste_dump');
-  const request = useLetterRequest<AreaLetterDraft>((language) => snap.areaLetters.letter({ kind, id }, issue, language));
+  const request = useLetterRequest<AreaLetterDraft>((language) => snap.areaLetters.letter({ kind, id }, issue, language), 'area');
   return { ...request, issue, setIssue };
 }
 

@@ -116,12 +116,23 @@
   color: var(--accent-ink);
 }
 
-.action-row__button:hover .action-row__icon {
+.action-row__button:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.action-row__button:disabled .action-row__icon {
+  border-style: dashed;
+  background: var(--tile);
+  color: var(--text-secondary);
+}
+
+.action-row__button:hover:not(:disabled) .action-row__icon {
   border-color: var(--line-strong);
   transform: translateY(-2px);
 }
 
-.action-row__button:active .action-row__icon {
+.action-row__button:active:not(:disabled) .action-row__icon {
   transform: translateY(1px) scale(1.06, 0.92);
 }
 
@@ -254,7 +265,8 @@
   z-index: 4;
   display: flex;
   gap: var(--s-3);
-  height: 112px;
+  /* Grows with the text (Hindi, larger fonts) so Details never spills out. */
+  min-height: 112px;
   padding: var(--s-3);
   border-radius: var(--radius-l);
   background: var(--surface);
@@ -295,6 +307,8 @@
 
 .preview-card__title {
   display: flex;
+  /* Room for the close button. */
+  padding-right: var(--s-8);
   align-items: center;
   gap: var(--s-2);
   font-family: var(--font-display);
@@ -315,9 +329,23 @@
 }
 
 .preview-card .button--text {
+  position: relative;
   align-self: flex-end;
   min-height: 40px;
   margin-top: auto;
+}
+
+/* 40 px to look at, 48 px to tap. */
+.preview-card .button--text::before {
+  content: '';
+  position: absolute;
+  inset: calc((40px - var(--target)) / 2) 0;
+}
+
+.preview-card > .icon-button {
+  position: absolute;
+  top: var(--s-1);
+  right: var(--s-1);
 }
 
 @media (min-width: 1024px) {
@@ -421,4 +449,25 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
+}
+
+/* A site off the map (removed, cleaned, rejected): what happened, in place of the votes and actions. */
+.site-closed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-top: var(--s-6);
+  padding: var(--s-4);
+  border-radius: var(--radius-l);
+  background: var(--tile);
+}
+
+.site-closed__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
+}
+
+.site-closed__text {
+  color: var(--text-secondary);
 }

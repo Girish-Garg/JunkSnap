@@ -15,12 +15,14 @@ export function SearchResults({ sites, query, onPick }: SearchResultsProps) {
   if (places.length === 0) return <p className="search-results search-results--empty">{t('search.noResults')}</p>;
   return (
     <ul className="search-results" aria-label={t('search.results')}>
-      {places.map((place) => (
-        <li key={`${place.kind}:${place.name}`}>
+      {/* Two seats can share a name, so the position keeps keys apart. */}
+      {places.map((place, index) => (
+        <li key={`${place.kind}:${place.name}:${index}`}>
           <button type="button" className="search-results__item" onClick={() => onPick(place)}>
             <span>{place.name}</span>
             <span className="search-results__meta">
-              {t(`place.${place.kind}`)} · {t('search.siteCount', { count: place.sites.length })}
+              {t(`place.${place.kind}`)}
+              {place.sites.length > 0 && ` · ${t('search.siteCount', { count: place.sites.length })}`}
             </span>
           </button>
         </li>
