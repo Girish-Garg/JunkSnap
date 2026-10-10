@@ -4,7 +4,7 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { GatedAction } from '../../actions/GatedAction';
 
 export interface AddPhoto {
-  /** SITE_GATES.addPhoto from useSiteGates: closed, too far (with a fresh fix), offline, sign-in. */
+  /** SITE_GATES.addPhoto from useSiteGates: closed, too far (with a fresh fix), sign-in. */
   readonly action: GatedAction;
   /** The tap: opens Snap preset to this site, or says why not (and takes a fresh fix or opens sign-in first). */
   readonly open: () => void;

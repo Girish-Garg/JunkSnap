@@ -28,6 +28,7 @@ function fakeActions() {
     withdraw: vi.fn(async () => ({})),
     letter: vi.fn(async () => ({})),
     note: vi.fn(async () => ({})),
+    flagPhoto: vi.fn(async () => ({})),
   } as unknown as SiteActionsApi;
 }
 
@@ -56,5 +57,12 @@ describe('EvictingSiteActionsApi', () => {
     await actions.letter('site_d', {} as never);
     await actions.note('site_e', {} as never);
     expect(forgetSite.mock.calls).toEqual([['site_a'], ['site_b'], ['site_c']]);
+  });
+
+  it('forgets the site after a photo report, which can cover or hide a photo', async () => {
+    const forgetSite = vi.fn();
+    const actions = new EvictingSiteActionsApi(fakeActions(), { forgetSite });
+    await actions.flagPhoto('site_f', 'rpt_f', {} as never);
+    expect(forgetSite.mock.calls).toEqual([['site_f']]);
   });
 });

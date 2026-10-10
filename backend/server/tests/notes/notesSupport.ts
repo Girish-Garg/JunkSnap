@@ -115,7 +115,7 @@ export function siteWithoutCommunity(): Site {
   return { ...site, properties: { ...site.properties, community: null } };
 }
 
-export function notesWorld(sites: readonly Site[] = [siteWithoutCommunity()], reportNotes: ShownNote[] = []): NotesWorld {
+export function notesWorld(sites: readonly Site[] = [siteWithoutCommunity()], reportNotes: ShownNote[] = [], photoReports: ShownNote[] = []): NotesWorld {
   const world = {
     moderator: new FakeModerator(),
     notes: new MemoryNotes(),
@@ -128,6 +128,7 @@ export function notesWorld(sites: readonly Site[] = [siteWithoutCommunity()], re
     sites: new FakeSites(sites),
     notes: world.notes,
     reportNotes: new FixedReportNotes(reportNotes),
+    photoReports: new FixedReportNotes(photoReports),
     writer: world.community,
     counters: memoryCounters(),
     moderator: world.moderator,

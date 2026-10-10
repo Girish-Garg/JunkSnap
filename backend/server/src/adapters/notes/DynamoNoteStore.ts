@@ -50,10 +50,11 @@ export class DynamoNoteStore implements NoteStore {
   #query(siteId: string, startKey: Record<string, unknown> | undefined): QueryCommand {
     return new QueryCommand({
       TableName: this.#table,
-      KeyConditionExpression: "site_id = :site",
+      // Photo reports share the table under flag#... sort keys (decision 20261011-0310-hem-photo-flags).
+      KeyConditionExpression: "site_id = :site AND begins_with(note_id, :note)",
       FilterExpression: "#status = :shown",
       ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: { ":site": siteId, ":shown": "shown" },
+      ExpressionAttributeValues: { ":site": siteId, ":shown": "shown", ":note": "note_" },
       ScanIndexForward: false,
       ExclusiveStartKey: startKey,
     });

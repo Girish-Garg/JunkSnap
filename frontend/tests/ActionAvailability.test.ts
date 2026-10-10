@@ -136,6 +136,16 @@ describe('cleanup send and Activity delete gates', () => {
 
 const CAMERA: CameraFacts = { camera: 'live', fix: FIX, gpsDenied: false, gpsNeededReason: 'snap.gpsNeeded' };
 
+describe('site action gates: report a photo (#133)', () => {
+  it('needs the person within 1 km by a fresh fix, then sign-in; offline is left to the request', () => {
+    const report = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.reportPhoto.decide(site(patch)));
+    expect(report({ online: false })).toEqual(OK);
+    expect(report({ distanceM: 1250 })).toEqual(blocked('gate.tooFarReport', { limit: 1000 }, 'relocate'));
+    expect(report({ signedIn: false })).toEqual(blocked('gate.signIn.reportPhoto', undefined, 'signIn'));
+    expect(report({ site: { verification: 'verified', status: 'cleaned', cleanup_status: 'accepted' } })).toEqual(blocked('gate.siteClosed'));
+  });
+});
+
 describe('capture gates: camera', () => {
   it('the shutter waits for the camera and the first fix, and says how to allow location', () => {
     const shutter = (patch: Partial<CameraFacts>) => seen(CAPTURE_GATES.shutter.decide({ ...CAMERA, ...patch }));

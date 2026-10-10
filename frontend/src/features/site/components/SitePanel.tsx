@@ -42,7 +42,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
       {presenter.showsBackers() && <SiteBackersBar backers={details.backers} />}
       {!closed && <SiteClearance site={details} vote={gates.vote} onChanged={changed} />}
       {!closed && <SiteExpiryNote site={details} />}
-      <SitePhotos photos={presenter.photos()} addPhoto={gates.addPhoto} siteId={details.site_id} />
+      <SitePhotos siteId={details.site_id} photos={presenter.photos()} gates={gates} reportable={!closed} onChanged={changed} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
       <SiteReporters site={details} />
       {!closed && <SiteNotes siteId={details.site_id} community={details.community} add={gates.note} onChanged={changed} />}

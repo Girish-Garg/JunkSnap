@@ -1,0 +1,35 @@
+/* "Report this photo": the strip's quiet action and the report sheet (decision 20261011-0310-hem-photo-flags). */
+
+.photo-strip__report {
+  margin-top: var(--s-2);
+  padding: var(--s-1) 0;
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.photo-strip__report:hover {
+  color: var(--text);
+}
+
+.photo-report {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+
+.photo-report .facts__title {
+  margin: 0;
+}
+
+.photo-report__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}

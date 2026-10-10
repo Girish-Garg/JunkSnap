@@ -82,6 +82,12 @@ export const SITE_GATES = {
     tooFar((facts) => facts.addPhotoLimitM, 'addPhoto.tooFar'),
     GateRules.signIn('addPhoto.signIn'),
   ]),
+  // "Report this photo" (#133): within 1 km of the site, by the same fresh-fix rule as a vote, and signed in.
+  reportPhoto: new ActionGate<SiteActionFacts>([
+    offMap(),
+    tooFar(within(VOTE_RADIUS_M), 'gate.tooFarReport'),
+    GateRules.signIn('gate.signIn.reportPhoto'),
+  ]),
   withdraw: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
     GateRules.when((facts) => facts.site.verification === 'verified', 'withdraw.errors.site_verified'),
