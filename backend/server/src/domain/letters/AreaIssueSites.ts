@@ -23,13 +23,11 @@ export class AreaIssueSites {
   readonly area: AreaKey;
   readonly issue: AreaIssue;
   readonly #all: readonly StoredAreaSite[];
-  readonly #noBinMinReporters: number;
 
-  constructor(area: AreaKey, issue: AreaIssue, sites: readonly StoredAreaSite[], noBinMinReporters: number) {
+  constructor(area: AreaKey, issue: AreaIssue, sites: readonly StoredAreaSite[]) {
     this.area = area;
     this.issue = issue;
     this.#all = sites.filter((stored) => AREA_REF[area.kind](stored.site.properties.location)?.id === area.id);
-    this.#noBinMinReporters = noBinMinReporters;
   }
 
   hasSites(): boolean {
@@ -81,19 +79,12 @@ export class AreaIssueSites {
     });
   }
 
-  // Decision 20261010-1430 per site: a no-bin site counts only with enough reporters and no bin measured within 3 km.
+  // Decision 20261010-1630: a no-bin zone counts once 10 people confirmed it; a mapped bin nearby is evidence, not a gate.
   #noBinProblem(site: Site): string | null {
     const facts = site.properties;
-    if (facts.report_type !== "no_bin") {
+    if (facts.report_type !== "no_bin" || facts.verification === "verified") {
       return null;
     }
-    if ((facts.reporters ?? 0) < this.#noBinMinReporters) {
-      return `fewer than ${this.#noBinMinReporters} people reported no bin`;
-    }
-    const measured = facts.insights?.no_bin_within_3km;
-    if (typeof measured !== "boolean") {
-      return "Bins not mapped here yet";
-    }
-    return measured ? null : "a known bin or collection point is within 3 km";
+    return "Fewer than 10 people have confirmed no dustbin within 1 km";
   }
 }

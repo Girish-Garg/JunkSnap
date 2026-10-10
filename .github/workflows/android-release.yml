@@ -35,9 +35,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
-      contents: write # only used to create the GitHub Release on tags
+      contents: read
+    outputs:
+      name: ${{ steps.package.outputs.name }}
+      version: ${{ steps.version.outputs.version }}
+      signed: ${{ steps.keystore.outputs.signed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Version
         id: version
@@ -153,7 +159,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           SIGNED: ${{ steps.keystore.outputs.signed }}
         run: |
-          rm -f "$RUNNER_TEMP/release.jks"
           mkdir -p dist-apk
           name="junksnap-${STAGE}-${VERSION}.apk"
           cp "apps/android-tauri/out/junksnap-${STAGE}.apk" "dist-apk/$name"
@@ -171,7 +176,7 @@ jobs:
             else
               echo "> **Warning: test build.** No release keystore was configured, so this APK is signed with a"
               echo "> throwaway debug key made on the build machine. Android will not update it from another build:"
-              echo "> uninstall the old JunkSnap first. Do not share it as a release."
+              echo "> uninstall the old JunkSnap first. Do not share it as a release (a tag publishes it as a prerelease)."
             fi
             echo
             echo "Install: copy the APK to the phone and open it (allow installs from that app), or \`adb install -r $name\`."
@@ -179,18 +184,38 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           cat notes.md
 
+      - name: Remove the keystore
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ steps.package.outputs.name }}
           path: dist-apk/
           if-no-files-found: error
 
+  # Tags only: publish the built APK. Only this job can write to the repository, and it never
+  # sees the keystore. A tag built without the release key is published as a prerelease.
+  release:
+    needs: apk
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.apk.outputs.name }}
+          path: dist-apk
+
       - name: GitHub Release
-        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          name: JunkSnap Android ${{ steps.version.outputs.version }}
+          name: JunkSnap Android ${{ needs.apk.outputs.version }}
           body_path: dist-apk/notes.md
+          prerelease: ${{ needs.apk.outputs.signed != 'true' }}
           files: |
-            dist-apk/${{ steps.package.outputs.name }}
-            dist-apk/${{ steps.package.outputs.name }}.sha256
+            dist-apk/${{ needs.apk.outputs.name }}
+            dist-apk/${{ needs.apk.outputs.name }}.sha256

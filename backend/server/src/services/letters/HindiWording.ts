@@ -1,7 +1,8 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
-import { coordinates, joinList, kilometres, letterDate } from "./utils.js";
+import { coordinates, joinList, letterDate } from "./utils.js";
 
 const WHAT: Readonly<Record<SiteContext, string>> = {
   vacant_plot: "खाली प्लॉट पर कचरे का ढेर",
@@ -16,6 +17,8 @@ const WHAT: Readonly<Record<SiteContext, string>> = {
   choked_drain: "बंद नाली",
   uncovered_debris: "खुला पड़ा निर्माण मलबा",
   dusty_site: "धूल भरा निर्माण स्थल",
+  overflowing: "भरा हुआ कूड़ेदान, आसपास फैला कचरा",
+  damaged: "टूटा, जला या बिना ढक्कन का कूड़ेदान",
 };
 
 const REQUEST: Readonly<Record<ReportType, string>> = {
@@ -23,6 +26,7 @@ const REQUEST: Readonly<Record<ReportType, string>> = {
   no_bin: "अनुरोध है कि यहाँ कूड़ेदान लगाए जाएँ और नियमित कचरा संग्रह की व्यवस्था की जाए।",
   contaminated_water: "अनुरोध है कि यहाँ के पानी और नालियों की सफ़ाई कराई जाए और प्रदूषण के स्रोत की जाँच की जाए।",
   open_construction: "अनुरोध है कि मलबे को ढका या हटाया जाए और धूल नियंत्रण के उपाय लागू कराए जाएँ।",
+  overflowing_bin: "कृपया कूड़ेदान को नियमित रूप से खाली कराएँ और उसकी मरम्मत कराएँ या उसे बदलवाएँ।",
 };
 
 const OFFICE: Readonly<Record<CcLine["office"], string>> = {
@@ -69,8 +73,7 @@ export class HindiWording implements TemplateWording {
     if (site.reportType !== "no_bin") {
       return REQUEST[site.reportType];
     }
-    const km = kilometres(this.#binRadiusM);
-    return `इस स्थान के ${km} किलोमीटर के भीतर कोई ज्ञात कूड़ेदान या कचरा संग्रह केंद्र (OpenStreetMap, वार्ड रिकॉर्ड) नहीं है। ${REQUEST.no_bin}`;
+    return `${new NoBinStatement(this.#binRadiusM).hindi(site)} ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {

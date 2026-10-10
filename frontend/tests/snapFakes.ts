@@ -14,6 +14,7 @@ import { DeviceIdentity } from '../src/services/DeviceIdentity';
 import { GpsWatcher } from '../src/services/GpsWatcher';
 import { MockReportApi } from '../src/services/MockReportApi';
 import type { ImageEncoder } from '../src/services/PhotoEncoder';
+import { NoBinReporter } from '../src/services/NoBinReporter';
 import { PhotoHasher } from '../src/services/PhotoHasher';
 import { QueueLock } from '../src/services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
@@ -202,6 +203,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     gps,
     siteActions: testSiteActions(options.siteApi, { uploads: api, identity, gps }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
+    noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
 }
 

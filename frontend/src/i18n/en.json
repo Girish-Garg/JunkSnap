@@ -59,6 +59,7 @@
     "offline": "Offline. Showing what was loaded.",
     "loadFailed": "Could not load sites.",
     "locationDenied": "Location is blocked in your browser.",
+    "locationDeniedApp": "Location is blocked for JunkSnap.",
     "locationUnavailable": "Could not find your location.",
     "filteredEmpty": "No sites match. Turn a filter off.",
     "zoomIn": "Zoom in to see every site here.",
@@ -76,7 +77,8 @@
     "waste_dump": "Waste dump",
     "no_bin": "No bin or pickup",
     "contaminated_water": "Contaminated water",
-    "open_construction": "Open construction"
+    "open_construction": "Open construction",
+    "overflowing_bin": "Overflowing or broken bin"
   },
   "context": {
     "vacant_plot": "Vacant plot",
@@ -90,7 +92,9 @@
     "foam": "Foam",
     "choked_drain": "Choked drain",
     "uncovered_debris": "Uncovered debris",
-    "dusty_site": "Dusty site"
+    "dusty_site": "Dusty site",
+    "overflowing": "Overflowing",
+    "damaged": "Broken, burnt or no lid"
   },
   "status": {
     "open": "Open",
@@ -148,13 +152,15 @@
     "evidence": "Who reported it",
     "reporters_one": "{{count}} person reported this",
     "reporters_other": "{{count}} people reported this",
-    "noBinReporters": "{{count}} of {{min}} people reported no bin here",
     "bin": {
       "nearest": "Nearest known bin: {{distance}} (OpenStreetMap)",
       "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
-      "notMapped": "Bins not mapped here yet"
+      "notMapped": "Bins not mapped here yet",
+      "mappedNear": "A mapped bin is {{distance}} away (OpenStreetMap)"
     },
-    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body"
+    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body",
+    "noWardShort": "Not mapped yet",
+    "noWardLineShort": "Ward: not mapped yet"
   },
   "snap": {
     "title": "Report a waste site",
@@ -176,6 +182,7 @@
     },
     "gpsWeak": "Wait a moment or step into the open for a better fix.",
     "gpsNeeded": "The report needs your location. Allow location in the browser settings.",
+    "gpsNeededApp": "The report needs your location. Tap Open app settings, then Permissions, Location, Allow.",
     "guest": "You are signed out. Photos wait on this phone until you sign in.",
     "signIn": "Sign in",
     "sample": "Sample mode: reports stay on this phone and are not sent.",
@@ -224,7 +231,8 @@
     "mode": {
       "label": "Capture",
       "photo": "Photo",
-      "video": "Video"
+      "video": "Video",
+      "nobin": "No bin here"
     }
   },
   "account": {
@@ -482,6 +490,11 @@
       "offline": "No connection. Try again when you are online.",
       "failed": "The vote did not go through. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    },
+    "noBin": {
+      "title": "Is there no dustbin within 1 km?",
+      "text": "Neighbours confirm no-bin zones. Your answer counts when you are within 1 km.",
+      "yes": "I confirm there's no bin within 1 km"
     }
   },
   "cleanup": {
@@ -604,7 +617,8 @@
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
     "legendChip": "Legend",
-    "caveat": "Scores show after 10 verified reports"
+    "caveat": "Scores show after 10 verified reports",
+    "outdated": "Dashed outline: seat boundary out of date"
   },
   "ranking": {
     "open": "City ranking",
@@ -646,6 +660,7 @@
       "no_bin": "No bin",
       "contaminated_water": "Contaminated water",
       "open_construction": "Open construction",
+      "overflowing_bin": "Overflowing or broken bins",
       "all": "All issues"
     }
   },
@@ -727,6 +742,33 @@
       "system": "System",
       "light": "Light",
       "dark": "Dark"
+    },
+    "edgeHints": "On-device hints",
+    "edgeHintsNote": "Boxes in the camera from a small model on this phone. Only hints: the server checks every photo again."
+  },
+  "edge": {
+    "loading": "Getting hints ready",
+    "spotted": "Waste spotted",
+    "pointAt": "Point at the waste",
+    "class": {
+      "waste_pile": "Pile",
+      "bag": "Bag",
+      "bin": "Bin",
+      "burning": "Burning",
+      "waste_item": "Waste"
     }
+  },
+  "nobin": {
+    "title": "No dustbin within 1 km of here?",
+    "text": "Report it from where you stand. 10 different people make it a verified no-bin zone.",
+    "send": "There is no dustbin within 1 km of here",
+    "accuracy": "Location accurate to {{metres}} m",
+    "tooVague": "Location is only accurate to {{metres}} m; move into the open until it is 50 m or better.",
+    "waiting": "Finding your location",
+    "photo": "Add a photo instead (optional)",
+    "sending": "Sending",
+    "sent": "Thanks. Your report joins the no-bin zone here.",
+    "signIn": "Sign in to report a missing bin.",
+    "failed": "Could not send. Check your connection and try again."
   }
 }

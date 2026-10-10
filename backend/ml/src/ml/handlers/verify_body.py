@@ -26,7 +26,9 @@ class VerifyBody(BaseModel):
     purpose: Literal["report", "cleanup"]
     # Only blurred copies under media/ may reach a model.
     blurred_key: str = Field(pattern=r"^media/[a-z]+/(rpt|cln)_[a-z0-9_]{1,40}\.jpg$")
-    report_type: Literal["waste_dump", "no_bin", "contaminated_water", "open_construction"]
+    report_type: Literal[
+        "waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"
+    ]
     context: ContextName
     features: FeaturesBody
 

@@ -15,6 +15,7 @@ from ml.ports.signal import Signal
 logger = logging.getLogger(__name__)
 
 # Claims the waste head speaks to; any other claim gets a neutral score combiners skip.
+# overflowing_bin stays out: the head never saw a bin, and a damaged bin may show no waste.
 WASTE_CLAIMS = frozenset({"waste_dump", "no_bin"})
 NEUTRAL = 0.5
 HAZARD_MIN = 0.5

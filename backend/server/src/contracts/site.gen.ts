@@ -33,7 +33,8 @@ export interface Site {
     /**
      * no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430).
      */
-    report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+    report_type:
+      "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
     context:
       | "vacant_plot"
       | "roadside"
@@ -46,7 +47,9 @@ export interface Site {
       | "foam"
       | "choked_drain"
       | "uncovered_debris"
-      | "dusty_site";
+      | "dusty_site"
+      | "overflowing"
+      | "damaged";
     /**
      * open -> cleaned (only with an after-photo the pipeline confirms) -> reopened.
      */
@@ -64,6 +67,10 @@ export interface Site {
      * Confirm votes plus Me too reports from other devices.
      */
     corroborations: number;
+    /**
+     * Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites.
+     */
+    zone_radius_m?: 1000;
     /**
      * Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).
      */
@@ -1027,7 +1034,8 @@ export const siteSchema = {
             "waste_dump",
             "no_bin",
             "contaminated_water",
-            "open_construction"
+            "open_construction",
+            "overflowing_bin"
           ],
           "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)."
         },
@@ -1044,7 +1052,9 @@ export const siteSchema = {
             "foam",
             "choked_drain",
             "uncovered_debris",
-            "dusty_site"
+            "dusty_site",
+            "overflowing",
+            "damaged"
           ]
         },
         "status": {
@@ -1076,6 +1086,10 @@ export const siteSchema = {
           "type": "integer",
           "minimum": 0,
           "description": "Confirm votes plus Me too reports from other devices."
+        },
+        "zone_radius_m": {
+          "const": 1000,
+          "description": "Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites."
         },
         "backers": {
           "type": "object",
@@ -1579,6 +1593,27 @@ export const siteSchema = {
           "if": {
             "properties": {
               "report_type": {
+                "const": "no_bin"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "zone_radius_m"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "zone_radius_m"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
                 "const": "contaminated_water"
               }
             }
@@ -1610,6 +1645,25 @@ export const siteSchema = {
                 "enum": [
                   "uncovered_debris",
                   "dusty_site"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
+                "const": "overflowing_bin"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "context": {
+                "enum": [
+                  "overflowing",
+                  "damaged"
                 ]
               }
             }

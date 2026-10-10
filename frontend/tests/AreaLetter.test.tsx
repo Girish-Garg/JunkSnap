@@ -64,6 +64,17 @@ describe('area letter sheet', () => {
   });
 });
 
+describe('area letter issues', () => {
+  it('offers overflowing or broken bins as an issue and drafts the letter about it', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn() });
+    await user.click(screen.getByRole('radio', { name: 'Overflowing or broken bins' }));
+    await user.click(screen.getByRole('button', { name: 'Draft letter' }));
+    const letter = await screen.findByRole('article');
+    expect(within(letter).queryByText(/no known bin within 3 km/)).not.toBeInTheDocument();
+  });
+});
+
 describe('area letter refusals', () => {
   it('shows the reason when an issue has too few verified reports', async () => {
     const user = userEvent.setup();

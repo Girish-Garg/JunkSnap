@@ -43,6 +43,11 @@ TOOL_DEFAULTS = {
 }
 
 
+def without_signing(env: dict[str, str]) -> dict[str, str]:
+    """The env minus the release-signing variables, for steps that run npm packages."""
+    return {key: value for key, value in env.items() if not key.startswith("ANDROID_KEY")}
+
+
 def stream(args: list[str], cwd: Path, env: dict[str, str]) -> None:
     """Run a long build step with its output shown live; exit on failure."""
     print("+", " ".join(args), flush=True)
@@ -102,7 +107,7 @@ class AndroidBuild:
     def web(self, settings: StageSettings) -> None:
         web_env = settings.vite_env()
         print("build env:", web_env, flush=True)  # public values only
-        env = {**self._env, **web_env}
+        env = {**without_signing(self._env), **web_env}
         stream(["npm", "ci", "--no-audit", "--no-fund"], FRONTEND, env)
         stream(["npm", "run", "build"], FRONTEND, env)
         STAGE_MARK.write_text(self._stage)
@@ -112,7 +117,8 @@ class AndroidBuild:
         conf = APP / "out" / f"tauri.{self._stage}.conf.json"
         conf.parent.mkdir(exist_ok=True)
         conf.write_text(json.dumps(stage_config.config(), indent=2))
-        stream(["npm", "ci", "--no-audit", "--no-fund"], APP, self._env)
+        stream(["npm", "ci", "--no-audit", "--no-fund"], APP, without_signing(self._env))
+        # Only the Tauri build (Gradle signs the APK) sees ANDROID_KEYSTORE_* and ANDROID_KEY_*.
         build = ["npx", "tauri", "android", "build", "--apk", "--ci", "--config", str(conf)]
         build += ["--debug"] if debug else []
         stream([*build, "--target", *targets], APP, self._env)

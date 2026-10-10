@@ -1,0 +1,20 @@
+/* No bin here (decision 20261010-1630); tokens only, the redesign owns the look. */
+.nobin-stage {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) 0;
+}
+
+.nobin-stage__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  color: var(--text);
+}
+
+.nobin-stage__text,
+.nobin-stage__location {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--text-secondary);
+}

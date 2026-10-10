@@ -22,7 +22,14 @@ const StoredExtras = z.object({
   lon: z.number(),
   report_ids: z.array(z.string()).default([]),
   merged_reports: z
-    .array(z.object({ report_id: z.string(), verified: z.boolean(), insights: StoredInsights.nullable() }))
+    .array(
+      z.object({
+        report_id: z.string(),
+        verified: z.boolean(),
+        insights: StoredInsights.nullable(),
+        point: z.object({ lat: z.number(), lon: z.number() }).nullable().default(null),
+      }),
+    )
     .optional(),
   reporter_devices: z.array(z.string()).default([]),
   reporter_users: z.array(z.string()).default([]),
@@ -58,7 +65,7 @@ export class SiteItemMapper {
       lon: site.point.lon,
       geohash4: this.#cells.cellOf(site.point),
       report_ids: reports.map((report) => report.reportId),
-      merged_reports: reports.map(({ reportId, verified, insights }) => ({ report_id: reportId, verified, insights })),
+      merged_reports: reports.map(({ reportId, verified, insights, point }) => ({ report_id: reportId, verified, insights, point })),
       reporter_devices: internals.reporterDevices,
       reporter_users: internals.reporterUsers,
       reporter_ids: internals.reporterIds,
@@ -119,9 +126,9 @@ export class SiteItemMapper {
   static #reports(extras: Extras): MergedReport[] {
     const stored = extras.merged_reports;
     if (stored === undefined) {
-      return extras.report_ids.map((reportId) => ({ reportId, verified: false, insights: null }));
+      return extras.report_ids.map((reportId) => ({ reportId, verified: false, insights: null, point: null }));
     }
-    return stored.map((report) => ({ reportId: report.report_id, verified: report.verified, insights: report.insights }));
+    return stored.map((report) => ({ reportId: report.report_id, verified: report.verified, insights: report.insights, point: report.point }));
   }
 
   static #checked(feature: unknown): SiteFeature {

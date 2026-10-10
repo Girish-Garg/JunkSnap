@@ -15,11 +15,14 @@ export class LocationPresenter {
     this.#t = translate;
   }
 
-  /** Ward, MLA seat and MP seat on one line; an outdated MP seat is left out. */
+  /**
+   * Ward, MLA seat and MP seat on one line; an outdated MP seat is left out. Without a ward map, letters
+   * go to the city-wide body, which is said only when the site has one.
+   */
   line(): string {
     const { ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;
     const parts = [
-      ward?.name ?? this.#t('site.noWardLine'),
+      ward?.name ?? this.#t(this.#location.local_body ? 'site.noWardLine' : 'site.noWardLineShort'),
       assembly ? this.#t('site.mla', { name: assembly.name }) : this.#t('site.noAssembly'),
     ];
     if (loksabha.status !== 'outdated') parts.push(this.#t('site.mp', { name: loksabha.name }));
@@ -33,7 +36,7 @@ export class LocationPresenter {
     return [
       { label: this.#t('site.localBody'), value: body?.name ?? this.#t('site.notKnown') },
       this.#areaFact('site.district', 'district', district, 'site.notKnown'),
-      this.#areaFact('site.ward', 'ward', ward, 'site.noWard'),
+      this.#areaFact('site.ward', 'ward', ward, body ? 'site.noWard' : 'site.noWardShort'),
       this.#areaFact('site.assemblySeat', 'assembly', assembly, 'site.noAssembly'),
       this.#areaFact('site.loksabhaSeat', 'loksabha', current, 'site.seatOutdated'),
     ];

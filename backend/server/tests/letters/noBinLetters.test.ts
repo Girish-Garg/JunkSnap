@@ -30,43 +30,45 @@ async function draftFor(site: Site, language: "en" | "hi" = "en") {
   return (await letterService({ sites: [site], writer: downWriter() })).draft({ ...request, language });
 }
 
-describe("no-bin letters (decision 20261010-1430)", () => {
-  it("refuses with how many people reported it and how far the nearest bin is, below 5 reporters", async () => {
-    const draft = draftFor(siteWith(noBin, { reporters: 3 }));
+// A zone backed by people who reported it (photo people) and people who voted yes; each counts once.
+function zone(reported: number, votedYes: number, verified = reported + votedYes >= 10): Site {
+  const backers = { count: reported + votedYes, needed: 10 as const, photo_people: reported, vote_people: votedYes };
+  return siteWith(noBin, { reporters: reported, backers, verification: verified ? "verified" : "unverified" });
+}
+
+describe("no-bin letters (decision 20261010-1630)", () => {
+  it("refuses a zone fewer than 10 people confirmed, counting reports and yes votes together", async () => {
+    const draft = draftFor(zone(3, 4));
     await expect(draft).rejects.toThrow(NotVerifiedError);
-    await expect(draft).rejects.toThrow("3 of 5 people reported no bin here; nearest known bin 4.2 km");
+    await expect(draft).rejects.toThrow("not verified");
+    expect(() => new NoBinEligibility(3000).check(LetterSite.fromSite(zone(3, 4)))).toThrow("7 of 10 people have confirmed no dustbin within 1 km");
   });
 
-  it("refuses when a known bin lies within 3 km or bins are not mapped there", async () => {
-    await expect(draftFor(measured(siteWith(noBin, { reporters: 6 }), false, 1200))).rejects.toThrow("within 3.0 km: nearest known bin 1.2 km");
-    await expect(draftFor(measured(siteWith(noBin, { reporters: 6 }), null, null))).rejects.toThrow(/bins not mapped here yet/i);
-  });
-
-  it("drafts once 5 people reported it and no bin is known within 3 km, saying so in the request", async () => {
-    const letter = await draftFor(siteWith(noBin, { reporters: 5 }));
+  it("drafts for a zone 4 people reported and 6 confirmed by vote, showing a mapped bin nearby as evidence", async () => {
+    const letter = await draftFor(measured(zone(4, 6), false, 420));
     expect(() => validateLetterDraft(letter)).not.toThrow();
-    expect(letter.body).toContain("No known waste bin or collection point (OpenStreetMap, ward records) within 3 km of this site.");
-    expect(letter.evidence).toMatchObject({ reporters: 5, no_bin_within_3km: true, nearest_bin: { distance_m: 4210 } });
-    const hindi = await draftFor(siteWith(noBin, { reporters: 5 }), "hi");
-    expect(hindi.body).toContain("3 किलोमीटर के भीतर कोई ज्ञात कूड़ेदान या कचरा संग्रह केंद्र (OpenStreetMap, वार्ड रिकॉर्ड) नहीं है");
+    expect(letter.body).toContain("10 people confirmed there is no dustbin within 1 km of this spot.");
+    expect(letter.body).toContain("A mapped bin is 420 m away (OpenStreetMap, ward records); it may be missing or broken.");
+    expect(letter.evidence).toMatchObject({ reporters: 4, nearest_bin: { distance_m: 420 } });
   });
 
-  it("says bins are not mapped, not that none is nearby, when the site was never measured", async () => {
-    await expect(draftFor(measured(siteWith(noBin, { reporters: 3 }), null, null))).rejects.toThrow("3 of 5 people reported no bin here; bins not mapped here yet.");
+  it("says no mapped bin is within the radius when none is, in English and Hindi", async () => {
+    const letter = await draftFor(zone(3, 9));
+    expect(letter.body).toContain("12 people confirmed there is no dustbin within 1 km of this spot.");
+    expect(letter.body).toContain("No mapped bin or collection point within 3 km (OpenStreetMap, ward records).");
+    const hindi = await draftFor(zone(3, 9), "hi");
+    expect(hindi.body).toContain("12 लोगों ने पुष्टि की है कि इस जगह के 1 किलोमीटर के भीतर कोई कूड़ेदान नहीं है");
   });
 
-  it("states the configured radius in the template and the model prompt", () => {
-    const site = LetterSite.fromSite(siteWith(noBin, { reporters: 5 }));
-    expect(new EnglishWording(2500).request(site)).toMatch(/^No known waste bin or collection point \(OpenStreetMap, ward records\) within 2.5 km of this site\./);
-    expect(new HindiWording(2500).request(site)).toContain("2.5 किलोमीटर");
+  it("gives the model the template's statement: who confirmed it and any mapped bin, as evidence", () => {
+    const site = LetterSite.fromSite(measured(zone(5, 5), false, 300));
+    expect(new EnglishWording(2500).request(site)).toContain("10 people confirmed there is no dustbin within 1 km of this spot. A mapped bin is 300 m away");
     const brief = { site, addressees: { channel: "local_body", to: { office: "Commissioner", body: "Jodhpur Municipal Corporation" }, cc: [], filingUrl: null }, citations: [], language: "en", binRadiusM: 2000 } as const;
-    expect(new LetterPrompt(brief).user()).toContain("within 2 km of this site.");
-  });
-
-  it("uses the configured threshold", () => {
-    const site = LetterSite.fromSite(siteWith(noBin, { reporters: 2 }));
-    expect(() => new NoBinEligibility(2, 3000).check(site)).not.toThrow();
-    expect(() => new NoBinEligibility(3, 3000).check(site)).toThrow("2 of 3 people");
+    const prompt = new LetterPrompt(brief).user();
+    expect(prompt).toContain("10 people confirmed there is no dustbin within 1 km of this spot. A mapped bin is 300 m away (OpenStreetMap, ward records)");
+    expect(prompt).not.toContain("No known waste bin");
+    const far = LetterSite.fromSite(zone(5, 5));
+    expect(new HindiWording(2500).request(far)).toContain("2.5 किलोमीटर");
   });
 });
 

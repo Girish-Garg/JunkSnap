@@ -27,17 +27,26 @@ class PermissionChromeClient(
 
   override fun onPermissionRequest(request: PermissionRequest) {
     val camera = request.resources.filter { it == PermissionRequest.RESOURCE_VIDEO_CAPTURE }
-    if (camera.isEmpty() || request.origin.host != appHost) return request.deny()
+    if (camera.isEmpty() || request.origin.scheme != "https" || request.origin.host != appHost) {
+      runCatching { request.deny() }
+      return
+    }
     asker.ask(arrayOf(Manifest.permission.CAMERA)) { granted ->
       runCatching { if (granted) request.grant(camera.toTypedArray()) else request.deny() }
     }
   }
 
   override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
-    if (Uri.parse(origin).host != appHost) return callback.invoke(origin, false, false)
+    val page = Uri.parse(origin)
+    if (page.scheme != "https" || page.host != appHost) {
+      runCatching { callback.invoke(origin, false, false) }
+      return
+    }
     val location = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
     // The page retries location by itself, so after "Don't allow" stay quiet for a while.
-    asker.ask(location, anyGranted = true, quietMs = LOCATION_QUIET_MS) { granted -> callback.invoke(origin, granted, false) }
+    asker.ask(location, anyGranted = true, quietMs = LOCATION_QUIET_MS) { granted ->
+      runCatching { callback.invoke(origin, granted, false) }
+    }
   }
 
   private companion object {

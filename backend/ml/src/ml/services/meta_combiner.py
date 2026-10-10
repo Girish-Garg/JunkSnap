@@ -5,8 +5,10 @@ from collections.abc import Sequence
 from ml.domain.case import CombinerInfo
 from ml.domain.linear import MetaModel
 from ml.domain.purposes import Purpose
-from ml.domain.verification import Outcome, SignalResult, Thresholds
+from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
+from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
+from ml.services.judge_decides_combiner import JudgeDecidesCombiner
 
 # Same rule as the fixed-weight combiner: scores this far apart strongly disagree.
 DISAGREEMENT_GAP = 0.5
@@ -29,6 +31,13 @@ class MetaLearnerCombiner(Combiner):
 
     def info(self) -> CombinerInfo:
         return CombinerInfo(kind=self.KIND, version=self._model.version)
+
+    def for_claim(self, claim: Claim) -> Combiner:
+        """A type with no training rows goes to the judge, on the v0 fixed weights."""
+        if self._model.covers(claim.report_type):
+            return self
+        reason = f"meta-learner has no training rows for {claim.report_type}; judge decides"
+        return JudgeDecidesCombiner(FixedWeightCombiner(self._thresholds), reason)
 
     def probability(self, signals: Sequence[SignalResult], purpose: Purpose) -> float:
         """Fitted on "waste is visible"; `support` maps a purpose's scores there and back."""

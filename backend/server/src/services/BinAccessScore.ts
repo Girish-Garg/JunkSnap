@@ -11,15 +11,18 @@ export interface BinAccessMeasure {
   readonly value: number | null;
 }
 
-// scores-v2 bin access: measured from known bins, never from no_bin report counts (decision 20261010-1430).
+// scores-v3 bin access (decision 20261010-1630): the share of the area's verified sites that are verified no-bin zones
+// (10 people each), and the measured distance to known bins. no_bin_within_3km_pct stays a shown measure only.
+// overflowing_bin sites stand at a bin, so they would make an area look well served: never measured (decision 20261010-1645).
 export class BinAccessScore {
   measure(sites: AreaSites): BinAccessMeasure {
-    const verified = sites.verified();
+    const verified = sites.verified().filter((site) => !site.isType("overflowing_bin"));
     const measured = verified.filter((site) => site.binMeasured());
     const noBinWithin3kmPct = percent(measured.filter((site) => site.noBinNearby()).length, measured.length);
+    const zoneSharePct = percent(verified.filter((site) => site.isType("no_bin")).length, verified.length);
     const medianDistanceToBinM = median(verified.flatMap(BinAccessScore.#distance));
     const distancePart = medianDistanceToBinM === null ? null : Math.max(0, 100 - medianDistanceToBinM / METRES_PER_POINT);
-    return { medianDistanceToBinM, noBinWithin3kmPct, value: mean([complement(noBinWithin3kmPct), distancePart]) };
+    return { medianDistanceToBinM, noBinWithin3kmPct, value: mean([complement(zoneSharePct), distancePart]) };
   }
 
   static #distance(site: AreaSite): number[] {

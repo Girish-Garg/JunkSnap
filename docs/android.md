@@ -47,7 +47,7 @@ Toolchain: Rust with the Android targets, JDK 17 or later, and the Android SDK w
 
 Workflow: `.github/workflows/android-release.yml`.
 - **Manual run:** Actions, then android-release, then Run workflow, then pick `demo` or `dev`. The version is `0.1.<run number>`. The APK is an artifact of the run.
-- **Release:** push a tag `app-v<major>.<minor>.<patch>`, for example `git tag app-v1.0.0` then `git push origin app-v1.0.0`. This builds `demo` with that version and creates a GitHub Release. The release holds the APK, its `.sha256` and notes with the SHA-256 and the signing state.
+- **Release:** push a tag `app-v<major>.<minor>.<patch>`, for example `git tag app-v1.0.0` then `git push origin app-v1.0.0`. This builds `demo` with that version, and a separate release job publishes it as a GitHub Release. The release holds the APK, its `.sha256` and notes with the SHA-256 and the signing state. The build job can only read the repository. Only the release job can write, and it never sees the keystore.
 
 The APK contains arm64-v8a and armeabi-v7a, which covers practically every Android phone.
 
@@ -89,9 +89,9 @@ keytool -genkeypair -v -keystore junksnap-release.jks -alias junksnap -keyalg RS
 - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("junksnap-release.jks")) | Set-Clipboard`
 - macOS or Linux: `base64 -w0 junksnap-release.jks`
 
-Without `ANDROID_KEYSTORE_B64` the workflow still builds, but it signs with a throwaway debug key made on the runner. The run shows a warning, and the release notes say it is a test build. Each such build has a different key, so a phone must uninstall before installing the next one.
+Without `ANDROID_KEYSTORE_B64` the workflow still builds, but it signs with a throwaway debug key made on the runner. The run shows a warning, and the release notes say it is a test build. A tag built this way is published as a prerelease, not as a release. Each such build has a different key, so a phone must uninstall before installing the next one.
 
-The workflow never prints the secrets. GitHub masks them, the keystore is written to the runner's temp folder, and it is deleted after the build.
+The workflow never prints the secrets. GitHub masks them, and only the Gradle signing step receives them (`build_android.py` removes them from the env of the npm steps). The keystore is written to the runner's temp folder and deleted after the build, even when the build fails.
 
 ## Install on a phone
 

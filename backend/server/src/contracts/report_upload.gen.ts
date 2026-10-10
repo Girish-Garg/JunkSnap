@@ -6,10 +6,11 @@ import { ContractValidator } from "./ContractValidator.js";
  */
 export type ReportUpload = {
   /**
-   * From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent.
+   * From POST /uploads/presign for a photo. A no_bin report without a photo has no presign: the app makes it, upl_ plus 26 lowercase base-32 characters (decision 20261010-1630). The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent.
    */
   upload_id: string;
-  report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+  report_type:
+    "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
   /**
    * Allowed values depend on report_type; see allOf.
    */
@@ -25,7 +26,9 @@ export type ReportUpload = {
     | "foam"
     | "choked_drain"
     | "uncovered_debris"
-    | "dusty_site";
+    | "dusty_site"
+    | "overflowing"
+    | "damaged";
   /**
    * snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203).
    */
@@ -43,7 +46,7 @@ export type ReportUpload = {
   /**
    * SHA-256 of the original image bytes, computed on the phone, lowercase hex.
    */
-  sha256: string;
+  sha256?: string;
   gps: {
     lat: number;
     lon: number;
@@ -100,7 +103,6 @@ export const reportUploadSchema = {
     "report_type",
     "context",
     "capture_mode",
-    "sha256",
     "gps",
     "device_token",
     "captured_at"
@@ -109,14 +111,15 @@ export const reportUploadSchema = {
     "upload_id": {
       "type": "string",
       "pattern": "^upl_[a-z0-9_]{1,40}$",
-      "description": "From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent."
+      "description": "From POST /uploads/presign for a photo. A no_bin report without a photo has no presign: the app makes it, upl_ plus 26 lowercase base-32 characters (decision 20261010-1630). The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent."
     },
     "report_type": {
       "enum": [
         "waste_dump",
         "no_bin",
         "contaminated_water",
-        "open_construction"
+        "open_construction",
+        "overflowing_bin"
       ]
     },
     "context": {
@@ -132,7 +135,9 @@ export const reportUploadSchema = {
         "foam",
         "choked_drain",
         "uncovered_debris",
-        "dusty_site"
+        "dusty_site",
+        "overflowing",
+        "damaged"
       ],
       "description": "Allowed values depend on report_type; see allOf."
     },
@@ -304,8 +309,32 @@ export const reportUploadSchema = {
               "no_bin",
               "no_pickup"
             ]
+          },
+          "gps": {
+            "properties": {
+              "accuracy_m": {
+                "maximum": 50
+              }
+            }
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "no_bin"
+          }
+        }
+      },
+      "then": {
+        "description": "Decision 20261010-1630: a no_bin report says there is no dustbin within 1 km of where the reporter stands. The photo is optional: without sha256 there is no photo; upload_id is then made by the app (upl_ plus a lowercase ULID)."
+      },
+      "else": {
+        "required": [
+          "sha256"
+        ]
       }
     },
     {
@@ -343,6 +372,25 @@ export const reportUploadSchema = {
             "enum": [
               "uncovered_debris",
               "dusty_site"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "overflowing_bin"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "context": {
+            "enum": [
+              "overflowing",
+              "damaged"
             ]
           }
         }

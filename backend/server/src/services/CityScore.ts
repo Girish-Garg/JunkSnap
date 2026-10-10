@@ -1,29 +1,33 @@
-import type { AreaSite } from "../domain/AreaSite.js";
+import type { AreaSite, ReportType } from "../domain/AreaSite.js";
 import type { AreaSites } from "../domain/AreaSites.js";
 import type { DataWindow } from "../domain/DataWindow.js";
 import { complement, DAY_MS, mean, median, percent } from "../domain/scoreUtils.js";
 
 const CLEAR_WITHIN_DAYS = 7;
+// Bin service needs this many verified overflowing_bin sites, so one bin never sways the city score (decision 20261010-1645).
+export const MIN_BIN_SERVICE_SITES = 3;
 
 export interface CityMeasure {
   readonly medianDaysToClear: number | null;
   readonly clearedWithin7DaysPct: number | null;
   readonly redumpedPct: number | null;
   readonly noBinResponsePct: number | null;
+  readonly binServicePct: number | null;
   readonly value: number | null;
 }
 
-// scores-v1 and v2 city: how fast and how lastingly the city clears verified sites.
+// scores-v3 city: how fast and how lastingly the city clears verified sites, and whether it services bad-state bins.
 export class CityScore {
   measure(sites: AreaSites, window: DataWindow): CityMeasure {
     const verified = sites.verified();
     const medianDaysToClear = median(verified.map((site) => site.daysToClear(window.toMs)));
     const clearedWithin7DaysPct = this.#clearedWithin7Days(verified, window);
     const redumpedPct = this.#redumped(verified);
-    const noBinResponsePct = this.#noBinResponse(verified);
+    const noBinResponsePct = CityScore.#clearedShare(verified, "no_bin");
+    const binServicePct = CityScore.#binService(verified);
     const speed = medianDaysToClear === null ? null : Math.max(0, 100 - 10 * medianDaysToClear);
-    const value = mean([speed, clearedWithin7DaysPct, complement(redumpedPct), noBinResponsePct]);
-    return { medianDaysToClear, clearedWithin7DaysPct, redumpedPct, noBinResponsePct, value };
+    const value = mean([speed, clearedWithin7DaysPct, complement(redumpedPct), noBinResponsePct, binServicePct]);
+    return { medianDaysToClear, clearedWithin7DaysPct, redumpedPct, noBinResponsePct, binServicePct, value };
   }
 
   #redumped(verified: readonly AreaSite[]): number | null {
@@ -37,8 +41,15 @@ export class CityScore {
     return percent(due.filter((site) => site.clearedWithinDays(CLEAR_WITHIN_DAYS)).length, due.length);
   }
 
-  #noBinResponse(verified: readonly AreaSite[]): number | null {
-    const noBin = verified.filter((site) => site.isType("no_bin"));
-    return percent(noBin.filter((site) => site.everCleared()).length, noBin.length);
+  // Null below MIN_BIN_SERVICE_SITES, so it feeds neither the mean nor the city_response diagnosis.
+  static #binService(verified: readonly AreaSite[]): number | null {
+    const bins = verified.filter((site) => site.isType("overflowing_bin")).length;
+    return bins < MIN_BIN_SERVICE_SITES ? null : CityScore.#clearedShare(verified, "overflowing_bin");
+  }
+
+  // no_bin response and bin service: sites of one type ever cleared or served, over all of them.
+  static #clearedShare(verified: readonly AreaSite[], reportType: ReportType): number | null {
+    const ofType = verified.filter((site) => site.isType(reportType));
+    return percent(ofType.filter((site) => site.everCleared()).length, ofType.length);
   }
 }

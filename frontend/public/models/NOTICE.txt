@@ -1,0 +1,12 @@
+edge-int8.onnx: the JunkSnap on-phone waste detector.
+
+Model: Ultralytics YOLO26n, trained by the JunkSnap team at 320 px, exported to ONNX and quantised to int8.
+Version yolo26n-320-int8-v1, 2,827,592 bytes,
+SHA-256 fa07920d9552faf7e8498499b048e8d5c7ed9c650ea93c4f5d07e72f156b0312
+(S3 models/edge_int8/, listed in backend/ml/src/ml/settings/models.json; test mAP50 0.372, docs/ml/eval.md).
+Classes, in output order: edge-int8.classes.json.
+
+Licence: AGPL-3.0, like the Ultralytics code that trained and exported it and like this repository.
+Source and training code: https://github.com/Girish-Garg/saboot (backend/ml/training).
+
+The app uses its boxes only as hints for live boxes and Scan frame choice. The server always re-verifies.

@@ -32,18 +32,19 @@ class StackedVerifier:
         self._clock = clock
 
     def verify(self, case: VerificationCase) -> VerificationResult:
+        combiner = self._combiner.for_claim(case.claim)
         results = self._measured(case)
-        needed = self._combiner.needs_judge(results, case.purpose)
+        needed = combiner.needs_judge(results, case.purpose)
         reading = self._judge.judge(case) if needed else None
         if reading is not None:
             results.append(reading.signal)
         result = VerificationResult(
             case=case,
-            outcome=self._combiner.combine(results, case.purpose),
-            thresholds=self._combiner.thresholds,
+            outcome=combiner.combine(results, case.purpose),
+            thresholds=combiner.thresholds,
             signals=tuple(results),
             judge=None if reading is None else reading.verdict,
-            combiner=self._combiner.info(),
+            combiner=combiner.info(),
             decided_at=self._clock.now(),
             embedding_key=next((r.artifact_key for r in results if r.artifact_key), None),
             insights=self._insights(results),
@@ -76,6 +77,8 @@ class StackedVerifier:
             "probability": round(result.outcome.probability, 4),
             "decision": result.outcome.decision,
             "judge_ran": result.judge is not None,
+            "combiner": result.combiner.kind,
+            "combiner_reason": result.combiner.reason,
             "signals": [f"{s.name}={s.score:.2f}" for s in result.signals],
         }
         logger.info("verified", extra={"fields": fields})

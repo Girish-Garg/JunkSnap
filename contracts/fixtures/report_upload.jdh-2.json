@@ -1,0 +1,14 @@
+{
+  "upload_id": "upl_01jc9x7k2m4q6r8t0v2w4y6z8a",
+  "report_type": "no_bin",
+  "context": "no_bin",
+  "capture_mode": "snap",
+  "gps": {
+    "lat": 26.3049,
+    "lon": 73.0352,
+    "accuracy_m": 9
+  },
+  "device_token": "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63",
+  "captured_at": "2026-10-10T03:20:00Z",
+  "user_id": "9d4f2a17-3c8e-4b61-a5d2-7e0c1b9f6a34"
+}

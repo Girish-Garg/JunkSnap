@@ -1,6 +1,9 @@
-import type { RefObject } from 'react';
+import { useRef, type RefObject } from 'react';
+import { EDGE_MODEL } from '../../../domain/EdgeModel';
 import type { CaptureProblem } from '../../../domain/CaptureError';
+import { ScanHintLog } from '../../../services/ScanHintLog';
 import { useCamera, type CameraState } from './useCamera';
+import { useEdgeHints } from './useEdgeHints';
 import type { GpsState } from './useGpsFix';
 import { useReportChoice } from './useReportChoice';
 import { useScanRecorder } from './useScanRecorder';
@@ -15,12 +18,16 @@ export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: Sn
   const camera = useCamera(video, 'video');
   const report = useReportChoice();
   const recorder = useScanRecorder(video, flow.scanSaved);
+  // Edge mode only: the strongest waste box of each analysed frame goes with the scan as a hint.
+  const hintLog = useRef<ScanHintLog | null>(null);
+  const hints = useEdgeHints(video, camera.state === 'live', (frame) => hintLog.current?.add(frame));
   const choice = report.choice;
   const canStart = camera.state === 'live' && recorder.supported && gps.fix !== null && choice !== null;
   const start = () => {
     if (!choice || !gps.fix) return;
-    recorder.start({ report_type: choice.report_type, context: choice.context }, { fix: gps.fix, takenAtMs: gps.takenAtMs });
+    hintLog.current = hints.state === 'live' ? new ScanHintLog(EDGE_MODEL.version) : null;
+    recorder.start({ report_type: choice.report_type, context: choice.context }, { fix: gps.fix, takenAtMs: gps.takenAtMs }, hintLog.current);
   };
   const problem: CaptureProblem | null = recorder.problem ?? (recorder.supported ? null : 'recorder_unsupported');
-  return { camera, report, recorder, failed: cameraProblem(camera.state), canStart, start, problem };
+  return { camera, report, recorder, hints, failed: cameraProblem(camera.state), canStart, start, problem };
 }

@@ -1,6 +1,7 @@
 import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
+import { mergeRadiusM, publishedPoint, zoneCentre } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import {
   AlreadyCleanedError,
@@ -15,13 +16,12 @@ import { SiteTemplate } from "./SiteTemplate.js";
 import { earlierTime, laterTime, mergeBrands, newestPhotos, withItem } from "./utils.js";
 import type { VoteTally } from "./VoteTally.js";
 
-export const MERGE_RADIUS_M = 40;
 const VOTE_RADIUS_M = 1000;
 
 // Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (a new photo merges in).
 // Verification: unverified -> verified at 10 backers, or rejected by the no-vote valve (decision 20261010-1530).
 export class Site {
-  readonly #point: GeoPoint;
+  #point: GeoPoint;
   #props: SiteProperties;
   #internals: SiteInternals;
 
@@ -89,7 +89,7 @@ export class Site {
     if (report_type !== report.reportType || verification === "rejected") {
       return false;
     }
-    return this.#point.distanceTo(report.point) <= MERGE_RADIUS_M;
+    return this.#point.distanceTo(report.point) <= mergeRadiusM(report_type);
   }
 
   merge(report: MergeableReport): void {
@@ -101,6 +101,9 @@ export class Site {
     }
     this.#addReporter(report);
     this.#addEvidence(report);
+    if (this.#props.report_type === "no_bin") {
+      this.#point = zoneCentre(this.#internals.reports, this.#point);
+    }
     this.#adoptBinMeasure(report);
     this.#reopenIfCleaned();
     this.#settle();
@@ -173,19 +176,23 @@ export class Site {
     return { site_id, votes, backers, verification };
   }
 
+  // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
   toFeature(): SiteFeature {
-    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
-    return { type: "Feature", geometry, properties: this.#props };
+    const shown = publishedPoint(this.#point, this.#props);
+    return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties: this.#props };
   }
 
+  // The stored state keeps the exact centre; zones merge on it.
   snapshot(): SiteState {
-    return { feature: this.toFeature(), internals: this.#internals };
+    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
+    return { feature: { type: "Feature", geometry, properties: this.#props }, internals: this.#internals };
   }
 
   #addReporter(report: MergeableReport): void {
     const { reports, reporterDevices, reporterUsers, meTooCount, embeddingKey } = this.#internals;
     const meToo = report.meTooSiteId === this.siteId && !this.#reportedBy(report);
-    const merged = { reportId: report.reportId, verified: false, insights: report.insights };
+    const point = { lat: report.point.lat, lon: report.point.lon };
+    const merged = { reportId: report.reportId, verified: false, insights: report.insights, point };
     this.#internals = {
       ...this.#internals,
       reports: [...reports, merged],

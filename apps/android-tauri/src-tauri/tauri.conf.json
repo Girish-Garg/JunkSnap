@@ -19,9 +19,9 @@
     "security": {
       "csp": {
         "default-src": "'self'",
-        "script-src": "'self'",
+        "script-src": ["'self'", "'wasm-unsafe-eval'"],
         "style-src": "'self'",
-        "font-src": "'self'",
+        "font-src": ["'self'", "data:"],
         "img-src": ["'self'", "data:", "blob:"],
         "media-src": ["'self'", "blob:"],
         "worker-src": ["'self'", "blob:"],

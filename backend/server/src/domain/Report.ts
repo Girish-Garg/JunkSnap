@@ -82,6 +82,16 @@ export class Report {
     return owner === undefined ? viewer.deviceToken === this.#record.device_token : viewer.userId === owner;
   }
 
+  // Decision 20261010-1630: a no_bin report may come without a photo (no sha256).
+  hasPhoto(): boolean {
+    return this.#record.sha256 !== undefined;
+  }
+
+  // A no_bin photo only shows the spot; the models never judge it as waste.
+  needsWasteCheck(): boolean {
+    return this.#record.report_type !== "no_bin";
+  }
+
   // Rejected, needs_review and both verification outcomes end the pipeline.
   isSettled(): boolean {
     return !OPEN_STATUSES.has(this.#record.status);

@@ -32,11 +32,20 @@ export function areaSite(id: string, patch: Partial<Properties> = {}, reporterId
   return { site: siteWith(wardSite(), { site_id: `site_${id}`, ...patch }), reporterIds };
 }
 
-// A verified no-bin place: within is site.insights.no_bin_within_3km (null when bins are not mapped there).
-export function noBinSite(id: string, verified: number, reporters: number, within: boolean | null): StoredAreaSite {
+export interface NoBinZoneFacts {
+  // Verified once 10 people confirmed it (decision 20261010-1630).
+  readonly confirmed: boolean;
+  // site.insights.no_bin_within_3km: evidence only, null when bins are not mapped there.
+  readonly within?: boolean | null;
+}
+
+// A no-bin zone in the test ward and seat.
+export function noBinSite(id: string, verified: number, reporters: number, zone: NoBinZoneFacts): StoredAreaSite {
   const base = wardSite().properties.insights;
-  const insights = base === undefined ? undefined : { ...base, nearest_bin: null, no_bin_within_3km: within };
-  const patch = { report_type: "no_bin", context: "no_pickup", verified_count: verified, report_count: verified, reporters, insights } as const;
+  const insights = base === undefined ? undefined : { ...base, nearest_bin: null, no_bin_within_3km: zone.within === undefined ? true : zone.within };
+  const verification = zone.confirmed ? "verified" : "unverified";
+  const counts = { verified_count: zone.confirmed ? verified : 0, report_count: verified, reporters };
+  const patch = { report_type: "no_bin", context: "no_pickup", zone_radius_m: 1000, verification, ...counts, insights } as const;
   return areaSite(id, patch);
 }
 
@@ -47,7 +56,7 @@ export function assemblySites(): StoredAreaSite[] {
     areaSite("a2", { verified_count: 4, report_count: 4, status: "cleaned", cleaned_at: "2026-10-10T01:00:00Z" }, ["u2", "u4"]),
     areaSite("a3", { verified_count: 2, report_count: 3, last_reported_at: "2026-10-10T06:00:00Z" }, null),
     areaSite("a4", { verification: "rejected", verified_count: 0, report_count: 2 }),
-    noBinSite("b1", 3, 6, true),
+    noBinSite("b1", 3, 6, { confirmed: true }),
     { site: siteWith(siteFixture("jpr-1"), { site_id: "site_far_9", verification: "verified", verified_count: 9 }), reporterIds: [] },
   ];
 }

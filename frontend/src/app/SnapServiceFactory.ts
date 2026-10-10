@@ -18,6 +18,7 @@ import { IndexedDbScanStore } from '../services/IndexedDbScanStore';
 import { JunkSnapDb } from '../services/JunkSnapDb';
 import { MockReportApi } from '../services/MockReportApi';
 import { MockScanApi } from '../services/MockScanApi';
+import { NoBinReporter } from '../services/NoBinReporter';
 import { PhotoEncoder } from '../services/PhotoEncoder';
 import { PhotoHasher } from '../services/PhotoHasher';
 import { QueueLock } from '../services/QueueLock';
@@ -107,15 +108,16 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
-      ...SnapServiceFactory.#actions(apis, identity, gps),
+      ...SnapServiceFactory.#actions(apis, identity, gps, () => browser.crypto.getRandomValues(new Uint8Array(16))),
     };
   }
 
   // Site actions and area letters share the sign-in gate and the device token.
-  static #actions(apis: Apis, identity: RequestIdentity, gps: GpsWatcher): Pick<SnapServices, 'siteActions' | 'areaLetters'> {
+  static #actions(apis: Apis, identity: RequestIdentity, gps: GpsWatcher, random: () => Uint8Array): Pick<SnapServices, 'siteActions' | 'areaLetters' | 'noBin'> {
     return {
       siteActions: new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps }),
       areaLetters: new AreaLetterService(apis.areaLetters, identity),
+      noBin: new NoBinReporter(apis.reports, identity, random),
     };
   }
 

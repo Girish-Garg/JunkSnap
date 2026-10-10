@@ -8,6 +8,9 @@ export default defineConfig({
     // Mock mode reads ../contracts/fixtures.
     fs: { allow: ['..'] },
   },
+  // onnxruntime-web finds its .wasm next to its own module; pre-bundling would move the module.
+  optimizeDeps: { exclude: ['onnxruntime-web'] },
+  worker: { format: 'es' },
   build: {
     // MapLibre is ~1 MB; its own chunk stays cached across app releases.
     chunkSizeWarningLimit: 1100,

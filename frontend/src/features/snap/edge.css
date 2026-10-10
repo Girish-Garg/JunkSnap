@@ -1,0 +1,91 @@
+/* On-device hints over the viewfinder: boxes and one hint chip. Pointer events pass through to the camera. */
+.edge-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.edge-overlay__boxes {
+  position: absolute;
+  inset: 0;
+}
+
+.edge-box {
+  --edge-colour: var(--sun);
+  --edge-ink: var(--on-sun);
+  position: absolute;
+  border: var(--outline) solid var(--edge-colour);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+}
+
+.edge-box--bin {
+  --edge-colour: var(--accent);
+  --edge-ink: var(--on-accent);
+}
+
+.edge-box--burning {
+  --edge-colour: var(--type-dump);
+  --edge-ink: var(--on-accent);
+}
+
+.edge-box__label {
+  position: absolute;
+  bottom: 100%;
+  left: calc(-1 * var(--outline));
+  max-width: 160px;
+  overflow: hidden;
+  padding: 0 var(--s-1);
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  background: var(--edge-colour);
+  color: var(--edge-ink);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Labels of boxes that touch the top edge go inside the box. */
+.edge-box[style*='top: 0%'] .edge-box__label {
+  top: 0;
+  bottom: auto;
+  border-radius: 0 0 var(--radius-xs) 0;
+}
+
+.edge-hint {
+  position: absolute;
+  bottom: var(--s-2);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.edge-hint--spotted {
+  background: var(--sun);
+  color: var(--on-sun);
+}
+
+/* Boxes glide between frames only when motion is welcome; otherwise they jump in place. */
+@media (prefers-reduced-motion: no-preference) {
+  .edge-box {
+    transition:
+      left var(--dur-2) var(--ease-out),
+      top var(--dur-2) var(--ease-out),
+      width var(--dur-2) var(--ease-out),
+      height var(--dur-2) var(--ease-out);
+  }
+
+  .edge-hint {
+    transition: background-color var(--dur-2) var(--ease-out);
+  }
+}

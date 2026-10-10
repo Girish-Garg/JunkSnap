@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from android_stage import ENV_NAMES, StageSettings  # noqa: E402
-from build_android import StageConfig  # noqa: E402
+from build_android import StageConfig, without_signing  # noqa: E402
 
 VALUES = {
     "VITE_API_URL": "https://d111111abcdef8.cloudfront.net/",
@@ -55,3 +55,15 @@ def test_stage_config_adds_hosts_to_the_csp_and_sets_the_version() -> None:
     assert "https://api.example" in csp["img-src"]
     assert config["version"] == "1.2.3"
     assert "version" not in StageConfig(settings, None).config()
+
+
+def test_signing_variables_stay_out_of_npm_steps() -> None:
+    env = {
+        "PATH": "/bin",
+        "ANDROID_HOME": "/sdk",
+        "ANDROID_KEYSTORE_PATH": "/tmp/k.jks",
+        "ANDROID_KEYSTORE_PASSWORD": "x",
+        "ANDROID_KEY_ALIAS": "a",
+        "ANDROID_KEY_PASSWORD": "y",
+    }
+    assert without_signing(env) == {"PATH": "/bin", "ANDROID_HOME": "/sdk"}

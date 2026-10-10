@@ -5,11 +5,13 @@ import { FileBinSource } from "../../adapters/FileBinSource.js";
 import { FileMapLayerSource } from "../../adapters/FileMapLayerSource.js";
 import { AwsCalls } from "../../adapters/sites/AwsCalls.js";
 import { SystemClock } from "../../adapters/SystemClock.js";
+import type { Report } from "../../domain/Report.js";
 import type { CrawlActivator } from "../../ports/CrawlActivator.js";
 import type { PipelineStep } from "../../ports/PipelineStep.js";
 import type { ReportMerger } from "../../ports/ReportMerger.js";
 import { BinLocator } from "../../services/BinLocator.js";
 import { BrandsStep } from "../../services/BrandsStep.js";
+import { ConditionalStep } from "../../services/ConditionalStep.js";
 import { LocateStep } from "../../services/LocateStep.js";
 import { MergeStep } from "../../services/MergeStep.js";
 import { ModerateStep } from "../../services/ModerateStep.js";
@@ -43,10 +45,12 @@ export class ReportStepsFactory {
     const { settings: core, env, logger } = context;
     const location = LocationServiceFactory.fromEnv(core, env).create();
     const [located, places, bins] = await Promise.all([location, this.#places(), this.#bins()]);
+    const wasteCheck = (report: Report) => report.hasPhoto() && report.needsWasteCheck();
     return [
-      new ModerateStep(new ServiceReportModerator(moderation)),
-      new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder())),
-      new BrandsStep(new LabellerBrandReader(buildBrandLabeller({ core, env, logger }))),
+      // A no_bin report may have no photo, and a no_bin photo is never judged as waste (decision 20261010-1630).
+      new ConditionalStep(new ModerateStep(new ServiceReportModerator(moderation)), (report) => report.hasPhoto()),
+      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder())), wasteCheck),
+      new ConditionalStep(new BrandsStep(new LabellerBrandReader(buildBrandLabeller({ core, env, logger }))), wasteCheck),
       new LocateStep(new ServiceReportLocator(located)),
       new MergeStep(this.#merger(places, bins)),
     ];

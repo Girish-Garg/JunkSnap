@@ -9,6 +9,7 @@ const REQUEST: Readonly<Record<AreaIssue, string>> = {
   no_bin: "place waste bins and arrange regular collection at these places",
   contaminated_water: "clean the water and drains at these sites and check the sources of contamination",
   open_construction: "cover or remove the debris at these sites and enforce dust control measures",
+  overflowing_bin: "empty these bins regularly and repair or replace them",
   all: "clear the reported sites and address the causes behind them",
 };
 

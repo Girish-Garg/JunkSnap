@@ -32,6 +32,8 @@ export interface MergedReport {
   readonly reportId: string;
   readonly verified: boolean;
   readonly insights: ReportInsights | null;
+  // Where the reporter stood; null for a report stored before points were kept. No-bin zones centre on these.
+  readonly point: { readonly lat: number; readonly lon: number } | null;
 }
 
 // Kept on the site item but never in the Feature: device tokens and user ids must not reach GeoJSON.

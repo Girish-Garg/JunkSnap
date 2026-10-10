@@ -1,0 +1,126 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      73.0189,
+      26.2805
+    ]
+  },
+  "properties": {
+    "site_id": "site_jdh_4",
+    "report_type": "overflowing_bin",
+    "context": "overflowing",
+    "status": "open",
+    "verification": "verified",
+    "report_count": 4,
+    "verified_count": 4,
+    "corroborations": 9,
+    "backers": {
+      "count": 10,
+      "needed": 10,
+      "photo_people": 4,
+      "vote_people": 6
+    },
+    "votes": {
+      "confirm": 6,
+      "reject": 0
+    },
+    "photo_urls": [
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_4.jpg"
+    ],
+    "cleanup_status": "none",
+    "cleanup_photo_url": null,
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": {
+        "id": "rajasthan-jodhpur",
+        "name": "Jodhpur"
+      },
+      "town": "Jodhpur",
+      "local_body": {
+        "id": "jodhpur-mc",
+        "name": "Jodhpur Municipal Corporation",
+        "head_office": "Commissioner"
+      },
+      "ward": null,
+      "assembly_seat": {
+        "id": "s20-ac-127",
+        "name": "Sardarpura"
+      },
+      "loksabha_seat": {
+        "id": "s20-pc-16",
+        "name": "Jodhpur",
+        "status": "current"
+      },
+      "representatives": [
+        {
+          "office": "mla",
+          "seat_id": "s20-ac-127",
+          "as_of": "2026-10-01",
+          "source": "https://eci.gov.in/"
+        },
+        {
+          "office": "mp",
+          "seat_id": "s20-pc-16",
+          "as_of": "2026-10-01",
+          "source": "https://sansad.in/ls"
+        }
+      ]
+    },
+    "brands": [],
+    "first_reported_at": "2026-10-08T05:40:00Z",
+    "last_reported_at": "2026-10-10T04:10:00Z",
+    "cleaned_at": null,
+    "pilot": true,
+    "reporters": 4,
+    "insights": {
+      "reports": 4,
+      "composition": [
+        {
+          "material": "organic",
+          "share_pct": 45,
+          "reports": 4,
+          "sources": [
+            {
+              "signal": "vision_judge",
+              "provider": "bedrock",
+              "model": "global.anthropic.claude-sonnet-4-6",
+              "version": "4.6"
+            }
+          ]
+        },
+        {
+          "material": "plastic",
+          "share_pct": 40,
+          "reports": 4,
+          "sources": [
+            {
+              "signal": "rekognition_labels",
+              "provider": "rekognition",
+              "model": "DetectLabels",
+              "version": "3.0"
+            }
+          ]
+        }
+      ],
+      "size_class": {
+        "value": "medium",
+        "reports": 4,
+        "sources": [
+          {
+            "signal": "vision_judge",
+            "provider": "bedrock",
+            "model": "global.anthropic.claude-sonnet-4-6",
+            "version": "4.6"
+          }
+        ]
+      },
+      "hazards": [],
+      "near": [],
+      "nearest_bin": null,
+      "no_bin_within_3km": null
+    }
+  }
+}

@@ -29,7 +29,7 @@ class PermissionAsker(private val activity: ComponentActivity) {
   private var current: Ask? = null
   private val launcher = activity.registerForActivityResult(
     ActivityResultContracts.RequestMultiplePermissions(),
-  ) { results -> finish(decide(current, results.values)) }
+  ) { results -> finish(decide(current, results.values), asked = true) }
 
   fun ask(permissions: Array<String>, anyGranted: Boolean = false, quietMs: Long = 0, answer: (Boolean) -> Unit) {
     queue.addLast(Ask(permissions, anyGranted, quietMs, answer))
@@ -37,14 +37,15 @@ class PermissionAsker(private val activity: ComponentActivity) {
   }
 
   private fun next() {
+    if (current != null) return
     val ask = queue.removeFirstOrNull() ?: return
     current = ask
     val held = ask.permissions.map {
       ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
     }
     when {
-      decide(ask, held) -> finish(true)
-      stillDenied(ask) -> finish(false)
+      decide(ask, held) -> finish(true, asked = false)
+      stillDenied(ask) -> finish(false, asked = false)
       else -> launcher.launch(ask.permissions)
     }
   }
@@ -56,10 +57,12 @@ class PermissionAsker(private val activity: ComponentActivity) {
     return quiet || androidStoppedAsking
   }
 
-  private fun finish(granted: Boolean) {
+  // Only a denial from a shown dialog starts the quiet period; answering from memory must not
+  // restart it, or a page that keeps retrying would keep it quiet forever.
+  private fun finish(granted: Boolean, asked: Boolean) {
     val ask = current ?: return
     current = null
-    if (granted) deniedAt.remove(ask.key) else deniedAt[ask.key] = SystemClock.elapsedRealtime()
+    if (granted) deniedAt.remove(ask.key) else if (asked) deniedAt[ask.key] = SystemClock.elapsedRealtime()
     val same = queue.filter { it.key == ask.key }
     queue.removeAll(same)
     (listOf(ask) + same).forEach { it.answer(granted) }

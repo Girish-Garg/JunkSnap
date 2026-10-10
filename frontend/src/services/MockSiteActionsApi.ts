@@ -1,7 +1,6 @@
 import { ApiError } from '../domain/ApiError';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
-import { NO_BIN_MIN_REPORTERS } from '../domain/BinAccess';
-import type { SiteFeature, SiteProperties } from '../domain/Site';
+import type { SiteFeature } from '../domain/Site';
 import type { SiteActionsApi } from './SiteActionsApi';
 
 export interface MockSiteSources {
@@ -38,25 +37,8 @@ export class MockSiteActionsApi implements SiteActionsApi {
     await this.#wait();
     const site = (await this.#sources.site(siteId)).properties;
     if (site.verification !== 'verified') throw new ApiError(409, 'not_verified', 'Letters open once the site is verified');
-    const noBin = MockSiteActionsApi.#noBinReason(site);
-    if (noBin) throw new ApiError(409, 'not_verified', noBin);
     const sample = await this.#sources.letter();
     return { ...sample, site_id: siteId, language: request.language };
-  }
-
-  // The api's no-bin gate (decision 20261010-1430), worded as the api words it.
-  static #noBinReason(site: SiteProperties): string | null {
-    if (site.report_type !== 'no_bin') return null;
-    const reporters = site.reporters ?? 0;
-    const noBinWithin3km = site.insights?.no_bin_within_3km;
-    if (reporters >= NO_BIN_MIN_REPORTERS && noBinWithin3km === true) return null;
-    if (noBinWithin3km === null || noBinWithin3km === undefined) return 'Bins not mapped here yet, so a no-bin letter cannot be checked.';
-    return `${reporters} of ${NO_BIN_MIN_REPORTERS} people reported no bin here${MockSiteActionsApi.#nearest(site)}`;
-  }
-
-  static #nearest(site: SiteProperties): string {
-    const bin = site.insights?.nearest_bin;
-    return bin ? `; nearest known bin ${(bin.distance_m / 1000).toFixed(1)} km` : '';
   }
 
   #wait(): Promise<void> {

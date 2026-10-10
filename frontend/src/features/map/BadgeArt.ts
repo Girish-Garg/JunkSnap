@@ -15,10 +15,18 @@ export interface BadgeImage {
 
 type Rgb = readonly [number, number, number];
 
-// Same as --surface, --divider and --text-secondary in theme.css; MapLibre images need the values in JS.
-const FILL: Rgb = [255, 255, 255];
-const BORDER: Rgb = [218, 220, 224];
-const GLYPH: Rgb = [95, 99, 104];
+interface Palette {
+  readonly fill: Rgb;
+  readonly border: Rgb;
+  readonly glyph: Rgb;
+}
+
+// From src/ui/tokens.css (MapLibre images need the values in JS). Light: --surface, --divider,
+// --text-secondary. Dark: --tile, --divider, --text-secondary of the dark theme.
+export const BADGE_PALETTES: Readonly<Record<'light' | 'dark', Palette>> = {
+  light: { fill: [255, 253, 248], border: [235, 224, 207], glyph: [95, 84, 70] },
+  dark: { fill: [42, 37, 30], border: [54, 47, 39], glyph: [201, 189, 170] },
+};
 const RATIO = 2;
 const RADIUS = 8 * RATIO;
 const PAD = 6 * RATIO;
@@ -29,16 +37,18 @@ interface Frame {
   readonly width: number;
   readonly height: number;
   readonly glyph: Glyph | null;
+  readonly palette: Palette;
 }
 
 /** Draws badges pixel by pixel: no canvas needed, so it also works in tests and workers. */
 export class BadgeArt {
   /** A plain badge, or one with a fixed glyph at its left that the text never covers or stretches. */
-  static create(kind: BadgeKind = 'plain'): BadgeImage {
+  static create(kind: BadgeKind = 'plain', dark = false): BadgeImage {
     const glyph = BADGE_GLYPHS[kind];
+    const palette = BADGE_PALETTES[dark ? 'dark' : 'light'];
     const frame: Frame = glyph
-      ? { width: GLYPH_LEFT + GLYPH_SIZE + 2 * RADIUS, height: GLYPH_SIZE + 2 * RADIUS + 8, glyph }
-      : { width: 2 * RADIUS + 4, height: 2 * RADIUS + 4, glyph: null };
+      ? { width: GLYPH_LEFT + GLYPH_SIZE + 2 * RADIUS, height: GLYPH_SIZE + 2 * RADIUS + 8, glyph, palette }
+      : { width: 2 * RADIUS + 4, height: 2 * RADIUS + 4, glyph: null, palette };
     const data = new Uint8Array(frame.width * frame.height * 4);
     for (let y = 0; y < frame.height; y++) {
       for (let x = 0; x < frame.width; x++) BadgeArt.#paint(data, frame, x, y);
@@ -79,7 +89,8 @@ export class BadgeArt {
     const alpha = Math.min(Math.max(0.5 - d, 0), 1);
     const top = (frame.height - GLYPH_SIZE) / 2;
     const onGlyph = frame.glyph?.(x - GLYPH_LEFT, y - top) ?? false;
-    const color = onGlyph ? GLYPH : d > -RATIO ? BORDER : FILL;
+    const { fill, border, glyph } = frame.palette;
+    const color = onGlyph ? glyph : d > -RATIO ? border : fill;
     data.set([color[0], color[1], color[2], Math.round(alpha * 255)], (y * frame.width + x) * 4);
   }
 }
