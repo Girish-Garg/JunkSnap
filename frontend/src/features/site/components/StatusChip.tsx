@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import type { SiteProperties } from '../../../domain/Site';
-import { SiteStatusChip } from '../../../domain/SiteStatusChip';
+import { SiteStatusChip, type ChipFields } from '../../../domain/SiteStatusChip';
 
 interface StatusChipProps {
-  readonly site: Pick<SiteProperties, 'status' | 'verification' | 'backers'>;
+  readonly site: ChipFields;
 }
 
 /** A dot and the words, on a tint: "Waiting · 1 of 10", "Verified", "Cleared". Never red for a normal state. */

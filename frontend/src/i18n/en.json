@@ -64,7 +64,8 @@
     "fallbackHint": "To see the map, turn on hardware acceleration in your browser settings.",
     "listLabel": "Sites nearby",
     "fallbackApp": "This phone can't draw the map here. Showing a list instead.",
-    "fallbackHintApp": "To see the map, update Android System WebView in the Play Store, then reopen JunkSnap."
+    "fallbackHintApp": "To see the map, update Android System WebView in the Play Store, then reopen JunkSnap.",
+    "goToMe": "Go to my location"
   },
   "notice": {
     "offline": "Offline. Showing what was loaded.",
@@ -96,7 +97,8 @@
     "reopened": "Reopened",
     "removed": "Withdrawn",
     "expired": "Expired",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "clearing": "{{count}} of {{needed}} say cleared"
   },
   "addPhoto": {
     "action": "Add a photo",
@@ -1165,5 +1167,33 @@
       "location": "Your location is needed to report a photo. Allow location in the browser settings.",
       "too_far": "Photo reports count only within 1 km of the site. Go closer and try again."
     }
+  },
+  "browse": {
+    "toggle": "Map or list",
+    "map": "Map",
+    "list": "List",
+    "mapLabel": "Map view",
+    "listLabel": "List view",
+    "title_one": "{{count}} site in view",
+    "title_other": "{{count}} sites in view",
+    "cityTitle": "Sites in Jodhpur",
+    "label": "Sites, in the order you chose",
+    "close": "Close the list",
+    "sort": "Sort by",
+    "sortNearest": "Nearest",
+    "sortNewest": "Newest",
+    "sortBacked": "Most backed",
+    "emptyView": "No sites in this view",
+    "cityNote": "Here are Jodhpur's sites instead.",
+    "showCity": "Show all of Jodhpur",
+    "emptyText": "No sites match the filters. Turn a filter off or move the map.",
+    "more": "Show {{count}} more",
+    "again": "Tap again for details",
+    "previous": "Previous site",
+    "next": "Next site",
+    "position": "{{position}} of {{total}}",
+    "cityFailed": "Could not load Jodhpur's sites.",
+    "retry": "Try again",
+    "announce": "{{type}}, {{area}}. {{position}} of {{total}}"
   }
 }
