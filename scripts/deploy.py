@@ -20,6 +20,8 @@ REGION = "ap-south-1"
 CLUSTER = "junksnap"
 SHARED_STACK = "junksnap-shared"
 ALB_WAIT_SECONDS = 600
+# ml downloads and checks about 420 MB of trained models before it serves (startup probe: 5 min).
+ROLLOUT_WAIT_SECONDS = {"api": 300, "ml": 600, "worker": 300}
 # image -> (build folders, first with a Dockerfile wins; backend/agent until backend/ml exists)
 IMAGES = {
     "junksnap-server": (("backend/server",), "ServerRepositoryUri"),
@@ -103,8 +105,8 @@ class StageDeployer:
         self._write_layer(repos, tag, outputs)
         aws("eks", "update-kubeconfig", "--name", CLUSTER, "--kubeconfig", self._kubeconfig)
         self._kubectl("apply", "-k", self._layer.relative_to(ROOT).as_posix())
-        for name in ("api", "ml", "worker"):
-            self._kubectl("rollout", "status", f"deployment/{name}", "--timeout=300s")
+        for name, seconds in ROLLOUT_WAIT_SECONDS.items():
+            self._kubectl("rollout", "status", f"deployment/{name}", f"--timeout={seconds}s")
         alb = self._wait_for_alb()
         return self._deploy_stage_stack([f"AlbDnsName={alb}"])["PublicBaseUrl"]
 
