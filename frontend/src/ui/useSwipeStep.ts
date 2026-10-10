@@ -1,9 +1,11 @@
-import { useRef, type PointerEvent } from 'react';
+import { useRef, type MouseEvent, type PointerEvent } from 'react';
 
 // A flick at least this long, mostly sideways and quick, steps; anything else is a tap or a scroll.
 const MIN_DISTANCE_PX = 48;
 const SIDEWAYS_RATIO = 1.5;
 const MAX_DURATION_MS = 600;
+// The click a mouse sends at the end of a swipe arrives within this time; it must not also tap the card.
+const CLICK_AFTER_SWIPE_MS = 400;
 
 interface Start {
   readonly x: number;
@@ -18,6 +20,7 @@ interface Start {
  */
 export function useSwipeStep(onPrevious: (() => void) | null, onNext: (() => void) | null) {
   const start = useRef<Start | null>(null);
+  const steppedAt = useRef(-Infinity);
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     const owned = event.target instanceof Element && event.target.closest('[data-own-drag]');
     start.current = owned || !event.isPrimary ? null : { x: event.clientX, y: event.clientY, at: event.timeStamp };
@@ -28,10 +31,15 @@ export function useSwipeStep(onPrevious: (() => void) | null, onNext: (() => voi
     if (!from || event.timeStamp - from.at > MAX_DURATION_MS) return;
     const dx = event.clientX - from.x;
     const sideways = Math.abs(dx) >= MIN_DISTANCE_PX && Math.abs(dx) > Math.abs(event.clientY - from.y) * SIDEWAYS_RATIO;
-    if (sideways) (dx < 0 ? onNext : onPrevious)?.();
+    if (!sideways) return;
+    steppedAt.current = event.timeStamp;
+    (dx < 0 ? onNext : onPrevious)?.();
+  };
+  const onClickCapture = (event: MouseEvent<HTMLElement>) => {
+    if (event.timeStamp - steppedAt.current < CLICK_AFTER_SWIPE_MS) event.stopPropagation();
   };
   const onPointerCancel = () => {
     start.current = null;
   };
-  return { onPointerDown, onPointerUp, onPointerCancel };
+  return { onPointerDown, onPointerUp, onPointerCancel, onClickCapture };
 }

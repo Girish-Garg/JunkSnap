@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom';
+import { useShareLinks } from '../../../app/useShareLinks';
 import type { AreaLetterDraft } from '../../../domain/AreaLetter';
 import type { LetterText } from '../LetterText';
 import { AreaEvidence } from './AreaEvidence';
@@ -12,11 +13,12 @@ interface AreaLetterDraftViewProps {
 
 /** The drafted area letter on screen, its actions, and the print-only copy. */
 export function AreaLetterDraftView({ draft, onReset }: AreaLetterDraftViewProps) {
+  const links = useShareLinks();
   const evidence = (text: LetterText) => <AreaEvidence evidence={draft.evidence} text={text} language={draft.language} />;
   return (
     <>
       <LetterView draft={draft} evidence={evidence} />
-      <LetterActions draft={draft} onReset={onReset} />
+      <LetterActions draft={draft} onReset={onReset} link={links.area(draft.area.kind, draft.area.id)} />
       {createPortal(<LetterView draft={draft} evidence={evidence} forPrint />, document.body)}
     </>
   );

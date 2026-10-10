@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { validateReportUpload } from "../contracts/index.gen.js";
 import { ValidationError } from "../domain/errors.js";
+import type { MyReportsQuery } from "../services/MyReportsQuery.js";
 import type { ReportIntake } from "../services/ReportIntake.js";
 import type { ReportStatusReader } from "../services/ReportStatusReader.js";
 import type { PresignRequest, UploadPresigner } from "../services/UploadPresigner.js";
@@ -16,6 +17,12 @@ const PresignBody = z.strictObject({
   device_token: z.string().regex(UUID_V4),
 });
 
+// GET /me/reports: 20 a page by default, at most 50; the cursor is the opaque next_cursor of the page before.
+const MineQuery = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().regex(/^[A-Za-z0-9_-]{1,1024}$/).optional(),
+});
+
 // Creating needs a signed-in user (decision 0227); GET also opens a guest report made before accounts by its device.
 export type ReportGuard = Pick<RouteGuard, "requireUser" | "optionalUser">;
 
@@ -23,6 +30,7 @@ export interface ReportServices {
   readonly presigner: UploadPresigner;
   readonly intake: ReportIntake;
   readonly statuses: ReportStatusReader;
+  readonly mine: MyReportsQuery;
 }
 
 export class ReportEndpoints {
@@ -35,7 +43,7 @@ export class ReportEndpoints {
   }
 
   plugin(): FastifyPluginAsync {
-    const { presigner, intake, statuses } = this.#services;
+    const { presigner, intake, statuses, mine } = this.#services;
     const guard = this.#guard;
     return async (app) => {
       app.post("/uploads/presign", async (request) => {
@@ -53,11 +61,20 @@ export class ReportEndpoints {
         const viewer = { userId: user?.userId, deviceToken: typeof token === "string" ? token : undefined };
         return statuses.read(request.params.id, viewer);
       });
+      app.get("/me/reports", async (request) => {
+        const user = await guard.requireUser(request);
+        const query = ReportEndpoints.#parse(MineQuery, request.query);
+        return mine.list(user.userId, { limit: query.limit, cursor: query.cursor ?? null });
+      });
     };
   }
 
   static #presignBody(body: unknown): PresignRequest {
-    const parsed = PresignBody.safeParse(body);
+    return ReportEndpoints.#parse(PresignBody, body);
+  }
+
+  static #parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
+    const parsed = schema.safeParse(input);
     if (!parsed.success) {
       throw new ValidationError(z.prettifyError(parsed.error));
     }

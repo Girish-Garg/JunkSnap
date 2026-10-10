@@ -3,7 +3,6 @@ import { BBox } from '../src/domain/BBox';
 import { PilotCity } from '../src/domain/PilotCity';
 import type { SiteFeature } from '../src/domain/Site';
 import { SiteBrowse } from '../src/domain/SiteBrowse';
-import { SiteChip } from '../src/domain/SiteChip';
 import { SiteFilter } from '../src/domain/SiteFilter';
 import { SiteOrder } from '../src/domain/SiteOrder';
 import { SiteSteps } from '../src/domain/SiteSteps';
@@ -69,14 +68,5 @@ describe('SiteSteps', () => {
     expect(steps?.previous()).toBeNull();
     expect(steps?.next()?.properties.site_id).toBe('middle');
     expect(SiteSteps.at([NEAR], 'elsewhere')).toBeNull();
-  });
-});
-
-describe('SiteChip', () => {
-  it('says waiting with the count, verified, or cleared while people confirm the clearing', () => {
-    expect(SiteChip.of(MIDDLE.properties)).toEqual({ kind: 'waiting', count: 4, needed: 10 });
-    expect(SiteChip.of(FAR.properties)).toEqual({ kind: 'verified', count: null, needed: null });
-    const clearing = testSite({ clearance: { count: 1, needed: 3, still_there: 0 } });
-    expect(SiteChip.of(clearing.properties)).toEqual({ kind: 'cleared', count: 1, needed: 3 });
   });
 });

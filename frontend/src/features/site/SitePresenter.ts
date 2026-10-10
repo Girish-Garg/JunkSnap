@@ -69,6 +69,11 @@ export class SitePresenter {
     return this.#site.verification === 'verified' && this.closedReason() === null;
   }
 
+  /** The status chip says verified or waiting only for an open site; any other status spells it out beside the chip. */
+  showsVerification(): boolean {
+    return this.#site.status !== 'open';
+  }
+
   /** "n of 10 people confirmed" means nothing once a site is off the map, unless it was verified first. */
   showsBackers(): boolean {
     return this.closedReason() === null || this.#site.verification === 'verified';

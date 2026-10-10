@@ -1,0 +1,150 @@
+/*
+  The pin card: a compact map-app place card. It keeps .preview-card's place and spring (site.css) and lays its
+  content out as a column: handle, photo with title, chip and meta, then View site with two round buttons.
+  It follows a finger down (--card-drag, useSwipeDismiss). Tokens only; the same roles work in light and dark.
+*/
+.preview-card.pin-card {
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 0;
+  padding: var(--s-2) var(--s-3) var(--s-3);
+  cursor: pointer;
+  touch-action: none;
+  transform: translateY(var(--card-drag, 0px));
+  transition: transform var(--dur-3) var(--spring);
+}
+
+.preview-card.pin-card.is-dragging {
+  transition: none;
+}
+
+.pin-card__handle {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+}
+
+.pin-card__main {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  /* Room for the close button at the top right. */
+  padding-right: var(--s-8);
+}
+
+.pin-card__thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: var(--tile);
+  color: var(--text-tertiary);
+}
+
+.pin-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: fade-in var(--dur-3) var(--ease-out);
+}
+
+.pin-card__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.pin-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.pin-card__type {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  background: var(--tile);
+}
+
+.pin-card__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pin-card__meta {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.pin-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.pin-card__actions .button {
+  flex: 1;
+}
+
+.pin-card__round {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--target);
+  height: var(--target);
+  padding: 0;
+  border: var(--outline) solid var(--divider);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent-ink);
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-out);
+}
+
+.pin-card__round:hover {
+  border-color: var(--line-strong);
+}
+
+.pin-card__round:active {
+  transform: scale(0.94);
+}
+
+.pin-card__round[aria-disabled='true'] {
+  border-style: dashed;
+  background: var(--tile);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.pin-card__why {
+  margin-top: calc(-1 * var(--s-1));
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.preview-card.pin-card > .icon-button {
+  top: var(--s-2);
+  right: var(--s-2);
+}

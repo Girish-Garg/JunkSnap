@@ -4,6 +4,7 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
 import '../../snap/snap.css';
+import '../activity.css';
 import { useActivity } from '../hooks/useActivity';
 import { ActivityLists } from './ActivityLists';
 
@@ -20,7 +21,7 @@ export function ActivityRoute() {
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('activity.title')}
       </h2>
-      <p className="sheet-text">{t('activity.text')}</p>
+      <p className="activity-subtitle">{t('activity.text')}</p>
       <ActivityLists reports={reports} scans={scans} />
     </BottomSheet>
   );

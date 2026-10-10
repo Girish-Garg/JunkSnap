@@ -1,3 +1,4 @@
+import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatus, ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import type { SiteFeature } from '../domain/Site';
@@ -53,6 +54,12 @@ export class MockReportApi implements ReportApi {
     const site = (await this.#sampleSite()).properties;
     const view: ReportStatusView = { report_id: reportId, status, site_id: site.site_id, blurred_url: site.photo_urls[0] ?? null, updated_at };
     return this.#evidence ? this.#evidence.snap(view) : view;
+  }
+
+  /** Mock mode keeps nothing off the phone, so the server list is empty and Activity keeps its own rows. */
+  async mine(): Promise<ReportListPage> {
+    await this.#wait();
+    return { reports: [], next_cursor: null };
   }
 
   #wait(): Promise<void> {

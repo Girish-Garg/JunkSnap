@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Icon } from '../../../ui/Icon';
 
 interface SiteThumbProps {
-  /** The site's newest blurred public photo; never an original. */
+  /** Blurred public copy only, never an original. */
   readonly url: string | null;
   readonly className: string;
 }
 
-/** A small decorative photo for a list row; a missing or broken photo shows the photo icon instead. */
+/** A site's newest blurred photo as a small rounded tile; a missing or broken photo shows the photo icon. */
 export function SiteThumb({ url, className }: SiteThumbProps) {
   const [broken, setBroken] = useState(false);
   return (

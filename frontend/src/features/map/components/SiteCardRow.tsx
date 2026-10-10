@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { AreaName } from '../../../domain/AreaName';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { TypeIcon } from '../../../ui/TypeIcon';
-import { useDistanceLabel } from '../../site/hooks/useDistanceLabel';
+import { SiteThumb } from '../../site/components/SiteThumb';
+import { StatusChip } from '../../site/components/StatusChip';
+import { useSiteDistance } from '../../site/hooks/useSiteDistance';
 import { useSitePresenter } from '../../site/hooks/useSitePresenter';
 import '../../site/site.css';
-import { SiteChipBadge } from './SiteChipBadge';
-import { SiteThumb } from './SiteThumb';
 
 interface SiteCardRowProps {
   readonly site: SiteFeature;
@@ -23,7 +23,7 @@ interface SiteCardRowProps {
 export function SiteCardRow({ site, userLocation, current, onChoose, focus }: SiteCardRowProps) {
   const { t } = useTranslation();
   const details = site.properties;
-  const distance = useDistanceLabel(site, userLocation);
+  const distance = useSiteDistance(site, userLocation)?.short;
   return (
     <li>
       <button type="button" className="site-row site-card" aria-current={current || undefined} onClick={() => onChoose(site)} {...focus}>
@@ -37,7 +37,7 @@ export function SiteCardRow({ site, userLocation, current, onChoose, focus }: Si
           </span>
           <span className="site-card__area">{AreaName.of(details.location)}</span>
           <span className="site-row__meta">
-            <SiteChipBadge site={details} />
+            <StatusChip site={details} />
             <span>{t('preview.reports', { count: details.report_count })}</span>
             {distance && <span>{distance}</span>}
           </span>

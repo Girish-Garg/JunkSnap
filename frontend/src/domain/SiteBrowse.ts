@@ -30,10 +30,20 @@ export interface BrowseRows {
 /** The list sheet's rows: the sites of the view (or of Jodhpur when the view has none), filtered and sorted. */
 export class SiteBrowse {
   static rows(input: BrowseInput, sort: SiteSort, from: LonLat | null): BrowseRows {
+    const own = SiteBrowse.own(input, sort, from);
+    return own.length > 0 ? { sites: own, fallback: false } : { sites: SiteBrowse.city(input, sort, from), fallback: true };
+  }
+
+  /** The view's own rows; when there are none, the list falls back to the pilot city (and only then loads it). */
+  static own(input: Omit<BrowseInput, 'pilot'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
     const own = input.filter.apply(SiteBrowse.#fresh(input.source.sites, input.loaded));
-    if (own.length > 0) return { sites: SiteOrder.sort(own, sort, from ?? input.source.middle), fallback: false };
+    return SiteOrder.sort(own, sort, from ?? input.source.middle);
+  }
+
+  /** The pilot city's rows, through the same filters and order. */
+  static city(input: Pick<BrowseInput, 'pilot' | 'loaded' | 'filter'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
     const city = input.filter.apply(PilotCity.sitesOf(SiteBrowse.#fresh(input.pilot ?? [], input.loaded)));
-    return { sites: SiteOrder.sort(city, sort, from ?? PilotCity.centre), fallback: true };
+    return SiteOrder.sort(city, sort, from ?? PilotCity.centre);
   }
 
   /** The source for a view: its loaded sites and its middle. */

@@ -36,7 +36,7 @@ export function SiteListSheet({ browser, userLocation, filters, onClose }: SiteL
       <div className="site-list-sheet__sort">
         <Segmented<SiteSort> label={t('browse.sort')} options={sorts} value={browser.sort} onChange={browser.setSort} />
       </div>
-      <SiteListEmpty fallback={fallback} empty={sites.length === 0} loading={browser.pilot === null} onShowCity={browser.showCity} />
+      <SiteListEmpty fallback={fallback} empty={sites.length === 0} pilot={browser.pilot} onShowCity={browser.showCity} />
       {sites.length > 0 && (
         <SiteListRows key={browser.sort} sites={sites} userLocation={userLocation} chosen={browser.chosen} onChoose={browser.choose} />
       )}

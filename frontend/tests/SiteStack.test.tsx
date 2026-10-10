@@ -33,7 +33,7 @@ describe('Stack pin', () => {
     const dump = rows.find((row) => within(row).queryByText('Waste dump'));
     const construction = rows.find((row) => within(row).queryByText('Open construction'));
     expect(dump).toHaveTextContent('Verified');
-    expect(construction).toHaveTextContent('2 of 10 people confirmed');
+    expect(construction).toHaveTextContent('Waiting · 2 of 10');
   });
 
   it('opens a site sheet from a row and leaves the list', async () => {

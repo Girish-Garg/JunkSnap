@@ -63,6 +63,10 @@
   transform-origin: 50% 90%;
 }
 
+.empty-state__action {
+  margin-top: var(--s-3);
+}
+
 .empty-state__title {
   color: var(--text);
   font-family: var(--font-display);

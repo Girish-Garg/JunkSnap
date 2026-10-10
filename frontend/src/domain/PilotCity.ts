@@ -12,6 +12,12 @@ export class PilotCity {
   static readonly centre: LonLat = [73.02, 26.27];
   static readonly bounds = new BBox(72.96, 26.22, 73.08, 26.36);
 
+  /** The box takes in the whole city, so one GET /sites over it also answers for the city. */
+  static within(box: BBox): boolean {
+    const { minLon, minLat, maxLon, maxLat } = PilotCity.bounds;
+    return box.contains([minLon, minLat]) && box.contains([maxLon, maxLat]);
+  }
+
   static contains(point: LonLat): boolean {
     return PilotCity.bounds.contains(point);
   }

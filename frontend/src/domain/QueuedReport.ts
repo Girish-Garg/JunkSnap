@@ -28,6 +28,8 @@ export interface QueuedReportData {
   readonly retry_at: string | null;
   readonly problem: SendProblem | null;
   readonly saved_at: string;
+  /** When GET /me/reports last confirmed this row; absent until a server listing has seen it. */
+  readonly synced_at?: string;
 }
 
 // Presigned URLs live PRESIGN_TTL_SECONDS (300 s); re-presign a little before that.
@@ -108,6 +110,11 @@ export class QueuedReport {
 
   withStatus(status: ReportStatusView): QueuedReport {
     return this.#with({ status });
+  }
+
+  /** The server's listing has this report: keep its status and when it was confirmed. */
+  synced(status: ReportStatusView, now: Date): QueuedReport {
+    return this.#with({ status, synced_at: now.toISOString() });
   }
 
   /** Decision 20261010-1700: the reporter took this report back; a report never checked has nothing to withdraw. */

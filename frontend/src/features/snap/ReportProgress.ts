@@ -2,7 +2,8 @@ import type { QueuedReport } from '../../domain/QueuedReport';
 import { ReportRejection } from '../../domain/ReportRejection';
 import { ReportStatuses } from '../../domain/ReportStatus';
 
-export type ProgressTone = 'plain' | 'good' | 'alert';
+/** wait: still with the checks or the neighbours; muted: withdrawn. */
+export type ProgressTone = 'plain' | 'good' | 'alert' | 'wait' | 'muted';
 
 export interface ProgressView {
   /** Key under progress.* in the i18n files. */
@@ -11,6 +12,16 @@ export interface ProgressView {
 }
 
 const TONES: Readonly<Record<string, ProgressTone>> = {
+  sending: 'wait',
+  offline: 'wait',
+  server: 'wait',
+  rate_limited: 'wait',
+  queued: 'wait',
+  processing: 'wait',
+  unverified: 'wait',
+  community_check: 'wait',
+  needs_review: 'wait',
+  withdrawn: 'muted',
   verified: 'good',
   rejected: 'alert',
   unclear: 'alert',

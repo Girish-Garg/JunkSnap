@@ -56,7 +56,7 @@ describe('AreaDirectory', () => {
     const seat = areaRow({ id: 's20-ac-127', name: 'Sardarpura', reports: 4 });
     const entries = AreaDirectory.of([listing('assembly', [seat]), listing('assembly', [seat])]);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ sites: 1, verified: 4 });
+    expect(entries[0]?.row?.counts).toMatchObject({ sites: 1, verified_reports: 4 });
     expect(entries[0]?.area.key).toBe('assembly/s20-ac-127');
     expect(AreaDirectory.match(entries, ' sard')).toHaveLength(1);
     expect(AreaDirectory.match(entries, 'mandore')).toHaveLength(0);

@@ -10,14 +10,6 @@
   margin-top: var(--s-3);
 }
 
-.stack-row__backing {
-  font-weight: 600;
-}
-
-.stack-row__backing--verified {
-  color: var(--accent);
-}
-
 .stack-row__thumb {
   display: grid;
   flex: none;

@@ -160,25 +160,6 @@
   font-weight: 700;
 }
 
-/* Status chips: a dot plus the words. */
-.chip-badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.chip-badge--verified {
-  background: var(--accent-tint);
-  color: var(--accent-ink);
-}
-
-.chip-badge--cleared {
-  background: var(--status-cleaned-tint);
-  color: var(--status-cleaned);
-}
-
 /* Previous, "3 of 12" and next, floating just above the preview card. */
 .preview-swipe {
   touch-action: pan-y;
@@ -226,15 +207,15 @@
   inset: calc((36px - var(--target)) / 2);
 }
 
-.preview-stepper__button:hover:not(:disabled) {
+.preview-stepper__button:hover:not([aria-disabled='true']) {
   background: var(--tile-hover);
 }
 
-.preview-stepper__button:active:not(:disabled) {
+.preview-stepper__button:active:not([aria-disabled='true']) {
   transform: scale(0.92);
 }
 
-.preview-stepper__button:disabled {
+.preview-stepper__button[aria-disabled='true'] {
   background: transparent;
   color: var(--text-tertiary);
   opacity: 0.5;

@@ -25,6 +25,11 @@ export class SiteSteps {
     return this.#sites.length;
   }
 
+  /** The site this step is on. */
+  current(): SiteFeature {
+    return this.#sites[this.#index] as SiteFeature;
+  }
+
   /** The list does not wrap round: the first site has no previous, the last no next. */
   previous(): SiteFeature | null {
     return this.#sites[this.#index - 1] ?? null;

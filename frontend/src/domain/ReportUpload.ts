@@ -22,6 +22,8 @@ export interface ReportDraft {
   readonly target?: LatLon;
   readonly captured_at: string;
   readonly note?: string;
+  /** "Add a photo" on a site: the api ranks the merge toward this site and still checks distance and the image. */
+  readonly me_too_site_id?: string;
 }
 
 /** Body of POST /reports from the phone. user_id comes from the token, never the body. */

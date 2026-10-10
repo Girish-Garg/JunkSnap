@@ -17,6 +17,7 @@ Other files there are removed. Rerun when a boundary file changes:
 """
 
 import gzip
+import hashlib
 import json
 import sys
 from dataclasses import dataclass
@@ -89,8 +90,17 @@ class LayerResult:
     sources: tuple[str, ...]
     attribution: str = ""
 
+    @property
+    def version(self) -> str:
+        """Content hash of the layer's files; the app puts it in their URLs to bust old copies."""
+        digest = hashlib.sha256()
+        for encoded in (self.coarse, self.labels, self.fine):
+            digest.update(encoded.text.encode("utf-8") if encoded else b"")
+        return digest.hexdigest()[:16]
+
     def manifest(self) -> dict[str, Any]:
         out: dict[str, Any] = {
+            "version": self.version,
             "features": len(self.coarse.features),
             "bytes": self.coarse.bytes,
             "label_bytes": self.labels.bytes,

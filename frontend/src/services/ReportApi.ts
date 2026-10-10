@@ -1,3 +1,4 @@
+import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, NoBinUpload, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 
@@ -9,6 +10,8 @@ export interface ReportApi {
   /** Idempotent per upload_id: a retry returns the same report id. */
   submit(upload: ReportUpload | NoBinUpload): Promise<AcceptedReport>;
   status(reportId: string): Promise<ReportStatusView>;
+  /** GET /me/reports: the signed-in user's own reports, newest first; cursor is the next_cursor before. */
+  mine(cursor: string | null): Promise<ReportListPage>;
 }
 
 /** Who is asking: the Cognito ID token when signed in, and this phone's device token. */

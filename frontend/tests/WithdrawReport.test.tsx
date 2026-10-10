@@ -115,7 +115,7 @@ describe('withdrawal rules', () => {
   it('shows a withdrawn report as final and Withdrawn in Activity', () => {
     const report = sentReport('site_a').withdrawn();
     expect(ReportStatuses.isFinal('withdrawn')).toBe(true);
-    expect(ReportProgress.of(report)).toEqual({ key: 'withdrawn', tone: 'plain' });
+    expect(ReportProgress.of(report)).toEqual({ key: 'withdrawn', tone: 'muted' });
   });
 
   it('puts the toast before every other map notice', () => {

@@ -3,13 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
-import { ApiError } from '../src/domain/ApiError';
 import { BBox } from '../src/domain/BBox';
 import type { SiteFeature } from '../src/domain/Site';
-import { SiteListing } from '../src/domain/SiteListing';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
-import type { ApiClient } from '../src/services/ApiClient';
 import { renderApp, testServices } from './helpers';
+import { ListApi } from './listApi';
 import { testSite } from './siteBuilder';
 
 const seen = vi.hoisted(() => ({ last: null as SiteMapBindings | null }));
@@ -30,25 +28,6 @@ const SITES: readonly SiteFeature[] = [
   testSite({ site_id: 'site_c', report_type: 'contaminated_water', coordinates: [73.06, 26.33], last_reported_at: '2026-10-01T00:00:00Z', backers: backers(7), verification: 'unverified' }),
   testSite({ site_id: 'site_gone', coordinates: [73.03, 26.28], status: 'cleaned' }),
 ];
-
-// Answers like GET /sites: only sites on the active map, inside the box.
-class ListApi implements ApiClient {
-  readonly #sites: readonly SiteFeature[];
-
-  constructor(sites: readonly SiteFeature[]) {
-    this.#sites = sites;
-  }
-
-  async listSites(bbox: BBox): Promise<readonly SiteFeature[]> {
-    return this.#sites.filter((site) => SiteListing.onMap(site.properties) && bbox.contains(site.geometry.coordinates));
-  }
-
-  async getSite(siteId: string): Promise<SiteFeature> {
-    const site = this.#sites.find((item) => item.properties.site_id === siteId);
-    if (!site) throw new ApiError(404, 'not_found', siteId);
-    return site;
-  }
-}
 
 const JODHPUR_VIEW = new BBox(72.95, 26.2, 73.1, 26.4);
 const ELSEWHERE = new BBox(80, 20, 80.05, 20.05);
@@ -118,11 +97,17 @@ describe('site list on the map', () => {
     expect(screen.getByText('2 of 3')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next site' }));
     expect(await screen.findByRole('region', { name: 'Contaminated water' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next site' })).toBeDisabled();
+    const next = screen.getByRole('button', { name: 'Next site' });
+    expect(next).toHaveAttribute('aria-disabled', 'true');
+    // At the end the button keeps focus, and the step was announced with the site's type and area.
+    expect(next).toHaveFocus();
+    expect(screen.getByText('Contaminated water, Ward 37. 3 of 3')).toBeInTheDocument();
+    await user.click(next);
+    expect(screen.getByRole('region', { name: 'Contaminated water' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Previous site' }));
     await user.click(screen.getByRole('button', { name: 'Previous site' }));
     expect(await screen.findByRole('region', { name: 'Waste dump' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Previous site' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous site' })).toHaveAttribute('aria-disabled', 'true');
   });
 });
 

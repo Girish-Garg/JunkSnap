@@ -1,4 +1,5 @@
 import type { LayerSpecification, StyleSpecification } from 'maplibre-gl';
+import { PlaceholderNames } from './PlaceholderNames';
 
 type Properties = Record<string, unknown>;
 
@@ -29,9 +30,13 @@ const DARK: Palette = {
 
 interface Rule {
   readonly match: RegExp;
-  readonly paint?: (palette: Palette) => Properties;
+  readonly paint?: (palette: Palette, type: LayerSpecification['type']) => Properties;
   readonly hide?: boolean;
 }
+
+// Line and fill layers of one feature class (aeroway, piers) take the same colour under their own property.
+const tint = (color: (palette: Palette) => string) => (palette: Palette, type: LayerSpecification['type']) =>
+  type === 'fill' ? { 'fill-color': color(palette) } : { 'line-color': color(palette) };
 
 // Rules for OpenFreeMap Positron layer ids: a quiet base so report pins are the only colour.
 const RULES: readonly Rule[] = [
@@ -43,9 +48,13 @@ const RULES: readonly Rule[] = [
   { match: /^waterway$/, paint: (p) => ({ 'line-color': p.water }) },
   { match: /^building$/, paint: (p) => ({ 'fill-color': p.building, 'fill-outline-color': p.buildingEdge }) },
   { match: /_casing$/, paint: (p) => ({ 'line-color': p.casing }) },
-  { match: /^highway_(minor|path|major_inner|motorway_inner|motorway_bridge_inner)$/, paint: (p) => ({ 'line-color': p.road }) },
+  { match: /^(tunnel_motorway_inner|highway_(minor|path|major_inner|motorway_inner|motorway_bridge_inner))$/, paint: (p) => ({ 'line-color': p.road }) },
   { match: /_subtle$/, paint: (p) => ({ 'line-color': p.subtle }) },
   { match: /^railway(_transit|_service)?$/, paint: (p) => ({ 'line-color': p.casing }) },
+  // Positron paints these near white, which glares as bars across the dark map (the Jodhpur runway).
+  { match: /^railway.*_dashline$/, paint: (p) => ({ 'line-color': p.land }) },
+  { match: /^aeroway-/, paint: tint((p) => p.subtle) },
+  { match: /^road_(area_)?pier$/, paint: tint((p) => p.land) },
   { match: /^boundary/, paint: (p) => ({ 'line-color': p.boundary }) },
   { match: /shield/, hide: true },
 ];
@@ -61,13 +70,21 @@ export class BasemapTheme {
     const palette = dark ? DARK : LIGHT;
     const rule = RULES.find(({ match }) => match.test(layer.id));
     const label = layer.type === 'symbol' ? { 'text-color': palette.label, 'text-halo-color': palette.halo, 'text-halo-width': 1.5 } : {};
-    return { ...label, ...rule?.paint?.(palette) };
+    return { ...label, ...rule?.paint?.(palette, layer.type) };
   }
 
   static #restyle(layer: LayerSpecification, dark: boolean): LayerSpecification {
     const rule = RULES.find(({ match }) => match.test(layer.id));
     const paint = { ...('paint' in layer ? layer.paint : {}), ...BasemapTheme.paint(layer, dark) };
-    const layout = rule?.hide ? { ...('layout' in layer ? layer.layout : {}), visibility: 'none' } : undefined;
+    const layout = BasemapTheme.#layout(layer, rule?.hide === true);
     return { ...layer, paint, ...(layout ? { layout } : {}) } as LayerSpecification;
+  }
+
+  // Hidden layers; and labels that never print an OSM placeholder name such as "Nan" (PlaceholderNames).
+  static #layout(layer: LayerSpecification, hide: boolean): Properties | undefined {
+    const layout: Properties = { ...('layout' in layer ? layer.layout : {}) };
+    if (hide) return { ...layout, visibility: 'none' };
+    if (layer.type !== 'symbol' || layout['text-field'] === undefined) return undefined;
+    return { ...layout, 'text-field': PlaceholderNames.guard(layout['text-field']) };
   }
 }

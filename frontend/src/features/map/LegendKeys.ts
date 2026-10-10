@@ -2,9 +2,9 @@ import type { AreaMarker } from './AreaMarkers';
 
 /** Which map legend entries apply now; pins always do, area entries only once the map draws them. */
 export interface LegendEntries {
-  /** Seat outlines are drawn, so the dashed "out of date" outline can appear. */
+  /** Seats are drawn: their neighbour tints, the focus outline, and the dashed "out of date" outline. */
   readonly boundaries: boolean;
-  /** Some seat shows a verified report count (grey fill, photo marker). */
+  /** Some seat shows a verified report count (photo marker). */
   readonly counts: boolean;
   /** Some seat shows a score (score fill, bars marker, its count and the pilot flag). */
   readonly scores: boolean;
