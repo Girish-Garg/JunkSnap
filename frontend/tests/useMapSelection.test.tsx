@@ -49,3 +49,24 @@ describe('useMapSelection', () => {
     expect(result.current.selection.camera?.points).toHaveLength(2);
   });
 });
+
+describe('useMapSelection stacks', () => {
+  it('lists a stack pin, never next to a preview card, and a single tap clears it', () => {
+    const { result } = renderSelection();
+    act(() => result.current.selection.pick('site_a'));
+    act(() => result.current.selection.pickStack(['site_a', 'site_b', 'site_gone']));
+    expect(result.current.selection.stack?.map((site) => site.properties.site_id)).toEqual(['site_a', 'site_b']);
+    expect(result.current.selection.preview).toBeNull();
+    act(() => result.current.selection.pick('site_b'));
+    expect(result.current.selection.stack).toBeNull();
+    expect(result.current.selection.preview?.properties.site_id).toBe('site_b');
+  });
+
+  it('closes the stack list when one of its sites opens', () => {
+    const { result } = renderSelection();
+    act(() => result.current.selection.pickStack(['site_a', 'site_b']));
+    act(() => result.current.selection.openDetails(SITE_A));
+    expect(result.current.selection.stack).toBeNull();
+    expect(result.current.path).toBe('/sites/site_a');
+  });
+});

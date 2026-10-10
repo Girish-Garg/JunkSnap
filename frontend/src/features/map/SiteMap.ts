@@ -1,14 +1,14 @@
-import type { Feature, FeatureCollection } from 'geojson';
-import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
+import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
-import { BackersBadge } from '../../domain/BackersBadge';
-import { HeatWeight } from '../../domain/HeatWeight';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
 import type { AreaMarker } from './AreaMarkers';
 import { BasemapMode } from './BasemapMode';
 import { BoundaryOverlay, type AreaHit, type BoundaryFiles, type BoundaryView } from './BoundaryOverlay';
+import { PinFeatures } from './PinFeatures';
+import { PinGroups } from './PinGroups';
+import { PinPicker } from './PinPicker';
 import { PinDrop } from './PinDrop';
 import { SelectedPulse } from './SelectedPulse';
 
@@ -18,9 +18,11 @@ const JODHPUR: [number, number] = [73.02, 26.27];
 // MapLibre zooms use 512 px tiles (one below Google Maps); 12 shows about 6 km across a phone.
 const CITY_ZOOM = 12;
 const SITE_ZOOM = 14;
+// OpenFreeMap tiles stop at 14 and are overzoomed; past 18 a phone shows a few metres of plain background.
+const MAX_ZOOM = 18;
 const INDIA_BOUNDS: [[number, number], [number, number]] = [[60, 4], [100, 38.5]];
 const SOURCE_ID = 'sites';
-const TAP_TOLERANCE_PX = 16;
+const PIN_SOURCE_ID = 'site-pin-groups';
 // GET /sites allows 1 by 1 degree; stay under it after rounding.
 const MAX_QUERY_SPAN_DEG = 0.99;
 // Must match DESKTOP_QUERY in ui/useMediaQuery.ts: the map then sits beside the side panel, not under it.
@@ -39,6 +41,8 @@ export interface SiteMapOptions {
   readonly attributionLabel: string;
   /** A site id, or null when the tap hit empty map. */
   readonly onPick: (siteId: string | null) => void;
+  /** A tap on a pin that stands for several sites at one spot. */
+  readonly onPickStack: (siteIds: readonly string[]) => void;
   /** A tap that hit no site but an area of the boundary layer shown. */
   readonly onPickArea: (area: AreaHit) => void;
   readonly boundaries: BoundaryFiles;
@@ -57,6 +61,8 @@ export class SiteMap {
   readonly #boundaries: BoundaryOverlay;
   readonly #pulse: SelectedPulse;
   readonly #drop: PinDrop;
+  readonly #groups = new PinGroups();
+  readonly #picker: PinPicker;
 
   constructor(options: SiteMapOptions) {
     this.#layers = options.layers;
@@ -65,12 +71,14 @@ export class SiteMap {
       center: JODHPUR,
       zoom: CITY_ZOOM,
       minZoom: 4,
+      maxZoom: MAX_ZOOM,
       maxBounds: INDIA_BOUNDS,
       attributionControl: false,
       locale: { 'AttributionControl.ToggleAttribution': options.attributionLabel },
     });
     this.#pulse = new SelectedPulse(this.#map);
     this.#drop = new PinDrop(this.#map);
+    this.#picker = new PinPicker(this.#map, this.#layers);
     this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
     this.#basemap = new BasemapMode(this.#map);
     this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => this.#basemap.transform(next) });
@@ -80,7 +88,8 @@ export class SiteMap {
 
   showSites(sites: readonly SiteFeature[]): void {
     this.#sites = sites;
-    this.#source()?.setData(this.#collection());
+    this.#source(SOURCE_ID)?.setData(PinFeatures.sites(sites));
+    this.#refreshPins();
     this.#showPulse();
     this.#drop.play(this.#layers.interactiveIds(), sites.length);
   }
@@ -145,7 +154,7 @@ export class SiteMap {
     this.#map.remove();
   }
 
-  #listen({ onPick, onPickArea, onViewChange }: SiteMapOptions): void {
+  #listen({ onPick, onPickStack, onPickArea, onViewChange }: SiteMapOptions): void {
     // A zero-size container gives an empty box; the resize that follows fires moveend with the real one.
     const emitView = () => {
       if (this.#map.getContainer().clientHeight > 0) onViewChange(this.#view());
@@ -157,11 +166,14 @@ export class SiteMap {
         .catch((error: unknown) => console.error('Could not add site layers', error));
     });
     this.#map.on('moveend', emitView);
+    // Pins that overlap at one zoom stand apart at another, so the stacks follow the zoom.
+    this.#map.on('zoomend', () => this.#refreshPins());
     this.#map.on('click', (event) => {
-      const siteId = this.#pick(event.point);
-      const area = siteId === null ? this.#boundaries.pick(event.point) : null;
+      const hit = this.#picker.at(event.point);
+      const area = hit === null ? this.#boundaries.pick(event.point) : null;
       if (area) onPickArea(area);
-      else onPick(siteId);
+      else if (hit?.kind === 'stack') onPickStack(hit.siteIds);
+      else onPick(hit?.siteId ?? null);
     });
     for (const id of this.#layers.interactiveIds()) {
       this.#map.on('mouseenter', id, () => this.#setCursor('pointer'));
@@ -171,7 +183,8 @@ export class SiteMap {
 
   async #addSiteLayers(): Promise<void> {
     await Promise.all(this.#layers.all().map((layer) => layer.prepare?.(this.#map)));
-    this.#map.addSource(SOURCE_ID, { type: 'geojson', data: this.#collection() });
+    this.#map.addSource(SOURCE_ID, { type: 'geojson', data: PinFeatures.sites(this.#sites) });
+    this.#map.addSource(PIN_SOURCE_ID, { type: 'geojson', data: this.#pins() });
     this.#ready = true;
     this.#renderLayers();
     this.#boundaries.ready();
@@ -181,22 +194,11 @@ export class SiteMap {
   // Layers describe themselves from mode and selection; re-adding three layers is cheap.
   #renderLayers(): void {
     if (!this.#ready) return;
-    const context = { sourceId: SOURCE_ID, mode: this.#mode, selectedId: this.#selectedId };
+    const context = { sourceId: SOURCE_ID, pinSourceId: PIN_SOURCE_ID, mode: this.#mode, selectedId: this.#selectedId };
     for (const layer of this.#layers.all()) {
       if (this.#map.getLayer(layer.id)) this.#map.removeLayer(layer.id);
     }
     for (const layer of this.#layers.all()) this.#map.addLayer(layer.spec(context));
-  }
-
-  #pick(point: Point): string | null {
-    const box: [[number, number], [number, number]] = [
-      [point.x - TAP_TOLERANCE_PX, point.y - TAP_TOLERANCE_PX],
-      [point.x + TAP_TOLERANCE_PX, point.y + TAP_TOLERANCE_PX],
-    ];
-    const layers = this.#layers.interactiveIds().filter((id) => this.#map.getLayer(id));
-    const [hit] = this.#map.queryRenderedFeatures(box, { layers });
-    const siteId: unknown = hit?.properties['site_id'];
-    return typeof siteId === 'string' ? siteId : null;
   }
 
   #clearOffset(): [number, number] {
@@ -204,18 +206,16 @@ export class SiteMap {
     return [0, -Math.round(this.#map.getContainer().clientHeight * 0.2)];
   }
 
-  #source(): GeoJSONSource | undefined {
-    return this.#map.getSource<GeoJSONSource>(SOURCE_ID);
+  #source(id: string): GeoJSONSource | undefined {
+    return this.#map.getSource<GeoJSONSource>(id);
   }
 
-  #collection(): FeatureCollection {
-    // Nested properties do not reach MapLibre expressions, so the heat weight and the n/10 badge are added flat.
-    const features = this.#sites.map((site) => ({
-      ...site,
-      properties: { ...site.properties, heat_weight: HeatWeight.of(site.properties), backers_badge: BackersBadge.of(site.properties) },
-    }));
-    // MapLibre types want mutable GeoJSON but it only reads it.
-    return { type: 'FeatureCollection', features: features as unknown as Feature[] };
+  #refreshPins(): void {
+    this.#source(PIN_SOURCE_ID)?.setData(this.#pins());
+  }
+
+  #pins() {
+    return PinFeatures.pins(this.#groups.of(this.#sites, this.#map.getZoom()));
   }
 
   #view(): MapView {

@@ -6,8 +6,9 @@ import HeatLayer from '../src/layers/HeatLayer';
 import type { LayerContext } from '../src/layers/MapLayer';
 import SelectedSiteLayer from '../src/layers/SelectedSiteLayer';
 import SitesLayer from '../src/layers/SitesLayer';
+import StackPinsLayer from '../src/layers/StackPinsLayer';
 
-const context = (mode: MapMode, selectedId: string | null = null): LayerContext => ({ sourceId: 'sites', mode, selectedId });
+const context = (mode: MapMode, selectedId: string | null = null): LayerContext => ({ sourceId: 'sites', pinSourceId: 'site-pins', mode, selectedId });
 type Section = 'paint' | 'layout';
 const prop = (spec: LayerSpecification, section: Section, name: string): unknown =>
   (spec as unknown as Record<Section, Record<string, unknown> | undefined>)[section]?.[name];
@@ -48,7 +49,9 @@ describe('SitesLayer.spec', () => {
   });
 
   it('leaves the selected site to SelectedSiteLayer', () => {
-    expect(pins.spec(context('auto', 'site_a'))).toMatchObject({ filter: ['!=', ['get', 'site_id'], 'site_a'] });
+    expect(pins.spec(context('auto', 'site_a'))).toMatchObject({
+      filter: ['all', ['!', ['has', 'stack_count']], ['!=', ['get', 'site_id'], 'site_a']],
+    });
   });
 });
 
@@ -58,5 +61,29 @@ describe('SelectedSiteLayer.spec', () => {
     for (const mode of ['auto', 'pins', 'heat'] as const) {
       expect(layer.spec(context(mode, 'site_a'))).toMatchObject({ filter: ['==', ['get', 'site_id'], 'site_a'] });
     }
+  });
+});
+
+describe('StackPinsLayer.spec', () => {
+  const stacks = new StackPinsLayer();
+
+  it('draws only stacks, from the pin source, with their count always shown', () => {
+    const spec = stacks.spec(context('pins'));
+    expect(spec).toMatchObject({ source: 'site-pins', filter: ['has', 'stack_count'], minzoom: 0 });
+    expect(prop(spec, 'layout', 'icon-image')).toEqual(['get', 'stack_icon']);
+    expect(prop(spec, 'layout', 'text-field')).toEqual(['to-string', ['get', 'stack_count']]);
+    expect(prop(spec, 'layout', 'text-allow-overlap')).toBe(true);
+  });
+
+  it('fades in and hides like the lone pins', () => {
+    const opacity = prop(stacks.spec(context('auto')), 'paint', 'icon-opacity');
+    expect([atZoom(opacity, 11), atZoom(opacity, 12)]).toEqual([0, 1]);
+    expect(prop(stacks.spec(context('heat')), 'layout', 'visibility')).toBe('none');
+  });
+
+  it('leaves stacks out of the lone pins, whose n/10 badges always show', () => {
+    const spec = new SitesLayer().spec(context('pins'));
+    expect(spec).toMatchObject({ source: 'site-pins' });
+    expect(prop(spec, 'layout', 'text-allow-overlap')).toBe(true);
   });
 });

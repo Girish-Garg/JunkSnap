@@ -22,6 +22,8 @@ export interface SiteMapBindings {
   /** Area id to fill colour. */
   readonly areaColors: ReadonlyMap<string, string>;
   readonly onPick: (siteId: string | null) => void;
+  /** A tap on one pin standing for several sites at one spot. */
+  readonly onPickStack: (siteIds: readonly string[]) => void;
   readonly onPickArea: (area: AreaHit) => void;
   readonly onViewChange: (view: MapView) => void;
   readonly onFail: (error: unknown) => void;

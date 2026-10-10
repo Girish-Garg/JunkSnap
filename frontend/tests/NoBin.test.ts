@@ -67,7 +67,7 @@ describe('no-bin zones on the map and the sheet', () => {
   });
 
   it('draws only no-bin zones, as a 1 km circle that grows with the zoom', () => {
-    const spec = new ZonesLayer().spec({ sourceId: 'sites', mode: 'pins', selectedId: null });
+    const spec = new ZonesLayer().spec({ sourceId: 'sites', pinSourceId: 'site-pins', mode: 'pins', selectedId: null });
     expect(spec).toMatchObject({ type: 'circle', filter: ['==', ['get', 'report_type'], 'no_bin'] });
     const radius = (spec as { paint: { 'circle-radius': unknown[] } }).paint['circle-radius'];
     expect(radius.slice(0, 3)).toEqual(['interpolate', ['exponential', 2], ['zoom']]);

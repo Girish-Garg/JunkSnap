@@ -5,17 +5,14 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { Place } from '../../../domain/PlaceSearch';
 import type { SiteFeature } from '../../../domain/Site';
 import type { CameraRequest } from '../CameraRequest';
+import { usePinPick } from './usePinPick';
 
-/** Which site is previewed or open, and where the camera should go. */
+/** Which site is previewed or open, which stack pin is listed, and where the camera should go. */
 export function useMapSelection(loaded: readonly SiteFeature[]) {
   const sheets = useSheetNavigation();
   const openId = useMatch(SITE_PATH)?.params.siteId ?? null;
-  const [preview, setPreview] = useState<SiteFeature | null>(null);
+  const { preview, stack, setPreview, pick, pickStack } = usePinPick(loaded);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
-  const pick = useCallback(
-    (siteId: string | null) => setPreview(loaded.find((site) => site.properties.site_id === siteId) ?? null),
-    [loaded],
-  );
   const showSite = useCallback((site: SiteFeature) => setCamera({ points: [site.geometry.coordinates] }), []);
   const openDetails = useCallback(
     (site: SiteFeature) => {
@@ -26,12 +23,16 @@ export function useMapSelection(loaded: readonly SiteFeature[]) {
       if (openId) sheets.swap(path);
       else sheets.open(path);
     },
-    [sheets, showSite, openId],
+    [sheets, showSite, openId, setPreview],
   );
-  const showPlace = useCallback((place: Place) => {
-    setPreview(place.sites.length === 1 ? (place.sites[0] ?? null) : null);
-    setCamera({ points: place.sites.map((site) => site.geometry.coordinates) });
-  }, []);
+  const showPlace = useCallback(
+    (place: Place) => {
+      setPreview(place.sites.length === 1 ? (place.sites[0] ?? null) : null);
+      setCamera({ points: place.sites.map((site) => site.geometry.coordinates) });
+    },
+    [setPreview],
+  );
   const selectedId = openId ?? preview?.properties.site_id ?? null;
-  return { openId, selectedId, preview, camera, pick, showSite, openDetails, showPlace };
+  const closeStack = useCallback(() => setPreview(null), [setPreview]);
+  return { openId, selectedId, preview, stack, camera, pick, pickStack, closeStack, showSite, openDetails, showPlace };
 }

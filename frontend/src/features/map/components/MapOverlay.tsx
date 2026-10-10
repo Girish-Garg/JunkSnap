@@ -1,5 +1,4 @@
 import { DESKTOP_QUERY, useMediaQuery } from '../../../ui/useMediaQuery';
-import { SitePreviewCard } from '../../site/components/SitePreviewCard';
 import type { MapPageState } from '../hooks/useMapPage';
 import { BoundaryLegend } from './BoundaryLegend';
 import { DesktopActions } from './DesktopActions';
@@ -7,6 +6,7 @@ import { FiltersButton } from './FiltersButton';
 import { LegendToggle } from './LegendToggle';
 import { MapControls } from './MapControls';
 import { MapStatus } from './MapStatus';
+import { PickedPin } from './PickedPin';
 import { SearchBar } from './SearchBar';
 
 interface MapOverlayProps {
@@ -15,7 +15,7 @@ interface MapOverlayProps {
   readonly listMode: boolean;
 }
 
-/** Everything floating over the map: search, filters, status, preview card and location. */
+/** Everything floating over the map: search, filters, status, preview card or stack list, and location. */
 export function MapOverlay({ page, listMode }: MapOverlayProps) {
   const { selection, filters } = page;
   const desktop = useMediaQuery(DESKTOP_QUERY);
@@ -26,9 +26,7 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
         <FiltersButton activeCount={filters.filter.activeCount()} onOpen={() => filters.setOpen(true)} />
         {!listMode && <MapStatus notice={page.notice} />}
       </div>
-      {selection.preview && (
-        <SitePreviewCard site={selection.preview} userLocation={page.location.position} onDetails={selection.openDetails} />
-      )}
+      <PickedPin selection={selection} userLocation={page.location.position} />
       {!listMode && page.boundary.view && (
         <LegendToggle>
           <BoundaryLegend />
