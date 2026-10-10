@@ -1,4 +1,5 @@
 import type { QueuedReport } from '../../domain/QueuedReport';
+import { ReportRejection } from '../../domain/ReportRejection';
 import { ReportStatuses } from '../../domain/ReportStatus';
 
 export type ProgressTone = 'plain' | 'good' | 'alert';
@@ -12,6 +13,8 @@ export interface ProgressView {
 const TONES: Readonly<Record<string, ProgressTone>> = {
   verified: 'good',
   rejected: 'alert',
+  not_waste: 'alert',
+  unconfirmed: 'alert',
   refused: 'alert',
   sign_in: 'alert',
 };
@@ -33,6 +36,12 @@ export class ReportProgress {
     return status && !ReportStatuses.inPipeline(status.status) ? 4 : 3;
   }
 
+  /** Sent without a problem, and not turned down by the models. */
+  static celebrates(report: QueuedReport): boolean {
+    const { problem, stage, status } = report.data;
+    return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null;
+  }
+
   /** Sent, and the server has not finished its checks yet. */
   static isChecking(report: QueuedReport): boolean {
     const status = report.data.status?.status;
@@ -44,6 +53,6 @@ export class ReportProgress {
     if (stage === 'failed') return 'refused';
     if (problem) return problem;
     if (stage !== 'sent') return 'sending';
-    return status?.status ?? 'queued';
+    return ReportRejection.reasonOf(status) ?? status?.status ?? 'queued';
   }
 }
