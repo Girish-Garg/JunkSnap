@@ -493,11 +493,17 @@ Resources:
                 Effect: Allow
                 Action: s3:GetObject
                 Resource: !Sub "${PublicBucket.Arn}/media/*"
-              # Never reads originals: only the embeddings/ prefix of the private bucket.
+              # Never reads originals: only the embeddings/ and models/ prefixes of the private bucket.
               - Sid: Embeddings
                 Effect: Allow
                 Action: [s3:GetObject, s3:PutObject]
                 Resource: !Sub "${OriginalsBucket.Arn}/embeddings/*"
+              # Trained model files written by backend/ml/training learn publish; read once at start.
+              - Sid: ReadModels
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${OriginalsBucket.Arn}/models/*"
+              # Decrypt covers the SSE-KMS model files as well as the embeddings.
               - Sid: EmbeddingsKey
                 Effect: Allow
                 Action: [kms:GenerateDataKey, kms:Decrypt]
