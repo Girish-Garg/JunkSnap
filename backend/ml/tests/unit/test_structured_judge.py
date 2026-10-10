@@ -218,6 +218,18 @@ def test_a_no_bin_claim_gets_neither_support_nor_denial() -> None:
 
 
 @pytest.mark.parametrize(
+    "claim",
+    [Claim("no_bin", "no_bin"), Claim("no_bin", "no_pickup"), Claim("waste_dump", "drain"),
+     claim_for("auto", "auto"), claim_for("overflowing_bin", "auto")],
+)
+def test_an_unusable_photo_is_unusable_for_every_claim_no_bin_included(claim: Claim) -> None:
+    verdict = parsed(judge_json(photo_usable="no"))
+
+    assert verdict.answer_for(claim) is ClaimAnswer.UNUSABLE
+    assert REPORT.judge_support(verdict, claim) == 0.0
+
+
+@pytest.mark.parametrize(
     ("fields", "report_type", "context"),
     [
         ({"bin": "yes", "bin_overflowing_or_broken": "yes", "context": "damaged"},

@@ -81,13 +81,14 @@ class JudgeAttributes:
     def answer(self, evidence: TriState | None) -> ClaimAnswer:
         """The claim's answer from the user verdict and the attributes the claim needs.
 
-        A "no" from either is a strong no; anything uncertain, the photo included, asks the
-        reporter; only a usable photo with both "yes" is a yes.
+        An unusable photo is unusable for every claim, no_bin included. A "no" from either is
+        a strong no; anything uncertain, the photo included, asks the reporter; only a usable
+        photo with both "yes" is a yes.
         """
-        if evidence is None:
-            return ClaimAnswer.NOT_JUDGED
         if self.photo_usable is TriState.NO:
             return ClaimAnswer.UNUSABLE
+        if evidence is None:
+            return ClaimAnswer.NOT_JUDGED
         states = {self.user_verdict, evidence, self.photo_usable}
         if TriState.NO in states:
             return ClaimAnswer.NO
