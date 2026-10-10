@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import type { QueuedScan } from '../../../domain/QueuedScan';
 import { Icon } from '../../../ui/Icon';
-import { ActivityItem } from './ActivityItem';
+import { ActivityReportList } from './ActivityReportList';
 import { ScanActivityItem } from './ScanActivityItem';
 
 interface ActivityListsProps {
@@ -29,13 +29,7 @@ export function ActivityLists({ reports, scans }: ActivityListsProps) {
           ))}
         </ul>
       )}
-      {reports.length > 0 && (
-        <ul className="report-list" aria-label={t('activity.photos')}>
-          {reports.map((report) => (
-            <ActivityItem key={report.id} report={report} />
-          ))}
-        </ul>
-      )}
+      {reports.length > 0 && <ActivityReportList reports={reports} />}
     </>
   );
 }
