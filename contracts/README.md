@@ -29,7 +29,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 `data/wards/<city>.json` also holds `map_layers`: city-wide OpenStreetMap layers (`disposal`, `school`, `hospital`, `water`, `drain`), each `{kind, count, source_url, fetched_at, page_sha256, features: [{ref, coords}]}`, where `ref` is `osm:<type>/<id>` and `coords` are `[lat, lon]` pairs (one for a place, the vertices for a line or area). The worker finds `site.insights.near` in these layers, so it works where a site has no ward. The city file and its layers have no schema yet (W1, issue 9).
 
-`ward_record` is the crawler's shape as it stands. Its `id` (`<city>-<body>-<nnn>`), its free-text `extracted_by.provider` and its bare `$id` are the crawler's own, and W1 aligns them with the rules below. Until then, a ward area id `<local-body-id>-w<n>` joins a record on the local body plus `ward_number.value`.
+`ward_record` follows the rules below. Its `id` is the ward area id `<local-body-id>-w<n>` (`jaipur-mc-w23`), `extracted_by.provider` uses the shared enum (`bedrock`, or `junksnap` for the crawler's hand-checked row pattern), times end in `Z`, and `$id` is the full URL. Jodhpur records keep the pre-merger bodies `jodhpur-uttar-mc` and `jodhpur-dakshin-mc` (January 2020 ward formation), so they never join a `jodhpur-mc` ward.
 
 ## Conventions
 
@@ -293,7 +293,7 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 | `jdh-3` | Jodhpur | `site_jdh_3`: contaminated_water, choked_drain, reopened | an accepted cleanup (`cln_jdh_3c` moderation and verification, insights null), then reopened; a hazard and nearby places |
 | `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, community check | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
 
-All fixture data is sample data, except `ward_record.jdh-1`, which is a real, unreviewed crawler record (its body and id predate the November 2025 merger). Coordinates are plausible; seat codes match the loaded boundaries; the brand and OpenStreetMap ids are invented; rule quotes are placeholders; user ids are random. Sample ids are short; real ids follow the rules above. No fixture names a person.
+All fixture data is sample data, except `ward_record.jdh-1`, which is a real, unreviewed crawler record (its body `jodhpur-uttar-mc` predates the November 2025 merger; its id follows the ward rule). Coordinates are plausible; seat codes match the loaded boundaries; the brand and OpenStreetMap ids are invented; rule quotes are placeholders; user ids are random. Sample ids are short; real ids follow the rules above. No fixture names a person.
 
 ## Shared wording
 

@@ -58,12 +58,12 @@ export class WardRecordAreaFacts implements AreaFacts {
     return [...this.#cities.values()].flatMap((city) => city.skipped);
   }
 
-  // Joins <local-body-id>-w<n> on the body's cities and ward_number; old bodies can repeat a number, so two matches mean unknown.
+  // A record joins only the ward whose id it carries (same local body and number), so pre-merger bodies never attach; two matches mean unknown.
   #ward(wardId: string): WardRecord | null {
     const match = WARD_AREA_ID.exec(wardId);
     const cities = this.#bodyCities.get(match?.[1] ?? "") ?? [];
     const records = cities.flatMap((city) => this.#cities.get(city)?.reviewed ?? []);
-    const found = records.filter((record) => record.ward_number.value === Number(match?.[2]));
+    const found = records.filter((record) => record.id === wardId);
     return found.length === 1 ? (found[0] ?? null) : null;
   }
 
