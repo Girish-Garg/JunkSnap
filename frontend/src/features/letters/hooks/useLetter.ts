@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useServices } from '../../../app/useServices';
-import { ApiError } from '../../../domain/ApiError';
+import { ActionProblem } from '../../site/ActionProblem';
 import type { LetterDraft, LetterLanguage } from '../../../domain/SiteActions';
 
 // Error codes from POST /sites/{id}/letters with their own message.
 const KNOWN_ERRORS: ReadonlySet<string> = new Set(['not_verified', 'no_local_body', 'rate_limited', 'not_found']);
 
-function problemOf(error: unknown): string {
-  if (error instanceof ApiError && error.status === 0) return 'offline';
-  return error instanceof ApiError && KNOWN_ERRORS.has(error.code) ? error.code : 'failed';
-}
+const problemOf = (error: unknown) => ActionProblem.of(error, KNOWN_ERRORS);
 
 /** Pick the letter language (the app's by default), then ask the api for a cited draft. */
 export function useLetter(siteId: string) {

@@ -364,7 +364,8 @@
       "location": "Your location is needed to vote. Allow location in the browser settings.",
       "rate_limited": "Too many tries. Wait a little and try again.",
       "offline": "No connection. Try again when you are online.",
-      "failed": "The vote did not go through. Try again."
+      "failed": "The vote did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
   },
   "cleanup": {
@@ -391,7 +392,8 @@
       "already_cleaned": "This site is already marked cleared.",
       "rate_limited": "Too many tries. Wait a little and try again.",
       "offline": "No connection. Try again when you are online.",
-      "failed": "The photo did not go through. Try again."
+      "failed": "The photo did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
   },
   "letter": {
@@ -429,7 +431,9 @@
       "rate_limited": "You can draft 5 letters an hour. Try again later.",
       "not_found": "This site was not found.",
       "offline": "No connection. Try again when you are online.",
-      "failed": "The letter could not be drafted. Try again."
-    }
+      "failed": "The letter could not be drafted. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    },
+    "copyFailed": "Could not copy. Select the letter text and copy it yourself."
   }
 }

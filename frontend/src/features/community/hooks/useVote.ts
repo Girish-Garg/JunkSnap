@@ -1,18 +1,13 @@
 import { useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import { ApiError } from '../../../domain/ApiError';
-import { LocationError } from '../../../domain/LocationError';
+import { ActionProblem } from '../../site/ActionProblem';
 import type { VoteChoice, VoteResult } from '../../../domain/SiteActions';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 
 // Error codes with their own plain message; anything else says the vote did not go through.
 const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_site', 'too_far', 'rate_limited']);
 
-function problemOf(error: unknown): string {
-  if (error instanceof LocationError) return 'location';
-  if (error instanceof ApiError && error.status === 0) return 'offline';
-  return error instanceof ApiError && KNOWN_ERRORS.has(error.code) ? error.code : 'failed';
-}
+const problemOf = (error: unknown) => ActionProblem.of(error, KNOWN_ERRORS);
 
 /** A community vote: sign in first, then send with a fresh GPS fix; onVoted refreshes the site. */
 export function useVote(siteId: string, onVoted: () => void) {
