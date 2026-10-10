@@ -7,9 +7,10 @@ export const ANDROID_PACKAGE = "com.junksnap.app";
 // One SHA-256 certificate fingerprint as assetlinks.json and `keytool -list` write it: 32 hex bytes joined by colons.
 const FINGERPRINT = /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/;
 
-// Accepts upper or lower case, with or without colons.
+// Accepts upper or lower case, with or without colons; anything but exactly 64 hex digits stays as given and fails FINGERPRINT.
 function colonHex(value: string): string {
   const hex = value.replace(/:/g, "").toUpperCase();
+  if (!/^[0-9A-F]{64}$/.test(hex)) return value;
   return hex.match(/../g)?.join(":") ?? hex;
 }
 

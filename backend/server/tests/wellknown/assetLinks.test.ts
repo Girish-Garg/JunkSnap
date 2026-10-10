@@ -53,7 +53,7 @@ describe("AndroidAppSettings", () => {
     expect(AndroidAppSettings.fromEnv({ ANDROID_CERT_SHA256: `${RELEASE.toLowerCase()}, ${bare}` }).certFingerprints).toEqual([RELEASE, OTHER]);
   });
 
-  it.each(["B8:60:4A", `${RELEASE}:00`, RELEASE.replace("B8", "G8")])("refuses %s", (value) => {
+  it.each(["B8:60:4A", `${RELEASE}:00`, `${RELEASE.replace(/:/g, "")}0`, RELEASE.replace("B8", "G8")])("refuses %s", (value) => {
     expect(() => AndroidAppSettings.fromEnv({ ANDROID_CERT_SHA256: value })).toThrow(ConfigError);
   });
 
