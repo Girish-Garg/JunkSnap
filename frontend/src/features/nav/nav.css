@@ -13,6 +13,13 @@
   background: var(--surface);
 }
 
+/* Phones: while a field in a sheet has the keyboard up, the bar steps aside so the sheet keeps the room. */
+@media (max-width: 1023px) {
+  .map-page:has(.sheet textarea:focus, .sheet input:not([type='checkbox'], [type='radio'], [type='range']):focus) .nav-bar {
+    display: none;
+  }
+}
+
 .nav-bar__brand {
   display: none;
 }

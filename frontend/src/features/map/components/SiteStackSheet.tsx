@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { SiteFeature } from '../../../domain/Site';
 import { BottomSheet } from '../../../ui/BottomSheet';
-import { useHistoryLayer } from '../../../ui/useHistoryLayer';
 import '../stack.css';
 import { StackSiteRow } from './StackSiteRow';
 
@@ -10,14 +9,13 @@ const TITLE_ID = 'stack-title';
 interface SiteStackSheetProps {
   readonly sites: readonly SiteFeature[];
   readonly onOpen: (site: SiteFeature) => void;
-  readonly onClose: () => void;
+  /** Closes the list through its history entry (PickedPin's), then runs `after`. */
+  readonly dismiss: (after?: () => void) => void;
 }
 
 /** Lists every site behind one stack pin; each row opens that site's own sheet. */
-export function SiteStackSheet({ sites, onOpen, onClose }: SiteStackSheetProps) {
+export function SiteStackSheet({ sites, onOpen, dismiss }: SiteStackSheetProps) {
   const { t } = useTranslation();
-  // Its own history entry: back closes the list rather than leaving the map.
-  const dismiss = useHistoryLayer('stack', true, onClose);
   // The list's entry goes first, so back from the site sheet returns to the map in one step.
   const open = (site: SiteFeature) => dismiss(() => onOpen(site));
   return (

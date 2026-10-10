@@ -254,7 +254,8 @@
   z-index: 4;
   display: flex;
   gap: var(--s-3);
-  height: 112px;
+  /* Grows with the text (Hindi, larger fonts) so Details never spills out. */
+  min-height: 112px;
   padding: var(--s-3);
   border-radius: var(--radius-l);
   background: var(--surface);
@@ -295,6 +296,8 @@
 
 .preview-card__title {
   display: flex;
+  /* Room for the close button. */
+  padding-right: var(--s-8);
   align-items: center;
   gap: var(--s-2);
   font-family: var(--font-display);
@@ -315,9 +318,23 @@
 }
 
 .preview-card .button--text {
+  position: relative;
   align-self: flex-end;
   min-height: 40px;
   margin-top: auto;
+}
+
+/* 40 px to look at, 48 px to tap. */
+.preview-card .button--text::before {
+  content: '';
+  position: absolute;
+  inset: calc((40px - var(--target)) / 2) 0;
+}
+
+.preview-card > .icon-button {
+  position: absolute;
+  top: var(--s-1);
+  right: var(--s-1);
 }
 
 @media (min-width: 1024px) {

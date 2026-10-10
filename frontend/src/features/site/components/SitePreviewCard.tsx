@@ -1,7 +1,11 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { Button } from '../../../ui/Button';
+import { IconButton } from '../../../ui/IconButton';
+import { MAP_CARD_ATTRIBUTE } from '../../../ui/TopLayer';
 import { TypeIcon } from '../../../ui/TypeIcon';
+import { ESCAPE_LAYER, useEscapeKey } from '../../../ui/useEscapeKey';
 import { useDistanceLabel } from '../hooks/useDistanceLabel';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import '../site.css';
@@ -12,16 +16,23 @@ interface SitePreviewCardProps {
   readonly site: SiteFeature;
   readonly userLocation: LonLat | null;
   readonly onDetails: (site: SiteFeature) => void;
+  /** Closes the card through its history entry (PickedPin's), as back does. */
+  readonly onClose: () => void;
 }
 
-/** Compact card after tapping a pin; Details opens the full sheet. */
-export function SitePreviewCard({ site, userLocation, onDetails }: SitePreviewCardProps) {
+// Escape reaches the card when it is the top layer; map taps still pass through to the map.
+const LAYER = { [ESCAPE_LAYER]: '', [MAP_CARD_ATTRIBUTE]: '' };
+
+/** Compact card after tapping a pin; Details opens the full sheet. Close, back and Escape close it. */
+export function SitePreviewCard({ site, userLocation, onDetails, onClose }: SitePreviewCardProps) {
   const { t } = useTranslation();
+  const card = useRef<HTMLElement>(null);
+  useEscapeKey(onClose, card);
   const details = site.properties;
   const thumbnail = useSitePresenter(details).thumbnail();
   const distance = useDistanceLabel(site, userLocation);
   return (
-    <section className="preview-card" aria-label={t(`reportType.${details.report_type}`)}>
+    <section ref={card} className="preview-card" aria-label={t(`reportType.${details.report_type}`)} {...LAYER}>
       <ul className="preview-card__thumb">
         <SitePhoto key={thumbnail} url={thumbnail} alt="" />
       </ul>
@@ -37,10 +48,9 @@ export function SitePreviewCard({ site, userLocation, onDetails }: SitePreviewCa
           <span>{t('preview.reports', { count: details.report_count })}</span>
           {distance && <span>{distance}</span>}
         </p>
-        <Button variant="text" onClick={() => onDetails(site)}>
-          {t('preview.details')}
-        </Button>
+        <Button variant="text" onClick={() => onDetails(site)}>{t('preview.details')}</Button>
       </div>
+      <IconButton icon="close" label={t('preview.close')} onClick={onClose} />
     </section>
   );
 }

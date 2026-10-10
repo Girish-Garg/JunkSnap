@@ -224,10 +224,10 @@
 
 .onboarding__dots {
   display: flex;
-  gap: var(--s-4);
+  gap: var(--s-10);
 }
 
-/* 10 px dots with 48 px tall hit areas that share the row; the current one stretches into a pill. */
+/* 10 px dots with 50 x 48 px hit areas that share the row; the current one stretches into a pill. */
 .onboarding__dot {
   position: relative;
   flex: none;
@@ -246,7 +246,7 @@
 .onboarding__dot::before {
   content: '';
   position: absolute;
-  inset: -19px -8px;
+  inset: -19px -20px;
 }
 
 .onboarding__dot[aria-current='step'] {
