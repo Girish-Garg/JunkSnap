@@ -30,7 +30,7 @@ describe('RationaleSanitizer', () => {
 
 describe('RationaleSanitizer length and fallback', () => {
   it('caps long text at a word boundary with an ellipsis', () => {
-    const long = 'Plastic bags and food waste spread over the open plot '.repeat(10);
+    const long = `Plastic bags and food waste${' spread over the open plot'.repeat(12)}.`;
     const result = clean(long);
     expect(result).not.toBeNull();
     expect(result?.length).toBeLessThanOrEqual(RationaleSanitizer.MAX_LENGTH);
@@ -59,6 +59,10 @@ describe('RationaleSanitizer name guard', () => {
     ['a Hindi honorific', 'Waste outside श्री Sharma ji ka ghar on the corner.'],
     ['a naming phrase', 'The owner, named in the sign, left waste on the plot.'],
     ['a first and last name', 'Waste left outside the shop of Ramesh Kumar by the road.'],
+    ['a name at the start', 'Ramesh Kumar left the waste beside the wall.'],
+    ['a capitalised brand', 'Packets of SAMPLE NAMKEEN spread over the plot.'],
+    ['Devanagari text', 'Waste beside रमेश की दुकान on the corner.'],
+    ['a number plate', 'Waste next to a scooter with plate rj 19 ca 1234 on the road.'],
   ])('never shows text with %s', (_case, raw) => {
     expect(clean(raw)).toBeNull();
   });

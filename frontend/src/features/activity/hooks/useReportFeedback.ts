@@ -3,7 +3,7 @@ import { useServices } from '../../../app/useServices';
 import { ReportOutcome } from '../../../domain/ReportOutcome';
 import type { ReportStatusView } from '../../../domain/ReportStatus';
 
-// A report still being checked is read again after this long while the view is open.
+// A report still being checked, or one that could not be read, is read again after this long.
 const RECHECK_MS = 5_000;
 
 export interface ReportFeedbackState {
@@ -42,7 +42,7 @@ export function useReportFeedback(reportId: string): ReportFeedbackState {
     };
   }, [snap.tracker, reportId, round]);
   const shown = shownFor(result, reportId);
-  useRecheck(shown.view, again);
+  useRecheck(shown, again);
   return shown;
 }
 
@@ -52,12 +52,13 @@ function shownFor(result: ReadResult | null, reportId: string): ReportFeedbackSt
   return { view: result.view, failed: result.failed };
 }
 
-function useRecheck(view: ReportStatusView | null, again: () => void): void {
-  const settling = view !== null && ReportOutcome.isSettling(ReportOutcome.of(view));
+// Reads again while the report is still being checked, and after a failed first read (offline, a timeout).
+function useRecheck({ view, failed }: ReportFeedbackState, again: () => void): void {
+  const due = failed || (view !== null && ReportOutcome.isSettling(ReportOutcome.of(view)));
   useEffect(() => {
-    if (!settling) return undefined;
+    if (!due) return undefined;
     const timer = window.setTimeout(again, RECHECK_MS);
     return () => window.clearTimeout(timer);
     // Each fresh read is a new view, which starts the next wait.
-  }, [settling, view, again]);
+  }, [due, view, again]);
 }

@@ -945,7 +945,7 @@
     },
     "explain": {
       "checking": "We're still checking this photo. This page updates by itself.",
-      "waiting": "The checks passed. When 10 people back this spot, by photo or by vote, it becomes verified.",
+      "waiting": "The checks passed. Once enough neighbours back this spot, by photo or by vote, it becomes verified.",
       "verified": "Enough people backed this spot, so it counts in the area's scores and letters.",
       "not_waste": "The checks found no waste in this photo, so it isn't on the map.",
       "unconfirmed": "The checks couldn't confirm waste in this photo, so it isn't on the map.",

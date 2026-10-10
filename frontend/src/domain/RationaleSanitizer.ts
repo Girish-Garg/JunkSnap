@@ -1,6 +1,6 @@
 /**
  * Makes the vision judge's short reason safe to show its reporter: no links, emails or phone
- * numbers, a capped length, and nothing that could name a person. Anything doubtful returns
+ * numbers or plates, a capped length, and nothing that could name a person or a company. Anything doubtful returns
  * null, and the view shows a generic line instead.
  */
 export class RationaleSanitizer {
@@ -15,8 +15,12 @@ export class RationaleSanitizer {
   static readonly #CONTROL = /[\p{Cc}\p{Cf}]/gu;
   // Honorifics and naming phrases in English and Hindi: a sign the text names someone.
   static readonly #NAMING = /\b(?:mr|mrs|ms|miss|dr|shri|shree|sri|smt|kumari|sir|madam|named|called)\b\.?|\bname\s+is\b|श्री|श्रीमती|कुमारी|नाम/i;
-  // Two capitalised words in a row after the start of a sentence, like a first and last name.
-  static readonly #NAME_PAIR = /[a-z,;:]\s+[A-Z][a-z]+\s+[A-Z][a-z]+/;
+  // A capital letter inside a sentence: a name, a brand or a place, all of which the generic line covers safely.
+  static readonly #PROPER = /[^.!?\s]\s+["'(]?[A-Z]/;
+  // Model reasons are English; any Devanagari may hold a name the guard cannot read.
+  static readonly #DEVANAGARI = /\p{Script=Devanagari}/u;
+  // An Indian number plate, for example RJ 19 CA 1234.
+  static readonly #PLATE = /\b[a-z]{2}[\s-]?\d{1,2}[\s-]?[a-z]{0,3}[\s-]?\d{3,4}\b/i;
 
   static clean(raw: string | null | undefined): string | null {
     if (!raw) return null;
@@ -38,7 +42,8 @@ export class RationaleSanitizer {
 
   static #safe(text: string): boolean {
     if (text.length < RationaleSanitizer.MIN_LENGTH || !/\p{L}{3}/u.test(text)) return false;
-    return !RationaleSanitizer.#NAMING.test(text) && !RationaleSanitizer.#NAME_PAIR.test(text);
+    const guards = [RationaleSanitizer.#NAMING, RationaleSanitizer.#PROPER, RationaleSanitizer.#DEVANAGARI, RationaleSanitizer.#PLATE];
+    return guards.every((guard) => !guard.test(text));
   }
 
   static #cap(text: string): string {
