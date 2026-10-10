@@ -14,6 +14,7 @@ export interface SiteMapBindings {
   readonly camera: CameraRequest | null;
   readonly onPick: (siteId: string | null) => void;
   readonly onViewChange: (view: MapView) => void;
+  readonly onFail: (error: unknown) => void;
 }
 
 /** Keeps the imperative SiteMap in step with React state. */

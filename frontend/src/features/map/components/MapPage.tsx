@@ -5,7 +5,7 @@ import '../map.css';
 import type { MapContext } from '../useMapContext';
 import { FiltersSheet } from './FiltersSheet';
 import { MapOverlay } from './MapOverlay';
-import { SiteMapView } from './SiteMapView';
+import { MapSurface } from './MapSurface';
 
 export function MapPage() {
   const page = useMapPage();
@@ -15,7 +15,7 @@ export function MapPage() {
   return (
     <main className={classes.filter(Boolean).join(' ')}>
       <div className="map-area">
-        <SiteMapView
+        <MapSurface
           sites={page.sites}
           selectedId={selection.selectedId}
           mode={filters.mode}
@@ -23,6 +23,7 @@ export function MapPage() {
           camera={selection.camera}
           onPick={selection.pick}
           onViewChange={page.setView}
+          onOpen={selection.openDetails}
         />
         <MapOverlay page={page} />
         {filters.open && <FiltersSheet filters={filters} sites={page.loaded} onClose={() => filters.setOpen(false)} />}
