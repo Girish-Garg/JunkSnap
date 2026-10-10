@@ -7,6 +7,7 @@ import type {
 } from "../contracts/index.gen.js";
 import { InternalDataError } from "./errors.js";
 import { ReportId } from "./ReportId.js";
+import { ReportPlacement } from "./ReportPlacement.js";
 import type {
   MergeOutcome,
   ReportModerationRequest,
@@ -29,7 +30,7 @@ const DECISION_STATUS: Readonly<Record<VerificationResult["decision"], ReportSta
   rejected: "rejected",
 };
 const UPLOAD_FIELDS = [
-  "upload_id", "report_type", "context", "capture_mode", "sha256", "gps",
+  "upload_id", "report_type", "context", "capture_mode", "sha256", "gps", "target",
   "device_token", "captured_at", "user_id", "scan", "note", "me_too_site_id", "hints",
 ] as const;
 
@@ -41,11 +42,12 @@ export class Report {
     this.#record = Object.freeze(record);
   }
 
-  // user_id comes only from the verified token; any value in the body is replaced.
+  // user_id comes only from the verified token; any value in the body is replaced. A long-range report keeps its distance.
   static receive(upload: ReportUpload, receivedAt: string, userId?: string): Report {
     const reportId = ReportId.fromUpload(upload.upload_id).value;
     const fresh = { report_id: reportId, user_id: userId, received_at: receivedAt, updated_at: receivedAt };
-    return new Report({ ...upload, ...fresh, status: "queued", completed_steps: [] });
+    const evidence = ReportPlacement.of(upload).evidence();
+    return new Report({ ...upload, ...fresh, ...evidence, status: "queued", completed_steps: [] });
   }
 
   static fromRecord(record: ReportRecord): Report {
@@ -180,6 +182,11 @@ export class Report {
 
   gps(): ReportUpload["gps"] {
     return this.#record.gps;
+  }
+
+  // The reporter's fix and the waste's spot: the long-range target when set (decision 20261011-0400).
+  placement(): ReportPlacement {
+    return ReportPlacement.of(this.#record);
   }
 
   upload(): ReportUpload {

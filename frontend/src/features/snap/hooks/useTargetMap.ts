@@ -1,0 +1,47 @@
+import { useEffect, useEffectEvent, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { LatLon } from '../../../domain/ReportUpload';
+import { TargetMap, type TargetMapOptions } from '../TargetMap';
+
+export interface TargetMapState {
+  readonly origin: LatLon;
+  readonly spot: LatLon;
+  readonly headingEnd: LatLon | null;
+  readonly onMove: (point: LatLon) => void;
+}
+
+function tryCreate(options: TargetMapOptions, onFail: () => void): TargetMap | null {
+  try {
+    return new TargetMap(options);
+  } catch {
+    onFail();
+    return null;
+  }
+}
+
+/** Creates one TargetMap for the container while enabled, and keeps its pin and lines on the placement. */
+export function useTargetMap(enabled: boolean, view: TargetMapState, onFail: () => void) {
+  const { t } = useTranslation();
+  const container = useRef<HTMLDivElement | null>(null);
+  const map = useRef<TargetMap | null>(null);
+  const onMove = useEffectEvent(view.onMove);
+  const failed = useEffectEvent(onFail);
+  const showOn = useEffectEvent((created: TargetMap) => created.show(view.spot, view.headingEnd));
+  const { lat, lon } = view.origin;
+  useEffect(() => {
+    if (!enabled || !container.current) return undefined;
+    const labels = { attribution: t('map.attribution'), you: t('longRange.you'), pin: t('longRange.pin') };
+    const options = { container: container.current, origin: { lat, lon }, labels, onMove: (point: LatLon) => onMove(point) };
+    const created = tryCreate(options, () => failed());
+    if (created) showOn(created);
+    map.current = created;
+    return () => {
+      created?.destroy();
+      map.current = null;
+    };
+  }, [enabled, lat, lon, t]);
+  useEffect(() => {
+    map.current?.show(view.spot, view.headingEnd);
+  }, [view.spot, view.headingEnd]);
+  return container;
+}

@@ -1,6 +1,11 @@
-import type { LocationLookup, ReportUpload } from "../contracts/index.gen.js";
+import type { LocationLookup } from "../contracts/index.gen.js";
 
-// Location task: state, district, local body, ward and seats for a point.
+export interface LatLon {
+  readonly lat: number;
+  readonly lon: number;
+}
+
+// Location task: state, district, local body, ward and seats for a point (the report's spot, decision 20261011-0400).
 export interface ReportLocator {
-  locate(gps: ReportUpload["gps"]): Promise<LocationLookup>;
+  locate(point: LatLon): Promise<LocationLookup>;
 }

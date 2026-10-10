@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { BrandLabel, LocationLookup, ReportUpload } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../errors.js";
-import { GeoPoint } from "./GeoPoint.js";
+import { ReportPlacement } from "../ReportPlacement.js";
 import type { MergeableReport, MergeEvidence } from "./MergeableReport.js";
 import type { PublicMedia } from "./PublicMedia.js";
 import type { SiteBrand, SiteLocation } from "./SiteTypes.js";
@@ -26,7 +26,8 @@ export class MergeableReportFactory {
       reportId,
       reportType: upload.report_type,
       context: upload.context,
-      point: new GeoPoint(upload.gps.lat, upload.gps.lon),
+      // The site's spot: a long-range target when set (decision 20261011-0400); the reporter's fix never becomes public.
+      point: ReportPlacement.of(upload).spot,
       deviceToken: upload.device_token,
       userId: upload.user_id ?? null,
       reportedAt: upload.captured_at,

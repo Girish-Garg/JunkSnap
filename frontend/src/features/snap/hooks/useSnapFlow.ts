@@ -11,7 +11,7 @@ export type SnapPhase =
 
 export type CaptureMode = 'photo' | 'video' | 'nobin';
 
-export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note'>;
+export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note' | 'target'>;
 
 const CAMERA: SnapPhase = { kind: 'camera' };
 

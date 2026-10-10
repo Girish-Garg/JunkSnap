@@ -10,7 +10,8 @@ export class LocateStep implements PipelineStep {
     this.#locator = locator;
   }
 
+  // Ward and seats are where the waste is: the long-range target when set, else the reporter's fix.
   async run(report: Report): Promise<void> {
-    report.recordLocation(await this.#locator.locate(report.gps()));
+    report.recordLocation(await this.#locator.locate(report.placement().spot));
   }
 }
