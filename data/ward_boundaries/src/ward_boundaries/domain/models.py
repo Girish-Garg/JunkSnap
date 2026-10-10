@@ -30,6 +30,7 @@ class WardText:
     places: tuple[str, ...]
     population: int | None
     source: Document
+    models: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class WardEvidence:
     in_gazette: bool = False
     seat_agrees: bool = False
     layout_agrees: bool | None = None
+    models: tuple[str, ...] = ()
 
     def share_matched(self) -> float:
         names = {listed for listed, _ in self.matched}

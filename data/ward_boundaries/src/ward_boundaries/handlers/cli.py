@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -13,9 +14,15 @@ from botocore.config import Config
 from ward_boundaries.adapters.bedrock_place_extractor import BedrockPlaceExtractor
 from ward_boundaries.adapters.bedrock_transliterator import BedrockTransliterator
 from ward_boundaries.adapters.fetcher import USER_AGENT, CachedFetcher
-from ward_boundaries.adapters.geojson_output import WardChecks, WardFeatures, WardMap
+from ward_boundaries.adapters.geojson_output import (
+    CoverageCleaner,
+    WardChecks,
+    WardFeatures,
+    WardMap,
+)
 from ward_boundaries.adapters.neighbour_check import NeighbourCheck
 from ward_boundaries.adapters.overpass_gazetteer import OverpassGazetteer
+from ward_boundaries.adapters.politeness import Politeness
 from ward_boundaries.adapters.polling_stations import PollingStations
 from ward_boundaries.adapters.seat_check import SeatCheck
 from ward_boundaries.adapters.shapely_ward_builder import ShapelyWardBuilder, WardShape
@@ -33,7 +40,7 @@ class BoundaryRun:
     def __init__(self, city: dict[str, Any], client: httpx.Client, profile: str | None) -> None:
         self._city = city
         cache = PACKAGE / ".cache"
-        self._fetcher = CachedFetcher(client, cache)
+        self._fetcher = CachedFetcher(Politeness(client, USER_AGENT), cache)
         self._gazetteer = OverpassGazetteer(client, cache)
         self._stations = PollingStations(cache / "eci")
         config = Config(retries={"max_attempts": 6, "mode": "adaptive"}, read_timeout=300)
@@ -59,7 +66,14 @@ class BoundaryRun:
         self.context = [*named, *addressed]
         names = [name for ward in wards for name in ward.listed if not name.isascii()]
         english = self.names.english(str(self._city["city"]), names)
-        return PlaceMatcher(named, addressed, english).match(wards)
+        matched = PlaceMatcher(named, addressed, english).match(wards)
+        return tuple(self._with_models(ward) for ward in matched)
+
+    def _with_models(self, ward: WardEvidence) -> WardEvidence:
+        """Adds the model that spelled each matched locality to the ward's models."""
+        spelled = (self.names.model_for(listed) for listed, _ in ward.matched)
+        models = tuple(dict.fromkeys([*ward.models, *(m for m in spelled if m)]))
+        return replace(ward, models=models)
 
     def _read(self, urls: list[str], reader: GazetteRows | LocalityList) -> dict[int, WardText]:
         wards: dict[int, WardText] = {}
@@ -84,7 +98,7 @@ class Output:
         )
         dots = [(place.lon, place.lat) for place in context]
         WardMap().draw(shapes, title, out.with_suffix(".png"), dots)
-        print(json.dumps(WardChecks(self._lat0).report(shapes)))
+        print(json.dumps(WardChecks(self._lat0).report_file(out)))
         return out
 
 
@@ -105,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         shapes, conflicts = check.apply(shapes)
         left_out = tuple(sorted((*left_out, *conflicts)))
     shapes = NeighbourCheck().apply(shapes)
+    shapes = CoverageCleaner().clean(shapes)
     out = Output(city).write(shapes, run.context)
     print(f"wrote {out}; built {len(shapes)}, left out {len(left_out)}")
     for number, why in left_out:

@@ -4,10 +4,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from ward_boundaries.adapters.geojson_output import WardChecks, WardFeatures
+from shapely import Point
+from ward_boundaries.adapters.geojson_output import CoverageCleaner, WardChecks, WardFeatures
 from ward_boundaries.adapters.neighbour_check import NeighbourCheck
 from ward_boundaries.adapters.seat_check import SeatCheck
-from ward_boundaries.adapters.shapely_ward_builder import ShapelyWardBuilder
+from ward_boundaries.adapters.shapely_ward_builder import ShapelyWardBuilder, WardShape
 from ward_boundaries.domain.models import Document, Place, WardEvidence
 from ward_boundaries.domain.privacy import REDACTED, PersonGuard
 from ward_boundaries.services.place_matcher import PlaceMatcher
@@ -79,7 +80,7 @@ def test_builder_makes_valid_non_overlapping_wards_and_leaves_out_empty_ones() -
     three = ward(3)
 
     shapes, left_out = ShapelyWardBuilder((26.3, 73.0), 600).build((one, two, three))
-    report = WardChecks(26.3).report(shapes)
+    report = WardChecks(26.3).report([s.geometry for s in shapes])
 
     assert [s.evidence.number for s in shapes] == [1, 2]
     assert [number for number, _ in left_out] == [3]
@@ -173,3 +174,36 @@ def test_neighbour_check_flags_a_ward_far_from_the_wards_numbered_next_to_it() -
     checked = {s.evidence.number: s.evidence.layout_agrees for s in NeighbourCheck().apply(shapes)}
 
     assert checked == {1: True, 2: True, 3: False}
+
+
+def test_written_wards_never_overlap_and_the_check_reads_the_file(tmp_path: Path) -> None:
+    one = WardShape(ward(1), Point(73.0, 26.3).buffer(0.01))
+    two = WardShape(ward(2), Point(73.015, 26.3).buffer(0.01))
+    cleaned = CoverageCleaner().clean((one, two))
+    features = WardFeatures("jodhpur-mc", "Nagar Nigam Jodhpur", 26.3).collection(cleaned)
+    path = tmp_path / "wards.geojson"
+    path.write_text(json.dumps(features), encoding="utf-8")
+
+    report = WardChecks(26.3).report_file(path)
+
+    assert report["overlap_km2"] == 0
+    assert report["invalid"] == 0
+
+
+def test_each_ward_names_the_models_that_shaped_it() -> None:
+    one = ward(5, ("a", place("a", 26.300, 73.000, "1")), ("b", place("b", 26.302, 73.003, "2")))
+    shapes, _ = ShapelyWardBuilder((26.3, 73.0), 600).build(
+        (replace(one, models=("apac.amazon.nova-pro-v1:0",)),)
+    )
+
+    feature = WardFeatures("jodhpur-mc", "Nagar Nigam Jodhpur", 26.3).collection(shapes)[
+        "features"
+    ][0]
+
+    assert feature["properties"]["models"] == [
+        {
+            "provider": "bedrock",
+            "model": "apac.amazon.nova-pro-v1:0",
+            "version": "amazon.nova-pro-v1:0",
+        }
+    ]

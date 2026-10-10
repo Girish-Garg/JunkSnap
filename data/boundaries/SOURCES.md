@@ -37,6 +37,8 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 
 ## Wards: jodhpur_wards.geojson and jaipur_wards.geojson (approximate, unreviewed)
 
+**Attribution:** places © OpenStreetMap contributors (ODbL, https://www.openstreetmap.org/copyright); ECI polling stations CC0 as declared by the ramSeraph/indian_facilities copy; ward lists from the Rajasthan Gazette. The web map layer (`frontend/public/boundaries/index.json`, `wards`) carries the same credit.
+
 **Display only until reviewed:** the map shows these wards (labelled unreviewed), but location lookups, scores and letters must not use them until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
 
 Built 2026-10-10 by `data/ward_boundaries`. Run it with `uv run python -m ward_boundaries.handlers.cli --city <city> --profile junksnap`. Nobody has published an open map of the 2025 wards, so these polygons are **approximations**. Each one is built from the places that the official ward-formation text lists for the ward. Every ward is `review_status: unreviewed` and carries a `confidence` from 0 to 1. Wards that could not be placed are left out (listed below), never guessed.
@@ -49,6 +51,7 @@ Each feature is a GeoJSON Polygon or MultiPolygon in WGS 84, with these properti
 - `source_url`, `page_sha256`, `fetched_at`: the ward-formation text.
 - `sources`: every page used.
 - `notes`.
+- `models`: provider, model and version of every Bedrock call that shaped the ward (transliteration for Jodhpur, place extraction for Jaipur).
 
 ### How a ward is built
 
@@ -58,7 +61,7 @@ Each feature is a GeoJSON Polygon or MultiPolygon in WGS 84, with these properti
 2. **Spell the localities in Latin script.** A Bedrock model transliterates them (cached in `.cache/`).
 3. **Find each locality on a map.** Two sources are searched:
    - named OpenStreetMap places (Overpass API, ODbL);
-   - ECI polling stations (2017 locations, CC0, via ramSeraph/indian_facilities), whose names carry the colony or village they serve.
+   - ECI polling stations (2017 locations, CC0 as declared by the ramSeraph/indian_facilities copy), whose names carry the colony or village they serve.
 
    A locality counts only if all of these hold:
    - Its distinctive words match. Generic words like "Nagar", "Colony", "School" or "Balaji" alone do not count, and only small spelling slips are allowed.
@@ -86,14 +89,15 @@ Each feature is a GeoJSON Polygon or MultiPolygon in WGS 84, with these properti
 ### Coverage on 2026-10-10
 
 **Jodhpur:** 34 of 100 wards were built. Confidence ranges from 0.00 to 0.43, with a median of 0.26.
-- There are no overlaps and no invalid geometries; 3 wards are MultiPolygons. The wards cover 44.2 km².
+- There are no overlaps and no invalid geometries; 3 wards are MultiPolygons. The wards cover 44.1 km².
 - Jodhpur has no official ward-to-seat list, so the only cross-check is that ward numbers run in walking order. Most built wards lie within 0.3 to 2.5 km of a ward numbered next to them. Wards 1 and 100 lie 10 and 5 km away, and their confidence is lowered.
-- Left out: 0 listed localities found on the map, 0 of them close together: 2, 3, 5, 6, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 26, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 47, 50, 52, 53, 54, 56, 57, 60, 62, 65, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 82, 83, 84, 88, 89, 91, 94, 95.
+- No locality found on the map: 2, 3, 5, 6, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 26, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 47, 50, 52, 53, 54, 56, 57, 60, 62, 65, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 82, 83, 84, 88, 89, 91, 94, 95.
 
 **Jaipur:** 12 of 150 wards were built. Confidence ranges from 0.15 to 0.94, with a median of 0.44.
 - There are no overlaps and no invalid geometries. The wards cover 23.7 km².
 - The corporation's ward list gives each ward's assembly seat by range. Each ward is checked against those seats in `rajasthan_assembly.geojson`: 12 wards were dropped because they lay mostly outside their seat (a wrong place match).
-- Left out: 0 listed localities found on the map, 0 of them close together: 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23, 24, 27, 29, 30, 32, 33, 34, 35, 37, 38, 39, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 59, 61, 62, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 125, 126, 129, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 148, 149, 150; conflict with the official assembly seat: 10, 14, 25, 26, 28, 31, 41, 43, 83, 95, 98, 128.
+- No locality found on the map: 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23, 24, 27, 29, 30, 32, 33, 34, 35, 37, 38, 39, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 59, 61, 62, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 125, 126, 129, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 148, 149, 150.
+- Dropped as a conflict with the ward's official assembly seat: 10, 14, 25, 26, 28, 31, 41, 43, 83, 95, 98, 128.
 
 ### Known limits
 

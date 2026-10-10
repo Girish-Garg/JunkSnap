@@ -26,6 +26,8 @@ from shapely.geometry.base import BaseGeometry
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIR = ROOT / "data" / "boundaries"
 OUT_DIR = ROOT / "frontend" / "public" / "boundaries"
+# Ward counts per local body, for the "34 of 100 wards" line in the map legend.
+LOCAL_BODIES = ROOT / "data" / "representatives" / "local_bodies.json"
 # Degrees; tried smallest first until the layer fits its budget.
 TOLERANCES = (0.0005, 0.001, 0.002, 0.004, 0.008, 0.016, 0.024, 0.032)
 DECIMALS = 4  # about 11 m
@@ -42,7 +44,15 @@ class LayerSpec:
     pattern: str
     keep: tuple[str, ...]
     budget_bytes: int
+    attribution: str = ""
+    clip_overlaps: bool = False
 
+
+WARDS_CREDIT = (
+    "Approximate, unreviewed wards from the 2025 ward-formation orders (Rajasthan Gazette); "
+    "places © OpenStreetMap contributors (ODbL) and ECI polling stations "
+    "(CC0 as declared by the ramSeraph/indian_facilities copy)"
+)
 
 LAYERS = (
     LayerSpec("assembly", "rajasthan_assembly.geojson", ("id", "name", "pc_id"), 400_000),
@@ -50,6 +60,7 @@ LAYERS = (
     LayerSpec(
         "wards", "*_wards.geojson",
         ("id", "ward_no", "name", "zone", "confidence", "review_status"), 400_000,
+        attribution=WARDS_CREDIT, clip_overlaps=True,
     ),
 )
 
@@ -64,12 +75,16 @@ class LayerResult:
     label_bytes: int
     tolerance: float
     sources: tuple[str, ...]
+    attribution: str = ""
 
     def manifest(self) -> dict[str, Any]:
-        return {
+        entry: dict[str, Any] = {
             "features": self.features, "bytes": self.bytes, "label_bytes": self.label_bytes,
             "tolerance_deg": self.tolerance, "sources": list(self.sources),
         }
+        if self.attribution:
+            entry["attribution"] = self.attribution
+        return entry
 
 
 def read_features(paths: list[Path]) -> list[Feature]:
@@ -131,6 +146,24 @@ def build_polygons(features: list[Feature], spec: LayerSpec, tolerance: float) -
         if geometry is not None:
             properties = kept(feature["properties"], spec.keep)
             out.append({"type": "Feature", "properties": properties, "geometry": geometry})
+    return without_overlaps(out) if spec.clip_overlaps else out
+
+
+def without_overlaps(features: list[Feature]) -> list[Feature]:
+    """Cuts each area by the ones before it (one-grid margin), so rounding leaves no slivers."""
+    grid = 10.0**-DECIMALS
+    taken: BaseGeometry | None = None
+    out: list[Feature] = []
+    for feature in features:
+        geom = shape(feature["geometry"])
+        if taken is not None:
+            geom = geom.difference(taken.buffer(grid * 1.5))
+        geometry = rounded_geometry(shapely.set_precision(geom, grid))
+        if geometry is None:
+            continue
+        out.append({**feature, "geometry": geometry})
+        written = shape(geometry)
+        taken = written if taken is None else taken.union(written)
     return out
 
 
@@ -172,18 +205,37 @@ def write_layer(spec: LayerSpec, source_dir: Path, out_dir: Path) -> LayerResult
     (out_dir / f"{spec.name}.geojson").write_bytes(text.encode("utf-8"))
     (out_dir / f"{spec.name}_labels.geojson").write_bytes(labels.encode("utf-8"))
     return LayerResult(spec.name, len(polygons), len(text.encode("utf-8")),
-                       len(labels.encode("utf-8")), tolerance, tuple(p.name for p in paths))
+                       len(labels.encode("utf-8")), tolerance, tuple(p.name for p in paths),
+                       spec.attribution)
+
+
+def ward_coverage(wards_path: Path, bodies_path: Path) -> list[dict[str, Any]]:
+    """Per local body: wards mapped (ids `<body>-w<n>`) against the body's ward count."""
+    ids = [f["properties"].get("id", "") for f in read_features([wards_path])]
+    bodies = json.loads(bodies_path.read_text(encoding="utf-8")) if bodies_path.exists() else []
+    coverage = []
+    for body in bodies:
+        mapped = sum(1 for ward_id in ids if str(ward_id).startswith(f"{body['id']}-w"))
+        if mapped:
+            town = (body.get("towns") or [body["name"]])[0]
+            wards = body.get("wards")
+            coverage.append({"body": body["id"], "town": town, "mapped": mapped, "wards": wards})
+    return coverage
 
 
 def run(
-    source_dir: Path, out_dir: Path, specs: tuple[LayerSpec, ...] = LAYERS
+    source_dir: Path, out_dir: Path, specs: tuple[LayerSpec, ...] = LAYERS,
+    bodies_path: Path = LOCAL_BODIES,
 ) -> list[LayerResult]:
     out_dir.mkdir(parents=True, exist_ok=True)
     results = [r for spec in specs if (r := write_layer(spec, source_dir, out_dir)) is not None]
     for stale in {s.name for s in specs} - {r.name for r in results}:
         for suffix in (".geojson", "_labels.geojson"):
             (out_dir / f"{stale}{suffix}").unlink(missing_ok=True)
-    manifest = {"layers": {r.name: r.manifest() for r in results}}
+    manifest: dict[str, Any] = {"layers": {r.name: r.manifest() for r in results}}
+    if "wards" in manifest["layers"]:
+        coverage = ward_coverage(out_dir / "wards.geojson", bodies_path)
+        manifest["layers"]["wards"]["coverage"] = coverage
     (out_dir / "index.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     return results
 

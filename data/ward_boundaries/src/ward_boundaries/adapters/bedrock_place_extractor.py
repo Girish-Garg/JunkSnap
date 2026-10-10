@@ -43,11 +43,14 @@ class BedrockPlaceExtractor:
     def wards(self, city: str, document: Document) -> dict[int, WardText]:
         found: dict[int, WardText] = {}
         for chunk in self._chunks(document.text):
-            for item in self._answer(city, chunk).get("wards", []):
+            answer = self._answer(city, chunk)
+            models = (str(answer["model"]),) if "model" in answer else ()
+            for item in answer.get("wards", []):
                 number = item.get("ward")
                 if isinstance(number, int) and number not in found:
                     places = tuple(str(name) for name in item.get("places", []) if name)
-                    found[number] = WardText(number, places, item.get("population"), document)
+                    population = item.get("population")
+                    found[number] = WardText(number, places, population, document, models)
         return found
 
     def _chunks(self, text: str) -> list[str]:
@@ -68,6 +71,7 @@ class BedrockPlaceExtractor:
             answer = self._converse(model, PROMPT.format(city=city, text=chunk))
             if answer is not None:
                 self.used_models.add(model)
+                answer["model"] = model
                 self._cache_dir.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps(answer, ensure_ascii=False), encoding="utf-8")
                 return answer

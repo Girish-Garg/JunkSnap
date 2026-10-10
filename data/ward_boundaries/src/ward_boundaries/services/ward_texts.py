@@ -1,6 +1,7 @@
 """Reads ward lists out of source texts and cross-checks them against each other."""
 
 import re
+from dataclasses import replace
 
 from ward_boundaries.domain.models import Document, WardEvidence, WardText
 
@@ -57,9 +58,11 @@ class WardCrossCheck:
             sources = tuple(dict.fromkeys(t.source for t in (official, listed) if t is not None))
             places = listed.places if listed else ()
             population = official.population if official else None
+            models = tuple(dict.fromkeys(m for t in (official, listed) if t for m in t.models))
             ward = WardEvidence(
                 number, places, (), population, sources, notes, official is not None
             )
+            ward = replace(ward, models=models)
             evidence.append(ward)
         return tuple(evidence)
 

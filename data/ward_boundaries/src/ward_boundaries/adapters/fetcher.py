@@ -1,28 +1,26 @@
-"""Polite, cached fetching: one request per second per host; text, SHA-256 and fetched_at kept."""
+"""Polite, cached fetching: text, SHA-256 and fetched_at of every page kept."""
 
 import hashlib
 import html
 import json
 import re
-import time
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx
 from pypdf import PdfReader
 
+from ward_boundaries.adapters.politeness import Politeness
 from ward_boundaries.domain.models import Document, WardBoundariesError
 
 USER_AGENT = "JunkSnap-ward-boundaries/0.1 (civic waste reporting research)"
 
 
 class CachedFetcher:
-    def __init__(self, client: httpx.Client, cache_dir: Path) -> None:
-        self._client = client
+    def __init__(self, polite: Politeness, cache_dir: Path) -> None:
+        self._polite = polite
         self._cache_dir = cache_dir
-        self._last: dict[str, float] = {}
 
     def fetch(self, url: str) -> Document:
         path = self._cache_dir / f"{hashlib.sha256(url.encode()).hexdigest()[:24]}.json"
@@ -42,9 +40,8 @@ class CachedFetcher:
         return document
 
     def _download(self, url: str) -> Document:
-        self._wait(url)
         try:
-            response = self._client.get(url, follow_redirects=True)
+            response = self._polite.get(url)
             response.raise_for_status()
         except httpx.HTTPError as error:
             raise WardBoundariesError(f"{url}: {error}") from error
@@ -65,10 +62,3 @@ class CachedFetcher:
         text = html.unescape(re.sub(r"<[^>]+>", "\n", page))
         lines = (line.rstrip() for line in text.splitlines())
         return "\n".join(line for line in lines if line.strip())
-
-    def _wait(self, url: str) -> None:
-        host = urlsplit(url).netloc
-        delay = self._last.get(host, 0.0) + 1.0 - time.monotonic()
-        if delay > 0:
-            time.sleep(delay)
-        self._last[host] = time.monotonic()

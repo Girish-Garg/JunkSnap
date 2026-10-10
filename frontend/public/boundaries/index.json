@@ -20,12 +20,27 @@
     },
     "wards": {
       "features": 46,
-      "bytes": 18325,
-      "label_bytes": 5911,
+      "bytes": 25399,
+      "label_bytes": 5907,
       "tolerance_deg": 0.0005,
       "sources": [
         "jaipur_wards.geojson",
         "jodhpur_wards.geojson"
+      ],
+      "attribution": "Approximate, unreviewed wards from the 2025 ward-formation orders (Rajasthan Gazette); places \u00a9 OpenStreetMap contributors (ODbL) and ECI polling stations (CC0 as declared by the ramSeraph/indian_facilities copy)",
+      "coverage": [
+        {
+          "body": "jodhpur-mc",
+          "town": "Jodhpur",
+          "mapped": 34,
+          "wards": 100
+        },
+        {
+          "body": "jaipur-mc",
+          "town": "Jaipur",
+          "mapped": 12,
+          "wards": 150
+        }
       ]
     }
   }

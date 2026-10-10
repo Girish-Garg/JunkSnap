@@ -580,8 +580,11 @@
     "byScore": "Score, darker is worse",
     "byCount": "Verified reports, no score yet",
     "outdated": "Outdated seat boundary",
-    "unreviewed": "Unreviewed",
-    "scoreRule": "A score shows after 10 verified reports."
+    "scoreRule": "A score shows after 10 verified reports.",
+    "wardsApprox": "Approximate ward areas from official ward lists, unreviewed",
+    "wardsApproxCounted": "Approximate ward areas from official ward lists, unreviewed ({{counts}})",
+    "wardsOf": "{{mapped}} of {{wards}} wards",
+    "wardsMapped": "{{mapped}} wards"
   },
   "ranking": {
     "open": "City ranking",

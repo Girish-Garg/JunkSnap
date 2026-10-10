@@ -25,30 +25,43 @@ PROMPT = (
 
 
 class BedrockTransliterator:
+    """The cache keeps, for every name, its spelling and the model that wrote it."""
+
     def __init__(self, client: "BedrockRuntimeClient", cache_file: Path) -> None:
         self._client = client
         self._cache_file = cache_file
+        self._names: dict[str, str] = {}
+        self._models: dict[str, str] = {}
         self.used_models: set[str] = set()
 
     def english(self, city: str, names: list[str]) -> dict[str, str]:
-        known: dict[str, str] = {}
         if self._cache_file.exists():
-            known = json.loads(self._cache_file.read_text(encoding="utf-8"))
-        missing = [name for name in dict.fromkeys(names) if name not in known]
+            saved = json.loads(self._cache_file.read_text(encoding="utf-8"))
+            self._names, self._models = saved["names"], saved["models"]
+        missing = [name for name in dict.fromkeys(names) if name not in self._names]
         for start in range(0, len(missing), BATCH):
-            known.update(self._ask(city, missing[start : start + BATCH]))
-            self._cache_file.parent.mkdir(parents=True, exist_ok=True)
-            self._cache_file.write_text(json.dumps(known, ensure_ascii=False), encoding="utf-8")
-        return known
+            self._ask(city, missing[start : start + BATCH])
+            self._save()
+        return dict(self._names)
 
-    def _ask(self, city: str, names: list[str]) -> dict[str, str]:
+    def model_for(self, name: str) -> str | None:
+        return self._models.get(name)
+
+    def _save(self) -> None:
+        self._cache_file.parent.mkdir(parents=True, exist_ok=True)
+        saved = {"names": self._names, "models": self._models}
+        self._cache_file.write_text(json.dumps(saved, ensure_ascii=False), encoding="utf-8")
+
+    def _ask(self, city: str, names: list[str]) -> None:
         text = PROMPT.format(city=city, names="\n".join(names))
         for model in MODELS:
             answer = self._converse(model, text)
             if answer is not None:
                 self.used_models.add(model)
-                return {key: str(value) for key, value in answer.items() if key in names}
-        return {}
+                for key, value in answer.items():
+                    if key in names:
+                        self._names[key], self._models[key] = str(value), model
+                return
 
     def _converse(self, model: str, text: str) -> dict[str, Any] | None:
         try:
