@@ -1,8 +1,12 @@
 package com.junksnap.app
 
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.print.PrintManager
+import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -11,16 +15,37 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : TauriActivity() {
+  private val asker = PermissionAsker(this)
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     keepWebViewInsideSystemBars(findViewById(android.R.id.content))
   }
 
-  // JunkSnap: the Android WebView ignores window.print(), so letters print through
-  // window.JunkSnapPrint.print() instead (the system print dialog has Save as PDF).
+  // JunkSnap: the Android WebView ignores window.print(), and once camera or location is
+  // denied with "don't ask again" only the app's settings page can allow it again.
   override fun onWebViewCreate(webView: WebView) {
-    webView.addJavascriptInterface(LetterPrinter(webView), "JunkSnapPrint")
+    webView.addJavascriptInterface(AppBridge(webView), "JunkSnapAndroid")
+    // wry sets its WebChromeClient right after this call; wrap it once it is there so camera and
+    // location prompts are asked one at a time (PermissionChromeClient). Needs API 26.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      webView.post {
+        webView.webChromeClient?.let { webView.webChromeClient = PermissionChromeClient(it, asker, APP_HOST) }
+      }
+    }
+  }
+
+  // JunkSnap: on API 24-25 wry's client still answers prompts, and with Snap's simultaneous
+  // camera and location prompts one answer can reach a request twice; its second grant() throws.
+  // Ignore that repeat instead of closing the app; the page then offers Try again.
+  @Deprecated("ActivityResult API; kept to guard wry's permission callback")
+  override fun onRequestPermissionsResult(code: Int, permissions: Array<String>, results: IntArray) {
+    try {
+      super.onRequestPermissionsResult(code, permissions, results)
+    } catch (repeat: IllegalStateException) {
+      Log.w("JunkSnap", "ignored a repeated WebView permission answer", repeat)
+    }
   }
 
   // JunkSnap: Android 15+ always draws apps edge to edge, and the WebView does not pass the
@@ -37,16 +62,26 @@ class MainActivity : TauriActivity() {
     }
   }
 
-  /** The one native method the page gets: print the current page, only for the app's origin. */
-  private inner class LetterPrinter(private val webView: WebView) {
+  /** The page's only native methods (window.JunkSnapAndroid), each only for the app's origin. */
+  private inner class AppBridge(private val webView: WebView) {
+    /** The system print dialog for the current page; it offers Save as PDF. */
     @JavascriptInterface
-    fun print() {
+    fun print() = onAppPage {
+      val printer = getSystemService(PRINT_SERVICE) as PrintManager
+      printer.print("JunkSnap letter", webView.createPrintDocumentAdapter("JunkSnap letter"), null)
+    }
+
+    /** This app's page in Android settings, where Permissions can be allowed again. */
+    @JavascriptInterface
+    fun openAppSettings() = onAppPage {
+      val details = Uri.fromParts("package", packageName, null)
+      startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, details))
+    }
+
+    private fun onAppPage(action: () -> Unit) {
       webView.post {
         val page = Uri.parse(webView.url ?: "")
-        if (page.scheme == "https" && page.host == APP_HOST) {
-          val printer = getSystemService(PRINT_SERVICE) as PrintManager
-          printer.print("JunkSnap letter", webView.createPrintDocumentAdapter("JunkSnap letter"), null)
-        }
+        if (page.scheme == "https" && page.host == APP_HOST) action()
       }
     }
   }

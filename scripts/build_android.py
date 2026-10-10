@@ -5,14 +5,17 @@
 """Build the JunkSnap Android app (Tauri 2) against one stage and print the APK path.
 
 Usage: uv run scripts/build_android.py dev [--target aarch64 x86_64] [--skip-web] [--debug]
-Reads VITE_API_URL and the Cognito ids from the junksnap-<stage> stack outputs and VITE_WEB_URL
-from the stage's Amplify app (as deploy_web.py does), builds frontend/dist and marks it with
-the stage in dist/.stage, then runs `tauri android build --apk` in apps/android-tauri. The
-stage's api origin and originals bucket are added to the CSP in tauri.conf.json for that build
-only. The release APK is signed
-with the Android SDK debug key (no release keystore); --debug builds a debuggable APK whose
-WebView shows in chrome://inspect. Install with `adb install -r <apk>` or copy it to the
-phone. The stage's api CORS_ORIGINS and UploadOrigins must include https://tauri.localhost.
+       [--settings aws|env] [--version 1.2.3]
+Gets the stage's public values (android_stage.py): from the junksnap-<stage> stack outputs and
+the stage's Amplify app (--settings aws, local), or from env vars (--settings env, CI). Builds
+frontend/dist with them and marks it with the stage in dist/.stage, then runs
+`tauri android build --apk` in apps/android-tauri. The stage's api origin and originals bucket
+are added to the CSP in tauri.conf.json for that build only. The release APK is signed with the
+keystore named by ANDROID_KEYSTORE_PATH (with ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and
+ANDROID_KEY_PASSWORD) when set, else with the Android SDK debug key; --debug builds a
+debuggable APK whose WebView shows in chrome://inspect. Install with `adb install -r <apk>` or
+copy it to the phone. The stage's api CORS_ORIGINS and UploadOrigins must include
+https://tauri.localhost. Releases: docs/android.md.
 """
 
 import argparse
@@ -23,8 +26,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from deploy import REGION, ROOT
-from deploy_web import VITE_FROM_OUTPUTS, branch_url, find_web_app, stack_outputs, web_app_name
+from android_stage import StageSettings
+from deploy import ROOT
 
 APP = ROOT / "apps" / "android-tauri"
 FRONTEND = ROOT / "frontend"
@@ -38,6 +41,11 @@ TOOL_DEFAULTS = {
     "JAVA_HOME": Path(r"C:\Program Files\Android\Android Studio\jbr"),
     "ANDROID_HOME": LOCAL / "Android" / "Sdk",
 }
+
+
+def without_signing(env: dict[str, str]) -> dict[str, str]:
+    """The env minus the release-signing variables, for steps that run npm packages."""
+    return {key: value for key, value in env.items() if not key.startswith("ANDROID_KEY")}
 
 
 def stream(args: list[str], cwd: Path, env: dict[str, str]) -> None:
@@ -55,7 +63,8 @@ class Toolchain:
         env = dict(os.environ)
         for key, default in TOOL_DEFAULTS.items():
             env.setdefault(key, str(default))
-        env.setdefault("NDK_HOME", str(self._newest_ndk(Path(env["ANDROID_HOME"]))))
+        if not env.get("NDK_HOME"):
+            env["NDK_HOME"] = str(self._newest_ndk(Path(env["ANDROID_HOME"])))
         cargo_bin = Path.home() / ".cargo" / "bin"
         env["PATH"] = os.pathsep.join([str(cargo_bin), env.get("PATH", "")])
         return env
@@ -68,12 +77,12 @@ class Toolchain:
         return versions[-1]
 
 
-class StageCsp:
-    """The CSP from tauri.conf.json plus this stage's api origin and originals bucket."""
+class StageConfig:
+    """Per-build Tauri config: the CSP plus this stage's api and upload hosts, and the version."""
 
-    def __init__(self, outputs: dict[str, str]) -> None:
-        self._api = outputs["PublicBaseUrl"].rstrip("/")
-        self._uploads = f"https://{outputs['OriginalsBucketName']}.s3.{REGION}.amazonaws.com"
+    def __init__(self, settings: StageSettings, version: str | None) -> None:
+        self._api, self._uploads = settings.csp_sources()
+        self._version = version
 
     def config(self) -> dict[str, object]:
         csp: dict[str, list[str]] = {
@@ -82,7 +91,10 @@ class StageCsp:
         }
         csp["connect-src"] += [self._api, self._uploads]
         csp["img-src"].append(self._api)  # blurred photos: PUBLIC_BASE_URL/media/...
-        return {"app": {"security": {"csp": csp}}}
+        config: dict[str, object] = {"app": {"security": {"csp": csp}}}
+        if self._version:
+            config["version"] = self._version  # versionName; Tauri derives versionCode from it
+        return config
 
 
 class AndroidBuild:
@@ -92,22 +104,21 @@ class AndroidBuild:
         self._stage = stage
         self._env = env
 
-    def web(self, outputs: dict[str, str], web_url: str) -> None:
-        web_env = {key: outputs[name] for key, name in VITE_FROM_OUTPUTS.items()}
-        web_env["VITE_API_MODE"] = "live"
-        web_env["VITE_WEB_URL"] = web_url  # share links point at the web app, not tauri.localhost
-        print("build env:", web_env, flush=True)
-        env = {**self._env, **web_env}
+    def web(self, settings: StageSettings) -> None:
+        web_env = settings.vite_env()
+        print("build env:", web_env, flush=True)  # public values only
+        env = {**without_signing(self._env), **web_env}
         stream(["npm", "ci", "--no-audit", "--no-fund"], FRONTEND, env)
         stream(["npm", "run", "build"], FRONTEND, env)
         STAGE_MARK.write_text(self._stage)
 
-    def apk(self, targets: list[str], csp: StageCsp, debug: bool) -> Path:
+    def apk(self, targets: list[str], stage_config: StageConfig, debug: bool) -> Path:
         self._check_stage_mark()
         conf = APP / "out" / f"tauri.{self._stage}.conf.json"
         conf.parent.mkdir(exist_ok=True)
-        conf.write_text(json.dumps(csp.config(), indent=2))
-        stream(["npm", "ci", "--no-audit", "--no-fund"], APP, self._env)
+        conf.write_text(json.dumps(stage_config.config(), indent=2))
+        stream(["npm", "ci", "--no-audit", "--no-fund"], APP, without_signing(self._env))
+        # Only the Tauri build (Gradle signs the APK) sees ANDROID_KEYSTORE_* and ANDROID_KEY_*.
         build = ["npx", "tauri", "android", "build", "--apk", "--ci", "--config", str(conf)]
         build += ["--debug"] if debug else []
         stream([*build, "--target", *targets], APP, self._env)
@@ -127,35 +138,37 @@ class AndroidBuild:
                      f"{self._stage}; run without --skip-web")
 
 
-def stage_web_url(stage: str) -> str:
-    app = find_web_app(stage)
-    if app is None:
-        sys.exit(f"no Amplify app {web_app_name(stage)}; deploy the web app first "
-                 f"(uv run scripts/deploy_web.py {stage}), since share links point at it")
-    return branch_url(stage, app)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the JunkSnap Android APK.")
     parser.add_argument("stage", nargs="?", default="dev", choices=["dev", "demo"])
     parser.add_argument("--target", nargs="+", default=["aarch64", "x86_64"],
                         choices=["aarch64", "armv7", "i686", "x86_64"],
-                        help="ABIs in the APK: aarch64 for phones, x86_64 for the emulator")
+                        help="ABIs in the APK: aarch64 and armv7 for phones, x86_64 for emulators")
     parser.add_argument("--skip-web", action="store_true", help="reuse dist/ built for this stage")
     parser.add_argument("--debug", action="store_true", help="debuggable APK (chrome://inspect)")
+    parser.add_argument("--settings", choices=["aws", "env"], default="aws",
+                        help="stage values from AWS (local) or env vars (CI)")
+    parser.add_argument("--version", help="app version such as 1.2.3 (default: tauri.conf.json)")
     return parser.parse_args()
+
+
+def signing_note() -> str:
+    if os.environ.get("ANDROID_KEYSTORE_PATH"):
+        return "signed with the release keystore"
+    return "signed with the Android SDK DEBUG key, for testing only"
 
 
 def main() -> None:
     args = parse_args()
     os.environ.setdefault("AWS_PROFILE", "junksnap")
-    outputs = stack_outputs(f"junksnap-{args.stage}")
+    from_aws = args.settings == "aws"
+    settings = StageSettings.from_aws(args.stage) if from_aws else StageSettings.from_env()
     build = AndroidBuild(args.stage, Toolchain().env())
     if not args.skip_web:
-        build.web(outputs, stage_web_url(args.stage))
-    apk = build.apk(args.target, StageCsp(outputs), args.debug)
+        build.web(settings)
+    apk = build.apk(args.target, StageConfig(settings, args.version), args.debug)
     size_mb = apk.stat().st_size / 1_000_000
-    print(f"\nAPK ({args.stage}, {size_mb:.1f} MB): {apk}")
+    print(f"\nAPK ({args.stage}, {size_mb:.1f} MB, {signing_note()}): {apk}")
     print(f"Install: adb install -r \"{apk}\"  (or copy it to the phone and allow unknown apps)")
     print(f"The {args.stage} api CORS_ORIGINS and UploadOrigins must include {APP_ORIGIN} "
           f"(dev allows any origin; for demo: deploy.py demo --origins <web url>,{APP_ORIGIN}).")

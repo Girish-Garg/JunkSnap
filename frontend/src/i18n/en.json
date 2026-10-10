@@ -59,6 +59,7 @@
     "offline": "Offline. Showing what was loaded.",
     "loadFailed": "Could not load sites.",
     "locationDenied": "Location is blocked in your browser.",
+    "locationDeniedApp": "Location is blocked for JunkSnap.",
     "locationUnavailable": "Could not find your location.",
     "filteredEmpty": "No sites match. Turn a filter off.",
     "zoomIn": "Zoom in to see every site here.",
@@ -181,6 +182,7 @@
     },
     "gpsWeak": "Wait a moment or step into the open for a better fix.",
     "gpsNeeded": "The report needs your location. Allow location in the browser settings.",
+    "gpsNeededApp": "The report needs your location. Tap Open app settings, then Permissions, Location, Allow.",
     "guest": "You are signed out. Photos wait on this phone until you sign in.",
     "signIn": "Sign in",
     "sample": "Sample mode: reports stay on this phone and are not sent.",
@@ -203,6 +205,13 @@
       "checked": "Photo checked"
     },
     "tryAgain": "Try again",
+    "openSettings": "Open app settings",
+    "helpApp": {
+      "camera_denied": [
+        "Tap Try again and choose Allow when Android asks.",
+        "If Android no longer asks, tap Open app settings, then Permissions, Camera, Allow."
+      ]
+    },
     "waitingForGps": "Waiting for your location before the first photo.",
     "help": {
       "camera_denied": [

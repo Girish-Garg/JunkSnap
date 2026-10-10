@@ -14,6 +14,9 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// JunkSnap: path of the release keystore; CI decodes it from a secret (never committed).
+val releaseKeystore: String? = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+
 android {
     compileSdk = 36
     namespace = "com.junksnap.app"
@@ -24,6 +27,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,8 +52,9 @@ android {
             }
         }
         getByName("release") {
-            // JunkSnap: test builds use the SDK debug key; there is no release keystore.
-            signingConfig = signingConfigs.getByName("debug")
+            // JunkSnap: signed with the release keystore when CI provides one (docs/android.md),
+            // else with the SDK debug key for test builds.
+            signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
             optimization {
                enable = true
             }
