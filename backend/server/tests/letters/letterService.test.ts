@@ -106,7 +106,7 @@ describe("Template letter", () => {
       "Request for action on a waste dump on a vacant plot in Ward 37, Jodhpur (JunkSnap site site_jdh_1)",
     );
     expect(letter.body).toMatch(/^To the Commissioner, Jodhpur Municipal Corporation\./);
-    expect(letter.body).toContain("Reports since 9 October 2026: 7 (6 verified).");
+    expect(letter.body).toContain("Reports since 9 October 2026: 7 (7 verified).");
     expect(letter.body).toContain("Sample Waste Rules (test fixture), rule 39(2)(vii):\n\"plan for collection");
     expect(letter.body).toContain(
       "Copies go for attention to the councillor of Ward 37, the MLA for Sardarpura and the MP for Jodhpur.",
@@ -131,7 +131,7 @@ describe("LetterService errors", () => {
   });
 
   it("returns not_verified unless the site is verified", async () => {
-    const waiting = siteWith(jodhpur, { verification: "community_check" });
+    const waiting = siteWith(jodhpur, { verification: "unverified" });
     const service = await letterService({ sites: [waiting] });
     await expect(service.draft(request)).rejects.toThrow(NotVerifiedError);
   });

@@ -4,6 +4,7 @@ import { InternalDataError } from "../../domain/errors.js";
 import { Site } from "../../domain/sites/Site.js";
 import type { MergedReport, ReportInsights, SiteFeature, SiteInternals } from "../../domain/sites/SiteTypes.js";
 import type { Logger } from "../../ports/Logger.js";
+import { LegacySiteFields } from "./LegacySiteFields.js";
 import type { NgeohashCells } from "./NgeohashCells.js";
 
 export type SiteItem = Record<string, unknown>;
@@ -26,6 +27,8 @@ const StoredExtras = z.object({
   reporter_devices: z.array(z.string()).default([]),
   reporter_users: z.array(z.string()).default([]),
   reporter_ids: z.array(z.string()).optional(),
+  yes_voters: z.array(z.string()).default([]),
+  no_voters: z.array(z.string()).default([]),
   me_too_count: z.int().min(0).default(0),
   embedding_key: z.string().nullable().default(null),
   pending_cleanup_id: z.string().nullable().default(null),
@@ -58,6 +61,8 @@ export class SiteItemMapper {
       reporter_devices: internals.reporterDevices,
       reporter_users: internals.reporterUsers,
       reporter_ids: internals.reporterIds,
+      yes_voters: internals.yesVoters,
+      no_voters: internals.noVoters,
       me_too_count: internals.meTooCount,
       embedding_key: internals.embeddingKey,
       pending_cleanup_id: internals.pendingCleanupId,
@@ -65,7 +70,8 @@ export class SiteItemMapper {
     };
   }
 
-  toSite(item: SiteItem): Site {
+  toSite(stored: SiteItem): Site {
+    const item = new LegacySiteFields().upgrade(stored);
     const parsed = StoredExtras.safeParse(item);
     if (!parsed.success) {
       throw new InternalDataError(`site item ${String(item.site_id)} is malformed: ${z.prettifyError(parsed.error)}`);
@@ -96,6 +102,8 @@ export class SiteItemMapper {
       reporterUsers: extras.reporter_users,
       // Older items only know devices.
       reporterIds: extras.reporter_ids ?? extras.reporter_devices,
+      yesVoters: extras.yes_voters,
+      noVoters: extras.no_voters,
       meTooCount: extras.me_too_count,
       embeddingKey: extras.embedding_key,
       pendingCleanupId: extras.pending_cleanup_id,

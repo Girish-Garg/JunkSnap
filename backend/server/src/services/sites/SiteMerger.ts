@@ -48,13 +48,11 @@ export class SiteMerger {
     this.#deps = deps;
   }
 
-  // A settled site rewrites its reports' status on every pass, so a redelivered message repairs a failed write.
+  // Reports follow their site on every pass, so a redelivered message repairs a failed status write.
   async merge(evidence: MergeEvidence): Promise<MergeResult> {
     const report = this.#deps.reportFactory.create(evidence);
     const { site, outcome } = await this.#deps.retry.run(() => this.#attempt(report));
-    if (site.verification !== "community_check") {
-      await this.#deps.reports.followSite(site.reportIds, site.verification);
-    }
+    await this.#deps.reports.followSite(site.reportIds, site.verification);
     return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 

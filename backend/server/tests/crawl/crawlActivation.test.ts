@@ -107,7 +107,7 @@ describe("ActivatingReportMerger", () => {
     expect(activator.calls).toEqual([[{ id: "rajasthan-jodhpur", name: "Jodhpur" }, report.report_id]]);
   });
 
-  it.each(["community_check", "rejected"] as const)("leaves the district alone for a %s report", async (verification) => {
+  it.each(["unverified", "rejected"] as const)("leaves the district alone for a %s report", async (verification) => {
     const activator = new RecordingActivator();
     await subject({ siteId: "site_jdh_1", verification }, activator).merger.merge(record());
     expect(activator.calls).toEqual([]);

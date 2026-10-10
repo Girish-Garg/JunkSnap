@@ -52,15 +52,30 @@ export interface Site {
      */
     status: "open" | "cleaned" | "reopened";
     /**
-     * verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value.
+     * Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value.
      */
-    verification: "verified" | "community_check" | "rejected";
+    verification: "unverified" | "verified" | "rejected";
     report_count: number;
+    /**
+     * Reports that count as verified: every report of a verified site, 0 otherwise.
+     */
     verified_count: number;
     /**
      * Confirm votes plus Me too reports from other devices.
      */
     corroborations: number;
+    /**
+     * Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).
+     */
+    backers: {
+      /**
+       * People who backed it either way; one person with a photo and a vote counts once.
+       */
+      count: number;
+      needed: 10;
+      photo_people: number;
+      vote_people: number;
+    };
     votes: {
       confirm: number;
       reject: number;
@@ -988,6 +1003,7 @@ export const siteSchema = {
         "report_count",
         "verified_count",
         "corroborations",
+        "backers",
         "votes",
         "photo_urls",
         "cleanup_status",
@@ -1041,11 +1057,11 @@ export const siteSchema = {
         },
         "verification": {
           "enum": [
+            "unverified",
             "verified",
-            "community_check",
             "rejected"
           ],
-          "description": "verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value."
+          "description": "Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value."
         },
         "report_count": {
           "type": "integer",
@@ -1053,12 +1069,42 @@ export const siteSchema = {
         },
         "verified_count": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Reports that count as verified: every report of a verified site, 0 otherwise."
         },
         "corroborations": {
           "type": "integer",
           "minimum": 0,
           "description": "Confirm votes plus Me too reports from other devices."
+        },
+        "backers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "needed",
+            "photo_people",
+            "vote_people"
+          ],
+          "description": "Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "People who backed it either way; one person with a photo and a vote counts once."
+            },
+            "needed": {
+              "const": 10
+            },
+            "photo_people": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "vote_people": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         },
         "votes": {
           "type": "object",

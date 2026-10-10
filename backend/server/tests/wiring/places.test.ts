@@ -87,7 +87,7 @@ describe("SiteNearbyCounter", () => {
     const boxes: BoundingBox[] = [];
     const sites = [
       site({ verification: "verified", verified_count: 3 }),
-      site({ verification: "community_check", verified_count: 0 }),
+      site({ verification: "unverified", verified_count: 0 }),
       site({ verification: "verified", verified_count: 2, report_type: "no_bin", context: "no_bin" }),
       site({ verification: "verified", verified_count: 5 }, north(60)[0]),
     ];

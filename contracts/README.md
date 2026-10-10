@@ -93,7 +93,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `GET /scans/{id}` | api | `Authorization` | 200 scan status | 404 unless the user owns the scan |
 | `GET /sites?bbox=minLon,minLat,maxLon,maxLat` | api | none | 200 FeatureCollection of `site` | bbox up to 1 by 1 degree; at most 500 sites, newest first; `rejected` sites left out |
 | `GET /sites/{id}` | api | none | 200 `site` | |
-| `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and settles the community check; see below |
+| `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and recounts the backers; see below |
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
 | `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
@@ -107,7 +107,7 @@ Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never
 |---|---|---|
 | `POST /internal/verify` | verify request | `verification_result` with `insights` |
 
-**Community check.** The api owns it. Each vote has a weight of `0.5 + reputation`, so a new device (reputation 0.5) counts 1.0. While `site.verification` is `community_check`, the api sums the weights of confirm votes and subtracts the weights of reject votes. At +3 or more the site becomes `verified`; at -3 or less it becomes `rejected`. A report's status follows its site's verification once merged. Votes on a settled site still count as corroborations but never change it. The reporter (same user or same device) gets 403 `own_site`. Each device has one vote per site, and its latest vote counts; when settling, the api also keeps only the latest vote per `user_id`, so one user on two phones counts once. The weight uses the lower of the user's and the device's reputation.
+**Ten people verify a site** (decision 20261010-1530). The models only gate each photo: a photo whose moderation passed and whose `verification_result.decision` is not `rejected` merges into a site, and a new site appears on the map as `unverified` ("1 of 10"). A model decision never verifies a site by itself. A person is a user id, else a device token, and counts once. A person backs a site with a model-passed photo of it or with a confirm vote (their latest vote). `site.backers` holds `count` (people who backed it either way), `needed` (10), `photo_people` and `vote_people`. At 10 backers the site becomes `verified`. Safety valve: when the distinct people whose latest vote is reject (and who sent no photo of it) exceed `backers.count` by 3 or more, the site becomes `rejected` and leaves the map. Verified and rejected are final; later votes still count but never change them. A report's status follows its site's verification once merged (`unverified`, `verified` or `rejected`), and scores count only reports in verified sites. The reporter (same user or same device) gets 403 `own_site`. Each device has one vote per site, and when counting the api keeps only the latest vote per person. Votes carry no weight.
 
 **Cleanup.** The worker moderates and blurs the after-photo (`cln_` id, `near_site` check), then calls `/internal/verify` with `purpose: cleanup`. For a cleanup, `is_clean == (decision == "auto_verified")`, and the schema enforces it. The worker accepts the cleanup only when moderation passed and `is_clean` is true. On acceptance the site's `status` becomes `cleaned` and `cleaned_at` and `cleanup_photo_url` are set. `cleanup_status` goes `checking` to `accepted` or `rejected`, and resets to `none` when the site reopens.
 
@@ -134,7 +134,7 @@ Presign response. The phone PUTs the bytes with exactly these headers, and S3 re
 }
 ```
 
-`GET /reports/{id}` response. `status` is one of `queued`, `processing`, `verified`, `community_check`, `rejected` or `needs_review`. `site_id`, `blurred_url`, `moderation` and `verification` are null until each one exists. Mock mode builds this from the `jdh-1` and `jpr-1` fixtures.
+`GET /reports/{id}` response. `status` is one of `queued`, `processing`, `unverified`, `verified`, `rejected` or `needs_review` (rows written before decision 20261010-1530 may still say `community_check`, which means `unverified`). `site_id`, `blurred_url`, `moderation` and `verification` are null until each one exists. Mock mode builds this from the `jdh-1` and `jpr-1` fixtures.
 
 ```json
 {
@@ -188,7 +188,7 @@ Vote request (`vote` is `confirm` or `reject`) and vote result:
 ```
 
 ```json
-{ "site_id": "site_jpr_1", "votes": { "confirm": 2, "reject": 0 }, "verification": "community_check" }
+{ "site_id": "site_jpr_1", "votes": { "confirm": 2, "reject": 0 }, "backers": { "count": 3, "needed": 10, "photo_people": 1, "vote_people": 2 }, "verification": "unverified" }
 ```
 
 Cleanup request (the photo is presigned first, with `purpose: cleanup`) and its 202 response:
@@ -228,7 +228,7 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 | `cleanups` | `cleanup_id` | none | none | `site_id`, `upload_id`, `device_token`, `user_id`, `gps`, `sha256`, `captured_at`, `received_at`, `status`, `moderation_result`, `verification_result` |
 | `scans` | `scan_id` | none | none | `scan_session` fields (with `user_id`), `received_at`, `status`, `reason`, `frames`, `report_ids` |
 | `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`) top-level, `lat`, `lon`, `geohash4`, and the internals: `version` (each write sets it one higher, conditional on the stored value), `report_ids`, `merged_reports` (`[{report_id, verified, insights}]`), `reporter_devices`, `reporter_users`, `me_too_count`, `embedding_key`, `pending_cleanup_id`; the api builds the Feature |
-| `votes` | `site_id` | `device_token` | none | `vote`, `weight`, `user_id`, `voted_at` |
+| `votes` | `site_id` | `device_token` | none | `vote`, `user_id`, `voted_at` (older rows also hold an unused `weight`) |
 | `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
 | `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
 | `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`, top-level, plus `within`: the sorted district and local body ids of the area's sites (from `site.location.district.id` and `site.location.local_body.id`); the CronJob overwrites both, the api strips `within` and the keys before validating the body |
@@ -314,16 +314,16 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 
 | Sample | City | Site | What it shows |
 |---|---|---|---|
-| `jdh-1` | Jodhpur | `site_jdh_1`: waste_dump, vacant_plot, open, verified, cleanup checking | the full chain: report by a signed-in user, moderation, auto-verified with fixed weights, insights, brand label, location in seat `s20-ac-128` with no ward map, area scores and insights for that seat, letter Cc MLA and MP; a ward record from the crawler |
+| `jdh-1` | Jodhpur | `site_jdh_1`: waste_dump, vacant_plot, open, verified by 10 backers (5 by photo, 5 by vote), cleanup checking | the full chain: report by a signed-in user, moderation, a photo the models passed with fixed weights, insights, brand label, location in seat `s20-ac-128` with no ward map, area scores and insights for that seat, letter Cc MLA and MP; a ward record from the crawler |
 | `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin marker in seat `s20-ac-127`: 3 of 5 reporters, nearest known bin 4.2 km, so no letter yet |
 | `jdh-3` | Jodhpur | `site_jdh_3`: contaminated_water, choked_drain, reopened | an accepted cleanup (`cln_jdh_3c` moderation and verification, insights null), then reopened; a hazard and nearby places |
-| `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, community check | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
+| `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, unverified, 2 of 10 backers | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
 
 All fixture data is sample data, except `ward_record.jdh-1`, which is a real, unreviewed crawler record (its body `jodhpur-uttar-mc` predates the November 2025 merger; its id follows the ward rule). Coordinates are plausible; seat codes match the loaded boundaries; the brand and OpenStreetMap ids are invented; rule quotes are placeholders; user ids are random. Sample ids are short; real ids follow the rules above. No fixture names a person.
 
 ## Shared wording
 
-- Say "verified" only for auto-verified or community-confirmed reports. Otherwise say "waiting for a neighbour check".
+- Say "verified" only for a site 10 people backed. Otherwise say "n of 10 people confirmed".
 - Say "waste site", "reported" and "cleared". Never say "illegal" or "culprit", and never name a person.
 - Every Cc line says "for attention". Letters address offices, never people.
 - Below the guardrail, say "Not enough verified reports yet (N of 10)". Always show counts, and label Jodhpur data "Pilot city".

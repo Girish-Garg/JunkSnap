@@ -1,3 +1,4 @@
+import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
 import type { MergeableReport } from "./MergeableReport.js";
@@ -16,7 +17,8 @@ import type { VoteTally } from "./VoteTally.js";
 export const MERGE_RADIUS_M = 40;
 const VOTE_RADIUS_M = 1000;
 
-// Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (an auto-verified report merges in).
+// Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (a new photo merges in).
+// Verification: unverified -> verified at 10 backers, or rejected by the no-vote valve (decision 20261010-1530).
 export class Site {
   readonly #point: GeoPoint;
   #props: SiteProperties;
@@ -76,13 +78,10 @@ export class Site {
     return this.#props.verification !== "rejected";
   }
 
-  // Same type, within 40 m, not rejected; a cleaned site only takes an auto-verified report.
+  // Same type, within 40 m, not rejected; the models already passed the photo.
   accepts(report: MergeableReport): boolean {
-    const { report_type, verification, status } = this.#props;
+    const { report_type, verification } = this.#props;
     if (report_type !== report.reportType || verification === "rejected") {
-      return false;
-    }
-    if (status === "cleaned" && !report.autoVerified) {
       return false;
     }
     return this.#point.distanceTo(report.point) <= MERGE_RADIUS_M;
@@ -98,10 +97,8 @@ export class Site {
     this.#addReporter(report);
     this.#addEvidence(report);
     this.#adoptBinMeasure(report);
-    if (report.autoVerified) {
-      this.#confirmByReport();
-      this.#refreshInsights();
-    }
+    this.#reopenIfCleaned();
+    this.#settle();
     this.#recount();
   }
 
@@ -115,16 +112,21 @@ export class Site {
     }
   }
 
-  // Votes always count as corroborations but settle the site only during the community check.
+  // Votes always count, but only an unverified site can change verification.
   recordVotes(tally: VoteTally): void {
-    const before = this.#props;
-    const settled = before.verification === "community_check" ? tally.outcome() : null;
-    const votes = { confirm: tally.confirm, reject: tally.reject };
-    this.#props = { ...before, votes, verification: settled ?? before.verification };
-    if (settled === "verified") {
-      this.#confirmPendingReports();
-    }
+    this.#props = { ...this.#props, votes: { confirm: tally.confirm, reject: tally.reject } };
+    this.#internals = { ...this.#internals, yesVoters: tally.yesPeople, noVoters: tally.noPeople };
+    this.#settle();
     this.#recount();
+  }
+
+  // Migration to decision 20261010-1530: recounts from the stored photos and votes, forgetting the old verdict.
+  rebuild(tally: VoteTally): void {
+    const reports = this.#internals.reports.map((report) => ({ ...report, verified: false }));
+    this.#internals = { ...this.#internals, reports };
+    this.#props = { ...this.#props, verification: "unverified", verified_count: 0 };
+    this.#refreshInsights();
+    this.recordVotes(tally);
   }
 
   startCleanup(cleanupId: string): void {
@@ -159,8 +161,8 @@ export class Site {
   }
 
   voteResult(): VoteResult {
-    const { site_id, votes, verification } = this.#props;
-    return { site_id, votes, verification };
+    const { site_id, votes, backers, verification } = this.#props;
+    return { site_id, votes, backers, verification };
   }
 
   toFeature(): SiteFeature {
@@ -175,7 +177,7 @@ export class Site {
   #addReporter(report: MergeableReport): void {
     const { reports, reporterDevices, reporterUsers, meTooCount, embeddingKey } = this.#internals;
     const meToo = report.meTooSiteId === this.siteId && !this.#reportedBy(report);
-    const merged = { reportId: report.reportId, verified: report.autoVerified, insights: report.insights };
+    const merged = { reportId: report.reportId, verified: false, insights: report.insights };
     this.#internals = {
       ...this.#internals,
       reports: [...reports, merged],
@@ -187,14 +189,12 @@ export class Site {
     };
   }
 
-  // verified_count: docs/decisions/20261010-0253-hem-verified-count.md.
   #addEvidence(report: MergeableReport): void {
     const props = this.#props;
     const photos = report.photoUrl === null ? props.photo_urls : [report.photoUrl, ...props.photo_urls];
     this.#props = {
       ...props,
       report_count: props.report_count + 1,
-      verified_count: props.verified_count + (report.autoVerified ? 1 : 0),
       photo_urls: newestPhotos(photos),
       brands: mergeBrands(props.brands, report.brands),
       first_reported_at: earlierTime(props.first_reported_at, report.reportedAt),
@@ -202,17 +202,24 @@ export class Site {
     };
   }
 
-  #confirmByReport(): void {
-    const reopened = this.#props.status === "cleaned";
-    this.#props = {
-      ...this.#props,
-      verification: "verified",
-      status: reopened ? "reopened" : this.#props.status,
-      cleanup_status: reopened ? "none" : this.#props.cleanup_status,
-    };
+  #reopenIfCleaned(): void {
+    if (this.#props.status === "cleaned") {
+      this.#props = { ...this.#props, status: "reopened", cleanup_status: "none" };
+    }
   }
 
-  // Neighbours confirmed the site, so every report still waiting on that check counts as verified.
+  // Backers are the photo people plus the yes voters; settling happens only while unverified.
+  #settle(): void {
+    const { reporterIds, yesVoters, noVoters } = this.#internals;
+    const backers = new Backers(reporterIds, yesVoters, noVoters);
+    const outcome = this.#props.verification === "unverified" ? backers.outcome() : null;
+    this.#props = { ...this.#props, backers: backers.view(), verification: outcome ?? this.#props.verification };
+    if (this.#props.verification === "verified") {
+      this.#confirmPendingReports();
+    }
+  }
+
+  // Every report of a verified site counts as verified, including the ones that merge in later.
   #confirmPendingReports(): void {
     const pending = this.#internals.reports.filter((report) => !report.verified).length;
     const reports = this.#internals.reports.map((report) => ({ ...report, verified: true }));

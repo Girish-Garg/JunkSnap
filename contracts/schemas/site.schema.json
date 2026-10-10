@@ -28,19 +28,31 @@
     "properties": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "votes", "photo_urls", "cleanup_status", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
+      "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "backers", "votes", "photo_urls", "cleanup_status", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
       "properties": {
         "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
         "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"], "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)." },
         "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"] },
         "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
         "verification": {
-          "enum": ["verified", "community_check", "rejected"],
-          "description": "verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value."
+          "enum": ["unverified", "verified", "rejected"],
+          "description": "Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value."
         },
         "report_count": { "type": "integer", "minimum": 1 },
-        "verified_count": { "type": "integer", "minimum": 0 },
+        "verified_count": { "type": "integer", "minimum": 0, "description": "Reports that count as verified: every report of a verified site, 0 otherwise." },
         "corroborations": { "type": "integer", "minimum": 0, "description": "Confirm votes plus Me too reports from other devices." },
+        "backers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "needed", "photo_people", "vote_people"],
+          "description": "Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).",
+          "properties": {
+            "count": { "type": "integer", "minimum": 0, "description": "People who backed it either way; one person with a photo and a vote counts once." },
+            "needed": { "const": 10 },
+            "photo_people": { "type": "integer", "minimum": 0 },
+            "vote_people": { "type": "integer", "minimum": 0 }
+          }
+        },
         "votes": {
           "type": "object",
           "additionalProperties": false,

@@ -8,7 +8,6 @@ import { DynamoCleanupRepository } from "../../adapters/sites/DynamoCleanupRepos
 import { DynamoReportStatusWriter } from "../../adapters/sites/DynamoReportStatusWriter.js";
 import { DynamoSiteRepository } from "../../adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../adapters/sites/DynamoVoteRepository.js";
-import { DynamoVoterReputation } from "../../adapters/sites/DynamoVoterReputation.js";
 import { NgeohashCells } from "../../adapters/sites/NgeohashCells.js";
 import { S3EmbeddingStore } from "../../adapters/sites/S3EmbeddingStore.js";
 import { SiteItemMapper } from "../../adapters/sites/SiteItemMapper.js";
@@ -17,6 +16,7 @@ import { SystemClock } from "../../adapters/sites/SystemClock.js";
 import { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../domain/sites/PublicMedia.js";
 import type { Logger } from "../../ports/Logger.js";
+import { BackerMigration } from "../../services/sites/BackerMigration.js";
 import { CleanupIntake } from "../../services/sites/CleanupIntake.js";
 import { CleanupService } from "../../services/sites/CleanupService.js";
 import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
@@ -63,6 +63,11 @@ export class SiteServiceFactory {
     return this.#sites();
   }
 
+  backerMigration(): BackerMigration {
+    const votes = new DynamoVoteRepository(this.#clients.dynamo, this.#settings.tables.votes, this.#calls);
+    return new BackerMigration({ sites: this.#sites(), votes, reports: this.#reports(), retry: this.#retry });
+  }
+
   finder(): SiteFinder {
     return new SiteFinder(this.#sites(), this.#cells);
   }
@@ -73,7 +78,6 @@ export class SiteServiceFactory {
     return new VoteService({
       sites: this.#sites(),
       votes: new DynamoVoteRepository(dynamo, tables.votes, this.#calls),
-      reputation: new DynamoVoterReputation(dynamo, tables, this.#calls),
       reports: this.#reports(),
       clock: this.#clock,
       retry: this.#retry,

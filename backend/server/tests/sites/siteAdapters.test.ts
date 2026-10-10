@@ -6,7 +6,6 @@ import { DynamoCleanupRepository } from "../../src/adapters/sites/DynamoCleanupR
 import { DynamoReportStatusWriter } from "../../src/adapters/sites/DynamoReportStatusWriter.js";
 import { DynamoSiteRepository } from "../../src/adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../src/adapters/sites/DynamoVoteRepository.js";
-import { DynamoVoterReputation } from "../../src/adapters/sites/DynamoVoterReputation.js";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { SiteItemMapper } from "../../src/adapters/sites/SiteItemMapper.js";
 import type { WardScores } from "../../src/contracts/index.gen.js";
@@ -14,7 +13,7 @@ import { ExternalServiceError, InternalDataError } from "../../src/domain/errors
 import type { CleanupRecord } from "../../src/domain/sites/Cleanup.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { StaleSiteError } from "../../src/domain/sites/SiteErrors.js";
-import { DEVICE_B, fixture, report, userOf } from "./builders.js";
+import { DEVICE_B, fixture, report } from "./builders.js";
 import { FixedClock, RecordingLogger } from "./fakes.js";
 import { conditionFailed, failure, ScriptedClient } from "./ScriptedClient.js";
 
@@ -109,21 +108,6 @@ describe("DynamoVoteRepository", () => {
   });
 });
 
-describe("DynamoVoterReputation", () => {
-  it("takes the lower of the user's and the device's reputation, 0.5 when unknown", async () => {
-    const byTable = (command: { input: Record<string, unknown> }) =>
-      command.input.TableName === "users" ? { Item: { reputation: 0.3 } } : { Item: { reputation: 0.8 } };
-    const client = new ScriptedClient([], byTable);
-    const reputation = new DynamoVoterReputation(dynamo(client), { devices: "devices", users: "users" }, calls);
-    expect(await reputation.reputationOf({ deviceToken: DEVICE_B, userId: userOf(DEVICE_B) })).toBe(0.3);
-    expect(await reputation.reputationOf({ deviceToken: DEVICE_B, userId: null })).toBe(0.5);
-    expect(client.sent.at(-1)?.input).toMatchObject({ TableName: "devices", Key: { device_token: DEVICE_B } });
-    const unknown = new ScriptedClient([], () => ({ Item: { reputation: "high" } }));
-    const fresh = new DynamoVoterReputation(dynamo(unknown), { devices: "devices", users: "users" }, calls);
-    expect(await fresh.reputationOf({ deviceToken: DEVICE_B, userId: "user-1" })).toBe(0.5);
-  });
-});
-
 describe("DynamoReportStatusWriter", () => {
   it("writes each report only when its status differs, and swallows the refusals", async () => {
     const client = new ScriptedClient([() => ({}), conditionFailed]);
@@ -132,8 +116,8 @@ describe("DynamoReportStatusWriter", () => {
     expect(client.sent).toHaveLength(2);
     expect(client.sent[0]?.input).toMatchObject({
       Key: { report_id: "rpt_a" },
-      ConditionExpression: "#status IN (:verified, :community_check) AND #status <> :status",
-      ExpressionAttributeValues: { ":status": "verified", ":verified": "verified", ":community_check": "community_check" },
+      ConditionExpression: "#status IN (:unverified, :verified, :rejected, :community_check) AND #status <> :status",
+      ExpressionAttributeValues: { ":status": "verified", ":unverified": "unverified", ":community_check": "community_check" },
     });
   });
 
