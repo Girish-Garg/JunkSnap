@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
-SPLITS = ("train", "val", "test", "holdout")
+SPLITS = ("train", "val", "test")
 TRAINABLE_SPLITS = ("train", "val")
 
 
@@ -82,7 +82,6 @@ class ImageRecord:
     labels: tuple[str, ...] = ()
     boxes: tuple[Box, ...] = ()
     attributes: Attributes | None = None
-    group: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -97,7 +96,6 @@ class ImageRecord:
             labels=tuple(raw.get("labels", ())),
             boxes=tuple(Box(**box) for box in raw.get("boxes", ())),
             attributes=Attributes.from_json(attrs) if attrs else None,
-            group=raw.get("group"),
         )
 
 
@@ -118,8 +116,6 @@ class ManifestRow:
     brands: tuple[str, ...] = ()
     has_boxes: bool = False
     split: str | None = None
-    # Rows sharing a group (one scan or one site) always land in the same split.
-    group: str | None = None
 
     def with_split(self, split: str) -> ManifestRow:
         if split not in SPLITS:
@@ -142,5 +138,5 @@ class ManifestRow:
 
 MANIFEST_FIELDS = (
     "id", "source", "licence", "s3_key", "local_path", "report_type", "context",
-    "materials", "hazards", "size_class", "brands", "has_boxes", "split", "group",
+    "materials", "hazards", "size_class", "brands", "has_boxes", "split",
 )

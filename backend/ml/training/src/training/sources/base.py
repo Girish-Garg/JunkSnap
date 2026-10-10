@@ -27,13 +27,9 @@ class RawItem:
     labels: tuple[str, ...] = ()
     boxes: tuple[Box, ...] = ()
     attributes: Attributes | None = None
-    group: str | None = None
 
 
 class DatasetSource(ABC):
-    # Public archives hold the odd broken file; a broken field photo must stop the import.
-    skips_unreadable = True
-
     def __init__(self, info: SourceInfo, downloader: Downloader) -> None:
         self._info = info
         self._downloader = downloader

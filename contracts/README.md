@@ -235,9 +235,7 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `cleanups/{upload_id}.jpg` | cleanup after-photo originals |
 | same | `scans/{scan_id}.webm` or `.mp4` | scan videos, PUT by presigned URL; never public, never sent to a model |
 | same | `embeddings/{report_id or cleanup_id}.json` | image embeddings; `ml` may write only this prefix and reads only this prefix and `models/` in this bucket |
-| same | `datasets/{dataset}/...` | openly licensed public training images (decision 20261010-0200); `field` is reserved; offline training only, no pod has access |
-| same | `datasets/field/{report_id}.jpg` | blurred copies of field-audit reports, copied from `media/reports/`, never originals; offline training and evaluation only, no pod has access |
-| same | `datasets/field/records.jsonl` | labels and boxes of the field copies, written by `backend/ml/training` `import-field`; offline training only, no pod has access |
+| same | `datasets/{dataset}/...` | openly licensed public training images, their records and the OWLv2 teacher boxes (`teacher_boxes.jsonl`); models are trained and evaluated on public data only (decision 20261010-1245-hem-ml-public-data-only); offline training only, no pod has access |
 | same | `models/{name}/{sha256[:12]}-{file}` | trained model files (YOLO ONNX, SigLIP ONNX, embedding heads, meta-learner, phone model), written by `backend/ml/training` `learn publish`; `ml` reads them at start and checks the SHA-256 pinned in `backend/ml/src/ml/settings/models.json` |
 | same | `datasets/manifest.jsonl` | the dataset manifest (one line per image, with its split), written by `backend/ml/training` when it is over 5 MB; offline training only, no pod has access |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |

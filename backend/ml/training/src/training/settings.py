@@ -57,6 +57,3 @@ class Settings:
     def class_map_path(self) -> Path:
         return self.repo / CLASS_MAP
 
-    @property
-    def label_studio_path(self) -> Path:
-        return self.repo / "data" / "labels" / "label_studio.xml"

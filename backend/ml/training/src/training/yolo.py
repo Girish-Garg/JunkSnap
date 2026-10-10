@@ -1,4 +1,4 @@
-"""The `yolo-export` step: a YOLO-format detector dataset; holdout rows are never written."""
+"""The `yolo-export` step: a YOLO-format detector dataset of the public splits."""
 
 from __future__ import annotations
 

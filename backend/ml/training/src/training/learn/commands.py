@@ -33,7 +33,7 @@ class DetectorCommands:
 
         rows = [r for r in self._manifest().read() if r.source == args.source and r.split]
         labeller = TeacherLabeller(OwlTeacher(), self._cache)
-        records = labeller.label(r for r in rows if r.split != "holdout")
+        records = labeller.label(rows)
         TeacherBoxFile(self._cache, args.source).write(records, self._store)
         boxes = [b.label for r in records for b in r.boxes]
         counts = {k: boxes.count(k) for k in set(boxes)}

@@ -14,10 +14,10 @@ from training.manifest import ManifestBuilder, ManifestFile
 from training.sources.base import DatasetSource, RawItem, SourceInfo
 from training.split import Splitter
 
-LICENCES = {"taco": "CC-BY-4.0", "field": "private"}
+LICENCES = {"taco": "CC-BY-4.0"}
 MANIFEST_KEYS = {
     "id", "source", "licence", "s3_key", "local_path", "report_type", "context",
-    "materials", "hazards", "size_class", "brands", "has_boxes", "split", "group",
+    "materials", "hazards", "size_class", "brands", "has_boxes", "split",
 }
 
 
@@ -124,7 +124,7 @@ def test_a_build_never_quietly_drops_rows_from_the_s3_manifest(
     monkeypatch.setattr(manifest_module, "MAX_REPO_BYTES", 10)
     fetch(tmp_path / "cache", store)
     rows = ManifestBuilder(tmp_path / "cache", class_map, LICENCES).build(store)
-    extra = ManifestRow("field/rpt_other", "field", "private", None, None, "waste_dump")
+    extra = ManifestRow("taco/other", "taco", "CC-BY-4.0", None, None, "waste_dump")
     ManifestFile(tmp_path / "other", tmp_path, store).write([*rows, extra])
     with pytest.raises(ConfigError, match="1 ids this build lacks"):
         ManifestFile(tmp_path / "cache", tmp_path, store).write(rows)

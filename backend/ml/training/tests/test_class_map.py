@@ -84,15 +84,6 @@ def test_report_type_priority_prefers_waste_over_not_waste(class_map: ClassMap) 
     assert small.attributes_for(record("s", "a", "b")).report_type == "waste_dump"
 
 
-def test_field_attributes_pass_through_and_are_checked(class_map: ClassMap) -> None:
-    good = Attributes(report_type="waste_dump", context="vacant_plot", hazards=("burning",))
-    field = ImageRecord("field/a", "field", "field/a.jpg", attributes=good)
-    assert class_map.attributes_for(field) == good
-    wrong_pair = Attributes(report_type="no_bin", context="vacant_plot")
-    with pytest.raises(ConfigError):
-        class_map.attributes_for(ImageRecord("field/b", "field", "p", attributes=wrong_pair))
-
-
 def test_taco_map_covers_all_categories(class_map: ClassMap) -> None:
     classes = {name: class_map.yolo_class("taco", name) for name in TACO_NAMES}
     assert len(classes) == TACO_CATEGORIES

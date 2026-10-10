@@ -86,7 +86,7 @@ def test_stack_report_compares_each_signal_and_both_combiners() -> None:
     assert "meta-learner (meta-test)" in report.table(val)
 
 
-def test_case_writer_never_writes_the_field_holdout(tmp_path: Path) -> None:
+def test_case_writer_reads_only_val_or_test(tmp_path: Path) -> None:
     made = [ManifestRow("qr4change/a", "qr4change", "CC", None, "q/a.jpg", "waste_dump",
                         split="val")]
     writer = CaseWriter(tmp_path, ("qr4change",), fire_photos=0)
@@ -94,4 +94,4 @@ def test_case_writer_never_writes_the_field_holdout(tmp_path: Path) -> None:
     line = json.loads((tmp_path / "val.jsonl").read_text())
     assert line["truth"] == {"source": "qr4change", "waste": True, "burning": False}
     with pytest.raises(ConfigError):
-        writer.write(made, "holdout", tmp_path / "h.jsonl")
+        writer.write(made, "train", tmp_path / "h.jsonl")

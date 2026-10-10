@@ -21,8 +21,8 @@ class CaseWriter:
         self._fire_photos = fire_photos
 
     def write(self, rows: list[ManifestRow], split: str, out: Path) -> int:
-        if split == "holdout" or split not in ("val", "test"):
-            raise ConfigError("cases come from val or test; the field holdout has its own run")
+        if split not in ("val", "test"):
+            raise ConfigError("cases come from the val or test split")
         chosen = self._typed(rows, split) + self._fire(rows, split)
         out.parent.mkdir(parents=True, exist_ok=True)
         lines = [json.dumps(self._case(row)) for row in chosen]

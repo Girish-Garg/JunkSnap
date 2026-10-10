@@ -90,13 +90,6 @@
    "smoke": {"hazards": ["burning"], "yolo": "burning"},
    "fire": {"hazards": ["burning"], "yolo": "burning"},
    "none": {}
-  }},
-  "field": {"classes": {
-   "waste_pile": {"yolo": "waste_pile"},
-   "bag": {"yolo": "bag"},
-   "bin": {"yolo": "bin"},
-   "burning": {"yolo": "burning"},
-   "waste_item": {"yolo": "waste_item"}
   }}
  }
 }

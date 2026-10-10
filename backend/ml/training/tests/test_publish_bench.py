@@ -59,9 +59,9 @@ def test_bench_counts_unanswered_photos_as_wrong() -> None:
     assert "| nova | 4 | 3 |" in row.row()
 
 
-def test_benchmark_sample_is_capped_evenly_and_skips_the_holdout() -> None:
+def test_benchmark_sample_is_capped_evenly_and_skips_unsplit_rows() -> None:
     rows = [ManifestRow(f"s/{i:03d}", "s", "CC", None, None, None, split="train")
             for i in range(10)]
-    rows.append(ManifestRow("f/h", "field", "private", None, None, None, split="holdout"))
+    rows.append(ManifestRow("s/new", "s", "CC", None, None, None))
     picked = BenchmarkSample(5).rows(rows)
     assert [r.id for r in picked] == ["s/000", "s/002", "s/004", "s/006", "s/008"]
