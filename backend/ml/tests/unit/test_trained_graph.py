@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from ml.domain.errors import ConfigError
+from ml.adapters.s3_model_store import S3ModelStore
+from ml.domain.errors import ConfigError, ExternalServiceError
 from ml.domain.model_files import ModelPins, PinnedModel
 from ml.domain.verification import Thresholds
 from ml.handlers.trained_graph import TrainedModels
@@ -52,4 +53,18 @@ def test_without_a_bucket_the_v0_graph_runs_and_says_so(caplog: pytest.LogCaptur
     builder = VerifierBuilder(CoreSettings(), LlmSettings(), ModelSettings())
     verifier = builder.verifier()
     assert "trained_models_off" in caplog.text
+    assert verifier is not None
+
+
+def test_a_model_that_cannot_be_fetched_keeps_the_v0_graph_serving(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def refuse(self: object, model: PinnedModel) -> Path:
+        raise ExternalServiceError("AccessDenied on models/yolo")
+
+    monkeypatch.setattr(S3ModelStore, "fetch", refuse)
+    settings = ModelSettings(ORIGINALS_BUCKET="bucket")
+    verifier = VerifierBuilder(CoreSettings(), LlmSettings(), settings).verifier()
+    assert "trained_models_failed" in caplog.text
+    assert any(r.levelname == "ERROR" for r in caplog.records)
     assert verifier is not None

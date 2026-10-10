@@ -41,14 +41,13 @@ def test_yolo_is_neutral_on_claims_it_cannot_see() -> None:
     assert result.score == 0.5 and result.notes == ("no class for contaminated_water",)
 
 
-def test_embedding_signal_scores_waste_and_reads_composition() -> None:
+def test_embedding_signal_scores_waste_and_burning_but_no_composition() -> None:
     signal = EmbeddingSignal(FakeEmbedder((1.0, 0.0)), two_dim_heads())
     result = signal.measure(make_case())
     assert result.score > 0.95
     assert result.to_contract()["version"] == "amazon.titan-embed-image-v1/clf-test"
-    shares = {s.material: s.share for s in result.insights.composition}
-    assert shares == {"plastic": pytest.approx(1.0)}
-    assert result.insights.composition[0].source.signal == "embedding_classifier"
+    assert result.insights.composition == ()  # decision 0202: shares must be measured
+    assert result.insights.hazards[0].source.signal == "embedding_classifier"
     assert [h.hazard for h in result.insights.hazards] == ["burning"]
 
 

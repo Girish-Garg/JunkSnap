@@ -17,6 +17,7 @@ from ml.adapters.s3_images import S3BlurredImageStore
 from ml.adapters.s3_model_store import S3ModelStore
 from ml.adapters.secrets_manager import SecretsManagerSecretReader
 from ml.adapters.system_clock import SystemClock
+from ml.domain.errors import JunkSnapError
 from ml.domain.label_insights import LabelInsights
 from ml.domain.pricing import PriceTable
 from ml.domain.verification import Thresholds
@@ -59,11 +60,22 @@ class VerifierBuilder:
         signals: list[Signal] = [RekognitionLabelSignal(detector, LabelInsights())]
         judge = VisionJudge(self.provider_router(), self._prompt(JUDGE_PROMPT))
         combiner: Combiner = FixedWeightCombiner(Thresholds())
-        trained = self._trained()
+        trained = self._trained_parts()
         if trained is not None:
-            signals += trained.signals(self._embedding_sink())
-            combiner = trained.combiner(Thresholds())
+            signals += trained[0]
+            combiner = trained[1]
         return StackedVerifier(signals, judge, combiner, SystemClock())
+
+    def _trained_parts(self) -> tuple[list[Signal], Combiner] | None:
+        """A missing grant, download or hash keeps the v0 graph serving, logged as an error."""
+        trained = self._trained()
+        if trained is None:
+            return None
+        try:
+            return trained.signals(self._embedding_sink()), trained.combiner(Thresholds())
+        except JunkSnapError as error:
+            logger.error("trained_models_failed", extra={"fields": {"reason": str(error)}})
+            return None
 
     def _trained(self) -> TrainedModels | None:
         """Without ORIGINALS_BUCKET (tests, a laptop) only the v0 graph can run; it says so."""
