@@ -5,7 +5,6 @@ from importlib import resources
 from pathlib import Path
 
 import boto3
-import httpx
 from botocore.config import Config
 
 from ml.adapters.bedrock_converse import BedrockProviderBuilder
@@ -21,6 +20,7 @@ from ml.domain.errors import JunkSnapError
 from ml.domain.label_insights import LabelInsights
 from ml.domain.pricing import PriceTable
 from ml.domain.verification import Thresholds
+from ml.handlers.judge_timeouts import JudgeTimeouts
 from ml.handlers.trained_graph import TrainedModels
 from ml.ports.image_store import BlurredImageStore
 from ml.ports.llm_provider import ProviderBuilder
@@ -40,16 +40,22 @@ from ml.settings.models import ModelSettings
 JUDGE_PROMPT = "judge_v0.txt"
 # Few retries: a throttled provider should hand over to the next one quickly.
 AWS_CONFIG = Config(retries={"max_attempts": 2, "mode": "standard"}, read_timeout=60)
-HTTP_TIMEOUT_S = 60.0
 
 logger = logging.getLogger(__name__)
 
 
 class VerifierBuilder:
-    def __init__(self, core: CoreSettings, llm: LlmSettings, models: ModelSettings) -> None:
+    def __init__(
+        self,
+        core: CoreSettings,
+        llm: LlmSettings,
+        models: ModelSettings,
+        timeouts: JudgeTimeouts | None = None,
+    ) -> None:
         self._core = core
         self._llm = llm
         self._models = models
+        self._timeouts = timeouts or JudgeTimeouts()  # every Bedrock model call and OpenAI
         self._session = boto3.session.Session(region_name=core.aws_region)
 
     def service(self, images: BlurredImageStore) -> VerifyService:
@@ -85,7 +91,7 @@ class VerifierBuilder:
             return None
         s3 = self._session.client("s3", config=AWS_CONFIG)
         store = S3ModelStore(s3, self._models.originals_bucket, Path(self._models.model_dir))
-        bedrock = self._session.client("bedrock-runtime", config=AWS_CONFIG)
+        bedrock = self._session.client("bedrock-runtime", config=self._timeouts.aws_config())
         return TrainedModels(store, self._models.pins(), bedrock)
 
     def _embedding_sink(self) -> S3EmbeddingSink:
@@ -104,13 +110,10 @@ class VerifierBuilder:
             self._session.client("secretsmanager", config=AWS_CONFIG)
         )
         openai_secret = self._llm.openai_secret(self._core.stage)
+        bedrock = self._session.client("bedrock-runtime", config=self._timeouts.aws_config())
         return {
-            "bedrock": BedrockProviderBuilder(
-                self._session.client("bedrock-runtime", config=AWS_CONFIG)
-            ),
-            "openai": OpenAiProviderBuilder(
-                httpx.Client(timeout=HTTP_TIMEOUT_S), secrets, openai_secret
-            ),
+            "bedrock": BedrockProviderBuilder(bedrock),
+            "openai": OpenAiProviderBuilder(self._timeouts.http_client(), secrets, openai_secret),
         }
 
     @staticmethod
