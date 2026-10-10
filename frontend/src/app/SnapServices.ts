@@ -1,3 +1,4 @@
+import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
 import type { ScanCapture } from '../services/ScanCapture';
 import type { GpsWatcher } from '../services/GpsWatcher';
@@ -23,4 +24,5 @@ export interface SnapServices {
   readonly hasher: PhotoHasher;
   readonly gps: GpsWatcher;
   readonly siteActions: SiteActionService;
+  readonly areaLetters: AreaLetterService;
 }
