@@ -1,15 +1,17 @@
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import { AreaMarkerLayer, BADGE_IMAGES, INLINE_IMAGES, markerText } from '../../layers/boundaries/AreaMarkerLayer';
+import { AreaMarkerLayer, BADGE_IMAGES, INLINE_IMAGES, markerFilter } from '../../layers/boundaries/AreaMarkerLayer';
 import { BoundaryFillLayer } from '../../layers/boundaries/BoundaryFillLayer';
 import type { BoundaryContext, BoundaryLayer } from '../../layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../../layers/boundaries/BoundaryLineLayer';
+import { FocusLineLayer } from '../../layers/boundaries/FocusLineLayer';
 import { OutdatedLineLayer } from '../../layers/boundaries/OutdatedLineLayer';
+import type { MapAreaKind } from '../../services/BoundaryCatalog';
 import type { AreaMarker } from './AreaMarkers';
 import { AreaMarkerSource, type LabelLoader } from './AreaMarkerSource';
+import { AreaStates } from './AreaStates';
 import { BadgeArt } from './BadgeArt';
 import type { BadgeKind, InlineGlyph } from './BadgeIcons';
 import { MarkerTooltip } from './MarkerTooltip';
-import type { MapAreaKind } from '../../services/BoundaryCatalog';
 
 const KINDS: readonly unknown[] = ['assembly', 'loksabha'] satisfies MapAreaKind[];
 
@@ -18,10 +20,11 @@ export interface BoundaryFiles extends LabelLoader {
   fineUrl(): string;
 }
 
-/** An area under a tap: its own kind (assembly seat or Lok Sabha seat) and id. */
+/** An area under a tap: its own kind (assembly seat or Lok Sabha seat), id and name. */
 export interface AreaHit {
   readonly kind: MapAreaKind;
   readonly id: string;
+  readonly name: string;
 }
 
 /** How to draw the areas; `fine` says there is an original-edge file for close zooms. */
@@ -31,14 +34,17 @@ export interface BoundaryView {
   readonly attribution?: string;
 }
 
+const MARKERS = new AreaMarkerLayer();
+const FOCUS_MARKER = new AreaMarkerLayer(true);
 const LAYERS: readonly BoundaryLayer[] = [
   new BoundaryFillLayer(),
   new BoundaryLineLayer(),
   new OutdatedLineLayer(),
-  new AreaMarkerLayer(),
+  new FocusLineLayer(),
+  MARKERS,
+  FOCUS_MARKER,
 ];
-const MARKER_LAYER = 'boundary-marker';
-const PICKABLE = [MARKER_LAYER, 'boundary-fill'];
+const PICKABLE = [FOCUS_MARKER.id, MARKERS.id, 'boundary-fill'];
 const POLYGONS = 'boundary-polygons';
 const LABELS = 'boundary-labels';
 // Original edges load once the map is zoomed in past the city view.
@@ -49,7 +55,8 @@ const SEAT_CREDIT =
 
 /**
  * The map's areas (assembly seats where they exist, Lok Sabha seats elsewhere) and their markers under the
- * site layers, filled by colour per area id through feature state.
+ * site layers: each area tinted apart from its neighbours, or coloured by its shown score, through feature
+ * state; the area in focus gets a thick outline and a marker that is always shown.
  */
 export class BoundaryOverlay {
   readonly #map: MapLibreMap;
@@ -57,8 +64,8 @@ export class BoundaryOverlay {
   /** The first site layer; markers go just below it. */
   readonly #siteLayerId: string | undefined;
   readonly #markers: AreaMarkerSource;
+  readonly #states: AreaStates;
   #view: BoundaryView | null = null;
-  #colors: ReadonlyMap<string, string> = new Map();
   #fineLoaded = false;
   #ready = false;
   #dark = false;
@@ -68,8 +75,9 @@ export class BoundaryOverlay {
     this.#files = files;
     this.#siteLayerId = siteLayerId;
     this.#markers = new AreaMarkerSource(map, files, LABELS);
+    this.#states = new AreaStates(map, POLYGONS);
     map.on('zoomend', () => this.#loadFineEdges());
-    new MarkerTooltip(map, MARKER_LAYER);
+    new MarkerTooltip(map, MARKERS.id);
   }
 
   /** Called once the style and the site layers are in. */
@@ -79,13 +87,20 @@ export class BoundaryOverlay {
     this.#render();
   }
 
-  /** Dark badges with light text in the dark theme, switched in place like the basemap. */
+  /** Dark badges, light text and the dark tints in the dark theme, switched in place like the basemap. */
   setDark(dark: boolean): void {
     if (dark === this.#dark) return;
     this.#dark = dark;
     if (!this.#ready) return;
     this.#drawBadges();
-    if (this.#map.getLayer(MARKER_LAYER)) this.#map.setLayoutProperty(MARKER_LAYER, 'text-field', markerText(dark));
+    for (const layer of LAYERS) this.#restyle(layer, dark);
+  }
+
+  #restyle(layer: BoundaryLayer, dark: boolean): void {
+    const themed = layer.themed?.(dark);
+    if (!themed || !this.#map.getLayer(layer.id)) return;
+    for (const [name, value] of themed.paint ?? []) this.#map.setPaintProperty(layer.id, name, value);
+    for (const [name, value] of themed.layout ?? []) this.#map.setLayoutProperty(layer.id, name, value);
   }
 
   #drawBadges(): void {
@@ -111,9 +126,19 @@ export class BoundaryOverlay {
     return view ? `${String(view.fine)}|${view.attribution ?? ''}` : '';
   }
 
+  /** Score colours of the areas that show a score. */
   paint(colors: ReadonlyMap<string, string>): void {
-    this.#colors = colors;
-    this.#applyColors();
+    this.#states.paint(colors);
+  }
+
+  /** Neighbour tint slots of every area. */
+  tint(tints: ReadonlyMap<string, number>): void {
+    this.#states.tint(tints);
+  }
+
+  /** The area to outline and label, or null. */
+  focus(id: string | null): void {
+    if (this.#states.setFocus(id)) this.#filterMarkers();
   }
 
   label(markers: ReadonlyMap<string, AreaMarker>): void {
@@ -125,9 +150,9 @@ export class BoundaryOverlay {
     const layers = PICKABLE.filter((id) => this.#map.getLayer(id));
     if (!this.#view || layers.length === 0) return null;
     const [hit] = this.#map.queryRenderedFeatures(point, { layers });
-    const id: unknown = hit?.properties['id'];
-    const kind: unknown = hit?.properties['kind'];
-    return typeof id === 'string' && KINDS.includes(kind) ? { kind: kind as MapAreaKind, id } : null;
+    const { id, kind, name } = hit?.properties ?? {};
+    if (typeof id !== 'string' || !KINDS.includes(kind)) return null;
+    return { kind: kind as MapAreaKind, id, name: typeof name === 'string' ? name : id };
   }
 
   #render(): void {
@@ -143,8 +168,16 @@ export class BoundaryOverlay {
     const underLabels = this.#firstBasemapLabel();
     for (const layer of LAYERS) this.#map.addLayer(layer.spec(context), layer.onTop ? this.#siteLayer() : underLabels);
     this.#markers.load();
-    this.#applyColors();
+    this.#states.apply();
+    this.#filterMarkers();
     this.#loadFineEdges();
+  }
+
+  /** The focus marker shows the area in focus alone; the others leave it out so it is never drawn twice. */
+  #filterMarkers(): void {
+    const focus = this.#states.focus;
+    if (this.#map.getLayer(MARKERS.id)) this.#map.setFilter(MARKERS.id, markerFilter(false, focus));
+    if (this.#map.getLayer(FOCUS_MARKER.id)) this.#map.setFilter(FOCUS_MARKER.id, markerFilter(true, focus));
   }
 
   /** Swaps in the original edges once, the first time the map is closer than the city view. */
@@ -154,18 +187,12 @@ export class BoundaryOverlay {
     if (!source) return;
     this.#fineLoaded = true;
     source.setData(this.#files.fineUrl());
-    this.#applyColors();
+    this.#states.apply();
   }
 
   #clear(): void {
     for (const layer of LAYERS) if (this.#map.getLayer(layer.id)) this.#map.removeLayer(layer.id);
     for (const source of [POLYGONS, LABELS]) if (this.#map.getSource(source)) this.#map.removeSource(source);
-  }
-
-  #applyColors(): void {
-    if (!this.#map.getSource(POLYGONS)) return;
-    this.#map.removeFeatureState({ source: POLYGONS });
-    for (const [id, fill] of this.#colors) this.#map.setFeatureState({ source: POLYGONS, id }, { fill });
   }
 
   #siteLayer(): string | undefined {

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/report_list.schema.json",
+  "title": "report_list",
+  "description": "The signed-in user's own Snap reports (photos and no-bin reports; scan frames are left out), newest received first, from GET /me/reports?limit=&cursor=. Read from the reports by-user GSI, so only rows whose user_id is the token's sub. Each item is exactly the GET /reports/{id} response for that report. Guest reports made before accounts have no user_id and never appear.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reports", "next_cursor"],
+  "properties": {
+    "reports": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "At most limit items (20 by default, at most 50). A page can hold fewer than limit while next_cursor is not null; keep paging until it is null. report, moderation and verification are the report_upload, moderation_result and verification_result bodies; validate them against those schemas (schemas here never reference each other).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["report_id", "status", "site_id", "blurred_url", "report", "moderation", "verification", "received_at", "updated_at"],
+        "properties": {
+          "report_id": { "type": "string", "pattern": "^rpt_[0-9a-z_]{1,64}$" },
+          "status": { "enum": ["queued", "processing", "unverified", "community_check", "verified", "rejected", "needs_review", "withdrawn", "needs_confirmation", "not_confirmed"], "description": "needs_confirmation and not_confirmed since contracts v1.16: the judge was unsure and the reporter is asked, or did not answer in time." },
+          "site_id": { "type": ["string", "null"] },
+          "blurred_url": { "type": ["string", "null"], "format": "uri" },
+          "report": { "type": "object", "required": ["upload_id", "report_type", "context", "capture_mode", "gps", "captured_at"] },
+          "moderation": { "type": ["object", "null"] },
+          "verification": { "type": ["object", "null"] },
+          "confirmation": {
+            "description": "Contracts v1.16: null unless the verify step asked the reporter; as in the GET /reports/{id} response. Not in required, so v1.14 producers stay valid.",
+            "anyOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["question", "reasoning", "report_type", "asked_at", "expires_at", "answer", "answered_at"],
+                "properties": {
+                  "question": { "type": "string" },
+                  "reasoning": { "type": "string", "maxLength": 300 },
+                  "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] },
+                  "asked_at": { "type": "string", "format": "date-time" },
+                  "expires_at": { "type": "string", "format": "date-time" },
+                  "answer": { "enum": ["sure", "withdrawn", "expired", null] },
+                  "answered_at": { "type": ["string", "null"], "format": "date-time" }
+                }
+              }
+            ]
+          },
+          "received_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time", "description": "The row's last change; the app keeps it as the item's freshness token." }
+        }
+      }
+    },
+    "next_cursor": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9_-]{1,1024}$",
+      "description": "Opaque; pass it back as cursor for the next page. Null on the last page. A cursor only opens the user who received it."
+    }
+  }
+}

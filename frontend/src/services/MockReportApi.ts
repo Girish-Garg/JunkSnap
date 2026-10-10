@@ -1,5 +1,6 @@
 import { ApiError } from '../domain/ApiError';
 import type { ConfirmRequest } from '../domain/ReportConfirmation';
+import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatus, ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import type { SiteFeature } from '../domain/Site';
@@ -73,6 +74,12 @@ export class MockReportApi implements ReportApi {
     await this.#wait();
     if (!this.#confirmations) throw new ApiError(409, 'confirmation_closed', 'This report is not waiting for an answer.');
     return this.#confirmations.answer(reportId, request.sure, new Date());
+  }
+
+  /** Mock mode keeps nothing off the phone, so the server list is empty and Activity keeps its own rows. */
+  async mine(): Promise<ReportListPage> {
+    await this.#wait();
+    return { reports: [], next_cursor: null };
   }
 
   #wait(): Promise<void> {

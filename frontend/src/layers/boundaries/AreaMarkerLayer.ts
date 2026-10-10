@@ -1,5 +1,5 @@
-import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
-import { MARKER_MIN_ZOOM, type BoundaryContext, type BoundaryLayer } from './BoundaryLayer';
+import type { ExpressionSpecification, FilterSpecification, LayerSpecification } from 'maplibre-gl';
+import { MARKER_MIN_ZOOM, type BoundaryContext, type BoundaryLayer, type ThemedProperties } from './BoundaryLayer';
 
 /** Badge image names by marker basis; score and count badges carry a glyph left of the text. */
 export const BADGE_IMAGES = { plain: 'area-badge', score: 'area-badge-score', count: 'area-badge-count' } as const;
@@ -46,21 +46,45 @@ export function markerText(dark: boolean): ExpressionSpecification {
   ] as ExpressionSpecification;
 }
 
+/** No area id matches it: the focus marker's filter while nothing is in focus. */
+export const NO_AREA = '';
+
+/** Every marker but the one in focus, or only the one in focus. */
+export function markerFilter(focus: boolean, id: string | null): FilterSpecification {
+  return [focus ? '==' : '!=', ['get', 'id'], id ?? NO_AREA];
+}
+
+// The focus marker shows from a state-wide view and never gives way to another marker.
+const FOCUS_MIN_ZOOM = 5;
+
 /**
  * Each area's marker: a small badge at its pole of inaccessibility with its name, a score or photo glyph
  * and a number (no words: MapLibre cannot shape Devanagari; the tooltip and legend carry them). Collisions
  * hide the later markers; the worst areas place first (marker_rank). Larger as the map zooms in.
+ * The focus variant draws the same badge for the area in focus alone, always shown, over the others.
  */
 export class AreaMarkerLayer implements BoundaryLayer {
-  readonly id = 'boundary-marker';
+  readonly id: string;
   readonly onTop = true;
+  readonly #focus: boolean;
+
+  constructor(focus = false) {
+    this.#focus = focus;
+    this.id = focus ? 'boundary-marker-focus' : 'boundary-marker';
+  }
+
+  themed(dark: boolean): ThemedProperties {
+    return { layout: [['text-field', markerText(dark)]] };
+  }
 
   spec({ labelSource, dark }: BoundaryContext): LayerSpecification {
+    const focus = this.#focus;
     return {
       id: this.id,
       type: 'symbol',
       source: labelSource,
-      minzoom: MARKER_MIN_ZOOM,
+      minzoom: focus ? FOCUS_MIN_ZOOM : MARKER_MIN_ZOOM,
+      filter: markerFilter(focus, null),
       layout: {
         'text-field': markerText(dark),
         'text-font': ['Noto Sans Regular'],
@@ -71,8 +95,8 @@ export class AreaMarkerLayer implements BoundaryLayer {
         'icon-text-fit': 'both',
         'icon-text-fit-padding': [3, 6, 3, 2],
         'symbol-sort-key': ['coalesce', ['get', 'marker_rank'], 9999],
-        'text-allow-overlap': false,
-        'icon-allow-overlap': false,
+        'text-allow-overlap': focus,
+        'icon-allow-overlap': focus,
         'text-padding': 4,
       },
     };

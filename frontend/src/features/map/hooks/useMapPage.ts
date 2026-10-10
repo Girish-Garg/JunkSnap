@@ -24,7 +24,7 @@ export function useMapPage() {
   const selection = useMapSelection(loaded.sites);
   const location = useLocate();
   const flash = useMapFlash();
-  const { boundary, layerBindings } = useMapLayers(mode, selection);
+  const { boundary, areaCard, layerBindings } = useMapLayers(mode, selection, location.position);
   const settled = loaded.loaded && !loaded.pending && !loaded.failed && !partial;
   const discovery = { view, located: location.position !== null, camera: selection.camera, frame: selection.frame };
   const nearby = useMapDiscovery({ ...discovery, empty: settled && loaded.sites.length === 0, found: settled && loaded.sites.length > 0 });
@@ -35,5 +35,5 @@ export function useMapPage() {
   // Every route but the bare map opens a sheet, and so do Filters and the stack list.
   const sheetOpen = pathname !== '/' || filtersOpen || selection.stack !== null;
   const refresh = { refreshSites: loaded.refresh, announce: flash.announce };
-  return { loaded: loaded.sites, sites, setView, selection, location, notice, showNearest, sheetOpen, filters, boundary, layerBindings, ...refresh };
+  return { loaded: loaded.sites, sites, setView, selection, location, notice, showNearest, sheetOpen, filters, boundary, areaCard, layerBindings, ...refresh };
 }

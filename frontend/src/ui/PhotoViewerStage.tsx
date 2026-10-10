@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { PhotoCover } from './PhotoCover';
 import type { GestureOutcome } from './PhotoGesture';
 import { usePhotoGestures } from './usePhotoGestures';
 import type { ViewerPhoto } from './ViewerPhoto';
@@ -18,7 +19,9 @@ export function PhotoViewerStage({ photo, onOutcome }: PhotoViewerStageProps) {
   };
   return (
     <div className={`photo-viewer__stage${dragging ? ' photo-viewer__stage--dragging' : ''}`} data-testid="photo-stage" data-own-drag="" {...handlers}>
-      <img key={photo.url} className="photo-viewer__image" src={photo.url} alt={photo.alt} style={style} draggable={false} decoding="async" />
+      <PhotoCover warned={photo.warned === true}>
+        <img key={photo.url} className="photo-viewer__image" src={photo.url} alt={photo.alt} style={style} draggable={false} decoding="async" />
+      </PhotoCover>
     </div>
   );
 }

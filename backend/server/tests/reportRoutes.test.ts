@@ -16,6 +16,7 @@ import { SnapLimit } from "../src/services/SnapLimit.js";
 import { UploadPresigner } from "../src/services/UploadPresigner.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
+import { fakeMine } from "./myReportsFakes.js";
 import {
   FakeReportQueue,
   FakeReportRepository,
@@ -87,7 +88,8 @@ beforeEach(async () => {
   const presigner = new UploadPresigner({ signer, ids: new CountingIds(), clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue, clock });
   const statuses = new ReportStatusReader(reports, PUBLIC_BASE_URL, clock);
-  const plugin = new ReportEndpoints({ presigner, intake, statuses }, new RouteGuard(new FakeAuthenticator())).plugin();
+  const mine = fakeMine(reports, PUBLIC_BASE_URL, clock);
+  const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new FakeAuthenticator())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
 });

@@ -1,4 +1,5 @@
 import type { ActivityRemover } from '../services/ActivityRemover';
+import type { ActivitySync } from '../services/ActivitySync';
 import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
 import type { CompassHeading } from '../services/CompassHeading';
@@ -21,6 +22,8 @@ export interface SnapServices {
   readonly tracker: ReportTracker;
   /** The reporter's answer when the check was unsure (contracts v1.16). */
   readonly confirmer: ReportConfirmer;
+  /** Brings Activity in line with the user's reports on the server (GET /me/reports) when its token is stale. */
+  readonly activity: ActivitySync;
   readonly scans: ScanQueue;
   readonly scanTracker: ScanTracker;
   readonly recorder: VideoRecorder;

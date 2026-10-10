@@ -86,7 +86,7 @@ describe('SitePanel expiry line', () => {
     const site = testSite({ status: 'expired', expires_at: '2026-01-01T00:00:00Z', ...PENDING });
     await renderApp(<SitePanel site={site} userLocation={null} />);
     expect(screen.getByText(/This site expired and left the map/)).toBeInTheDocument();
-    expect(screen.getByText('Expired')).toHaveClass('badge--expired');
+    expect(screen.getByText('Expired')).toHaveClass('status-chip--closed');
     expect(screen.queryByText(/^Expires/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: "It's cleared now" })).not.toBeInTheDocument();
   });

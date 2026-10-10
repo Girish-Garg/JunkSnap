@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
-import type { ReportUpload, VerificationResult } from "../src/contracts/index.gen.js";
+import { validateReportList, type ReportUpload, type VerificationResult } from "../src/contracts/index.gen.js";
 import { UnauthorizedError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
@@ -18,6 +18,7 @@ import { UploadPresigner } from "../src/services/UploadPresigner.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { memoryCounters } from "./letters/support.js";
 import { LogSink } from "./LogSink.js";
+import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, fixture, FixedClock, moderation, OTHER_DEVICE, upload } from "./reportFakes.js";
 
 const RECEIVED = "2026-10-11T09:39:50Z";
@@ -56,7 +57,8 @@ beforeEach(async () => {
   const statuses = new ReportStatusReader(reports, BASE_URL, clock);
   const limiter = new LetterRateLimiter(counters, 20, "confirmations");
   const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: BASE_URL });
-  const plugins = [new ReportEndpoints({ presigner, intake, statuses }, guard).plugin(), new ReportConfirmEndpoint(confirmer, guard).plugin()];
+  const mine = fakeMine(reports, BASE_URL, clock);
+  const plugins = [new ReportEndpoints({ presigner, intake, statuses, mine }, guard).plugin(), new ReportConfirmEndpoint(confirmer, guard).plugin()];
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), plugins, logger);
   storeAsked();
@@ -228,5 +230,28 @@ describe("GET /reports/{id} with a confirmation", () => {
     expect(json).toMatchObject({ status: "not_confirmed", confirmation: { answer: "expired", answered_at: EXPIRES } });
     expect(reports.stored("rpt_jdh_1").status).toBe("not_confirmed");
     expect((await confirm({ sure: true })).json()).toMatchObject({ error: "confirmation_closed" });
+  });
+});
+
+describe("GET /me/reports with a confirmation (contracts v1.16)", () => {
+  const mine = () => app.inject({ url: "/me/reports", headers: headers(USER) });
+
+  it("lists a waiting report with its question, valid against report_list", async () => {
+    const body = (await mine()).json();
+    expect(() => validateReportList(body)).not.toThrow();
+    expect(body.reports[0]).toMatchObject({ status: "needs_confirmation", confirmation: { answer: null, expires_at: EXPIRES } });
+  });
+
+  it("lists a report past its window as not_confirmed", async () => {
+    clock.advance(Date.parse(EXPIRES) - Date.parse(NOW) + 1_000);
+    const body = (await mine()).json();
+    expect(() => validateReportList(body)).not.toThrow();
+    expect(body.reports[0]).toMatchObject({ status: "not_confirmed", confirmation: { answer: "expired" } });
+  });
+
+  it("lists a confirmed report as processing with the reporter's sure answer", async () => {
+    await confirm({ sure: true });
+    const body = (await mine()).json();
+    expect(body.reports[0]).toMatchObject({ status: "processing", confirmation: { answer: "sure" } });
   });
 });

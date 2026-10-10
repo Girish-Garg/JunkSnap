@@ -4,6 +4,7 @@ import { SiteLifecycle } from '../../domain/SiteLifecycle';
 /** Why a site takes no more votes, photos or letters; the key under site.closed.* in the i18n files. */
 export type ClosedReason =
   | 'removed'
+  | 'photosReported'
   | 'expired'
   | 'rejected'
   | 'rejectedNoBin'
@@ -28,6 +29,8 @@ export class SiteClosure {
     if (site.verification === 'rejected') return site.report_type === 'no_bin' ? 'rejectedNoBin' : 'rejected';
     if (new SiteLifecycle(site).isActive()) return null;
     if (site.status === 'cleaned') return SiteClosure.#cleaned(site);
+    // Decision 20261011-0310-hem-photo-flags: many people reported every photo of an unverified site.
+    if (site.removed_reason === 'photos_reported') return 'photosReported';
     return BY_STATUS.get(site.status) ?? 'other';
   }
 

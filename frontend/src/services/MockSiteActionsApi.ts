@@ -1,5 +1,6 @@
 import { ApiError } from '../domain/ApiError';
 import type { NoteRequest, SiteNote } from '../domain/Community';
+import type { PhotoFlagRequest, PhotoFlagResult } from '../domain/PhotoFlag';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import type { SiteFeature } from '../domain/Site';
 import type { SiteActionsApi } from './SiteActionsApi';
@@ -42,6 +43,16 @@ export class MockSiteActionsApi implements SiteActionsApi {
     const { verification, backers } = (await this.#sources.site(siteId)).properties;
     if (verification === 'verified') throw new ApiError(409, 'site_verified', 'Ten people have verified this site');
     return { site_id: siteId, withdrawn_report_ids: [], site_removed: true, status: 'removed', verification, backers };
+  }
+
+  /** Mock mode counts this phone's report on top of the fixture's; nothing is covered or hidden here. */
+  async flagPhoto(siteId: string, photoId: string, request: PhotoFlagRequest): Promise<PhotoFlagResult> {
+    await this.#wait();
+    const { photo_flags: flags = [], status } = (await this.#sources.site(siteId)).properties;
+    const before = flags.find((entry) => entry.photo_id === photoId) ?? { count: 0, warned: false, hidden: false };
+    const photo = { count: before.count + 1, warned: before.warned, hidden: before.hidden };
+    const text_status = request.text ? 'shown' : 'none';
+    return { site_id: siteId, photo_id: photoId, reason: request.reason, text_status, photo, site_status: status, created_at: new Date().toISOString() };
   }
 
   async cleanup(siteId: string, request: CleanupRequest): Promise<CleanupAccepted> {

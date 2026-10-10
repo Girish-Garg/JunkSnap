@@ -1,11 +1,16 @@
+import { RelativeTime } from './RelativeTime';
+
 // Both locales group digits the Indian way (1,00,000).
 const LOCALE_TAGS: Readonly<Record<string, string>> = { en: 'en-IN', hi: 'hi-IN' };
+/** Shown for a number the app does not have. */
+export const MISSING = '–';
 
 export class LocaleFormatter {
   readonly #numbers: Intl.NumberFormat;
   readonly #metres: Intl.NumberFormat;
   readonly #kilometres: Intl.NumberFormat;
   readonly #dates: Intl.DateTimeFormat;
+  readonly #relative: RelativeTime;
 
   constructor(language: string) {
     const locale = LOCALE_TAGS[language] ?? 'en-IN';
@@ -17,18 +22,27 @@ export class LocaleFormatter {
       timeStyle: 'short',
       timeZone: 'Asia/Kolkata',
     });
+    this.#relative = new RelativeTime(locale);
   }
 
+  /** A missing or broken number (NaN, Infinity) shows as a dash, never as "NaN". */
   distance(metres: number): string {
+    if (!Number.isFinite(metres)) return MISSING;
     if (metres < 1000) return this.#metres.format(Math.round(metres / 10) * 10);
     return this.#kilometres.format(metres / 1000);
   }
 
   number(value: number): string {
+    if (!Number.isFinite(value)) return MISSING;
     return this.#numbers.format(value);
   }
 
   dateTime(isoTimestamp: string): string {
     return this.#dates.format(new Date(isoTimestamp));
+  }
+
+  /** "2 min ago" against nowMs; a short date once it is a week old. */
+  ago(isoTimestamp: string, nowMs: number): string {
+    return this.#relative.format(isoTimestamp, nowMs);
   }
 }

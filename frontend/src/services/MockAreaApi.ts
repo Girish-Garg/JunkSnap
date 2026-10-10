@@ -5,10 +5,11 @@ import type { AreaListing } from '../domain/AreaListing';
 import { AreaRanking } from '../domain/AreaRanking';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
 import type { SiteFeature } from '../domain/Site';
-import type { AreaApi } from './AreaApi';
 import type { AreaFixtureLoaders } from './areaFixtures';
 import type { CrawlFixtureLoaders } from './crawlFixtures';
+import type { Tagged } from './ExpiringCache';
 import type { SiteFixtureLoaders } from './siteFixtures';
+import type { TaggedAreaApi } from './TaggedAreaApi';
 import { ZeroAreaScores } from './ZeroAreaScores';
 
 const MAX_LIMIT = 200;
@@ -17,7 +18,7 @@ const MAX_LIMIT = 200;
  * Mirrors the api: a fixture row, else the worker's zero row for an area with sites, else area_not_found.
  * A district's crawl is its fixture, else not_started, as for a district with no crawls row.
  */
-export class MockAreaApi implements AreaApi {
+export class MockAreaApi implements TaggedAreaApi {
   readonly #scores: AreaFixtureLoaders;
   readonly #sites: SiteFixtureLoaders;
   readonly #crawls: CrawlFixtureLoaders;
@@ -52,6 +53,11 @@ export class MockAreaApi implements AreaApi {
       .sort(AreaRanking.compare);
     const capped = Math.min(Math.max(limit, 1), MAX_LIMIT);
     return { kind, within, total: areas.length, limit: capped, areas: areas.slice(0, capped) };
+  }
+
+  /** Fixtures carry no ETag, so every listing is untagged. */
+  async listTagged(kind: AreaKind, within: string, limit: number): Promise<Tagged<AreaListing>> {
+    return { value: await this.list(kind, within, limit), token: null };
   }
 
   async #loadScores(): Promise<AreaScores[]> {

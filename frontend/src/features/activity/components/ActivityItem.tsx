@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import type { QueuedReport } from '../../../domain/QueuedReport';
-import { useFormatter } from '../../../i18n/useFormatter';
 import { TypeIcon } from '../../../ui/TypeIcon';
 import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
 import { ActivityActions } from './ActivityActions';
+import { ActivityMeta } from './ActivityMeta';
 import { ReportNotices } from './ReportNotices';
 
 interface ActivityItemProps {
@@ -13,33 +13,33 @@ interface ActivityItemProps {
   readonly onOpen: () => void;
 }
 
+/** One photo report as a card: thumbnail beside type, place and time, and status; actions along the foot. */
 export function ActivityItem({ report, onOpen }: ActivityItemProps) {
   const { t } = useTranslation();
-  const format = useFormatter();
   const { draft, status } = report.data;
   const blurred = status?.blurred_url ?? null;
   const thumb = <ReportThumb key={blurred ?? 'none'} url={blurred} />;
   return (
-    <li className="report-row">
-      {blurred ? (
-        <button type="button" className="photo-open photo-open--thumb" title={t('viewer.open')} onClick={onOpen}>
-          {thumb}
-        </button>
-      ) : (
-        thumb
-      )}
-      <div className="report-row__body">
-        <p className="report-row__title">
-          <TypeIcon type={draft.report_type} size={16} />
-          {t(`reportType.${draft.report_type}`)}
-        </p>
-        <p className="report-row__meta">
-          {t(`context.${draft.context}`)} · {format.dateTime(draft.captured_at)}
-        </p>
-        <ProgressBadge report={report} />
-        <ReportNotices report={report} />
-        <ActivityActions report={report} />
+    <li className="activity-card">
+      <div className="activity-card__head">
+        {blurred ? (
+          <button type="button" className="photo-open activity-card__thumb" title={t('viewer.open')} onClick={onOpen}>
+            {thumb}
+          </button>
+        ) : (
+          <span className="activity-card__thumb">{thumb}</span>
+        )}
+        <div className="activity-card__body">
+          <p className="activity-card__title">
+            <TypeIcon type={draft.report_type} size={20} />
+            {t(`reportType.${draft.report_type}`)}
+          </p>
+          <ActivityMeta place={t(`context.${draft.context}`)} at={draft.captured_at} />
+          <ProgressBadge report={report} />
+        </div>
       </div>
+      <ReportNotices report={report} />
+      <ActivityActions report={report} />
     </li>
   );
 }

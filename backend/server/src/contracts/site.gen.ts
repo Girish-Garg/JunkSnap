@@ -67,9 +67,9 @@ export interface Site {
       still_there: number;
     };
     /**
-     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. Null otherwise. Not in required so older rows stay valid.
+     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid.
      */
-    removed_reason?: "withdrawn" | null;
+    removed_reason?: "withdrawn" | "photos_reported" | null;
     /**
      * When the site was removed; null otherwise. Not in required so older rows stay valid.
      */
@@ -116,7 +116,7 @@ export interface Site {
       cleaned?: number;
     };
     /**
-     * Blurred public copies, newest first. Never an original.
+     * Blurred public copies, newest first. Never an original. A photo's id is its report id, the file name of its key media/reports/{report_id}.jpg. A photo hidden after many reports (photo_flags) is left out.
      *
      * @maxItems 6
      */
@@ -128,6 +128,27 @@ export interface Site {
       | [string, string, string, string]
       | [string, string, string, string, string]
       | [string, string, string, string, string, string];
+    /**
+     * Contracts v1.15, decision 20261011-0310-hem-photo-flags: residents' reports of a photo (POST /sites/{id}/photos/{photo}/flags), one entry per photo that has any, counted per photo by distinct people (user id and device, each once). Never names who reported or quotes why. Not in required so older rows stay valid.
+     */
+    photo_flags?: {
+      /**
+       * The report id of the photo.
+       */
+      photo_id: string;
+      /**
+       * Distinct people who reported this photo, each by their latest report.
+       */
+      count: number;
+      /**
+       * count is at least PHOTO_FLAG_WARN (3): the app blurs the photo more and shows it only after a tap.
+       */
+      warned: boolean;
+      /**
+       * count reached PHOTO_FLAG_HIDE (8), or PHOTO_FLAG_HIDE_EARLY (5) with at least PHOTO_FLAG_SURPLUS (5) more than the site's backers other than the photo's reporter. The photo has left photo_urls; final. The blurred copy and the report row stay for the audit trail.
+       */
+      hidden: boolean;
+    }[];
     /**
      * Latest cleanup after-photo, for polling after POST /sites/{id}/cleanup. pending_confirmation (contracts v1.12, decision 20261010-1855): the photo passed and counts as its uploader's cleared word, but fewer than 3 people have said so; the site stays on the map. accepted: the site is cleaned. Resets to none when a new photo merges in.
      */
@@ -1191,9 +1212,10 @@ export const siteSchema = {
         "removed_reason": {
           "enum": [
             "withdrawn",
+            "photos_reported",
             null
           ],
-          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. Null otherwise. Not in required so older rows stay valid."
+          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid."
         },
         "removed_at": {
           "type": [
@@ -1296,7 +1318,41 @@ export const siteSchema = {
             "type": "string",
             "format": "uri"
           },
-          "description": "Blurred public copies, newest first. Never an original."
+          "description": "Blurred public copies, newest first. Never an original. A photo's id is its report id, the file name of its key media/reports/{report_id}.jpg. A photo hidden after many reports (photo_flags) is left out."
+        },
+        "photo_flags": {
+          "type": "array",
+          "description": "Contracts v1.15, decision 20261011-0310-hem-photo-flags: residents' reports of a photo (POST /sites/{id}/photos/{photo}/flags), one entry per photo that has any, counted per photo by distinct people (user id and device, each once). Never names who reported or quotes why. Not in required so older rows stay valid.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "photo_id",
+              "count",
+              "warned",
+              "hidden"
+            ],
+            "properties": {
+              "photo_id": {
+                "type": "string",
+                "pattern": "^rpt_[a-z0-9_]{1,40}$",
+                "description": "The report id of the photo."
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Distinct people who reported this photo, each by their latest report."
+              },
+              "warned": {
+                "type": "boolean",
+                "description": "count is at least PHOTO_FLAG_WARN (3): the app blurs the photo more and shows it only after a tap."
+              },
+              "hidden": {
+                "type": "boolean",
+                "description": "count reached PHOTO_FLAG_HIDE (8), or PHOTO_FLAG_HIDE_EARLY (5) with at least PHOTO_FLAG_SURPLUS (5) more than the site's backers other than the photo's reporter. The photo has left photo_urls; final. The blurred copy and the report row stay for the audit trail."
+              }
+            }
+          }
         },
         "cleanup_status": {
           "enum": [

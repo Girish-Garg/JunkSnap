@@ -1,0 +1,214 @@
+{
+  "reports": [
+    {
+      "report_id": "rpt_jdh_nb1",
+      "status": "unverified",
+      "site_id": "site_jdh_4",
+      "blurred_url": null,
+      "report": {
+        "upload_id": "upl_jdh_nb1",
+        "report_type": "no_bin",
+        "context": "no_bin",
+        "capture_mode": "snap",
+        "gps": {
+          "lat": 26.27342,
+          "lon": 73.01118,
+          "accuracy_m": 12
+        },
+        "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
+        "captured_at": "2026-10-10T03:02:11Z",
+        "user_id": "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7"
+      },
+      "moderation": null,
+      "verification": null,
+      "received_at": "2026-10-10T03:02:12Z",
+      "updated_at": "2026-10-10T03:02:40Z"
+    },
+    {
+      "report_id": "rpt_jdh_1",
+      "status": "verified",
+      "site_id": "site_jdh_1",
+      "blurred_url": "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
+      "report": {
+        "upload_id": "upl_jdh_1",
+        "report_type": "waste_dump",
+        "context": "vacant_plot",
+        "capture_mode": "snap",
+        "sha256": "361477fa40d0646366e6b4a37679e846f82bfb66b3f791e64428ff5c21aca03c",
+        "gps": {
+          "lat": 26.26183,
+          "lon": 73.00352,
+          "accuracy_m": 6
+        },
+        "device_token": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14",
+        "captured_at": "2026-10-10T02:14:05Z",
+        "user_id": "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7",
+        "note": "Behind the community hall, smells bad after rain",
+        "hints": {
+          "model": "yolo-junk-nano-v0",
+          "waste_score": 0.81,
+          "recall_audit": false
+        }
+      },
+      "moderation": {
+        "report_id": "rpt_jdh_1",
+        "outcome": "passed",
+        "reasons": [],
+        "blurred_key": "media/reports/rpt_jdh_1.jpg",
+        "blur": {
+          "faces": 0,
+          "plates": 1,
+          "provider": "rekognition",
+          "model": "DetectFaces+DetectText+DetectLabels",
+          "version": "3.0+3.0",
+          "regions": {
+            "faces": 0,
+            "plates": 1,
+            "heads": 1,
+            "plate_zones": 0,
+            "people": 0,
+            "vehicles": 0,
+            "band": 0
+          },
+          "low_light": false
+        },
+        "image_moderation": {
+          "result": "pass",
+          "labels": [],
+          "provider": "rekognition",
+          "model": "DetectModerationLabels+DetectLabels",
+          "version": "7.0+3.0"
+        },
+        "checks": {
+          "inside_india": {
+            "result": "pass",
+            "detail": "point inside the India boundary"
+          },
+          "fresh_timestamp": {
+            "result": "pass",
+            "detail": "captured 47 s before upload; limit 72 h"
+          },
+          "duplicate": {
+            "result": "pass",
+            "detail": "nearest earlier photo at pHash distance 21; limit 8"
+          },
+          "rate_limit": {
+            "result": "pass",
+            "detail": "4 reports in the last hour; limit 20"
+          },
+          "device_token": {
+            "result": "pass",
+            "detail": "known device, reputation 0.74"
+          }
+        },
+        "phash": "c4e1b3a59d0f2687",
+        "duplicate_of": null,
+        "note_moderation": {
+          "result": "clean",
+          "reasons": [],
+          "provider": "bedrock",
+          "model": "in.anthropic.claude-haiku-4-5-20251001-v1:0",
+          "version": "20251001-v1:0"
+        },
+        "moderated_at": "2026-10-10T02:14:52Z"
+      },
+      "verification": {
+        "report_id": "rpt_jdh_1",
+        "purpose": "report",
+        "probability": 0.91,
+        "decision": "auto_verified",
+        "is_clean": null,
+        "thresholds": {
+          "auto_verify_min": 0.85,
+          "community_check_min": 0.5
+        },
+        "signals": [
+          {
+            "name": "rekognition_labels",
+            "score": 0.84,
+            "provider": "rekognition",
+            "model": "DetectLabels",
+            "version": "3.0",
+            "latency_ms": 380
+          },
+          {
+            "name": "vision_judge",
+            "score": 0.95,
+            "provider": "bedrock",
+            "model": "global.anthropic.claude-sonnet-4-6",
+            "version": "4.6",
+            "latency_ms": 2900
+          }
+        ],
+        "features": {
+          "gps_accuracy_m": 6,
+          "reputation": 0.74,
+          "nearby_verified_reports": 5
+        },
+        "judge": {
+          "report_type": "waste_dump",
+          "context": "vacant_plot",
+          "burning": false,
+          "readable_brands": [
+            "SAMPLE NAMKEEN"
+          ],
+          "rationale": "Mixed household waste and plastic packets spread across an open plot beside a wall; no smoke or flame."
+        },
+        "disagreement": false,
+        "combiner": {
+          "kind": "fixed_weights",
+          "version": "fw-v0"
+        },
+        "embedding_key": null,
+        "decided_at": "2026-10-10T02:15:03Z",
+        "insights": {
+          "composition": [
+            {
+              "material": "plastic",
+              "share_pct": 55,
+              "source": {
+                "signal": "rekognition_labels",
+                "provider": "rekognition",
+                "model": "DetectLabels",
+                "version": "3.0"
+              }
+            },
+            {
+              "material": "organic",
+              "share_pct": 25,
+              "source": {
+                "signal": "vision_judge",
+                "provider": "bedrock",
+                "model": "global.anthropic.claude-sonnet-4-6",
+                "version": "4.6"
+              }
+            },
+            {
+              "material": "paper",
+              "share_pct": 10,
+              "source": {
+                "signal": "rekognition_labels",
+                "provider": "rekognition",
+                "model": "DetectLabels",
+                "version": "3.0"
+              }
+            }
+          ],
+          "size_class": {
+            "value": "medium",
+            "source": {
+              "signal": "vision_judge",
+              "provider": "bedrock",
+              "model": "global.anthropic.claude-sonnet-4-6",
+              "version": "4.6"
+            }
+          },
+          "hazards": []
+        }
+      },
+      "received_at": "2026-10-10T02:14:52Z",
+      "updated_at": "2026-10-10T02:15:10Z"
+    }
+  ],
+  "next_cursor": null
+}

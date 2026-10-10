@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BinAccess } from '../src/domain/BinAccess';
 import type { AcceptedReport, NoBinUpload, PresignResponse, ReportUpload } from '../src/domain/ReportUpload';
+import type { ReportListPage } from '../src/domain/ReportList';
 import type { ReportStatusView } from '../src/domain/ReportStatus';
 import { NoBinReporter } from '../src/services/NoBinReporter';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
@@ -28,6 +29,10 @@ class RecordingReportApi implements ReportApi {
 
   confirm(): Promise<ReportStatusView> {
     throw new Error('a no-bin report is never asked to confirm');
+  }
+
+  mine(): Promise<ReportListPage> {
+    throw new Error('not used');
   }
 }
 
