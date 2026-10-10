@@ -20,7 +20,7 @@ from ml.domain.label_insights import LabelInsights
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
 from ml.domain.purposes import Purpose
-from ml.domain.verification import Claim, JudgeVerdict, Thresholds
+from ml.domain.verification import Claim, JudgeVerdict, SignalResult, Thresholds
 from ml.handlers.verify_body import VerifyBody
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
@@ -90,14 +90,15 @@ def test_a_scout_claim_is_backed_by_any_waste_it_can_find_and_denied_by_no_bin()
     assert report.judge_support(verdict("overflowing_bin"), picked) == pytest.approx(0.5)
 
 
-def test_every_combiner_asks_for_the_judge_on_an_auto_claim() -> None:
+def test_every_combiner_needs_the_judges_answer_on_an_auto_claim() -> None:
     combiners: list[Combiner] = [
         FixedWeightCombiner(Thresholds()), MetaLearnerCombiner(meta_model(), Thresholds())
     ]
+    sure = [SignalResult("yolo", 0.99, "junksnap", "fake", "1", 10)]
     for combiner in combiners:
         for claim in (SCOUT, claim_for("waste_dump", "auto")):
-            chosen = combiner.for_claim(claim)
-            assert chosen.needs_judge([FakeSignal("yolo", 0.99)], Purpose.named("report"))
+            unjudged = combiner.for_claim(claim).combine(sure, Purpose.named("report"))
+            assert unjudged.decision == "community_check"
     meta = MetaLearnerCombiner(meta_model(), Thresholds())
     assert meta.for_claim(claim_for("waste_dump", "auto")).info().reason == AUTO_CLAIM_REASON
     fixed = FixedWeightCombiner(Thresholds())

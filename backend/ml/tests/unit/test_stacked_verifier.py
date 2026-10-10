@@ -31,23 +31,35 @@ def verifier(signals: list[Signal], judge_script: list[str | Exception]) -> tupl
     return StackedVerifier(signals, judge, combiner, FixedClock()), provider
 
 
-def test_confident_signals_skip_the_judge() -> None:
+def test_confident_signals_still_ask_the_judge() -> None:
     stacked, provider = verifier([FakeSignal("rekognition_labels", 0.95)], [JUDGE_JSON])
 
     result = stacked.verify(make_case())
 
-    assert provider.requests == []
-    assert result.judge is None
-    assert [s.name for s in result.signals] == ["rekognition_labels"]
+    assert len(provider.requests) == 1
+    assert result.judge is not None
+    assert [s.name for s in result.signals] == ["rekognition_labels", "vision_judge"]
     assert result.outcome.decision == "auto_verified"
     assert result.decided_at == FIXED_NOW
 
 
-def test_confident_rejection_skips_the_judge() -> None:
-    stacked, provider = verifier([FakeSignal("rekognition_labels", 0.1)], [JUDGE_JSON])
+def test_confident_rejection_is_confirmed_by_the_judge() -> None:
+    not_waste = JUDGE_JSON.replace('"waste_dump"', '"not_waste"').replace('"vacant_plot"', "null")
+    stacked, provider = verifier([FakeSignal("rekognition_labels", 0.1)], [not_waste])
 
-    assert stacked.verify(make_case()).outcome.decision == "rejected"
-    assert provider.requests == []
+    result = stacked.verify(make_case())
+
+    assert len(provider.requests) == 1
+    assert result.outcome.decision == "rejected"
+
+
+def test_judge_outage_never_auto_verifies_a_report() -> None:
+    stacked, _ = verifier([FakeSignal("rekognition_labels", 0.95)], [provider_error()])
+
+    result = stacked.verify(make_case())
+
+    assert result.judge is None
+    assert result.outcome.decision == "community_check"
 
 
 def test_unsure_signals_ask_the_judge_with_the_blurred_photo() -> None:

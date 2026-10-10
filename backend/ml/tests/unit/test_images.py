@@ -3,7 +3,15 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from fakes import JPEG, FakeFitter, FakeImages, FakeSignal, FixedClock
+from fakes import (
+    JPEG,
+    FakeFitter,
+    FakeImages,
+    FakeSignal,
+    FixedClock,
+    provider_error,
+    scripted_judge,
+)
 from PIL import Image
 
 from ml.adapters.local_images import LocalBlurredImageStore
@@ -16,7 +24,6 @@ from ml.handlers.verify_cli import main
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.stacked_verifier import StackedVerifier
 from ml.services.verify_service import VerifyService
-from ml.services.vision_judge import VisionJudge
 
 KEY = "media/reports/rpt_jdh_1.jpg"
 
@@ -77,7 +84,7 @@ def test_service_fits_the_photo_before_verifying() -> None:
     fitter = FakeFitter()
     verifier = StackedVerifier(
         [FakeSignal("rekognition_labels", 0.95)],
-        VisionJudge(None, "prompt"),  # type: ignore[arg-type]
+        scripted_judge(provider_error())[0],
         FixedWeightCombiner(Thresholds()),
         FixedClock(),
     )

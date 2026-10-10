@@ -90,6 +90,8 @@ The meta-learner (`meta-v2`) is logistic regression over the signals' logits, fi
 
 The full model's bias assumes every trained signal spoke; with YOLO and the embedding classifier silent its probability would sit near sigmoid(1.55) = 0.82. So `meta-v2` also carries a Rekognition-only fallback (weight 1.20, bias -0.96; after the judge 0.68 and 2.63, bias -2.84), used whenever a trained signal is missing or neutral, for example for `contaminated_water` claims, which neither YOLO nor the embedding heads can see.
 
+**Runtime since 11 Oct 2026 (decision 20261011-0005):** the judge (Nova Lite first) now runs on every report, scan frame and cleanup, and types the detectors were not trained on go to the judge, not the Rekognition-only fallback. The replay table below describes the old runtime (judge only when unsure or split); it has not been re-run with the judge always on.
+
 Both models are replayed end to end on test with the service's rules: auto-verify at 0.85 or more, reject under 0.5, community check in between or when two signals differ by 0.5 or more, and the judge only for those last two cases. The fallback row replays the same photos with Rekognition (and the judge) only.
 
 | combiner | photos | accuracy | Brier | ECE | judge called | auto-verified (right) | rejected (right) | community check | judge cost |
