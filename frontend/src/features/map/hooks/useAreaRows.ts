@@ -1,35 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import { CITIES, type BoundaryKind } from '../../../domain/AreaListing';
+import { CITIES } from '../../../domain/AreaListing';
 import type { AreaScores } from '../../../domain/AreaScores';
+import type { MapAreaKind } from '../../../services/BoundaryCatalog';
 
 const LIMIT = 200;
 const NONE: readonly AreaScores[] = [];
+// The map's areas are assembly seats where they exist and Lok Sabha seats elsewhere; ids never clash.
+const KINDS: readonly MapAreaKind[] = ['assembly', 'loksabha'];
 
-interface RowsResult {
-  readonly kind: BoundaryKind;
-  readonly rows: readonly AreaScores[];
-}
-
-/** Scores rows of every area of this kind in the cities the app covers, for the map fill. */
-export function useAreaRows(kind: BoundaryKind | null): readonly AreaScores[] {
+/** Scores rows of the map's areas in the cities the app covers, for the fill and the markers. */
+export function useAreaRows(enabled: boolean): readonly AreaScores[] {
   const { areas } = useServices();
-  const [result, setResult] = useState<RowsResult | null>(null);
+  const [rows, setRows] = useState<readonly AreaScores[]>(NONE);
   useEffect(() => {
-    if (!kind) return undefined;
+    if (!enabled) return undefined;
     let current = true;
-    // One city failing leaves the other city's fill in place.
-    void Promise.allSettled(CITIES.map((city) => areas.list(kind, city.id, LIMIT))).then((results) => {
-      const rows = results.flatMap((result) => {
+    const requests = KINDS.flatMap((kind) => CITIES.map((city) => areas.list(kind, city.id, LIMIT)));
+    // One list failing leaves the others' fill in place.
+    void Promise.allSettled(requests).then((results) => {
+      const loaded = results.flatMap((result) => {
         if (result.status === 'fulfilled') return result.value.areas;
-        console.error(`Could not load ${kind} areas for the map`, result.reason);
+        console.error('Could not load areas for the map', result.reason);
         return [];
       });
-      if (current) setResult({ kind, rows });
+      if (current) setRows(loaded);
     });
     return () => {
       current = false;
     };
-  }, [areas, kind]);
-  return result && result.kind === kind ? result.rows : NONE;
+  }, [areas, enabled]);
+  return enabled ? rows : NONE;
 }

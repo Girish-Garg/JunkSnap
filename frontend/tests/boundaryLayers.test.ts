@@ -1,14 +1,13 @@
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import type { LayerSpecification } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
-import type { BoundaryKind } from '../src/domain/AreaListing';
 import { BoundaryFillLayer } from '../src/layers/boundaries/BoundaryFillLayer';
-import { BoundaryLabelLayer } from '../src/layers/boundaries/BoundaryLabelLayer';
+import { AreaMarkerLayer, BADGE_IMAGES } from '../src/layers/boundaries/AreaMarkerLayer';
 import type { BoundaryContext } from '../src/layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../src/layers/boundaries/BoundaryLineLayer';
 import { OutdatedLineLayer } from '../src/layers/boundaries/OutdatedLineLayer';
 
-const context = (kind: BoundaryKind): BoundaryContext => ({ kind, polygonSource: 'polys', labelSource: 'labels' });
+const context = (): BoundaryContext => ({ polygonSource: 'polys', labelSource: 'labels' });
 type Section = 'paint' | 'layout';
 const prop = (spec: LayerSpecification, section: Section, name: string): unknown =>
   (spec as unknown as Record<Section, Record<string, unknown> | undefined>)[section]?.[name];
@@ -29,20 +28,20 @@ function atZoom(expression: unknown, zoom: number): number {
 
 describe('BoundaryFillLayer', () => {
   it('takes its colour from feature state and is transparent without one', () => {
-    const spec = new BoundaryFillLayer().spec(context('assembly'));
+    const spec = new BoundaryFillLayer().spec(context());
     expect(spec).toMatchObject({ type: 'fill', source: 'polys' });
     expect(prop(spec, 'paint', 'fill-color')).toEqual(['coalesce', ['feature-state', 'fill'], 'rgba(0, 0, 0, 0)']);
   });
 
   it('lightens as the map zooms into streets', () => {
-    const opacity = prop(new BoundaryFillLayer().spec(context('assembly')), 'paint', 'fill-opacity');
+    const opacity = prop(new BoundaryFillLayer().spec(context()), 'paint', 'fill-opacity');
     expect(atZoom(opacity, 10)).toBeGreaterThan(atZoom(opacity, 15));
   });
 });
 
 describe('boundary lines', () => {
-  const current = new BoundaryLineLayer().spec(context('loksabha'));
-  const outdated = new OutdatedLineLayer().spec(context('loksabha'));
+  const current = new BoundaryLineLayer().spec(context());
+  const outdated = new OutdatedLineLayer().spec(context());
 
   it('draws current seats solid and outdated seats dashed and grey, each once', () => {
     expect([matches(filterOf(current), 'current'), matches(filterOf(current), 'outdated')]).toEqual([true, false]);
@@ -63,17 +62,44 @@ describe('boundary lines', () => {
   });
 });
 
-describe('BoundaryLabelLayer', () => {
-  it('names areas from the label points only at higher zooms, later for smaller areas', () => {
-    const label = new BoundaryLabelLayer();
-    expect(label.spec(context('loksabha'))).toMatchObject({ type: 'symbol', source: 'labels', minzoom: 7 });
-    expect(label.spec(context('assembly')).minzoom).toBe(10);
-    expect(label.spec(context('ward')).minzoom).toBe(13);
-    expect(prop(label.spec(context('ward')), 'layout', 'text-field')).toEqual(['get', 'name']);
+function markerText(spec: LayerSpecification, properties: Record<string, unknown>): string {
+  const parsed = createExpression(prop(spec, 'layout', 'text-field'), { type: 'formatted' } as never);
+  if (parsed.result !== 'success') throw new Error('Invalid text-field');
+  const feature = { type: 'Point', properties } as never;
+  const formatted = parsed.value.evaluate({ zoom: 12 }, feature) as { sections: { text: string }[] };
+  return formatted.sections.map((section) => section.text).join('');
+}
+
+describe('AreaMarkerLayer', () => {
+  const marker = new AreaMarkerLayer();
+
+  it('shows markers from the marker points once seats are a fair size on screen', () => {
+    expect(marker.spec(context())).toMatchObject({ type: 'symbol', source: 'labels', minzoom: 8 });
+  });
+
+  it('is a badge around the name and the value, or the name alone', () => {
+    const spec = marker.spec(context());
+    expect(prop(spec, 'layout', 'icon-image')).toEqual(['match', ['get', 'marker_basis'], 'score', BADGE_IMAGES.score, 'count', BADGE_IMAGES.count, BADGE_IMAGES.plain]);
+    expect(prop(spec, 'layout', 'icon-text-fit')).toBe('both');
+    expect(markerText(spec, { name: 'Jodhpur', marker_value: '44' })).toBe('Jodhpur\n44');
+    expect(markerText(spec, { name: 'Sardarpura' })).toBe('Sardarpura');
+  });
+});
+
+describe('AreaMarkerLayer placement', () => {
+  const marker = new AreaMarkerLayer();
+
+  it('avoids collisions, placing the worst areas first, and grows with zoom', () => {
+    const spec = marker.spec(context());
+    expect(prop(spec, 'layout', 'text-allow-overlap')).toBe(false);
+    expect(prop(spec, 'layout', 'icon-allow-overlap')).toBe(false);
+    expect(prop(spec, 'layout', 'symbol-sort-key')).toEqual(['coalesce', ['get', 'marker_rank'], 9999]);
+    const size = prop(spec, 'layout', 'text-size');
+    expect(atZoom(size, 15)).toBeGreaterThan(atZoom(size, 9));
   });
 
   it('sits above the basemap labels while fills and lines sit under them', () => {
-    expect(new BoundaryLabelLayer().onTop).toBe(true);
+    expect(marker.onTop).toBe(true);
     expect([new BoundaryFillLayer(), new BoundaryLineLayer(), new OutdatedLineLayer()].map((layer) => layer.onTop)).toEqual([false, false, false]);
   });
 });

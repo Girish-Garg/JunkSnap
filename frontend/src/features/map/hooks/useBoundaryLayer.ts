@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import type { BoundaryKind } from '../../../domain/AreaListing';
-import type { BoundaryIndex } from '../../../services/BoundaryCatalog';
+import type { AreasIndex } from '../../../services/BoundaryCatalog';
+import type { BoundaryView } from '../BoundaryOverlay';
 import { ChoroplethScale } from '../ChoroplethScale';
+import { useAreaMarkers } from './useAreaMarkers';
 import { useAreaRows } from './useAreaRows';
 
 export type BoundaryLayerState = ReturnType<typeof useBoundaryLayer>;
 
-// Assembly seats open by default: every Rajasthan site has one, and wards may not be mapped yet.
-const DEFAULT_KIND: BoundaryKind = 'assembly';
-const NO_INDEX: BoundaryIndex = { kinds: [], wardCoverage: [] };
+const NO_INDEX: AreasIndex = { available: false, fine: false, attribution: null };
 
-/** Which boundaries the map shows (null for none), which kinds have files, ward coverage, and area fill colours. */
+/** The map's one areas layer: whether it is drawn, how (fine edges, credit), its fills and markers. */
 export function useBoundaryLayer() {
   const { boundaries } = useServices();
-  const [index, setIndex] = useState<BoundaryIndex>(NO_INDEX);
-  const [chosen, choose] = useState<BoundaryKind | null>(DEFAULT_KIND);
+  const [index, setIndex] = useState<AreasIndex>(NO_INDEX);
   useEffect(() => {
     let current = true;
     void boundaries.index().then((next) => {
@@ -25,9 +23,12 @@ export function useBoundaryLayer() {
       current = false;
     };
   }, [boundaries]);
-  const available = index.kinds;
-  const kind = chosen !== null && available.includes(chosen) ? chosen : null;
-  const rows = useAreaRows(kind);
+  const rows = useAreaRows(index.available);
   const colors = useMemo(() => ChoroplethScale.colors(rows), [rows]);
-  return { kind, chosen, choose, available, wardCoverage: index.wardCoverage, colors };
+  const markers = useAreaMarkers(rows);
+  const view = useMemo<BoundaryView | null>(
+    () => (index.available ? { fine: index.fine, ...(index.attribution ? { attribution: index.attribution } : {}) } : null),
+    [index],
+  );
+  return { view, colors, markers };
 }
