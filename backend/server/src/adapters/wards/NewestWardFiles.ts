@@ -4,11 +4,12 @@ import { readWardFile } from "./readWardFile.js";
 interface Dated {
   readonly file: WardFile;
   readonly reviewed: number;
+  readonly hasLayers: boolean;
   readonly generatedAt: number;
 }
 
-// Per city, the file with more reviewed records (crawl output is always unreviewed), then the newest generated_at;
-// a tie or an unreadable date keeps the earlier source, so pass the image's files first.
+// Per city, the file with more reviewed records (crawl output is always unreviewed), then one with map layers over one
+// without, then the newest generated_at; a tie or an unreadable date keeps the earlier source, so pass the image's files first.
 export class NewestWardFiles implements WardFileSource {
   readonly #sources: readonly WardFileSource[];
 
@@ -27,11 +28,19 @@ export class NewestWardFiles implements WardFileSource {
 
   static #keepNewer(newest: Map<string, Dated>, candidate: Dated): void {
     const kept = newest.get(candidate.file.city);
-    const better = kept === undefined || candidate.reviewed > kept.reviewed
-      || (candidate.reviewed === kept.reviewed && candidate.generatedAt > kept.generatedAt);
-    if (better) {
+    if (kept === undefined || NewestWardFiles.#beats(candidate, kept)) {
       newest.set(candidate.file.city, candidate);
     }
+  }
+
+  static #beats(candidate: Dated, kept: Dated): boolean {
+    if (candidate.reviewed !== kept.reviewed) {
+      return candidate.reviewed > kept.reviewed;
+    }
+    if (candidate.hasLayers !== kept.hasLayers) {
+      return candidate.hasLayers;
+    }
+    return candidate.generatedAt > kept.generatedAt;
   }
 
   // An unreadable file or date counts as oldest; the reader that loads the file reports what is wrong with it.
@@ -40,10 +49,16 @@ export class NewestWardFiles implements WardFileSource {
       const body = await readWardFile(file.path);
       const value: unknown = typeof body === "object" && body !== null ? Reflect.get(body, "generated_at") : undefined;
       const time = typeof value === "string" ? Date.parse(value) : Number.NaN;
-      return { file, reviewed: NewestWardFiles.#reviewed(body), generatedAt: Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time };
+      const generatedAt = Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
+      return { file, reviewed: NewestWardFiles.#reviewed(body), hasLayers: NewestWardFiles.#hasLayers(body), generatedAt };
     } catch {
-      return { file, reviewed: 0, generatedAt: Number.NEGATIVE_INFINITY };
+      return { file, reviewed: 0, hasLayers: false, generatedAt: Number.NEGATIVE_INFINITY };
     }
+  }
+
+  static #hasLayers(body: unknown): boolean {
+    const layers: unknown = typeof body === "object" && body !== null ? Reflect.get(body, "map_layers") : undefined;
+    return Array.isArray(layers) && layers.length > 0;
   }
 
   static #reviewed(body: unknown): number {

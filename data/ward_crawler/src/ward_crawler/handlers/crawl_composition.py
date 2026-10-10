@@ -16,6 +16,7 @@ from ward_crawler.adapters.cached_record_extractor import CachedRecordExtractor,
 from ward_crawler.adapters.district_catalog import DistrictSourceCatalog
 from ward_crawler.adapters.dynamo_crawl_ledger import DynamoCrawlLedger
 from ward_crawler.adapters.extraction_prompt import ExtractionPrompt
+from ward_crawler.adapters.guarded_record_store import GuardedRecordStore
 from ward_crawler.adapters.host_throttle import HostThrottle
 from ward_crawler.adapters.http_page_fetcher import USER_AGENT, HttpPageFetcher
 from ward_crawler.adapters.json_blobs import JsonBlobs
@@ -85,5 +86,5 @@ class CrawlComposition:
             ),
             finder=CachedMapLayers(overpass, self._blobs, max_age, _now),
             validator=JsonSchemaRecordValidator(self._args.schema),
-            store=BlobRecordStore(self._blobs),
+            store=GuardedRecordStore(BlobRecordStore(self._blobs), self._blobs),
         )

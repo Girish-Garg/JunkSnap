@@ -127,6 +127,12 @@ describe("NewestWardFiles", () => {
     expect(files.filter((file) => file.city === "jodhpur").map(note)).toEqual(["image"]);
   });
 
+  it("keeps a file with map layers over a newer crawl without any", async () => {
+    const withLayers = JSON.stringify({ ...cityFile("2026-10-09T22:42:09Z", "image"), map_layers: [{ kind: "school" }] });
+    const files = await new NewestWardFiles([new DirectoryWardFiles(folder({ "jodhpur.json": withLayers })), new DirectoryWardFiles(crawled)]).files();
+    expect(files.filter((file) => file.city === "jodhpur").map(note)).toEqual(["image"]);
+  });
+
   it("feeds the newest files to the scores job's ward facts", async () => {
     const assets = folder({});
     mkdirSync(join(assets, "representatives"));
