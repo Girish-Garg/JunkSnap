@@ -78,29 +78,67 @@ describe('HttpAreaApi.list', () => {
 });
 
 describe('BoundaryCatalog', () => {
+  const index = (layers: object) => async () => Response.json({ layers });
+
   it('offers only the kinds the boundary index lists, wards once their file exists', async () => {
-    const index = (layers: object) => async () => Response.json({ layers });
     expect(await new BoundaryCatalog('/b', index({ assembly: {}, loksabha: {} })).index()).toEqual({
       kinds: ['assembly', 'loksabha'],
+      fine: [],
       wardCoverage: [],
+      attribution: {},
     });
     const coverage = [{ body: 'jodhpur-mc', town: 'Jodhpur', mapped: 34, wards: 100 }];
     expect(await new BoundaryCatalog('/b', index({ wards: { coverage }, assembly: {} })).index()).toEqual({
       kinds: ['ward', 'assembly'],
+      fine: [],
       wardCoverage: coverage,
+      attribution: {},
     });
+  });
+
+});
+
+describe('BoundaryCatalog index extras', () => {
+  const index = (layers: object) => async () => Response.json({ layers });
+
+  it('carries the credit line a layer brings, such as the ward sources', async () => {
+    const layers = { wards: { attribution: 'Approximate, unreviewed wards' }, assembly: {} };
+    expect((await new BoundaryCatalog('/b', index(layers)).index()).attribution).toEqual({
+      ward: 'Approximate, unreviewed wards',
+    });
+  });
+
+  it('lists the kinds that have an original-edge file for close zooms', async () => {
+    const layers = { assembly: { fine: { bytes: 1 } }, loksabha: {} };
+    expect((await new BoundaryCatalog('/b', index(layers)).index()).fine).toEqual(['assembly']);
   });
 
   it('offers nothing when the index cannot be read', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const empty = { kinds: [], wardCoverage: [] };
+    const empty = { kinds: [], fine: [], wardCoverage: [], attribution: {} };
     expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).index()).toEqual(empty);
     expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).index()).toEqual(empty);
   });
+});
 
+describe('BoundaryCatalog files', () => {
   it('names the simplified files', () => {
     const catalog = new BoundaryCatalog('https://app.example.test/boundaries');
     expect(catalog.polygonsUrl('ward')).toBe('https://app.example.test/boundaries/wards.geojson');
+    expect(catalog.fineUrl('assembly')).toBe('https://app.example.test/boundaries/assembly_fine.geojson');
     expect(catalog.labelsUrl('loksabha')).toBe('https://app.example.test/boundaries/loksabha_labels.geojson');
+  });
+
+  it('loads the marker points, and fails loudly when they are missing', async () => {
+    const points = { type: 'FeatureCollection', features: [] };
+    const calls: string[] = [];
+    const ok = new BoundaryCatalog('/b/', async (input) => {
+      calls.push(String(input));
+      return Response.json(points);
+    });
+    expect(await ok.labels('assembly')).toEqual(points);
+    expect(calls).toEqual(['/b/assembly_labels.geojson']);
+    const missing = new BoundaryCatalog('/b/', async () => new Response('', { status: 404 }));
+    await expect(missing.labels('ward')).rejects.toThrow('404');
   });
 });

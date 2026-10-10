@@ -584,7 +584,13 @@
     "wardsApprox": "Approximate ward areas from official ward lists, unreviewed",
     "wardsApproxCounted": "Approximate ward areas from official ward lists, unreviewed ({{counts}})",
     "wardsOf": "{{mapped}} of {{wards}} wards",
-    "wardsMapped": "{{mapped}} wards"
+    "wardsMapped": "{{mapped}} wards",
+    "tooltipScore": "{{name}}: score {{n}} of 100",
+    "tooltipReports_one": "{{name}}: {{n}} verified report, no score yet",
+    "tooltipReports_other": "{{name}}: {{n}} verified reports, no score yet",
+    "tooltipNone": "{{name}}: no verified reports yet",
+    "keyScore": "Marker: score out of 100",
+    "keyCount": "Marker: number of verified reports"
   },
   "ranking": {
     "open": "City ranking",

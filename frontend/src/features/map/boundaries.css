@@ -111,3 +111,19 @@
     left: calc(400px + var(--edge));
   }
 }
+
+.marker-key__glyph {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+/* Hover tooltip on area markers (MapLibre popup). */
+.area-tooltip .maplibregl-popup-content {
+  padding: 6px 10px;
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+}

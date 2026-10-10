@@ -25,10 +25,15 @@ describe('Map boundary controls', () => {
     expect(within(legend).getByText('Score, darker is worse')).toBeInTheDocument();
     expect(within(legend).getByText('Verified reports, no score yet')).toBeInTheDocument();
     expect(within(legend).getByText('A score shows after 10 verified reports.')).toBeInTheDocument();
+    expect(within(legend).getByText('Marker: score out of 100')).toBeInTheDocument();
+    expect(within(legend).getByText('Marker: number of verified reports')).toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaColors.get('s20-ac-128')).toBe('#e2786a'));
     expect(seen.last?.boundary).toBe('assembly');
     // Sardarpura has 4 verified reports and every score withheld: a grey count fill, never a score colour.
     expect(seen.last?.areaColors.get('s20-ac-127')).toBe('#c4c7c5');
+    // Markers follow the same rule: the shown score, else the report count.
+    expect(seen.last?.areaMarkers.get('s20-ac-128')?.value).toBe('44');
+    expect(seen.last?.areaMarkers.get('s20-ac-127')?.value).toBe('4');
   });
 
 });

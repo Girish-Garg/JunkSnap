@@ -2,12 +2,12 @@ import type { Feature, FeatureCollection } from 'geojson';
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
 import { HeatWeight } from '../../domain/HeatWeight';
-import type { BoundaryKind } from '../../domain/AreaListing';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
 import { BasemapTheme } from './BasemapTheme';
-import { BoundaryOverlay, type AreaHit, type BoundaryUrls } from './BoundaryOverlay';
+import type { AreaMarker } from './AreaMarkers';
+import { BoundaryOverlay, type AreaHit, type BoundaryFiles, type BoundaryView } from './BoundaryOverlay';
 
 // OpenFreeMap needs no key; its style carries the OpenStreetMap credit for the attribution control.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
@@ -39,7 +39,7 @@ export interface SiteMapOptions {
   readonly onPick: (siteId: string | null) => void;
   /** A tap that hit no site but an area of the boundary layer shown. */
   readonly onPickArea: (area: AreaHit) => void;
-  readonly boundaries: BoundaryUrls;
+  readonly boundaries: BoundaryFiles;
   readonly onViewChange: (view: MapView) => void;
 }
 
@@ -80,8 +80,13 @@ export class SiteMap {
     this.#renderLayers();
   }
 
-  showBoundaries(kind: BoundaryKind | null): void {
-    this.#boundaries.show(kind);
+  showBoundaries(view: BoundaryView | null): void {
+    this.#boundaries.show(view);
+  }
+
+  /** Area id to the value its marker shows under its name. */
+  labelAreas(markers: ReadonlyMap<string, AreaMarker>): void {
+    this.#boundaries.label(markers);
   }
 
   /** Area id to fill colour for the boundary kind shown. */

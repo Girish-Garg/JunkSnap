@@ -6,6 +6,7 @@ import type { WardCoverage } from '../../../services/BoundaryCatalog';
 import { ChoroplethScale } from '../ChoroplethScale';
 import { WardCoverageText } from '../WardCoverageText';
 import { LegendRamp } from './LegendRamp';
+import { MarkerKey } from './MarkerKey';
 
 interface BoundaryLegendProps {
   readonly kind: BoundaryKind | null;
@@ -28,6 +29,7 @@ export function BoundaryLegend({ kind, wardCoverage }: BoundaryLegendProps) {
       <LegendRamp steps={ChoroplethScale.scoreSteps} label={t('boundaries.byScore')} />
       <LegendRamp steps={ChoroplethScale.countSteps} label={t('boundaries.byCount')} />
       <p>{t('boundaries.scoreRule')}</p>
+      <MarkerKey />
       {kind === 'loksabha' && (
         <div className="boundary-legend__ramp">
           <span className="boundary-legend__dash" aria-hidden="true" />

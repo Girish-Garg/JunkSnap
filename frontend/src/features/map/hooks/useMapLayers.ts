@@ -12,6 +12,14 @@ interface Selection {
 export function useMapLayers(mode: MapMode, selection: Selection) {
   const boundary = useBoundaryLayer();
   const onPickArea = useAreaPick(selection.preview, () => selection.pick(null));
-  const layerBindings = { mode, boundary: boundary.kind, areaColors: boundary.colors, onPickArea };
+  const layerBindings = {
+    mode,
+    boundary: boundary.kind,
+    boundaryFine: boundary.fine,
+    boundaryCredit: boundary.attribution,
+    areaColors: boundary.colors,
+    areaMarkers: boundary.markers,
+    onPickArea,
+  };
   return { boundary, layerBindings };
 }

@@ -17,7 +17,7 @@ export interface BoundaryLayer {
 }
 
 // Area names show only once areas of that kind are large on screen (MapLibre zooms).
-export const LABEL_MIN_ZOOM: Readonly<Record<BoundaryKind, number>> = { ward: 13, assembly: 10, loksabha: 7 };
+export const LABEL_MIN_ZOOM: Readonly<Record<BoundaryKind, number>> = { ward: 12, assembly: 10, loksabha: 7 };
 
 // Same as --text-secondary and --divider in theme.css; MapLibre paint needs plain values.
 export const LINE_COLOR = '#5f6368';

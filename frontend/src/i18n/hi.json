@@ -584,7 +584,13 @@
     "wardsApprox": "आधिकारिक वार्ड सूचियों से अनुमानित वार्ड क्षेत्र, जाँच बाकी",
     "wardsApproxCounted": "आधिकारिक वार्ड सूचियों से अनुमानित वार्ड क्षेत्र, जाँच बाकी ({{counts}})",
     "wardsOf": "{{wards}} में से {{mapped}} वार्ड",
-    "wardsMapped": "{{mapped}} वार्ड"
+    "wardsMapped": "{{mapped}} वार्ड",
+    "tooltipScore": "{{name}}: 100 में से {{n}} स्कोर",
+    "tooltipReports_one": "{{name}}: {{n}} सत्यापित रिपोर्ट, अभी स्कोर नहीं",
+    "tooltipReports_other": "{{name}}: {{n}} सत्यापित रिपोर्ट, अभी स्कोर नहीं",
+    "tooltipNone": "{{name}}: अभी कोई सत्यापित रिपोर्ट नहीं",
+    "keyScore": "निशान: 100 में से स्कोर",
+    "keyCount": "निशान: सत्यापित रिपोर्ट की संख्या"
   },
   "ranking": {
     "open": "शहर की रैंकिंग",
