@@ -1,4 +1,8 @@
-"""The vision LLM judge: the last step of detection (decision 0137)."""
+"""The vision LLM judge: runs on every case after the detectors (decision 20261011-0005).
+
+Its answer is one signal the combiner weighs; for a type the detectors were not trained on
+it decides. Its composition and size win over the detectors'. It never sets counts or boxes.
+"""
 
 import logging
 from dataclasses import dataclass
