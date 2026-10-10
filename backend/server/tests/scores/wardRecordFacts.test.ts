@@ -24,7 +24,7 @@ const LAYER = { ...PROVENANCE, count: 1, features: [{ ref: "osm:node/1", coords:
 const NOTHING = { areaKm2: null, disposalPoints: [], placesMapped: false };
 
 function reviewedWard(number: number, extra: Partial<WardRecord> = {}): WardRecord {
-  const id = `jodhpur-uttar-${String(number).padStart(3, "0")}`;
+  const id = `jodhpur-mc-w${number}`;
   return { ...FIXTURE, id, ward_number: { ...FIXTURE.ward_number, value: number }, review_status: "reviewed", ...extra };
 }
 
@@ -48,7 +48,8 @@ beforeAll(async () => {
     area_km2: { ...PROVENANCE, value: 2.5 },
     disposal_points: [{ ...PROVENANCE, lat: 26.2589, lon: 73.0071, kind: "collection_point", ref: "osm:node/4" }],
   });
-  const records = [FIXTURE, measured, reviewedWard(12), reviewedWard(12, { id: "jodhpur-dakshin-012" })];
+  const uttar = reviewedWard(40, { id: "jodhpur-uttar-mc-w40", area_km2: { ...PROVENANCE, value: 1.5 } });
+  const records = [FIXTURE, measured, reviewedWard(12), reviewedWard(12), uttar];
   await writeJson("wards/jodhpur.json", { records, map_layers: { school: LAYER, water: LAYER, disposal: LAYER } });
   await writeJson("wards/jaipur.json", { records: [], map_layers: { disposal: LAYER } });
   await writeJson("wards/notes.txt", "not a city file");
@@ -75,7 +76,12 @@ describe("WardRecordAreaFacts", () => {
     expect((await load(assets)).skippedRecords()).toEqual([]);
   });
 
-  it("treats a ward number that two reviewed records share as unknown", async () => {
+  it("never attaches a pre-merger Uttar record to a jodhpur-mc ward with the same number", async () => {
+    const facts = await (await load(assets)).factsFor(wardArea(40), ["jodhpur-mc"]);
+    expect(facts).toEqual({ ...NOTHING, placesMapped: true });
+  });
+
+  it("treats a ward id that two reviewed records share as unknown", async () => {
     const facts = await (await load(assets)).factsFor(wardArea(12), ["jodhpur-mc"]);
     expect(facts).toEqual({ ...NOTHING, placesMapped: true });
   });
