@@ -11,8 +11,12 @@ export class RationaleSanitizer {
   static readonly #URL = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|in|org|net|io|gov|co|info|app|ly|me)\b\S*/gi;
   // A run of digits, spaces, dots, brackets and dashes; it is a phone number when it holds 7 or more digits.
   static readonly #NUMBER_RUN = /\+?\(?\d[\d\s().-]{5,}\d/g;
-  // Control and format characters, such as zero-width and direction marks.
-  static readonly #CONTROL = /[\p{Cc}\p{Cf}]/gu;
+  // Control characters (tabs, newlines, bells) become spaces.
+  static readonly #CONTROL = /\p{Cc}/gu;
+  // Format characters (zero-width and direction marks) are deleted, so "M<zero-width>r" reads "Mr" to the guards.
+  static readonly #FORMAT = /\p{Cf}/gu;
+  // Any word.word token followed by a path, like host.xyz/page, whatever its ending.
+  static readonly #PATH_URL = /[a-z0-9-]*[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+\/\S*/gi;
   // Honorifics and naming phrases in English and Hindi: a sign the text names someone.
   static readonly #NAMING = /\b(?:mr|mrs|ms|miss|dr|shri|shree|sri|smt|kumari|sir|madam|named|called)\b\.?|\bname\s+is\b|श्री|श्रीमती|कुमारी|नाम/i;
   // A capital letter inside a sentence: a name, a brand or a place, all of which the generic line covers safely.
@@ -31,9 +35,11 @@ export class RationaleSanitizer {
 
   static #strip(raw: string): string {
     return raw
+      .replace(RationaleSanitizer.#FORMAT, '')
       .replace(RationaleSanitizer.#CONTROL, ' ')
       .replace(RationaleSanitizer.#EMAIL, ' ')
       .replace(RationaleSanitizer.#URL, ' ')
+      .replace(RationaleSanitizer.#PATH_URL, ' ')
       .replace(RationaleSanitizer.#NUMBER_RUN, (run) => (run.replace(/\D/g, '').length >= 7 ? ' ' : run))
       .replace(/\s+/g, ' ')
       .replace(/\s+([,.;:!?])/g, '$1')

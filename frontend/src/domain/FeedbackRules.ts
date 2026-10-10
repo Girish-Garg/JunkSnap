@@ -6,7 +6,8 @@ import type { ReportStatusView } from './ReportStatus';
 const AGREES = 0.5;
 const STRONG_GAP = 0.3;
 // The report types our trained detector has classes for (backend/ml yolo_signal.py CLAIM_EVIDENCE).
-const DETECTOR_TYPES: ReadonlySet<string> = new Set(['waste_dump', 'no_bin', 'open_construction', 'overflowing_bin']);
+// It has no class for contaminated water or construction debris (issue 111), so those claims are not judged by it.
+const DETECTOR_TYPES: ReadonlySet<string> = new Set(['waste_dump', 'no_bin', 'overflowing_bin']);
 const CAMERA_MODES: ReadonlySet<string> = new Set(['snap', 'scan']);
 const CAMERA_REASONS: ReadonlySet<ModerationReason> = new Set(['invalid_image', 'stale_timestamp', 'blocked_device']);
 
@@ -79,12 +80,12 @@ export class DetectorRule implements ChecklistRule {
   }
 }
 
-/** The vision judge on the blurred photo: agreed, disagreed, or not needed. */
+/** The vision judge on the blurred photo: agreed, disagreed, or did not run. */
 export class JudgeRule implements ChecklistRule {
   item(view: ReportStatusView): CheckItem {
     const verification = view.verification;
     if (!verification) return notYet(view, 'judge');
-    if (!verification.judge) return check('judge', 'skip', 'not_needed', 'not_used');
+    if (!verification.judge) return check('judge', 'skip', 'not_run', 'not_used');
     const score = signal(view, 'vision_judge')?.score;
     if (score !== undefined && verification.judge.report_type !== 'not_waste') return scored('judge', score);
     const band = score === undefined ? null : bandOf(score);

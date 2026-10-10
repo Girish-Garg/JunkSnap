@@ -15,6 +15,8 @@ describe('RationaleSanitizer', () => {
     ['www link', 'Plastic waste on the plot www.example.in/page beside a wall.', 'Plastic waste on the plot beside a wall.'],
     ['bare domain', 'Plastic waste on the plot, details at dumpwatch.org today.', 'Plastic waste on the plot, details at today.'],
     ['email', 'Mixed waste on the roadside; write to someone@example.com about it.', 'Mixed waste on the roadside; write to about it.'],
+    ['link with a path and any ending', 'Waste on the plot, photos at dump-map.xyz/jodhpur/12 as well.', 'Waste on the plot, photos at as well.'],
+    ['www link with any ending', 'Waste on the plot, photos at www.dump-map.xyz as well.', 'Waste on the plot, photos at as well.'],
   ])('strips a %s', (_case, raw, expected) => {
     expect(clean(raw)).toBe(expected);
   });
@@ -71,5 +73,17 @@ describe('RationaleSanitizer name guard', () => {
     const zeroWidth = String.fromCharCode(0x200b);
     const bell = String.fromCharCode(7);
     expect(clean(`Waste${zeroWidth} pile on the${bell} roadside verge.`)).toBe('Waste pile on the roadside verge.');
+  });
+});
+
+describe('RationaleSanitizer known limits and hidden characters', () => {
+  it('deletes zero-width characters, so a split honorific still trips the guard', () => {
+    const zeroWidth = String.fromCharCode(0x200b);
+    expect(clean(`waste left by m${zeroWidth}r sharma near the wall.`)).toBeNull();
+  });
+
+  it('cannot tell a lone first name at the start of a sentence from an ordinary word (documented limit)', () => {
+    // A single capitalised word that opens a sentence passes; only the judge prompt keeps names out of it.
+    expect(clean('Ramesh left the waste beside the wall.')).toBe('Ramesh left the waste beside the wall.');
   });
 });

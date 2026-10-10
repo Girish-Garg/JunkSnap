@@ -42,12 +42,12 @@ describe('FeedbackChecklist from the contract fixtures', () => {
     expect(items[4]?.metres).toBe(6);
   });
 
-  it('jpr-1 (scan frame sent to neighbours): the detector and the AI check agree weakly', () => {
+  it('jpr-1 (construction frame sent to neighbours): the AI check agrees weakly; the detector has no debris class', () => {
     const items = FeedbackChecklist.of(view('unverified', JPR));
     expect(rows(items)).toEqual([
       'authentic:pass/pass/-',
       'blurred:pass/pass/-',
-      'detector:pass/pass/weak',
+      'detector:skip/untrained/not_used',
       'judge:pass/pass/weak',
       'location:pass/pass/-',
     ]);
@@ -74,7 +74,7 @@ describe('FeedbackChecklist for photos that did not pass', () => {
     expect(rows(FeedbackChecklist.of(view('rejected', { report: JPR.report, moderation, verification: null })))).toEqual([
       'authentic:skip/not_reached/-',
       'blurred:skip/never_shown/-',
-      'detector:skip/stopped/not_used',
+      'detector:skip/untrained/not_used',
       'judge:skip/stopped/not_used',
       'location:pass/pass/-',
     ]);
@@ -101,9 +101,14 @@ describe('FeedbackChecklist edge cases', () => {
     expect(rows(FeedbackChecklist.of(view('unverified', { ...JPR, report })))[2]).toBe('detector:skip/untrained/not_used');
   });
 
-  it('says the AI check was not needed when the judge did not run', () => {
+  it('says the detector is not trained for open construction (no debris class, issue 111)', () => {
+    const report = { ...JPR.report, report_type: 'open_construction' };
+    expect(rows(FeedbackChecklist.of(view('unverified', { ...JPR, report })))[2]).toBe('detector:skip/untrained/not_used');
+  });
+
+  it('says the AI check did not run when the judge is null', () => {
     const verification = { ...JDH.verification, judge: null, signals: JDH.verification.signals?.filter((s) => s.name !== 'vision_judge') };
-    expect(rows(FeedbackChecklist.of(view('verified', { ...JDH, verification })))[3]).toBe('judge:skip/not_needed/not_used');
+    expect(rows(FeedbackChecklist.of(view('verified', { ...JDH, verification })))[3]).toBe('judge:skip/not_run/not_used');
   });
 
   it('never carries a raw score, only bands', () => {

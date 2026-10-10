@@ -1006,7 +1006,7 @@
       "judge": {
         "pass": "AI check agreed",
         "fail": "AI check disagreed",
-        "not_needed": "AI check not needed",
+        "not_run": "AI check didn't run",
         "pending": "AI check not done yet",
         "stopped": "AI check not run: the photo was stopped first"
       },
