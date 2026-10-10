@@ -34,6 +34,8 @@ export interface CachePolicy {
 interface Entry<T> extends Tagged<T> {
   readonly fetchedAt: number;
   readonly error: unknown;
+  /** Which request fetched it; a later request always wins. */
+  readonly seq: number;
 }
 
 /**
@@ -45,6 +47,9 @@ export class ExpiringCache<T> {
   readonly #clock: Clock;
   readonly #entries = new Map<string, Entry<T>>();
   readonly #inflight = new Map<string, Promise<Entry<T>>>();
+  readonly #floors = new Map<string, number>();
+  #seq = 0;
+  #clearedAt = 0;
 
   constructor(policy: CachePolicy, clock: Clock) {
     this.#policy = policy;
@@ -71,9 +76,19 @@ export class ExpiringCache<T> {
     }
   }
 
-  /** Drops one key, so the next read fetches it again. */
+  /** Drops one key after a write, so the next read fetches it again; a read already on its way is not kept. */
   forget(key: string): void {
     this.#entries.delete(key);
+    this.#inflight.delete(key);
+    this.#floors.set(key, this.#seq);
+  }
+
+  /** Drops every key, as forget() does for one. */
+  clear(): void {
+    this.#entries.clear();
+    this.#inflight.clear();
+    this.#floors.clear();
+    this.#clearedAt = this.#seq;
   }
 
   #usable({ key, token }: CacheRequest<T>): Entry<T> | null {
@@ -86,26 +101,38 @@ export class ExpiringCache<T> {
     return this.#clock.now().getTime() - entry.fetchedAt < this.#policy.ttlMs;
   }
 
-  // One request per key at a time; every caller waiting on the same key shares it.
+  // Callers of one key share its request, except with no TTL: then a read must see every write made before it,
+  // so it never joins a request that was already on its way.
   #refresh(request: CacheRequest<T>, previous: Entry<T> | null): Promise<Entry<T>> {
     const running = this.#inflight.get(request.key);
-    if (running) return running;
-    const next = this.#load(request, previous).finally(() => this.#inflight.delete(request.key));
+    if (running && this.#policy.ttlMs > 0) return running;
+    this.#seq += 1;
+    const next: Promise<Entry<T>> = this.#load(request, previous, this.#seq).finally(() => {
+      if (this.#inflight.get(request.key) === next) this.#inflight.delete(request.key);
+    });
     this.#inflight.set(request.key, next);
     return next;
   }
 
-  async #load({ key, load }: CacheRequest<T>, previous: Entry<T> | null): Promise<Entry<T>> {
+  async #load({ key, load }: CacheRequest<T>, previous: Entry<T> | null, seq: number): Promise<Entry<T>> {
     try {
       const fetched = await load(previous && { value: previous.value, token: previous.token });
-      return this.#store(key, { ...fetched, fetchedAt: this.#clock.now().getTime(), error: null });
+      return this.#store(key, { ...fetched, fetchedAt: this.#clock.now().getTime(), error: null, seq });
     } catch (error) {
-      if (previous) this.#entries.set(key, { ...previous, error });
+      if (previous && this.#entries.get(key) === previous) this.#entries.set(key, { ...previous, error });
       throw error;
     }
   }
 
+  // A request that started before a newer one, or before a forget(), answers its caller but is not kept.
+  #outdated(key: string, seq: number): boolean {
+    const floor = Math.max(this.#clearedAt, this.#floors.get(key) ?? 0, this.#entries.get(key)?.seq ?? 0);
+    return seq <= floor;
+  }
+
   #store(key: string, entry: Entry<T>): Entry<T> {
+    if (this.#outdated(key, entry.seq)) return entry;
+    this.#floors.delete(key);
     this.#entries.delete(key);
     this.#entries.set(key, entry);
     for (const oldest of this.#entries.keys()) {

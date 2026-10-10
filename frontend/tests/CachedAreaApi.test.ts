@@ -48,14 +48,26 @@ describe('CachedAreaApi', () => {
 });
 
 describe('CachedAreaApi revalidation', () => {
-  it('shows a five-minute-old listing at once and asks again with its ETag', async () => {
+  it('makes a five-minute-old listing wait for a check with its ETag, and answers with what the check brings', async () => {
     const { api, listTagged } = fakeApi();
     const { clock, cached } = cachedWith(api);
     await cached.list('assembly', 'rajasthan-jodhpur', 200);
     clock.ms = 5 * 60 * 1000;
-    expect(await cached.list('assembly', 'rajasthan-jodhpur', 200)).toEqual(listing('rajasthan-jodhpur'));
-    await vi.waitFor(() => expect(listTagged).toHaveBeenCalledTimes(2));
+    const newer = { ...listing('rajasthan-jodhpur'), total: 4 };
+    listTagged.mockResolvedValueOnce({ value: newer, token: '"newer"' });
+    expect(await cached.list('assembly', 'rajasthan-jodhpur', 200)).toEqual(newer);
     const previous = { value: listing('rajasthan-jodhpur'), token: '"rajasthan-jodhpur"' };
     expect(listTagged).toHaveBeenLastCalledWith('assembly', 'rajasthan-jodhpur', 200, previous);
+  });
+
+  it('rejects when the check of an old listing fails, so the screen shows the error, then checks again', async () => {
+    const { api, listTagged } = fakeApi();
+    const { clock, cached } = cachedWith(api);
+    await cached.list('assembly', 'rajasthan-jodhpur', 200);
+    clock.ms = 5 * 60 * 1000;
+    listTagged.mockRejectedValueOnce(new Error('offline'));
+    await expect(cached.list('assembly', 'rajasthan-jodhpur', 200)).rejects.toThrow('offline');
+    await expect(cached.list('assembly', 'rajasthan-jodhpur', 200)).resolves.toEqual(listing('rajasthan-jodhpur'));
+    expect(listTagged).toHaveBeenCalledTimes(3);
   });
 });

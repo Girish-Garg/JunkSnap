@@ -109,6 +109,43 @@ describe('ExpiringCache first fetch', () => {
   });
 });
 
+const NO_TTL: CachePolicy = { ttlMs: 0, staleWhileRevalidate: false, maxEntries: 10 };
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+describe('ExpiringCache writes during a read', () => {
+  it('with no TTL, never lets a read made after a write join a read that started before it', async () => {
+    const { cache } = setUp(NO_TTL);
+    const before = deferred<Tagged<string>>();
+    const load = vi.fn<CacheLoader<string>>().mockReturnValueOnce(before.promise).mockResolvedValueOnce({ value: 'after vote', token: '"2"' });
+    const early = cache.get({ key: 'site', load });
+    const late = cache.get({ key: 'site', load });
+    expect(await late).toBe('after vote');
+    before.resolve({ value: 'before vote', token: '"1"' });
+    expect(await early).toBe('before vote');
+    const offline = vi.fn<CacheLoader<string>>().mockRejectedValue(OFFLINE);
+    expect(await cache.read({ key: 'site', load: offline })).toEqual({ value: 'after vote', stale: true, error: OFFLINE });
+  });
+
+  it('keeps nothing from a read already on its way when the key is forgotten after a write', async () => {
+    const { cache } = setUp(BLOCK);
+    const before = deferred<Tagged<string>>();
+    const early = cache.get({ key: 'site', load: () => before.promise });
+    cache.forget('site');
+    before.resolve({ value: 'before vote', token: '"1"' });
+    expect(await early).toBe('before vote');
+    const load = vi.fn<CacheLoader<string>>(async () => ({ value: 'after vote', token: '"2"' }));
+    expect(await cache.get({ key: 'site', load })).toBe('after vote');
+    expect(load).toHaveBeenCalledWith(null);
+  });
+});
+
 describe('ExpiringCache keys', () => {
   it('shares one request between callers of the same key', async () => {
     const { cache } = setUp(BLOCK);

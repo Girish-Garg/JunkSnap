@@ -36,7 +36,9 @@ import { ScanQueue } from '../services/ScanQueue';
 import { ScanSender } from '../services/ScanSender';
 import { ScanTracker } from '../services/ScanTracker';
 import { sampleAreaLetterLoader, sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../services/siteFixtures';
+import { EvictingSiteActionsApi } from '../services/EvictingSiteActionsApi';
 import { HttpSiteActionsApi } from '../services/HttpSiteActionsApi';
+import type { SiteCacheEviction } from '../services/SiteCacheEviction';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockSiteActionsApi } from '../services/MockSiteActionsApi';
 import { SiteActionService } from '../services/SiteActionService';
@@ -98,6 +100,8 @@ interface ActionParts {
   readonly random: () => Uint8Array;
 }
 
+const NO_EVICTION: SiteCacheEviction = { forgetSite: () => undefined };
+
 interface QueueParts {
   readonly db: JunkSnapDb;
   readonly apis: Apis;
@@ -106,11 +110,12 @@ interface QueueParts {
 }
 
 export class SnapServiceFactory {
-  static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService): SnapServices {
+  static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService, eviction: SiteCacheEviction = NO_EVICTION): SnapServices {
     const db = new JunkSnapDb();
     const device = new DeviceIdentity(new IndexedDbMetaStore(db), () => browser.crypto.getRandomValues(new Uint8Array(16)));
     const identity: RequestIdentity = { idToken: (force) => auth.idToken(force), deviceToken: () => device.token() };
-    const apis = API_BUILDERS[config.apiMode](config, identity);
+    const built = API_BUILDERS[config.apiMode](config, identity);
+    const apis: Apis = { ...built, sites: new EvictingSiteActionsApi(built.sites, eviction) };
     const clock = new SystemClock();
     const queue = SnapServiceFactory.#reportQueue({ db, apis, identity, clock }, browser.locks);
     const scans = SnapServiceFactory.#scanQueue({ db, apis, identity, clock }, browser.locks);

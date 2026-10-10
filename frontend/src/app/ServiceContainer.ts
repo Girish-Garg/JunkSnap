@@ -13,6 +13,7 @@ import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
 import { ExpiringCache } from '../services/ExpiringCache';
+import { SiteCaches } from '../services/SiteCaches';
 import { SystemClock } from '../services/SystemClock';
 import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
@@ -31,9 +32,9 @@ import { SnapServiceFactory, type SnapBrowserApis } from './SnapServiceFactory';
 import type { SnapServices } from './SnapServices';
 
 // A new API mode is a new entry here, not a new branch.
-const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiClient>> = {
+const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, caches: SiteCaches) => ApiClient>> = {
   mock: () => new MockApiClient(siteFixtureLoaders),
-  live: (config) => new HttpApiClient(config.requireApiUrl()),
+  live: (config, caches) => new HttpApiClient(config.requireApiUrl(), undefined, caches),
 };
 
 const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => TaggedAreaApi>> = {
@@ -115,17 +116,20 @@ export class ServiceContainer implements Services {
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
     const auth = AUTH_BUILDERS[config.apiMode](config, browser.store);
+    const clock = new SystemClock();
+    // One set of site copies: the api reads into it, and site actions forget a site after writing to it.
+    const siteCaches = SiteCaches.standard(clock);
     return new ServiceContainer({
       config,
-      api: API_CLIENT_BUILDERS[config.apiMode](config),
-      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.POLICY, new SystemClock())),
+      api: API_CLIENT_BUILDERS[config.apiMode](config, siteCaches),
+      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.POLICY, clock)),
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
       boundaries: new BoundaryCatalog(BoundaryCatalog.defaultBaseUrl()),
       locator: new GeoLocator(browser.geolocation),
       sharer: new Sharer(browser.share),
-      snap: SnapServiceFactory.build(config, browser, auth),
+      snap: SnapServiceFactory.build(config, browser, auth, siteCaches),
       onboarding: new OnboardingPreference(browser.store),
       theme: new ThemePreference(browser.store, browser.root ?? null),
       edge: ServiceContainer.#edge(browser),

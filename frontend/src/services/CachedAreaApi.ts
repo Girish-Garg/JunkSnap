@@ -7,12 +7,12 @@ import type { TaggedAreaApi } from './TaggedAreaApi';
 
 /**
  * Remembers GET /areas/{kind}?within= per kind, area and limit, so the map fill, the Areas tab and the ranking
- * share one request each. An old listing shows at once while it is asked again with its ETag; a failed first
- * request is not kept, so the next open tries again.
+ * share one request each. An older listing waits for a check with its ETag (a 304 keeps it); a failed request
+ * rejects, and a failed first request is not kept, so the next open tries again.
  */
 export class CachedAreaApi implements AreaApi {
   // The scores CronJob rewrites the rows every 15 minutes; a listing younger than 5 minutes is reused as is.
-  static readonly POLICY: CachePolicy = { ttlMs: 5 * 60 * 1000, staleWhileRevalidate: true, maxEntries: 32 };
+  static readonly POLICY: CachePolicy = { ttlMs: 5 * 60 * 1000, staleWhileRevalidate: false, maxEntries: 32 };
 
   readonly #inner: TaggedAreaApi;
   readonly #lists: ExpiringCache<AreaListing>;
@@ -26,11 +26,14 @@ export class CachedAreaApi implements AreaApi {
     return this.#inner.scores(kind, id);
   }
 
-  list(kind: AreaKind, within: string, limit: number): Promise<AreaListing> {
-    return this.#lists.get({
+  // A failed refresh rejects, so the screen shows the error; the old copy stays for the next 304.
+  async list(kind: AreaKind, within: string, limit: number): Promise<AreaListing> {
+    const read = await this.#lists.read({
       key: `${kind}|${within}|${String(limit)}`,
       load: (previous) => this.#inner.listTagged(kind, within, limit, previous),
     });
+    if (read.error !== null) throw read.error;
+    return read.value;
   }
 
   crawl(districtId: string): Promise<AreaCrawl> {
