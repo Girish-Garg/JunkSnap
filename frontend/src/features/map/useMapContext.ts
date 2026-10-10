@@ -11,9 +11,18 @@ export interface MapContext {
   readonly refreshSites: () => void;
   /** Shows a short toast over the map; key is an i18n key. */
   readonly announce: (key: string) => void;
+  /** Area id to its neighbour tint slot on the map (AreaColouring), for the Areas tab chips. */
+  readonly areaTints: ReadonlyMap<string, number>;
 }
 
-const DETACHED: MapContext = { userLocation: null, showSite: () => undefined, sites: [], refreshSites: () => undefined, announce: () => undefined };
+const DETACHED: MapContext = {
+  userLocation: null,
+  showSite: () => undefined,
+  sites: [],
+  refreshSites: () => undefined,
+  announce: () => undefined,
+  areaTints: new Map(),
+};
 
 export function useMapContext(): MapContext {
   return useOutletContext<MapContext | undefined>() ?? DETACHED;

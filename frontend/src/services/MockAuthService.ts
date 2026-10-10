@@ -90,9 +90,10 @@ export class MockAuthService implements AuthService {
     return MOCK_CODE;
   }
 
-  // A placeholder token so the mock report api sends only for a signed-in user, like the real one.
+  // A placeholder token so the mock report api sends only for a signed-in user, like the real one. It is
+  // shaped like a JWT with a stable sample `sub` per account (unsigned: nothing checks it in mock mode).
   async idToken(): Promise<string | null> {
-    return this.#user ? 'sample-id-token' : null;
+    return this.#user ? MockAuthService.#token(this.#user.email) : null;
   }
 
   #setUser(email: string): AuthUser {
@@ -108,6 +109,14 @@ export class MockAuthService implements AuthService {
 
   #wait(): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, this.#delayMs));
+  }
+
+  static #token(email: string): string {
+    // FNV-1a, so the sample sub is stable per account without being the email.
+    let hash = 0x811c9dc5;
+    for (const char of email) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+    const part = (value: object) => btoa(JSON.stringify(value)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+    return `${part({ alg: 'none' })}.${part({ sub: `sample-${hash.toString(16)}` })}.sample`;
   }
 
   static #key(email: string): string {

@@ -119,7 +119,7 @@ describe('BoundaryCatalog files', () => {
       return Response.json(points);
     });
     expect(await ok.labels()).toEqual(points);
-    expect(calls).toEqual(['/b/areas_labels.geojson']);
+    expect(calls).toEqual(['/b/index.json', '/b/areas_labels.geojson']);
     const missing = new BoundaryCatalog('/b/', async () => new Response('', { status: 404 }));
     await expect(missing.labels()).rejects.toThrow('404');
   });

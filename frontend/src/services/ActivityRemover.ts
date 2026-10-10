@@ -15,6 +15,8 @@ export interface ActivityRemoverPorts {
   readonly statuses: Pick<ReportApi, 'status'>;
   /** DELETE /sites/{id}/reports/mine, behind the sign-in gate. */
   readonly sites: { withdraw(siteId: string): Promise<WithdrawalResult> };
+  /** Deleted report ids, so the server's list never brings the row back. */
+  readonly dismissed: { add(reportId: string): Promise<void> };
 }
 
 // Already withdrawn, or verified in the meantime: neither stops the row from leaving this phone.
@@ -34,6 +36,7 @@ export class ActivityRemover {
 
   async removeReport(report: QueuedReport): Promise<RemovalOutcome> {
     const outcome = await this.#withdraw([report.data.status]);
+    if (report.data.report_id) await this.#ports.dismissed.add(report.data.report_id);
     await this.#ports.reports.remove(report.id);
     return outcome;
   }

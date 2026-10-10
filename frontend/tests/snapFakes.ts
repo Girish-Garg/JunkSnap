@@ -1,4 +1,9 @@
+import { AccountKey } from '../src/services/AccountKey';
+import { ActivityFreshness } from '../src/services/ActivityFreshness';
+import { ActivityOwnership } from '../src/services/ActivityOwnership';
 import { ActivityRemover, type ActivityRemoverPorts } from '../src/services/ActivityRemover';
+import { ActivitySync, type ActivitySyncPorts } from '../src/services/ActivitySync';
+import { DismissedReports } from '../src/services/DismissedReports';
 import type { SnapServices } from '../src/app/SnapServices';
 import type { AreaLetterApi } from '../src/services/AreaLetterApi';
 import { AreaLetterService } from '../src/services/AreaLetterService';
@@ -176,6 +181,10 @@ export interface SnapTestOptions {
   readonly clock?: FakeClock;
   readonly siteApi?: SiteActionsApi;
   readonly areaLetterApi?: AreaLetterApi;
+  /** The phone's small values (Activity's list token and deleted ids); fresh by default. */
+  readonly meta?: MetaStore;
+  /** The phone's stored videos; fresh by default. */
+  readonly scanStore?: ItemStore<QueuedScanData>;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
@@ -185,27 +194,43 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   const api = options.api ?? new MockReportApi(sampleSiteLoader, 0);
   const store = options.store ?? new MemoryReportStore();
   const queue = new ReportQueue({ store, sender: new ReportSender(api, identity, clock), clock, lock: new QueueLock(undefined) });
-  const media = options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices());
   const scanApi = options.scanApi ?? new MockScanApi(0);
-  const scans = new ScanQueue({ store: new MemoryItemStore<QueuedScanData>(), sender: new ScanSender(scanApi, identity, clock), clock, lock: new QueueLock(undefined) });
+  const scans = testScanQueue(options.scanStore, new ScanSender(scanApi, identity, clock), clock);
   const recorder = new VideoRecorder(fakeRecorderFactory, clock);
   const hasher = new PhotoHasher(crypto.subtle);
   const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation(), clock);
+  const { activity, dismissed } = testActivity(options, identity, { api, queue, scans, clock });
   return {
     queue,
     tracker: new ReportTracker(api, queue),
+    activity,
     scans,
     scanTracker: new ScanTracker(scanApi, scans),
     recorder,
     scanCapture: new ScanCapture({ recorder, gps, hasher, queue: scans, clock }),
-    camera: new CameraCapture(media),
+    camera: new CameraCapture(options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices())),
     encoder: new FakeEncoder(),
     hasher,
     gps,
-    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api }),
+    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
+}
+
+function testScanQueue(store: ItemStore<QueuedScanData> | undefined, sender: ScanSender, clock: Clock): ScanQueue {
+  return new ScanQueue({ store: store ?? new MemoryItemStore<QueuedScanData>(), sender, clock, lock: new QueueLock(undefined) });
+}
+
+function testActivity(options: SnapTestOptions, identity: RequestIdentity, ports: Pick<ActivitySyncPorts, 'api' | 'queue' | 'clock'> & { readonly scans: ScanQueue }) {
+  const meta = options.meta ?? new MemoryMetaStore();
+  const dismissed = new DismissedReports(meta);
+  const account = new AccountKey(identity, crypto.subtle);
+  const freshness = new ActivityFreshness(meta, ports.clock);
+  const ownership = new ActivityOwnership({ ...ports, freshness, account, meta });
+  const activity = new ActivitySync({ api: ports.api, queue: ports.queue, clock: ports.clock, freshness, ownership, dismissed, account });
+  activity.watch(options.auth);
+  return { activity, dismissed };
 }
 
 function testActions(siteActions: SiteActionService, ports: Omit<ActivityRemoverPorts, 'sites'>): Pick<SnapServices, 'siteActions' | 'remover'> {

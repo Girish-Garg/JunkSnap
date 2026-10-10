@@ -8,6 +8,7 @@ import { FiltersButton } from './FiltersButton';
 import { LegendToggle } from './LegendToggle';
 import { MapControls } from './MapControls';
 import { MapStatus } from './MapStatus';
+import { PickedArea } from './PickedArea';
 import { PickedPin } from './PickedPin';
 import { SearchBar } from './SearchBar';
 
@@ -17,9 +18,9 @@ interface MapOverlayProps {
   readonly listMode: boolean;
 }
 
-/** Everything floating over the map: search, filters, status, preview card or stack list, and location. */
+/** Everything floating over the map: search, filters, status, the pin or area card or stack list, and location. */
 export function MapOverlay({ page, listMode }: MapOverlayProps) {
-  const { selection, filters, boundary } = page;
+  const { selection, filters, boundary, areaCard } = page;
   const desktop = useMediaQuery(DESKTOP_QUERY);
   const filtersButton = <FiltersButton activeCount={filters.filter.activeCount()} onOpen={() => filters.setOpen(true)} />;
   return (
@@ -38,11 +39,8 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
         {!listMode && <MapStatus notice={page.notice} onNearest={page.showNearest} />}
       </div>
       <PickedPin selection={selection} userLocation={page.location.position} />
-      {!listMode && (
-        <LegendToggle>
-          <BoundaryLegend keys={LegendKeys.of(boundary.view !== null, boundary.markers)} />
-        </LegendToggle>
-      )}
+      {!listMode && <PickedArea card={areaCard} tints={boundary.tints} />}
+      {!listMode && <LegendToggle><BoundaryLegend keys={LegendKeys.of(boundary.view !== null, boundary.markers)} /></LegendToggle>}
       {!listMode && <MapControls onLocate={page.location.locate} />}
       {desktop && <DesktopActions />}
     </>

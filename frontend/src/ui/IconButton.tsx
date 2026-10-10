@@ -6,9 +6,10 @@ interface IconButtonProps {
   readonly onClick: () => void;
   readonly variant?: 'float' | 'plain';
   readonly expanded?: boolean;
+  readonly disabled?: boolean;
 }
 
-export function IconButton({ icon, label, onClick, variant = 'plain', expanded }: IconButtonProps) {
+export function IconButton({ icon, label, onClick, variant = 'plain', expanded, disabled }: IconButtonProps) {
   return (
     <button
       type="button"
@@ -16,6 +17,7 @@ export function IconButton({ icon, label, onClick, variant = 'plain', expanded }
       aria-label={label}
       aria-expanded={expanded}
       title={label}
+      disabled={disabled}
       onClick={onClick}
     >
       <Icon name={icon} size={22} />
