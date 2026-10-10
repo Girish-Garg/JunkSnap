@@ -2,16 +2,14 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useServices } from '../../../app/useServices';
 import type { FrameDetections } from '../../../domain/EdgeModel';
 import type { EdgeHints, EdgeReady } from '../../../services/EdgeHints';
-import { EdgeHintLoop, type Timer } from '../../../services/EdgeHintLoop';
+import { EdgeHintLoop } from '../../../services/EdgeHintLoop';
+import { FrameCounter } from '../../../services/FrameCounter';
+import { DocumentVisibility } from '../../../services/PageVisibility';
+import { WINDOW_TIMER } from '../../../services/Timer';
 import { EdgeOverlayView, EMPTY_OVERLAY, type OverlayView } from '../EdgeOverlayView';
 import { useEdgeHintsSetting } from './useEdgeHintsSetting';
 
 export type EdgeState = 'off' | 'loading' | 'live';
-
-const WINDOW_TIMER: Timer = {
-  set: (run, ms) => window.setTimeout(run, ms),
-  clear: (handle) => window.clearTimeout(handle),
-};
 
 interface Run {
   readonly edge: EdgeHints;
@@ -20,18 +18,23 @@ interface Run {
   readonly onFrame: (frame: FrameDetections) => void;
 }
 
-// Loads the detector (first time only) and runs the loop; the returned function stops it.
+// Loads the detector (first time only) and runs the loop on new frames of a visible page; the returned function stops it.
 function runHints({ edge, video, onReady, onFrame }: Run): () => void {
   let loop: EdgeHintLoop | null = null;
   let cancelled = false;
+  const counter = video.current ? FrameCounter.for(video.current) : null;
+  const page = new DocumentVisibility(document);
+  const frames = counter ? () => counter.count : undefined;
+  counter?.start();
   void edge.open().then((loaded) => {
     if (cancelled) return;
     onReady(loaded);
-    if (loaded) loop = new EdgeHintLoop({ detector: loaded.detector, video: () => video.current, onFrame, timer: WINDOW_TIMER });
+    if (loaded) loop = new EdgeHintLoop({ detector: loaded.detector, video: () => video.current, onFrame, timer: WINDOW_TIMER, frames, visible: () => page.visible() });
     loop?.start();
   });
   return () => {
     cancelled = true;
+    counter?.stop();
     loop?.stop();
   };
 }

@@ -34,7 +34,7 @@ export function CameraStage({ flow, gps }: CameraStageProps) {
   return (
     <div className="snap-camera">
       <div className="viewfinder">
-        <video ref={video} className="viewfinder__video" playsInline muted aria-hidden="true" />
+        <video ref={video} className="viewfinder__video" autoPlay playsInline muted aria-hidden="true" />
         <EdgeOverlay state={hints.state} view={hints.view} />
         {message && (
           <p className="viewfinder__message" role="status">
