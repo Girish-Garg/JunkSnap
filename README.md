@@ -121,6 +121,8 @@ Full method and every table: [docs/ml/eval.md](docs/ml/eval.md). Models are trai
 | bin | 129 | OWLv2 teacher | 0.860 | 0.690 | 0.732 |
 | all | 8,713 | | 0.761 | 0.466 | 0.537 |
 
+`all` also counts 5 `bag` boxes (recall 0.000), too few to report.
+
 **Phone detector.** A separate YOLO26n, trained 40 epochs at 320 px on the same data, is exported to ONNX (2.8 MB int8, 4.9 MB fp16). Test mAP50 at 320 px: 0.424 in PyTorch, 0.372 for the int8 file. The app loads the int8 file in a WASM worker for live boxes; its boxes are hints only.
 
 **Embedding classifier.** Logistic heads on SigLIP 2 image embeddings, run locally as ONNX. On one fixed sample SigLIP 2 tied Bedrock's Titan Multimodal Embeddings (mean test F1 0.923 against 0.919), so SigLIP 2 is used: no per-photo cost, no quota, and the photo stays in the cluster. The waste-or-not head scores F1 0.969 on the 184 QR4Change test photos.
@@ -208,7 +210,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 - Pipeline: moderation and blur; stacked verification; sites on the map from the first passed photo, verified by 10 people; no-bin community zones; location with ward, MLA and MP seats; brand labels; community votes and cleanup claims with an after-photo; residents' notes on a site, summarised on Bedrock.
 - Letters: site letters and area letters with evidence and the quote verifier, in English or Hindi, printed to PDF or shared.
 - Areas: scores with counts, the pilot flag, diagnosis and insights; the combined Areas map with markers and dark badges; a city ranking.
-- Ward data: the crawler runs as a service on EKS. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are shown on the map only, marked unreviewed.
+- Ward data: the crawler runs as a service on EKS. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are built as unreviewed data files (`data/boundaries/*_wards.geojson`); they are not on the map and not used for lookups, scores or letters.
 - App: the playful redesign with a cartoon logo, onboarding and dark mode; the Android app with a GitHub Actions APK release.
 - The deployed `ml` service loads the trained models at start (YOLO26s, the SigLIP 2 heads and the `meta-v2` meta-learner) and checks each file against its pinned SHA-256.
 - Not built: drones and CCTV, potholes.
@@ -217,7 +219,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 
 - Photos show that waste exists, not who put it there. JunkSnap never names a person.
 - Model numbers come from public datasets, not from Jodhpur. Pile and bin boxes come from a teacher model.
-- No open ward map exists for Jodhpur, so letters and scores use the assembly and Lok Sabha seats there. The approximate ward boundaries are display only and never used for letters until a person reviews them. Ward facts from the crawler stay marked unreviewed until a person checks them.
+- No open ward map exists for Jodhpur, so letters and scores use the assembly and Lok Sabha seats there. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are built as unreviewed data files (`data/boundaries/*_wards.geojson`); they are not on the map and not used for lookups, scores or letters. Ward facts from the crawler stay marked unreviewed until a person checks them.
 - Rule entries in `data/rules/rules.json` are marked unreviewed until a person checks them against the PDFs; the word-for-word check runs on every quote regardless.
 - Letters are drafts, not legal advice. The resident files them; nothing is sent automatically.
 

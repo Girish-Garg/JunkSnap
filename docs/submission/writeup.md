@@ -8,7 +8,7 @@ Dumps are not only the authorities' failure. People dump on empty plots, often b
 
 JunkSnap measures all three causes. Anyone in India photographs waste, or films it with GPS, in the app; on capable phones a small detector draws live boxes as they shoot. Report types cover waste dumps, overflowing or broken bins, contaminated water, open construction and missing bins. The server blurs faces and number plates, checks each photo with stacked models, and puts it on the map as a site from the first passed photo. A site is verified when 10 different people back it with a photo or a yes vote. A missing dustbin cannot be photographed, so people report "no dustbin within 1 km" from where they stand, and those reports form community zones, verified the same way. Residents can add notes to a site, which Bedrock summarises.
 
-Each site gets its ward, assembly seat (MLA) and Lok Sabha seat (MP). For a verified site, or for one issue across a whole ward, seat or district, JunkSnap drafts a letter To the local body head (or the District Collector for Lok Sabha seats and districts), Cc the councillor, MLA and MP for attention. Letters quote the Solid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026) and other official texts, each quote checked word for word, and carry evidence: counts, reporters, dates, blurred photos and a line on what residents noted. Each area gets three scores: city clearing, citizen dumping and access to bins. The Areas map shows assembly seats in Rajasthan and Lok Sabha seats elsewhere, with a ranking of the worst areas.
+Each site gets its ward, assembly seat (MLA) and Lok Sabha seat (MP). For a verified site, or for one issue across a whole ward, seat or district, JunkSnap drafts a letter To the local body head (for Lok Sabha seats and districts, the District Collector first and the local body heads too), Cc the councillor, MLA and MP for attention. Letters quote the Solid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026) and other official texts, each quote checked word for word, and carry evidence: counts, reporters, dates, blurred photos and a line on what residents noted. Each area gets three scores: city clearing, citizen dumping and access to bins. The Areas map shows assembly seats in Rajasthan and Lok Sabha seats elsewhere, with a ranking of the worst areas.
 
 The app has a playful look with a cartoon logo, onboarding cards and dark mode, and runs on the web and as an Android app.
 
@@ -22,17 +22,17 @@ Rekognition labels, our YOLO26 detector and a SigLIP 2 embedding classifier scor
 
 ## Real and pilot
 
-Jodhpur is the pilot. Assembly seats are loaded for Rajasthan, crawled ward data for Jodhpur and Jaipur, Lok Sabha seats for all of India (three states use older shapes, and their MPs are not copied on letters). A score shows only after 10 verified reports in an area; below that only counts show. Pilot areas are flagged; no history is invented.
+Jodhpur is the pilot. Assembly seats are loaded for Rajasthan, crawled ward data for Jodhpur and Jaipur, Lok Sabha seats for all of India (Assam, Jammu and Kashmir and Ladakh use older shapes, and their MPs are not copied on letters). A score shows only after 10 verified reports in an area; below that only counts show. Pilot areas are flagged; no history is invented.
 
 ## Limits
 
 - Accuracy on Jodhpur photos is not measured; the judge prompt changed after its evaluation.
-- Jodhpur has no open ward map. Approximate ward boundaries (34 of Jodhpur's 100 wards, 12 of Jaipur's 150) are display only; crawled ward facts and rule entries await a person's review.
+- Jodhpur has no open ward map. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are built as unreviewed data files (`data/boundaries/*_wards.geojson`); they are not on the map and not used for lookups, scores or letters. Crawled ward facts and rule entries await a person's review.
 - Photos show waste, not who put it there; no person is named. Letters are drafts the resident files.
 
 ## AI tools used
 
-- **Claude Code** (Claude Opus 5.5): coding agents, design and code reviews.
+- **Claude Code** (Claude Opus 5.5 for planning and coding agents; Claude Sonnet 5.5 for the fresh-context reviewer subagent).
 - **Amazon Bedrock**: Amazon Nova Lite as the vision judge; Amazon Nova Pro for letter prose, summaries of residents' notes, brand reading and note moderation; Nova Pro, then Nova Lite, for ward-data extraction. Claude Sonnet 4.6 and Haiku 4.5 are configured first but blocked for this account until Anthropic's use-case form is submitted. Nova 2 Lite and Titan embeddings were only benchmarked.
 - **Amazon Rekognition**: moderation, faces, plates, labels, packaging text.
 - **OWLv2**: offline teacher boxes for piles and bins.
