@@ -18,7 +18,7 @@ Amazon EKS Auto Mode runs `api`, `worker`, `ml`, a `scores` CronJob and an hourl
 
 ## ML and verification
 
-Rekognition labels, our YOLO26 detector and a SigLIP 2 embedding classifier score each blurred photo. A logistic-regression meta-learner combines them; a Bedrock vision judge runs only when signals disagree or the result is unsure. The models gate each photo: under 0.5 it is rejected, otherwise it joins a site, and people verify the site. On the public test split (184 photos) the meta-learner reached 0.978 accuracy with calibration error 0.019, against 0.115 for fixed weights. A smaller YOLO26n runs on the phone as a 2.8 MB int8 ONNX file for live boxes only; the server always re-verifies. All models are trained and evaluated on openly licensed public data only. Pile and bin boxes came from an OWLv2 teacher model, so those detector numbers measure agreement with it, not with people.
+Rekognition labels, our YOLO26 detector and a SigLIP 2 embedding classifier score each blurred photo. A logistic-regression meta-learner combines them; a Bedrock vision judge checks every photo. The models gate each photo: under 0.5 it is rejected, otherwise it joins a site, and people verify the site. On the public test split (184 photos) the meta-learner reached 0.978 accuracy with calibration error 0.019, against 0.115 for fixed weights. A smaller YOLO26n runs on the phone as a 2.8 MB int8 ONNX file for live boxes only; the server always re-verifies. All models are trained and evaluated on openly licensed public data only. Pile and bin boxes came from an OWLv2 teacher model, so those detector numbers measure agreement with it, not with people.
 
 ## Real and pilot
 
@@ -32,8 +32,11 @@ Jodhpur is the pilot. Assembly seats are loaded for Rajasthan, crawled ward data
 
 ## AI tools used
 
-- **Claude Code** (Claude Opus 5.5 for planning and coding agents; Claude Sonnet 5.5 for the fresh-context reviewer subagent).
-- **Amazon Bedrock**: Amazon Nova Lite as the vision judge; Amazon Nova Pro for letter prose, summaries of residents' notes, brand reading and note moderation; Nova Pro, then Nova Lite, for ward-data extraction. Claude Sonnet 4.6 and Haiku 4.5 are configured first but blocked for this account until Anthropic's use-case form is submitted. Nova 2 Lite and Titan embeddings were only benchmarked.
+- **Claude Code**
+
+## Models inside JunkSnap
+
+- **Amazon Bedrock**: Amazon Nova Lite as the vision judge on every report; Amazon Nova Pro for letter prose, summaries of residents' notes, brand reading and note moderation; Nova Pro, then Nova Lite, for ward-data extraction. Nova 2 Lite and Titan embeddings were only benchmarked.
 - **Amazon Rekognition**: moderation, faces, plates, labels, packaging text.
 - **OWLv2**: offline teacher boxes for piles and bins.
 - **Ultralytics YOLO26** (AGPL-3.0): the waste detector on the server (YOLO26s) and on the phone (YOLO26n, run with ONNX Runtime Web).
