@@ -120,6 +120,13 @@ describe("NewestWardFiles", () => {
     ]);
   });
 
+  it("keeps a file with reviewed records over a newer unreviewed crawl", async () => {
+    const reviewed = JSON.stringify({ generated_at: "2026-10-09T22:42:09Z", note: "image", records: [{ review_status: "reviewed" }] });
+    const older = folder({ "jodhpur.json": reviewed });
+    const files = await new NewestWardFiles([new DirectoryWardFiles(older), new DirectoryWardFiles(crawled)]).files();
+    expect(files.filter((file) => file.city === "jodhpur").map(note)).toEqual(["image"]);
+  });
+
   it("feeds the newest files to the scores job's ward facts", async () => {
     const assets = folder({});
     mkdirSync(join(assets, "representatives"));
