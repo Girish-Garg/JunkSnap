@@ -5,12 +5,11 @@ import { sitePath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
-import { useSite } from '../../site/hooks/useSite';
+import { useSiteRouteGate } from '../../actions/hooks/useRouteGates';
 import { useGpsFix } from '../../snap/hooks/useGpsFix';
 import '../../snap/snap.css';
 import { useCleanup } from '../hooks/useCleanup';
-import { CleanupCamera } from './CleanupCamera';
-import { CleanupReview } from './CleanupReview';
+import { CleanupStage } from './CleanupStage';
 import { CleanupStatus } from './CleanupStatus';
 
 const TITLE_ID = 'cleanup-title';
@@ -23,15 +22,15 @@ export function CleanupRoute() {
   const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useCleanup(siteId);
   const gps = useGpsFix(flow.phase === 'camera');
-  const site = useSite(siteId);
+  const site = useSiteRouteGate(siteId, 'cleanup');
+  // After Send the site is checking this very photo, so only a sheet that has not sent yet can be locked.
+  const locked = flow.phase === 'sent' ? null : site.locked;
   return (
     <BottomSheet labelledBy={TITLE_ID} closeLabel={t('cleanup.close')} resizeLabel={t('sheet.resize')} onClose={close} initial="full" focusKey={flow.phase}>
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t(flow.phase === 'sent' ? 'cleanup.sentTitle' : 'cleanup.title')}
       </h2>
-      {flow.phase === 'camera' && <p className="sheet-text">{t('cleanup.text')}</p>}
-      {flow.phase === 'camera' && <CleanupCamera flow={flow} gps={gps} />}
-      {flow.phase === 'review' && flow.photo && <CleanupReview photo={flow.photo} flow={flow} />}
+      <CleanupStage flow={flow} gps={gps} locked={locked} onBack={close} />
       {flow.phase === 'sent' && <CleanupStatus site={site.site} siteId={siteId} reload={site.reload} />}
     </BottomSheet>
   );

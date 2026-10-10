@@ -56,6 +56,15 @@
   }
 }
 
+/* A sheet opened by link for an action that cannot run: why, and the way back. */
+.route-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
 /* A sheet whose content crashed: the sheet stays, says so and offers to try again. */
 .sheet-crash {
   display: flex;

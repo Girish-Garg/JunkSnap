@@ -40,7 +40,7 @@ npm run build
 - Back button: a sheet that is not a route uses `useHistoryLayer`; route sheets open and close through `useSheetNavigation` (never a bare `navigate`), so Android back closes the topmost sheet. Each open sheet is one level: close, back, Escape, a drag down and a map tap pop exactly one (decision 20261011-0030, proposed). Build sheets on `BottomSheet` to get the drag and the model.
 - Accounts (decision 20261010-0227): browsing needs no sign-in; Snap, Scan, votes, cleanups and letters do. Sign in with Cognito (`VITE_COGNITO_*`) and send the ID token as `Authorization: Bearer`. Never show or store another user's id, email or name.
 - Failed uploads wait in the IndexedDB offline queue and retry with backoff.
-- An action that can be off gets a gate in `domain/` and `useGate`; an api call handles failures with `useActionErrors` (decision 20261011-0303). Never show the server's message.
+- An action that can be off gets a gate in `domain/`, decided in a hook that hands the component a `GatedAction` (`useSiteGates`, `useSessionGate`); an api call handles failures with `useActionErrors` (decision 20261011-0303). Never show the server's message.
 - Letters: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. No server-side PDF library (they mangle Devanagari). Nothing is filed automatically; the resident files.
 - Area pages show counts next to every score, the pilot flag, and "not enough reports" below 10 verified reports.
 - Neutral design: no party colours, no names of individuals anywhere on screen.

@@ -1,5 +1,8 @@
-/** signIn: the reason goes away after sign-in, so a tap opens it and then runs the action. */
-export type Remedy = 'signIn';
+/**
+ * signIn: the reason goes away after sign-in, so a tap opens it and then runs the action.
+ * relocate: the reason rests on a location fix, so a tap takes a fresh one and runs the action if it is in range.
+ */
+export type Remedy = 'signIn' | 'relocate';
 
 export interface Blocked {
   readonly enabled: false;

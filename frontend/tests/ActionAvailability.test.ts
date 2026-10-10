@@ -17,7 +17,7 @@ import hi from '../src/i18n/hi.json';
 const SESSION: SessionFacts = { signedIn: true, online: true, cooling: new Set() };
 const SITE: SiteActionFacts = {
   ...SESSION,
-  site: { verification: 'verified', cleanup_status: 'none' },
+  site: { verification: 'verified', status: 'open', cleanup_status: 'none' },
   ownSite: false,
   distanceM: 200,
   locationDenied: false,
@@ -41,7 +41,8 @@ describe('site action gates', () => {
     expect(vote({})).toEqual(OK);
     expect(vote({ busy: true })).toEqual(waiting('gate.busy'));
     expect(vote({ ownSite: true })).toEqual(blocked('vote.errors.own_site'));
-    expect(vote({ distanceM: 1250 })).toEqual(blocked('vote.errors.too_far'));
+    // Too far rests on a fix, so a tap takes a fresh one first (remedy relocate).
+    expect(vote({ distanceM: 1250 })).toEqual(blocked('vote.errors.too_far', undefined, 'relocate'));
     // The map's fix is rough, so only clearly too far blocks: 1 km plus a 100 m margin.
     expect(vote({ distanceM: 1080 })).toEqual(OK);
     expect(vote({ distanceM: null })).toEqual(OK);
@@ -54,7 +55,7 @@ describe('site action gates', () => {
   it('says the reason that sign-in or a connection would not fix first', () => {
     expect(reasonOf(SITE_GATES.vote.decide(site({ ownSite: true, online: false, signedIn: false })))).toBe('vote.errors.own_site');
     expect(reasonOf(SITE_GATES.vote.decide(site({ distanceM: 5000, signedIn: false })))).toBe('vote.errors.too_far');
-    expect(reasonOf(SITE_GATES.letter.decide(site({ site: { verification: 'unverified', cleanup_status: 'none' }, online: false })))).toBe('actions.letterLocked');
+    expect(reasonOf(SITE_GATES.letter.decide(site({ site: { verification: 'unverified', status: 'open', cleanup_status: 'none' }, online: false })))).toBe('actions.letterLocked');
   });
 });
 
@@ -62,17 +63,23 @@ describe('site action gates: cleanup and letters', () => {
   it('a cleanup photo: off while one is checked or from more than 50 m away', () => {
     const cleanup = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.cleanup.decide(site(patch)));
     expect(cleanup({ distanceM: 120 })).toEqual(OK);
-    expect(cleanup({ site: { verification: 'verified', cleanup_status: 'checking' } })).toEqual(blocked('cleanup.errors.cleanup_pending'));
-    expect(cleanup({ distanceM: 400 })).toEqual(blocked('gate.tooFarCleanup'));
+    expect(cleanup({ site: { verification: 'verified', status: 'open', cleanup_status: 'checking' } })).toEqual(blocked('cleanup.errors.cleanup_pending'));
+    expect(cleanup({ distanceM: 400 })).toEqual(blocked('gate.tooFarCleanup', undefined, 'relocate'));
+    expect(cleanup({ site: { verification: 'verified', status: 'cleaned', cleanup_status: 'accepted' } })).toEqual(blocked('gate.siteClosed'));
     expect(cleanup({ distanceM: 20, cooling: cooling('cleanup') })).toEqual(blocked('cleanup.errors.rate_limited'));
     expect(cleanup({ distanceM: 20, online: false })).toEqual(blocked('gate.offline'));
     expect(cleanup({ distanceM: 20, signedIn: false })).toEqual(blocked('gate.signIn.cleanup', undefined, 'signIn'));
   });
 
+});
+
+describe('site action gates: letters', () => {
   it('a letter waits for 10 people and shares the cooldown with area letters', () => {
     const letter = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.letter.decide(site(patch)));
     expect(letter({})).toEqual(OK);
-    expect(letter({ site: { verification: 'unverified', cleanup_status: 'none' } })).toEqual(blocked('actions.letterLocked'));
+    expect(letter({ site: { verification: 'unverified', status: 'open', cleanup_status: 'none' } })).toEqual(blocked('actions.letterLocked'));
+    // A deep link to a site that left the map says so before anything else.
+    expect(letter({ site: { verification: 'verified', status: 'expired', cleanup_status: 'none' }, signedIn: false })).toEqual(blocked('gate.siteClosed'));
     expect(letter({ cooling: cooling('letter') })).toEqual(blocked('letter.errors.rate_limited'));
     expect(letter({ online: false })).toEqual(blocked('gate.offline'));
     expect(letter({ signedIn: false })).toEqual(blocked('gate.signIn.letter', undefined, 'signIn'));
@@ -91,7 +98,7 @@ describe('site action gates: withdraw, notes and delete', () => {
   it('withdraw stays on a verified site, off, with the reason', () => {
     const withdraw = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.withdraw.decide(site(patch)));
     expect(withdraw({})).toEqual(blocked('withdraw.errors.site_verified'));
-    const unverified = { site: { verification: 'unverified', cleanup_status: 'none' } } as const;
+    const unverified = { site: { verification: 'unverified', status: 'open', cleanup_status: 'none' } } as const;
     expect(withdraw(unverified)).toEqual(OK);
     expect(withdraw({ ...unverified, cooling: cooling('withdraw') })).toEqual(blocked('withdraw.errors.rate_limited'));
     expect(withdraw({ ...unverified, online: false })).toEqual(blocked('gate.offline'));

@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CAPTURE_GATES } from '../../../domain/CaptureGates';
 import { NOTE_MAX_LENGTH } from '../../../domain/ReportUpload';
 import { TextArea } from '../../../ui/TextArea';
 import type { CapturedPhoto } from '../hooks/usePhotoCapture';
 import { usePhotoPreview } from '../hooks/usePhotoPreview';
 import { useReportChoice } from '../hooks/useReportChoice';
+import { useReviewSend } from '../hooks/useReviewSend';
 import type { SnapFlow } from '../hooks/useSnapFlow';
 import { useTargetPlacement } from '../hooks/useTargetPlacement';
 import { ContextPicker } from './ContextPicker';
@@ -25,17 +24,10 @@ export function ReviewStage({ photo, flow }: ReviewStageProps) {
   const report = useReportChoice(flow.presetType, photo.gps);
   const place = useTargetPlacement(photo.gps);
   const preview = usePhotoPreview(photo.bytes);
-  const [sending, setSending] = useState(false);
   // A no-bin report says "no dustbin near where I stand", so it never takes a long-range target.
   const longRange = report.type !== 'no_bin';
-  const target = longRange ? place.target : null;
-  const send = () => {
-    if (!report.choice) return;
-    setSending(true);
-    void flow.send(photo, target ? { ...report.choice, target } : report.choice).finally(() => setSending(false));
-  };
+  const { sendable, send } = useReviewSend(photo, flow, report, longRange ? place.target : null);
   const notice = report.gpsTooVague ? t('nobin.photoTooVague', { metres: Math.round(photo.gps.accuracy_m) }) : null;
-  const sendable = CAPTURE_GATES.send.decide({ busy: sending, chosen: report.choice !== null, vagueM: report.gpsTooVague ? photo.gps.accuracy_m : null });
   return (
     <div className="snap-review">
       <div className="snap-review__top">

@@ -499,11 +499,13 @@
     "needs_review": "Needs a manual check",
     "unverified": "Waiting for 10 people to confirm",
     "community_check": "Waiting for a neighbour check",
+    "unclear": "Retake: photo not clear",
     "not_waste": "Not a waste site",
     "unconfirmed": "Waste not confirmed",
     "withdrawn": "Withdrawn"
   },
   "rejection": {
+    "unclear": "Retake: we couldn't see waste clearly. Hold the phone steady and snap the waste in good light.",
     "not_waste": "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.",
     "unconfirmed": "Our checks couldn't confirm waste in this photo.",
     "dismiss": "Dismiss"
@@ -658,6 +660,7 @@
     "hash": "SHA-256 of the official text",
     "verified": "{{verified}} of {{total}} quotes verified word for word",
     "templateFallback": "Template letter: the drafted wording did not pass the quote check, so the standard letter with the same verified quotes is used.",
+    "link": "Photos and counts online",
     "residentFiles": "This letter is filed by a resident. JunkSnap does not send or file it.",
     "cc": {
       "councillor": "Ward councillor, {{seat}} (for attention)",
@@ -992,6 +995,7 @@
       "waiting": "On the map, waiting for neighbours",
       "waitingCount": "On the map, waiting for neighbours ({{count}} of {{needed}})",
       "verified": "Verified",
+      "unclear": "Retake: waste not clear",
       "not_waste": "Not a waste site",
       "unconfirmed": "Couldn't confirm waste",
       "withdrawn": "Withdrawn",
@@ -1003,6 +1007,7 @@
       "checking": "We're still checking this photo. This page updates by itself.",
       "waiting": "The checks passed. Once enough neighbours back this spot, by photo or by vote, it becomes verified.",
       "verified": "Enough people backed this spot, so it counts in the area's scores and letters.",
+      "unclear": "Retake: we couldn't see waste clearly in this photo, so it isn't on the map.",
       "not_waste": "The checks found no waste in this photo, so it isn't on the map.",
       "unconfirmed": "The checks couldn't confirm waste in this photo, so it isn't on the map.",
       "withdrawn": "You took this report back.",
@@ -1102,7 +1107,9 @@
       "letter": "Sign in to draft a letter.",
       "withdraw": "Sign in to withdraw your report.",
       "note": "Sign in to add a note."
-    }
+    },
+    "siteClosed": "This site is off the map, so it takes no more letters or cleanup photos.",
+    "back": "Back"
   },
   "toast": {
     "dismiss": "Dismiss"

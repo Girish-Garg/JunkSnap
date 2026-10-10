@@ -1,30 +1,29 @@
 import { useTranslation } from 'react-i18next';
 import { lookOf } from '../../../domain/ActionAvailability';
-import { SITE_GATES, type SiteActionFacts } from '../../../domain/SiteActionGates';
 import { Button } from '../../../ui/Button';
-import { useGate } from '../../actions/hooks/useGate';
+import type { GatedAction } from '../../actions/GatedAction';
 import { useVote } from '../../community/hooks/useVote';
 
 interface ClearanceVotesProps {
   readonly siteId: string;
-  readonly facts: SiteActionFacts;
+  /** Whether this person can vote here (useSiteGates). */
+  readonly gated: GatedAction;
   readonly onChanged: () => void;
 }
 
 /** "It's cleared" or "Still there": a cleared or yes vote, off with the reason where this person cannot vote. */
-export function ClearanceVotes({ siteId, facts, onChanged }: ClearanceVotesProps) {
+export function ClearanceVotes({ siteId, gated, onChanged }: ClearanceVotesProps) {
   const { t } = useTranslation();
-  const gate = useGate();
-  const vote = useVote(siteId, onChanged);
-  const availability = SITE_GATES.vote.decide({ ...facts, busy: vote.busy });
-  const look = lookOf(availability);
+  const vote = useVote(siteId, onChanged, gated);
+  const { action } = vote;
+  const look = lookOf(action.availability);
   return (
     <>
       <div className="clearance__buttons">
-        <Button onClick={gate(availability, () => vote.vote('cleaned'))} {...look}>
+        <Button onClick={action.tap(() => vote.vote('cleaned'))} {...look}>
           {t('clearance.cleared')}
         </Button>
-        <Button variant="secondary" onClick={gate(availability, () => vote.vote('confirm'))} {...look}>
+        <Button variant="secondary" onClick={action.tap(() => vote.vote('confirm'))} {...look}>
           {t('clearance.stillThere')}
         </Button>
       </div>

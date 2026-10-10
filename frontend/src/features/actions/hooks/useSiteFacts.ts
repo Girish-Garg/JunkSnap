@@ -1,21 +1,32 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import type { SiteActionFacts } from '../../../domain/SiteActionGates';
 import { SiteListing } from '../../../domain/SiteListing';
 import { metresBetween } from '../../../domain/utils';
-import { usePermissionDenied } from '../../../ui/usePermissionDenied';
+import { usePermissionState } from '../../../ui/usePermissionState';
 import { useQueue } from '../../snap/hooks/useQueue';
+import { useFreshFix } from './useFreshFix';
 import { useSessionFacts } from './useSessionFacts';
 
-/** Everything the site gates read: the session, the site, this phone's reports on it and how far away the person is. */
-export function useSiteFacts(site: SiteFeature, userLocation: LonLat | null): SiteActionFacts {
+export interface SiteFacts {
+  readonly facts: SiteActionFacts;
+  /** Takes a fresh fix and returns the metres to the site, or null when the browser gives no fix. */
+  readonly remeasure: () => Promise<number | null>;
+}
+
+/** Everything the site gates read: the session, the site, this phone's reports on it and a fresh distance to it. */
+export function useSiteFacts(site: SiteFeature, mapLocation: LonLat | null): SiteFacts {
   const session = useSessionFacts();
   const ownSite = SiteListing.reportedHere(useQueue(), site.properties.site_id).length > 0;
-  const locationDenied = usePermissionDenied('geolocation');
-  const distanceM = userLocation ? metresBetween(userLocation, site.geometry.coordinates) : null;
+  const locationDenied = usePermissionState('geolocation') === 'denied';
+  const { fix, relocate } = useFreshFix(mapLocation);
+  const point = site.geometry.coordinates;
+  const distanceM = fix ? metresBetween(fix.at, point) : null;
   const { properties } = site;
-  return useMemo(
+  const facts = useMemo(
     () => ({ ...session, site: properties, ownSite, distanceM, locationDenied }),
     [session, properties, ownSite, distanceM, locationDenied],
   );
+  const remeasure = useCallback(() => relocate().then((fresh) => (fresh ? metresBetween(fresh.at, point) : null)), [relocate, point]);
+  return { facts, remeasure };
 }

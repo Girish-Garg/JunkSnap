@@ -2,10 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { areaLetterPath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { lookOf } from '../../../domain/ActionAvailability';
-import { AREA_LETTER_GATE } from '../../../domain/SiteActionGates';
 import { Button } from '../../../ui/Button';
-import { useGate } from '../../actions/hooks/useGate';
-import { useSessionFacts } from '../../actions/hooks/useSessionFacts';
+import { useAreaLetterGate } from '../../actions/hooks/useAreaLetterGate';
 
 interface AreaLetterButtonProps {
   readonly kind: string;
@@ -20,11 +18,10 @@ interface AreaLetterButtonProps {
 export function AreaLetterButton({ kind, areaId, ready, short = false }: AreaLetterButtonProps) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
-  const gate = useGate();
-  const availability = AREA_LETTER_GATE.decide({ ...useSessionFacts(), ready });
+  const draft = useAreaLetterGate(ready);
   return (
     <div className={short ? 'area-letter area-letter--short' : 'area-letter'}>
-      <Button variant={short ? 'text' : 'primary'} onClick={gate(availability, () => sheets.open(areaLetterPath(kind, areaId)))} {...lookOf(availability)}>
+      <Button variant={short ? 'text' : 'primary'} onClick={draft.tap(() => sheets.open(areaLetterPath(kind, areaId)))} {...lookOf(draft.availability)}>
         {t(short ? 'areaLetter.short' : 'areaLetter.button')}
       </Button>
       {!ready && <p className="area-letter__locked">{t(short ? 'areaLetter.lockedShort' : 'areaLetter.locked')}</p>}

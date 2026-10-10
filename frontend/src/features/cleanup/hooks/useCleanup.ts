@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useServices } from '../../../app/useServices';
+import { CLEANUP_SEND_GATE } from '../../../domain/SiteActionGates';
 import { useActionErrors } from '../../actions/hooks/useActionErrors';
+import { useSessionGate } from '../../actions/hooks/useSessionGate';
 import { usePhotoCapture, type CapturedPhoto } from '../../snap/hooks/usePhotoCapture';
 
 export type CleanupPhase = 'camera' | 'review' | 'sent';
@@ -20,7 +22,7 @@ export function useCleanup(siteId: string) {
     setPhoto(taken);
     setPhase('review');
   });
-  const send = async () => {
+  const send = async (reauthed = false) => {
     if (!photo) return;
     setBusy(true);
     setProblem(null);
@@ -28,12 +30,13 @@ export function useCleanup(siteId: string) {
       await snap.siteActions.cleanup(siteId, { bytes: photo.bytes, sha256: photo.sha256, gps: photo.gps, capturedAt: photo.capturedAt });
       setPhase('sent');
     } catch (error) {
-      setProblem(handle(error, () => void send()));
+      setProblem(handle(error, reauthed ? null : () => void send(true)));
     } finally {
       setBusy(false);
     }
   };
-  return { phase, photo, busy, problem, capture, send: () => void send(), retake: () => setPhase('camera') };
+  const sendable = useSessionGate(CLEANUP_SEND_GATE, { busy });
+  return { phase, photo, busy, problem, capture, sendable, send: () => void send(), retake: () => setPhase('camera') };
 }
 
 export type CleanupFlow = ReturnType<typeof useCleanup>;

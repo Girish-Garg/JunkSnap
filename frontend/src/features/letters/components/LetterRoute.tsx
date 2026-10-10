@@ -5,12 +5,14 @@ import { useParams } from 'react-router';
 import { sitePath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
+import { useShareLinks } from '../../../app/useShareLinks';
 import { BottomSheet } from '../../../ui/BottomSheet';
+import { useSiteRouteGate } from '../../actions/hooks/useRouteGates';
 import '../../../ui/form.css';
 import { useLetter } from '../hooks/useLetter';
 import '../letters.css';
 import { LetterActions } from './LetterActions';
-import { LetterChooser } from './LetterChooser';
+import { LetterStart } from './LetterStart';
 import { LetterEvidence } from './LetterEvidence';
 import { LetterView } from './LetterView';
 import type { LetterText } from '../LetterText';
@@ -22,9 +24,11 @@ export function LetterRoute() {
   const { t } = useTranslation();
   const { config } = useServices();
   const { siteId = '' } = useParams();
+  const links = useShareLinks();
   const sheets = useSheetNavigation();
   const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useLetter(siteId);
+  const { locked } = useSiteRouteGate(siteId, 'letter');
   const { draft } = flow;
   const evidence = (text: LetterText) => draft?.evidence && <LetterEvidence evidence={draft.evidence} text={text} language={draft.language} />;
   return (
@@ -34,9 +38,9 @@ export function LetterRoute() {
       </h2>
       <p className="letter-banner">{t('letter.noAutoSend')}</p>
       {config.isSampleData() && <p className="form__note">{t('letter.sample')}</p>}
-      {!draft && <LetterChooser flow={flow} />}
+      {!draft && <LetterStart flow={flow} locked={locked} onBack={close} />}
       {draft && <LetterView draft={draft} evidence={evidence} />}
-      {draft && <LetterActions draft={draft} onReset={flow.reset} />}
+      {draft && <LetterActions draft={draft} onReset={flow.reset} link={links.site(siteId)} />}
       {draft && createPortal(<LetterView draft={draft} evidence={evidence} forPrint />, document.body)}
     </BottomSheet>
   );

@@ -6,9 +6,8 @@ import { AppRoutes } from '../src/app/AppRoutes';
 import type { ServiceContainer } from '../src/app/ServiceContainer';
 import { QueuedReport } from '../src/domain/QueuedReport';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
-import { SitePanel } from '../src/features/site/components/SitePanel';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
+import { MemoryStore, renderApp, testServices } from './helpers';
 import { MemoryReportStore, sampleDraft } from './snapFakes';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -65,14 +64,6 @@ describe('a vote the person cannot make', () => {
     expect(api.calls).toEqual([]);
   });
 
-  it('says to move closer when the person is far from the site, in Hindi too', async () => {
-    const user = userEvent.setup();
-    const site = await fixtureSite('site_jpr_1');
-    // Jodhpur is about 280 km from this Jaipur site.
-    await renderApp(withToasts(<SitePanel site={site} userLocation={[73.02, 26.27]} />), { services: await servicesWith(), language: 'hi' });
-    await user.click(screen.getByRole('button', { name: 'मैंने भी देखा' }));
-    expect(await screen.findByText('वोट केवल स्थल से 1 किमी के अंदर गिने जाते हैं। पास जाकर फिर कोशिश करें।')).toBeInTheDocument();
-  });
 });
 
 describe('a vote that needs a connection or a session', () => {
@@ -133,5 +124,23 @@ describe('a session the api ended', () => {
     await signInThroughSheet(user);
     expect(await screen.findByText('Thanks. Your note is shown and joins the summary within 10 minutes.')).toBeInTheDocument();
     expect(api.calls.at(-1)).toMatchObject({ kind: 'note', body: { text: 'Burnt again last night' } });
+  });
+});
+
+describe('a session the api ends twice', () => {
+  it('asks to sign in once; a second 401 on the retry only shows the inline line', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const api = new FakeSiteActionsApi();
+    // Each attempt gets one forced token refresh first, so two 401s end one attempt.
+    for (let i = 0; i < 4; i += 1) api.failNext('note', 401, 'unauthorized');
+    await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
+    await user.click(await screen.findByRole('button', { name: 'Add a note' }, { timeout: 3000 }));
+    await user.type(screen.getByLabelText('Your note'), 'Burnt again last night');
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await signInThroughSheet(user);
+    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('Sign in again to add a note.');
+    expect(screen.queryByRole('complementary', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(api.calls.filter((call) => call.kind === 'note')).toHaveLength(4);
   });
 });

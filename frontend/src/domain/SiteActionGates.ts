@@ -1,6 +1,7 @@
-import { ActionGate, type AvailabilityRule } from './ActionAvailability';
+import { ActionGate, blocked, type Availability, type AvailabilityRule } from './ActionAvailability';
 import { GateRules, type SessionFacts } from './GateRules';
 import type { SiteProperties } from './Site';
+import { SiteListing } from './SiteListing';
 
 /** contracts/README.md: votes count within 1 km of the site; a cleanup photo must be taken within 50 m. */
 export const VOTE_RADIUS_M = 1000;
@@ -9,10 +10,10 @@ export const CLEANUP_RADIUS_M = 50;
 export const DISTANCE_MARGIN_M = 100;
 
 export interface SiteActionFacts extends SessionFacts {
-  readonly site: Pick<SiteProperties, 'verification' | 'cleanup_status'>;
+  readonly site: Pick<SiteProperties, 'verification' | 'status' | 'cleanup_status'>;
   /** This phone sent a report that the api merged into the site; the api refuses its votes (403 own_site). */
   readonly ownSite: boolean;
-  /** Metres between the person's last known location and the site; null when the app does not know. */
+  /** Metres between the person and the site from a fix under 2 minutes old (FreshFix); null when there is none. */
   readonly distanceM: number | null;
   /** The browser said no to location, and a vote sends a fresh fix. */
   readonly locationDenied: boolean;
@@ -25,8 +26,12 @@ export interface AreaLetterFacts extends SessionFacts {
 
 type Rule = AvailabilityRule<SiteActionFacts>;
 
-const tooFar = (limitM: number, reason: string): Rule =>
-  GateRules.when((facts: SiteActionFacts) => facts.distanceM !== null && facts.distanceM > limitM + DISTANCE_MARGIN_M, reason);
+// A tap takes a fresh fix first and goes through when that one is in range (remedy relocate).
+const tooFar = (limitM: number, reason: string): Rule => (facts) =>
+  facts.distanceM !== null && facts.distanceM > limitM + DISTANCE_MARGIN_M ? blocked(reason, undefined, 'relocate') : null;
+
+// A deep link can open a letter or cleanup sheet for a site that already left the map.
+const offMap: Rule = GateRules.when((facts) => !SiteListing.onMap(facts.site), 'gate.siteClosed');
 
 const VOTE: readonly Rule[] = [
   GateRules.busy(),
@@ -46,6 +51,7 @@ export const SITE_GATES = {
   vote: new ActionGate<SiteActionFacts>(VOTE),
   cleanup: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
+    offMap,
     GateRules.when((facts) => facts.site.cleanup_status === 'checking', 'cleanup.errors.cleanup_pending'),
     tooFar(CLEANUP_RADIUS_M, 'gate.tooFarCleanup'),
     GateRules.cooling('cleanup', 'cleanup.errors.rate_limited'),
@@ -54,6 +60,7 @@ export const SITE_GATES = {
   ]),
   letter: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
+    offMap,
     GateRules.when((facts) => facts.site.verification !== 'verified', 'actions.letterLocked'),
     GateRules.cooling('letter', 'letter.errors.rate_limited'),
     GateRules.offline(),
@@ -122,3 +129,16 @@ export const AREA_LETTER_GATE = new ActionGate<AreaLetterFacts>([
   GateRules.offline(),
   GateRules.signIn('gate.signIn.letter'),
 ]);
+
+// A deep-linked sheet checks only what the site or area itself allows; its own Draft or Send button says the rest.
+const ROUTE_SESSION: SessionFacts = { signedIn: true, online: true, cooling: new Set() };
+
+/** Whether a letter or cleanup sheet opened by link can be used at all: off the map, not verified, a photo checking. */
+export function decideSiteRoute(rule: ActionGate<SiteActionFacts>, site: SiteActionFacts['site']): Availability {
+  return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false });
+}
+
+/** Whether an area letter sheet opened by link can draft at all: 10 verified reports. */
+export function decideAreaLetterRoute(ready: boolean): Availability {
+  return AREA_LETTER_GATE.decide({ ...ROUTE_SESSION, ready });
+}

@@ -3,7 +3,9 @@ import { useServices } from '../../../app/useServices';
 import type { RemovalKind } from '../../../domain/ActivityRemoval';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import type { QueuedScan } from '../../../domain/QueuedScan';
+import { ACTIVITY_DELETE_GATE } from '../../../domain/SiteActionGates';
 import { useActionErrors } from '../../actions/hooks/useActionErrors';
+import { useSessionGate } from '../../actions/hooks/useSessionGate';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 import { useActivityDeleteFollowup } from './useActivityDeleteFollowup';
 
@@ -20,13 +22,13 @@ export function useActivityDelete(target: ActivityTarget) {
   const [plan, setPlan] = useState<RemovalKind | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const run = async (step: () => Promise<void>): Promise<void> => {
+  const run = async (step: () => Promise<void>, reauthed = false): Promise<void> => {
     setBusy(true);
     setProblem(null);
     try {
       await step();
     } catch (error) {
-      setProblem(handle(error, () => void run(step)));
+      setProblem(handle(error, reauthed ? null : () => void run(step, true)));
     } finally {
       setBusy(false);
     }
@@ -37,5 +39,6 @@ export function useActivityDelete(target: ActivityTarget) {
     ? () => setPlan(snap.remover.planReport(target.report))
     : () => requireAuth(() => void run(async () => setPlan(await snap.remover.planScan(target.scan))));
   const confirm = () => (plan === 'withdraw' ? requireAuth(() => void run(remove)) : void run(remove));
-  return { plan, busy, problem, ask, cancel: () => setPlan(null), confirm };
+  const confirmable = useSessionGate(ACTIVITY_DELETE_GATE, { busy, withdraws: plan === 'withdraw' });
+  return { plan, busy, problem, ask, confirmable, cancel: () => setPlan(null), confirm };
 }

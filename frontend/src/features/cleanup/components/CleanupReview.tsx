@@ -1,9 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { lookOf } from '../../../domain/ActionAvailability';
-import { CLEANUP_SEND_GATE } from '../../../domain/SiteActionGates';
 import { Button } from '../../../ui/Button';
-import { useGate } from '../../actions/hooks/useGate';
-import { useSessionFacts } from '../../actions/hooks/useSessionFacts';
 import { GpsPanel } from '../../snap/components/GpsPanel';
 import type { CapturedPhoto } from '../../snap/hooks/usePhotoCapture';
 import { usePhotoPreview } from '../../snap/hooks/usePhotoPreview';
@@ -18,8 +15,7 @@ interface CleanupReviewProps {
 export function CleanupReview({ photo, flow }: CleanupReviewProps) {
   const { t } = useTranslation();
   const preview = usePhotoPreview(photo.bytes);
-  const gate = useGate();
-  const sendable = CLEANUP_SEND_GATE.decide({ ...useSessionFacts(), busy: flow.busy });
+  const { sendable } = flow;
   return (
     <div className="snap-review">
       <div className="snap-review__top">
@@ -32,7 +28,7 @@ export function CleanupReview({ photo, flow }: CleanupReviewProps) {
         </p>
       )}
       <div className="snap-actions">
-        <Button onClick={gate(sendable, flow.send)} {...lookOf(sendable)}>
+        <Button onClick={sendable.tap(flow.send)} {...lookOf(sendable.availability)}>
           {t(flow.busy ? 'cleanup.sending' : 'cleanup.send')}
         </Button>
         <Button variant="text" onClick={flow.retake}>
