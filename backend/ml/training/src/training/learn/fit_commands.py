@@ -20,7 +20,7 @@ from training.learn.publish import ModelPublisher, Release
 from training.learn.report import StackReport
 from training.learn.sample import BenchmarkSample
 from training.learn.selection import HeadSelector
-from training.learn.stacker import ScoredPhoto, StackerTrainer
+from training.learn.stacker import ScoredPhoto, ScoreMerge, StackerTrainer
 from training.manifest import ManifestFile
 from training.ports import ObjectStore
 from training.settings import Settings
@@ -66,7 +66,7 @@ class FitCommands:
             SklearnLogisticFitter,
         )
 
-        val, test = self._scored(Path(args.val)), self._scored(Path(args.test))
+        val, test = self._scored(args.val), self._scored(args.test)
         meta = StackerTrainer(SklearnLogisticFitter()).fit(val, args.version)
         fitted_on = {"photos": len(val), "judged": sum(p.judged for p in val)}
         out = self._write(f"{args.version}.json", meta.to_json(fitted_on))
@@ -92,8 +92,12 @@ class FitCommands:
         out.write_text(json.dumps(content, indent=1), encoding="utf-8")
         return out
 
-    def _scored(self, path: Path) -> list[ScoredPhoto]:
-        return [p for raw in self._lines(path) if (p := ScoredPhoto.from_json(raw)) is not None]
+    def _scored(self, paths: str) -> list[ScoredPhoto]:
+        """Comma-separated score files of one split, merged by photo id."""
+        merged = ScoreMerge()
+        for path in paths.split(","):
+            merged.add(self._lines(Path(path)))
+        return [p for raw in merged.rows() if (p := ScoredPhoto.from_json(raw)) is not None]
 
     @staticmethod
     def _lines(path: Path) -> list[dict[str, Any]]:

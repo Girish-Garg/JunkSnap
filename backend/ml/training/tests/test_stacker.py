@@ -9,7 +9,13 @@ from training.learn.cases import CaseWriter
 from training.learn.domain import LinearModel
 from training.learn.ports import LinearFitter
 from training.learn.report import StackReport
-from training.learn.stacker import LogitModel, ScoredPhoto, StackerTrainer, WeightedMean
+from training.learn.stacker import (
+    LogitModel,
+    ScoredPhoto,
+    ScoreMerge,
+    StackerTrainer,
+    WeightedMean,
+)
 
 
 class EqualFitter(LinearFitter):
@@ -30,6 +36,15 @@ def test_scored_photo_reads_the_cli_line_and_skips_fire_photos() -> None:
     read = ScoredPhoto.from_json(raw)
     assert read is not None and read.judged and read.scores["vision_judge"] == 0.8
     assert ScoredPhoto.from_json({"id": "f", "truth": {"waste": None}, "signals": {}}) is None
+
+
+def test_score_files_of_one_split_merge_by_photo() -> None:
+    merge = ScoreMerge()
+    merge.add([{"id": "a", "truth": {"waste": True}, "signals": {"yolo": 0.9}}])
+    merge.add([{"id": "a", "truth": {"waste": True}, "signals": {}, "judge": {"score": 0.7},
+                "judge_cost": {"usd": 0.001}}])
+    photo_a = ScoredPhoto.from_json(merge.rows()[0])
+    assert photo_a is not None and dict(photo_a.scores) == {"yolo": 0.9, "vision_judge": 0.7}
 
 
 def test_trainer_fits_base_and_judged_models_on_logits() -> None:

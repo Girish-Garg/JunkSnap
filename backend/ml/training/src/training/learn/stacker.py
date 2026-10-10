@@ -47,6 +47,24 @@ class ScoredPhoto:
         return ScoredPhoto(raw["id"], bool(waste), scores, usd)
 
 
+class ScoreMerge:
+    """Signals scored in separate runs over the same photos, joined by id."""
+
+    def __init__(self) -> None:
+        self._rows: dict[str, dict[str, Any]] = {}
+
+    def add(self, rows: list[dict[str, Any]]) -> None:
+        for raw in rows:
+            row = self._rows.setdefault(raw["id"], {"id": raw["id"], "truth": raw["truth"],
+                                                    "signals": {}})
+            row["signals"].update(raw.get("signals", {}))
+            if raw.get("judge"):
+                row["judge"], row["judge_cost"] = raw["judge"], raw.get("judge_cost")
+
+    def rows(self) -> list[dict[str, Any]]:
+        return list(self._rows.values())
+
+
 class Combination(ABC):
     """A way to turn signal scores into one probability, before or after the judge."""
 
