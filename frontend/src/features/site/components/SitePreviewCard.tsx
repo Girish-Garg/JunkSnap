@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { Button } from '../../../ui/Button';
@@ -18,19 +18,20 @@ interface SitePreviewCardProps {
   readonly onDetails: (site: SiteFeature) => void;
   /** Closes the card through its history entry (PickedPin's), as back does. */
   readonly onClose: () => void;
+  /** Extras the card hosts, such as the list's PreviewStepper. */
+  readonly children?: ReactNode;
 }
 
 // Escape reaches the card when it is the top layer; map taps still pass through to the map.
 const LAYER = { [ESCAPE_LAYER]: '', [MAP_CARD_ATTRIBUTE]: '' };
 
 /** Compact card after tapping a pin; Details opens the full sheet. Close, back and Escape close it. */
-export function SitePreviewCard({ site, userLocation, onDetails, onClose }: SitePreviewCardProps) {
+export function SitePreviewCard({ site, userLocation, onDetails, onClose, children }: SitePreviewCardProps) {
   const { t } = useTranslation();
   const card = useRef<HTMLElement>(null);
   useEscapeKey(onClose, card);
   const details = site.properties;
-  const thumbnail = useSitePresenter(details).thumbnail();
-  const distance = useDistanceLabel(site, userLocation);
+  const [thumbnail, distance] = [useSitePresenter(details).thumbnail(), useDistanceLabel(site, userLocation)];
   return (
     <section ref={card} className="preview-card" aria-label={t(`reportType.${details.report_type}`)} {...LAYER}>
       <ul className="preview-card__thumb">
@@ -51,6 +52,7 @@ export function SitePreviewCard({ site, userLocation, onDetails, onClose }: Site
         <Button variant="text" onClick={() => onDetails(site)}>{t('preview.details')}</Button>
       </div>
       <IconButton icon="close" label={t('preview.close')} onClick={onClose} />
+      {children}
     </section>
   );
 }

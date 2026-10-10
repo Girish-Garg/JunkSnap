@@ -30,11 +30,14 @@ async function showView(view: MapView): Promise<void> {
 }
 
 describe('opening view', () => {
-  it('widens once to take in the nearest sites when the first view is empty', async () => {
+  it("widens once to take in the pilot city's sites when the first view is empty", async () => {
     await renderApp(<AppRoutes />);
     await showView({ bbox: EMPTY_VIEW });
     await waitFor(() => expect(seen.last?.camera?.points).toContainEqual(NEAREST));
     expect(seen.last?.camera?.points[0]).toEqual(EMPTY_VIEW.center());
+    // Every Jodhpur site on the map (jdh-5 was withdrawn), and nothing from outside the city.
+    expect(seen.last?.camera?.points).toHaveLength(5);
+    expect(seen.last?.camera?.points).not.toContainEqual([75.8156, 26.853]);
     expect(screen.queryByText('No reports here yet.')).not.toBeInTheDocument();
   });
 
@@ -60,7 +63,8 @@ describe('opening view and location', () => {
     await waitFor(() => expect(seen.last?.userLocation).toEqual([73.08, 26.33]));
     await showView({ bbox: EMPTY_VIEW });
     expect(await screen.findByText('No reports in this view.')).toBeInTheDocument();
-    expect(seen.last?.camera).toBeNull();
+    // "Show my location" flew there; the opening fit to Jodhpur's sites does not move the map back.
+    expect(seen.last?.camera).toEqual({ points: [[73.08, 26.33]] });
   });
 });
 

@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SiteFeature } from '../../../domain/Site';
-import { Icon } from '../../../ui/Icon';
 import { TypeIcon } from '../../../ui/TypeIcon';
 import { StatusBadge } from '../../site/components/StatusBadge';
 import { useSitePresenter } from '../../site/hooks/useSitePresenter';
 import '../../site/site.css';
+import { SiteThumb } from './SiteThumb';
 
 interface StackSiteRowProps {
   readonly site: SiteFeature;
@@ -33,18 +32,8 @@ export function StackSiteRow({ site, onOpen }: StackSiteRowProps) {
             <span>{t('preview.reports', { count: details.report_count })}</span>
           </span>
         </span>
-        <StackThumb url={useSitePresenter(details).thumbnail()} />
+        <SiteThumb url={useSitePresenter(details).thumbnail()} className="stack-row__thumb" />
       </button>
     </li>
-  );
-}
-
-// Only the blurred public copy is ever shown; a missing or broken photo shows the photo icon instead.
-function StackThumb({ url }: { readonly url: string | null }) {
-  const [broken, setBroken] = useState(false);
-  return (
-    <span className="stack-row__thumb" aria-hidden="true">
-      {url && !broken ? <img src={url} alt="" loading="lazy" draggable={false} onError={() => setBroken(true)} /> : <Icon name="photo" size={20} />}
-    </span>
   );
 }

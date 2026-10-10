@@ -64,7 +64,8 @@
     "fallbackHint": "To see the map, turn on hardware acceleration in your browser settings.",
     "listLabel": "Sites nearby",
     "fallbackApp": "This phone can't draw the map here. Showing a list instead.",
-    "fallbackHintApp": "To see the map, update Android System WebView in the Play Store, then reopen JunkSnap."
+    "fallbackHintApp": "To see the map, update Android System WebView in the Play Store, then reopen JunkSnap.",
+    "goToMe": "Go to my location"
   },
   "notice": {
     "offline": "Offline. Showing what was loaded.",
@@ -1090,5 +1091,33 @@
     "pin": "Pin: one reported site; colour and icon show the type",
     "unverified": "Dashed pin: not verified yet; 1/10 counts the people backing it",
     "stack": "Stacked pin: several sites at one spot"
+  },
+  "browse": {
+    "toggle": "Map or list",
+    "map": "Map",
+    "list": "List",
+    "mapLabel": "Map view",
+    "listLabel": "List view",
+    "title_one": "{{count}} site in view",
+    "title_other": "{{count}} sites in view",
+    "cityTitle": "Sites in Jodhpur",
+    "label": "Sites, in the order you chose",
+    "close": "Close the list",
+    "sort": "Sort by",
+    "sortNearest": "Nearest",
+    "sortNewest": "Newest",
+    "sortBacked": "Most backed",
+    "emptyView": "No sites in this view",
+    "cityNote": "Here are Jodhpur's sites instead.",
+    "showCity": "Show all of Jodhpur",
+    "emptyText": "No sites match the filters. Turn a filter off or move the map.",
+    "more": "Show {{count}} more",
+    "again": "Tap again for details",
+    "chipWaiting": "Waiting · {{count}} of {{needed}}",
+    "chipVerified": "Verified",
+    "chipCleared": "Cleared · {{count}} of {{needed}}",
+    "previous": "Previous site",
+    "next": "Next site",
+    "position": "{{position}} of {{total}}"
   }
 }

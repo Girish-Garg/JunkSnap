@@ -27,7 +27,7 @@ export function MapPage() {
           {...taps}
           userLocation={page.location.position}
           camera={selection.camera}
-          onViewChange={page.setView}
+          onViewChange={page.onViewChange}
           onFail={fail}
           listMode={listMode}
           notice={page.notice}
