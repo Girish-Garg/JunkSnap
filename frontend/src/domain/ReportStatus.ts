@@ -1,4 +1,6 @@
 // GET /reports/{id} in contracts/README.md: the fields the app reads.
+import type { ModerationEvidence, UploadEvidence, VerificationEvidence } from './ReportEvidence';
+
 /** withdrawn: the reporter took it back from an unverified site (decision 20261010-1700). */
 export type ReportStatus = 'queued' | 'processing' | 'unverified' | 'verified' | 'rejected' | 'needs_review' | 'withdrawn';
 
@@ -9,13 +11,12 @@ export interface ReportStatusView {
   /** Public blurred copy; null until moderation has made it. */
   readonly blurred_url: string | null;
   readonly updated_at: string;
-  /** Null until moderation ran; mock statuses leave it out. */
-  readonly moderation?: { readonly outcome: 'passed' | 'rejected' } | null;
+  /** The report_upload as sent; mock statuses may leave it out. */
+  readonly report?: UploadEvidence | null;
+  /** Null until moderation ran; mock statuses may leave it out. */
+  readonly moderation?: ModerationEvidence | null;
   /** The verification_result, only the fields the app reads. */
-  readonly verification?: {
-    readonly decision: 'auto_verified' | 'community_check' | 'rejected';
-    readonly judge: { readonly report_type: string } | null;
-  } | null;
+  readonly verification?: VerificationEvidence | null;
 }
 
 const IN_PIPELINE: ReadonlySet<ReportStatus> = new Set(['queued', 'processing']);

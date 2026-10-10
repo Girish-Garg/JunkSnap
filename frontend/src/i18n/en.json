@@ -924,5 +924,108 @@
       "failed": "Could not delete it. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
+  },
+  "feedback": {
+    "title": "What we checked",
+    "open": "What we checked",
+    "close": "Close what we checked",
+    "loading": "Loading the checks",
+    "failed": "Couldn't load the checks for this report. Try again in a moment.",
+    "outcome": {
+      "checking": "Checking…",
+      "waiting": "On the map, waiting for neighbours",
+      "waitingCount": "On the map, waiting for neighbours ({{count}} of {{needed}})",
+      "verified": "Verified",
+      "not_waste": "Not a waste site",
+      "unconfirmed": "Couldn't confirm waste",
+      "withdrawn": "Withdrawn",
+      "removed": "Removed by neighbours",
+      "stopped": "Stopped at the photo checks",
+      "review": "Couldn't be checked"
+    },
+    "explain": {
+      "checking": "We're still checking this photo. This page updates by itself.",
+      "waiting": "The checks passed. Once enough neighbours back this spot, by photo or by vote, it becomes verified.",
+      "verified": "Enough people backed this spot, so it counts in the area's scores and letters.",
+      "not_waste": "The checks found no waste in this photo, so it isn't on the map.",
+      "unconfirmed": "The checks couldn't confirm waste in this photo, so it isn't on the map.",
+      "withdrawn": "You took this report back.",
+      "removed": "Neighbours said there is no waste here, so the spot left the map.",
+      "stopped": "This photo was stopped before anyone else could see it.",
+      "review": "Something went wrong while checking this photo, so it isn't on the map."
+    },
+    "reason": {
+      "invalid_image": "The photo file couldn't be read, or didn't match what the phone sent.",
+      "unsafe_image": "The photo shows something we can't publish.",
+      "person_dumping": "The photo shows a person, and we never publish photos of people.",
+      "outside_india": "The spot is outside India.",
+      "stale_timestamp": "The photo was taken too long before it was sent.",
+      "duplicate": "It repeats an earlier photo of the same view.",
+      "rate_limited": "Too many photos were sent in one hour.",
+      "blocked_device": "This device can't send reports right now.",
+      "not_near_site": "The photo was taken too far from the site."
+    },
+    "judge": {
+      "label": "AI check ({{model}} on {{provider}})",
+      "labelPlain": "AI check",
+      "private": "Only you can see this.",
+      "genericAgreed": "The AI check saw the reported problem in this photo.",
+      "genericDisagreed": "The AI check didn't see the reported problem in this photo."
+    },
+    "checksTitle": "Checks",
+    "mark": {
+      "pass": "Passed",
+      "fail": "Did not pass",
+      "skip": "Skipped"
+    },
+    "band": {
+      "strong": "strong",
+      "weak": "weak",
+      "not_used": "not used"
+    },
+    "check": {
+      "authentic": {
+        "pass": "Photo is real and from the in-app camera",
+        "fail": "Photo failed the camera checks",
+        "not_reached": "Camera checks not reached",
+        "pending": "Camera checks not done yet"
+      },
+      "blurred": {
+        "pass": "Faces and plates blurred",
+        "never_shown": "Stopped before blurring, so never shown",
+        "pending": "Blurring not done yet"
+      },
+      "detector": {
+        "pass": "Waste seen by the detector",
+        "fail": "Detector didn't see waste",
+        "untrained": "Detector not trained for this type",
+        "not_run": "Detector didn't run",
+        "pending": "Detector not run yet",
+        "stopped": "Detector not run: the photo was stopped first"
+      },
+      "judge": {
+        "pass": "AI check agreed",
+        "fail": "AI check disagreed",
+        "not_run": "AI check didn't run",
+        "pending": "AI check not done yet",
+        "stopped": "AI check not run: the photo was stopped first"
+      },
+      "location": {
+        "pass": "Location checked (GPS ±{{metres}} m)",
+        "pass_plain": "Location checked",
+        "fail": "Location is outside India",
+        "not_reached": "Location not checked",
+        "pending": "Location not checked yet"
+      }
+    },
+    "share": "Think this is wrong? Ask neighbours to check",
+    "copied": "Link copied",
+    "tips": {
+      "title": "Think this is wrong?",
+      "text": "Take a new photo of the spot:",
+      "closer": "Step closer, so the waste fills most of the picture.",
+      "daylight": "Take it in daylight, without strong glare.",
+      "frame": "Keep the waste in the middle of the frame."
+    }
   }
 }
