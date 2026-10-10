@@ -9,11 +9,12 @@ const english = new LocaleFormatter('en');
 const BRAND = { brand: 'Sample Namkeen', parent_company: 'Sample Foods Pvt Ltd', confidence: 0.93, source_url: 'https://example.test/brand' };
 
 describe('SitePanel header and counts', () => {
-  it('shows type, status, verification, context and counts', async () => {
+  it('shows type, status chip, context and counts', async () => {
     await renderApp(<SitePanel site={testSite({ cleanup_status: 'checking' })} userLocation={null} />);
     expect(screen.getByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
-    expect(screen.getByText('Open')).toHaveClass('badge--open');
-    expect(screen.getByText('Verified')).toBeInTheDocument();
+    // An open, verified site: one green-teal chip, never a red "Open".
+    expect(screen.getByText('Verified')).toHaveClass('status-chip--verified');
+    expect(screen.queryByText('Open')).not.toBeInTheDocument();
     expect(screen.getByText('Vacant plot · Jodhpur, Rajasthan')).toBeInTheDocument();
     expect(screen.getByText('Pilot city')).toBeInTheDocument();
     expect(screen.getByText('Cleanup photo being checked')).toBeInTheDocument();
@@ -59,7 +60,7 @@ describe('SitePanel for the fixtures and Hindi', () => {
   it('makes Confirm the main action and shows the backers while unverified', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
     expect(factValue('Ward')).toHaveTextContent('Not mapped yet; letters go to the city-wide body');
-    expect(screen.getByText('Unverified')).toBeInTheDocument();
+    expect(screen.getByText('Waiting · 2 of 10')).toHaveClass('status-chip--waiting');
     expect(screen.getByRole('button', { name: 'Confirm' })).toHaveClass('action-row__button--primary');
     expect(screen.queryByText('Packaging seen at this site')).not.toBeInTheDocument();
   });
@@ -67,7 +68,7 @@ describe('SitePanel for the fixtures and Hindi', () => {
   it('shows the dates, the cleanup photo and the reopened status', async () => {
     const site = await fixtureSite('site_jdh_3');
     await renderApp(<SitePanel site={site} userLocation={null} />);
-    expect(screen.getByText('Reopened')).toHaveClass('badge--reopened');
+    expect(screen.getByText('Reopened')).toHaveClass('status-chip--reopened');
     expect(screen.getByRole('img', { name: 'Blurred photo after the last cleanup' })).toBeInTheDocument();
     expect(factValue('First reported')).toHaveTextContent(english.dateTime(site.properties.first_reported_at));
     expect(factValue('Last cleared')).toHaveTextContent(english.dateTime(site.properties.cleaned_at ?? ''));
