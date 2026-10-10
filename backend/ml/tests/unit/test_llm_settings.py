@@ -13,16 +13,24 @@ def clean_llm_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
-def test_judge_order_is_bedrock_then_openai() -> None:
+def test_judge_order_is_nova_lite_then_nova_pro_then_openai() -> None:
     judge = LlmSettings.load().task_configs()["judge"]
 
     assert [choice.label() for choice in judge.choices()] == [
-        "bedrock:global.anthropic.claude-sonnet-4-6",
-        "bedrock:in.anthropic.claude-haiku-4-5-20251001-v1:0",
         "bedrock:apac.amazon.nova-lite-v1:0",
         "bedrock:apac.amazon.nova-pro-v1:0",
         "openai:gpt-4.1-mini",
     ]
+
+
+def test_claude_is_reachable_only_through_llm_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+    sonnet = "global.anthropic.claude-sonnet-4-6"
+    default = LlmSettings.load().task_configs()["judge"]
+    assert not any("anthropic" in choice.model for choice in default.choices())
+
+    monkeypatch.setenv("LLM_TASKS", f'{{"judge": {{"provider": "bedrock", "model": "{sonnet}"}}}}')
+
+    assert LlmSettings.load().task_configs()["judge"].model == sonnet
 
 
 def test_llm_tasks_replaces_the_judge_order(monkeypatch: pytest.MonkeyPatch) -> None:

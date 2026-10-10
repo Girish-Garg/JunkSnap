@@ -10,10 +10,10 @@ from ml.domain.errors import ConfigError
 
 # Scores are clipped before the logit so a 0 or 1 never becomes infinite.
 SCORE_CLIP = 0.01
-# Report types a meta.json without "report_types" was fitted on (before contracts v1.7).
-TRAINED_REPORT_TYPES = frozenset(
-    {"waste_dump", "no_bin", "contaminated_water", "open_construction"}
-)
+# Report types a meta.json without "report_types" (meta-v2) was fitted on: QR4Change photos
+# labelled waste_dump or not_waste. no_bin is checked as the same "waste is visible" question
+# by every trained signal. No row ever claimed contaminated_water or open_construction.
+TRAINED_REPORT_TYPES = frozenset({"waste_dump", "no_bin"})
 
 
 class Logistic:

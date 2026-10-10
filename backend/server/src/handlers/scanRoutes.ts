@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { ulid } from "ulid";
+import { ScanFindings } from "../domain/scout/ScanFindings.js";
+import { PublicMedia } from "../domain/sites/PublicMedia.js";
 import { ScanIntake } from "../services/ScanIntake.js";
 import { ScanSessionRules } from "../services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../services/ScanUploadPresigner.js";
@@ -48,7 +50,9 @@ export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync
       now,
       newScanId,
     });
-    const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), now });
+    const findings = new ScanFindings(new PublicMedia(settings.publicBaseUrl));
+    const reads = { outcomes: adapters.frameOutcomes(), findings };
+    const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), ...reads, now });
     await app.register(scanRoutes({ presigner, intake, guard }));
   };
 }

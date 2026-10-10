@@ -19,6 +19,8 @@ export interface MergeEvidence {
   readonly near: readonly NearPlace[];
   readonly bin: BinMeasure;
   readonly brands: readonly BrandLabel[];
+  // Scan frames only: t_ms of the first frame of the frame's spot (contracts v1.10).
+  readonly scanSpot?: number;
 }
 
 export interface MergeableReport {
@@ -38,4 +40,6 @@ export interface MergeableReport {
   readonly brands: readonly SiteBrand[];
   readonly location: SiteLocation;
   readonly pilot: boolean;
+  // Scan frames of one spot and type share this site id, so they found or join one site even when merged at once.
+  readonly spotSiteId?: string;
 }

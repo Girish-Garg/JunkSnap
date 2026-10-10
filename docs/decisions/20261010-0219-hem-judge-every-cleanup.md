@@ -1,6 +1,6 @@
 ---
-status: proposed
-superseded_by:
+status: superseded
+superseded_by: 20261011-0005-hem-judge-every-report.md
 area: agent
 by: hem
 date: 2026-10-10T02:19+05:30

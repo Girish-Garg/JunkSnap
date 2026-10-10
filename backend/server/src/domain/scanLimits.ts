@@ -17,4 +17,9 @@ export const SCAN_FRAME_RULES = {
   maxHintFrames: 60,
   // Difference-hash bits two frames may differ by and still count as the same view.
   duplicateDistance: 5,
+  // Two frames within this many metres whose hashes differ by at most similarDistance show the same spot.
+  sameSpotM: 10,
+  similarDistance: 20,
+  // Kept frames within this radius of a spot's first frame merge into one site per type (diameter 40 m, the merge radius).
+  spotRadiusM: 20,
 } as const;

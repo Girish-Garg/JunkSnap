@@ -1,5 +1,5 @@
 import pytest
-from fakes import FakeBuilder, FakeProvider, FakeSignal, FixedClock, make_case
+from fakes import JUDGE_JSON, FakeBuilder, FakeProvider, FakeSignal, FixedClock, make_case
 from model_fakes import FakeEmbedder, FakeObjectDetector, meta_model, two_dim_heads
 
 from ml.domain.case import VerificationCase
@@ -35,7 +35,7 @@ class Sink(EmbeddingSink):
 
 
 def verifier(signals: list[Signal]) -> StackedVerifier:
-    provider = FakeProvider("nova", [])
+    provider = FakeProvider("nova", [JUDGE_JSON])
     router = ProviderRouter({"judge": TaskConfig("bedrock", "nova")},
                             ProviderFactory({"bedrock": FakeBuilder({"nova": provider})}),
                             PriceTable())
@@ -47,15 +47,16 @@ def test_a_signal_that_cannot_see_the_claim_never_counts_as_disagreement() -> No
     case = make_case(claim=Claim("open_construction", "uncovered_debris"))
     yolo = YoloSignal(FakeObjectDetector([])).measure(case)
     embedding = EmbeddingSignal(FakeEmbedder((1.0, 0.0)), two_dim_heads()).measure(case)
-    assert embedding.neutral and not yolo.neutral and yolo.score == 0.0
+    assert embedding.neutral and yolo.neutral  # neither was trained on construction sites
+    labels = SignalResult("rekognition_labels", 0.0, "rekognition", "DetectLabels", "3.0", 300)
     combiner = MetaLearnerCombiner(meta_model(), Thresholds())
-    assert not combiner.disagree([yolo, embedding])
+    assert not combiner.disagree([labels, yolo, embedding])
 
 
 def test_a_failing_signal_is_skipped_and_the_rest_decide() -> None:
     result = verifier([BrokenSignal(), FakeSignal("yolo", 0.99), FakeSignal("rekognition_labels",
                                                                           0.99)]).verify(make_case())
-    assert [s.name for s in result.signals] == ["yolo", "rekognition_labels"]
+    assert [s.name for s in result.signals] == ["yolo", "rekognition_labels", "vision_judge"]
     assert result.outcome.decision == "auto_verified"
 
 

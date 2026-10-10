@@ -74,5 +74,10 @@ WASTE_KEYWORDS: Mapping[str, KeywordGroup] = MappingProxyType(
         ),
         # Labels cannot tell a full bin from a tidy one, so a bin alone is only weak.
         "overflowing_bin": KeywordGroup(strong=_WASTE, weak=_BINS | _LOOSE_WASTE),
+        # Area scout (contracts v1.10): litter is strong; sewage, rubble or a bin alone is weak.
+        "auto": KeywordGroup(
+            strong=_WASTE,
+            weak=_LOOSE_WASTE | _BINS | {"sewage", "sewer", "gutter", "foam", "rubble", "debris"},
+        ),
     }
 )

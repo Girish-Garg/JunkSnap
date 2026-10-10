@@ -31,16 +31,18 @@ def test_meta_learner_adds_signal_logits() -> None:
     assert combiner().info().version == "meta-test"
 
 
-def test_confident_agreement_is_decided_without_the_judge() -> None:
-    sure = signals(0.9, 0.9, 0.9)
-    assert not combiner().needs_judge(sure, REPORT)
+def test_confident_agreement_with_the_judge_is_decided() -> None:
+    sure = signals(0.9, 0.9, 0.9, judge=0.9)
     assert combiner().combine(sure, REPORT).decision == "auto_verified"
-    assert combiner().combine(signals(0.1, 0.1, 0.1), REPORT).decision == "rejected"
+    assert combiner().combine(signals(0.1, 0.1, 0.1, judge=0.1), REPORT).decision == "rejected"
 
 
-def test_unsure_or_split_signals_ask_the_judge_and_its_model_takes_over() -> None:
-    assert combiner().needs_judge(signals(0.6, 0.55, 0.5), REPORT)
-    assert combiner().needs_judge(signals(0.95, 0.2, 0.9), REPORT)
+def test_without_the_judge_sure_detectors_only_reach_community_check() -> None:
+    outcome = combiner().combine(signals(0.99, 0.99, 0.99), REPORT)
+    assert outcome.probability > 0.85 and outcome.decision == "community_check"
+
+
+def test_the_judged_model_takes_over_when_the_judge_answers() -> None:
     judged = combiner().combine(signals(0.6, 0.55, 0.5, judge=0.95), REPORT)
     assert judged.probability > 0.85 and judged.decision == "auto_verified"
 
@@ -49,7 +51,6 @@ def test_cleanup_support_is_mapped_to_waste_and_back() -> None:
     clean = signals(0.9, 0.9, 0.9)
     as_report = combiner().probability(clean, REPORT)
     assert combiner().probability(clean, CLEANUP) == pytest.approx(as_report)
-    assert combiner().needs_judge(clean, CLEANUP)
 
 
 def test_without_every_trained_signal_the_rekognition_fallback_decides() -> None:

@@ -28,6 +28,19 @@ class Claim:
         if self.context not in REPORT_CONTEXTS.get(self.report_type, frozenset()):
             raise InvalidClaimError(f"{self.report_type}/{self.context} is not a contract pair")
 
+    @property
+    def judge_required(self) -> bool:
+        """True when the judge must name part of the claim, so it runs on every case."""
+        return False
+
+    def matches(self, report_type: str) -> bool:
+        """The judge's type supports this claim."""
+        return report_type == self.report_type
+
+    def denies(self, report_type: str) -> bool:
+        """The judge's type says the claim is false."""
+        return report_type == NOT_WASTE
+
 
 @dataclass(frozen=True)
 class CaseFeatures:

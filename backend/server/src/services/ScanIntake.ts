@@ -1,6 +1,8 @@
 import type { ScanSession } from "../contracts/index.gen.js";
 import { NotFoundError, ValidationError } from "../domain/errors.js";
 import type { ScanFailureReason, ScanFrameCounts, ScanRecord, ScanStatus } from "../domain/ScanRecord.js";
+import type { ScanFindings, ScanFound } from "../domain/scout/ScanFindings.js";
+import type { FrameOutcomeReader } from "../ports/FrameOutcomeReader.js";
 import type { ScanQueue } from "../ports/ScanQueue.js";
 import type { ScanRepository } from "../ports/ScanRepository.js";
 import type { ScanSessionRules } from "./ScanSessionRules.js";
@@ -14,6 +16,8 @@ export interface ScanStatusView extends ScanAccepted {
   readonly reason: ScanFailureReason | null;
   readonly frames: ScanFrameCounts | null;
   readonly report_ids: readonly string[];
+  // Null until the worker is done cutting frames.
+  readonly found: ScanFound | null;
   readonly received_at: string;
   readonly updated_at: string;
 }
@@ -22,6 +26,8 @@ export interface ScanIntakeDeps {
   readonly scans: ScanRepository;
   readonly queue: ScanQueue;
   readonly rules: ScanSessionRules;
+  readonly outcomes: FrameOutcomeReader;
+  readonly findings: ScanFindings;
   readonly now: () => Date;
 }
 
@@ -53,7 +59,8 @@ export class ScanIntake {
       throw new NotFoundError("No scan with that id");
     }
     const { scan_id, status, reason, frames, report_ids, received_at, updated_at } = stored;
-    return { scan_id, status, reason, frames, report_ids, received_at, updated_at };
+    const found = status === "done" ? this.#deps.findings.of(await this.#deps.outcomes.outcomes(report_ids)) : null;
+    return { scan_id, status, reason, frames, report_ids, found, received_at, updated_at };
   }
 
   // A retry while still queued sends the message again, in case the first send was lost.

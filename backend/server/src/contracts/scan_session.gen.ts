@@ -15,10 +15,18 @@ export type ScanSession = {
    */
   user_id?: string;
   /**
-   * Picked before recording; every frame report gets it, and verification still checks it.
+   * Picked before recording; every frame report gets it, and verification still checks it. auto is an area scout (contracts v1.10): the models name each frame's type and context, and frames they find nothing in make no report.
    */
   report_type:
-    "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
+    | "waste_dump"
+    | "no_bin"
+    | "contaminated_water"
+    | "open_construction"
+    | "overflowing_bin"
+    | "auto";
+  /**
+   * auto lets the models name the place in each frame; required with report_type auto, never allowed with no_bin.
+   */
   context:
     | "vacant_plot"
     | "roadside"
@@ -33,7 +41,8 @@ export type ScanSession = {
     | "uncovered_debris"
     | "dusty_site"
     | "overflowing"
-    | "damaged";
+    | "damaged"
+    | "auto";
   /**
    * When recording started; t_ms 0.
    */
@@ -154,9 +163,10 @@ export const scanSessionSchema = {
         "no_bin",
         "contaminated_water",
         "open_construction",
-        "overflowing_bin"
+        "overflowing_bin",
+        "auto"
       ],
-      "description": "Picked before recording; every frame report gets it, and verification still checks it."
+      "description": "Picked before recording; every frame report gets it, and verification still checks it. auto is an area scout (contracts v1.10): the models name each frame's type and context, and frames they find nothing in make no report."
     },
     "context": {
       "enum": [
@@ -173,8 +183,10 @@ export const scanSessionSchema = {
         "uncovered_debris",
         "dusty_site",
         "overflowing",
-        "damaged"
-      ]
+        "damaged",
+        "auto"
+      ],
+      "description": "auto lets the models name the place in each frame; required with report_type auto, never allowed with no_bin."
     },
     "started_at": {
       "type": "string",
@@ -345,7 +357,8 @@ export const scanSessionSchema = {
               "vacant_plot",
               "roadside",
               "drain",
-              "other"
+              "other",
+              "auto"
             ]
           }
         }
@@ -385,7 +398,8 @@ export const scanSessionSchema = {
               "stagnant",
               "sewage",
               "foam",
-              "choked_drain"
+              "choked_drain",
+              "auto"
             ]
           }
         }
@@ -404,7 +418,8 @@ export const scanSessionSchema = {
           "context": {
             "enum": [
               "uncovered_debris",
-              "dusty_site"
+              "dusty_site",
+              "auto"
             ]
           }
         }
@@ -423,8 +438,25 @@ export const scanSessionSchema = {
           "context": {
             "enum": [
               "overflowing",
-              "damaged"
+              "damaged",
+              "auto"
             ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "auto"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "context": {
+            "const": "auto"
           }
         }
       }

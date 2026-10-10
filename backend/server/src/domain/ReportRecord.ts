@@ -5,6 +5,7 @@ import type {
   ReportUpload,
   VerificationResult,
 } from "../contracts/index.gen.js";
+import type { AutoClaimKind } from "./scout/AutoClaim.js";
 
 // withdrawn: the reporter took the report back from an unverified site (decision 20261010-1700).
 export type ReportStatus = "queued" | "processing" | "unverified" | "verified" | "rejected" | "needs_review" | "withdrawn";
@@ -24,6 +25,10 @@ export interface ReportRecord extends ReportUpload {
   readonly brand_labels?: readonly BrandLabel[];
   readonly location?: LocationLookup;
   readonly site_id?: string;
+  // Scan frames only: the part of the claim the models name (contracts v1.10); absent when the person picked both.
+  readonly auto_claim?: AutoClaimKind;
+  // Scan frames only: t_ms of the first frame of the frame's spot (ScanSpots).
+  readonly scan_spot?: number;
   // Optimistic lock: every save writes version + 1 only if the stored version is still the one read.
   readonly version?: number;
 }

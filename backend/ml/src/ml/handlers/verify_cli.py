@@ -7,10 +7,11 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ml.adapters.local_images import LocalBlurredImageStore
+from ml.domain.auto_claims import claim_for
 from ml.domain.case import VerificationResult, VerifyInput
 from ml.domain.errors import JunkSnapError
 from ml.domain.purposes import Purpose
-from ml.domain.verification import CaseFeatures, Claim
+from ml.domain.verification import CaseFeatures
 from ml.handlers.verify_graph import VerifierBuilder
 from ml.logging_setup import JsonLogging
 from ml.settings.core import CoreSettings
@@ -93,7 +94,7 @@ class VerifyCli:
             report_id=f"{self._purpose.id_prefix}_cli_{index:02d}",
             purpose=self._purpose.name,
             blurred_key=key,
-            claim=Claim(report_type, context),
+            claim=claim_for(report_type, context),
             features=CLI_FEATURES,
         )
 
