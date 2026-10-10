@@ -6,6 +6,7 @@ export const AREAS_PATH = '/areas';
 export const AREA_PATH = '/areas/:kind/:areaId';
 export const ACTIVITY_PATH = '/activity';
 export const ACCOUNT_PATH = '/account';
+export const RANKING_PATH = '/ranking';
 
 export function sitePath(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;

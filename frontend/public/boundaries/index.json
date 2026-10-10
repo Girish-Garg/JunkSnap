@@ -1,0 +1,22 @@
+{
+  "layers": {
+    "assembly": {
+      "features": 200,
+      "bytes": 344886,
+      "label_bytes": 25881,
+      "tolerance_deg": 0.008,
+      "sources": [
+        "rajasthan_assembly.geojson"
+      ]
+    },
+    "loksabha": {
+      "features": 543,
+      "bytes": 504462,
+      "label_bytes": 69902,
+      "tolerance_deg": 0.024,
+      "sources": [
+        "india_loksabha.geojson"
+      ]
+    }
+  }
+}

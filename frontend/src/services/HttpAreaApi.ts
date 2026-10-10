@@ -1,3 +1,4 @@
+import type { AreaListing } from '../domain/AreaListing';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
 import type { AreaApi } from './AreaApi';
 import { HttpErrors } from './HttpErrors';
@@ -13,8 +14,16 @@ export class HttpAreaApi implements AreaApi {
     this.#fetch = fetchImpl;
   }
 
-  async scores(kind: AreaKind, id: string): Promise<AreaScores> {
-    const path = `/areas/${kind}/${encodeURIComponent(id)}/scores`;
+  scores(kind: AreaKind, id: string): Promise<AreaScores> {
+    return this.#get<AreaScores>(`/areas/${kind}/${encodeURIComponent(id)}/scores`);
+  }
+
+  list(kind: AreaKind, within: string, limit: number): Promise<AreaListing> {
+    const query = new URLSearchParams({ within, limit: String(limit) });
+    return this.#get<AreaListing>(`/areas/${kind}?${query.toString()}`);
+  }
+
+  async #get<T>(path: string): Promise<T> {
     let response: Response;
     try {
       response = await this.#fetch(`${this.#baseUrl}${path}`, { headers: { Accept: 'application/json' } });
@@ -22,6 +31,6 @@ export class HttpAreaApi implements AreaApi {
       throw HttpErrors.network(`Request to ${path}`, cause);
     }
     if (!response.ok) throw await HttpErrors.fromResponse(response);
-    return (await response.json()) as AreaScores;
+    return (await response.json()) as T;
   }
 }

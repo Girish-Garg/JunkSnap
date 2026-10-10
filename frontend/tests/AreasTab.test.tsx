@@ -25,7 +25,8 @@ describe('Areas list', () => {
     expect(screen.getByRole('heading', { name: 'Lok Sabha seats' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Districts' })).toBeInTheDocument();
     await user.type(screen.getByLabelText('Find an area'), 'sard');
-    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: /Sites on the map/ })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'City ranking' })).toHaveAttribute('href', '/ranking');
   });
 
   it('sends an unknown area kind back to the list', async () => {
