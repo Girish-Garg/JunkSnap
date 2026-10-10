@@ -66,7 +66,7 @@ export class SnapServiceFactory {
     const scans = SnapServiceFactory.#scanQueue({ db, apis, identity, clock }, browser.locks);
     const recorder = new VideoRecorder(browser.mediaRecorder, clock);
     const hasher = new PhotoHasher(browser.crypto.subtle);
-    const gps = new GpsWatcher(browser.geolocation);
+    const gps = new GpsWatcher(browser.geolocation, clock);
     return {
       queue,
       tracker: new ReportTracker(apis.reports, queue),

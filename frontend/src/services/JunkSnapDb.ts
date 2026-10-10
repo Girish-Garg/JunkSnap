@@ -19,13 +19,20 @@ export class JunkSnapDb {
   #db: Promise<JunkSnapDatabase> | null = null;
 
   open(): Promise<JunkSnapDatabase> {
-    this.#db ??= openDB<JunkSnapSchema>(NAME, VERSION, {
+    if (this.#db) return this.#db;
+    const opened = openDB<JunkSnapSchema>(NAME, VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('reports')) db.createObjectStore('reports', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
         if (!db.objectStoreNames.contains('scans')) db.createObjectStore('scans', { keyPath: 'id' });
       },
+      // A newer app version in another tab is waiting to upgrade: let it, and reopen on the next call.
+      blocking: () => {
+        this.#db = null;
+        void opened.then((db) => db.close());
+      },
     });
-    return this.#db;
+    this.#db = opened;
+    return opened;
   }
 }

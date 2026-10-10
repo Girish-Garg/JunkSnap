@@ -170,7 +170,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   const scans = new ScanQueue({ store: new MemoryItemStore<QueuedScanData>(), sender: new ScanSender(scanApi, identity, clock), clock, lock: new QueueLock(undefined) });
   const recorder = new VideoRecorder(fakeRecorderFactory, clock);
   const hasher = new PhotoHasher(crypto.subtle);
-  const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation());
+  const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation(), clock);
   return {
     queue,
     tracker: new ReportTracker(api, queue),
