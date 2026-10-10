@@ -28,16 +28,21 @@ const MAX_PAGES = 10;
  * Activity shows this phone's rows at once; this brings them in line with the signed-in user's reports
  * on the server when the list token is missing, stale or another account's. Sent rows are shown only once
  * the token names the signed-in account (`trusted`), so a shared phone never shows one account's rows to
- * another; signing out removes sent rows. Reports still being checked are refreshed by ReportTracker.
+ * another. A missing or foreign token means the phone's sent photos and videos from before this sign-in are
+ * not this account's: the sync removes them. Signing out removes sent rows too. Reports still being checked
+ * are refreshed by ReportTracker.
  */
 export class ActivitySync {
   readonly #ports: ActivitySyncPorts;
   readonly #listeners = new Set<() => void>();
   #running: Promise<void> | null = null;
   #trusted = false;
+  /** When the current sign-in began on this phone (ms); rows saved since are the current account's. */
+  #ownedSince: number;
 
   constructor(ports: ActivitySyncPorts) {
     this.#ports = ports;
+    this.#ownedSince = ports.clock.now().getTime();
   }
 
   /** True once this phone's sent rows are confirmed to be the signed-in account's. */
@@ -57,6 +62,7 @@ export class ActivitySync {
       const next = auth.currentUser()?.email ?? null;
       if (next === email) return;
       email = next;
+      this.#ownedSince = this.#ports.clock.now().getTime();
       this.#setTrusted(false);
       if (next === null) void this.forgetSent();
     });
@@ -83,20 +89,31 @@ export class ActivitySync {
     const owner = await this.#ports.account.current();
     if (owner === null) return this.#setTrusted(false);
     const token = await this.#ports.freshness.read();
-    if (this.#ports.freshness.isStale(token, owner)) await this.#sync(owner, token?.owner ?? null);
+    if (this.#ports.freshness.isStale(token, owner)) await this.#sync(owner, token?.owner !== owner);
     this.#setTrusted((await this.#ports.freshness.read())?.owner === owner);
   }
 
-  async #sync(owner: string, previous: string | null): Promise<void> {
+  /** ownerChanged: the token was missing or another account's. */
+  async #sync(owner: string, ownerChanged: boolean): Promise<void> {
     const { freshness, queue, dismissed, clock } = this.#ports;
     const listing = await this.#list();
     if (listing === null) return;
     await queue.load();
-    const context = { now: clock.now(), ownerChanged: previous !== null && previous !== owner, dismissed: await dismissed.all() };
+    const context = { now: clock.now(), ownerChanged, ownedSince: this.#ownedSince, dismissed: await dismissed.all() };
     const plan = ActivityMerge.plan(queue.snapshot(), listing, context);
     for (const row of plan.save) await queue.save(row);
     for (const id of plan.remove) await queue.remove(id);
+    if (ownerChanged) await this.#dropForeignScans();
     await freshness.mark(owner, ActivitySync.#newest(listing.views));
+  }
+
+  // Videos cannot be listed from the server yet, so after an owner change every sent one from before this
+  // sign-in goes; unsent ones stay.
+  async #dropForeignScans(): Promise<void> {
+    const { scans } = this.#ports;
+    await scans.load();
+    const foreign = scans.snapshot().filter((scan) => scan.data.stage === 'sent' && Date.parse(scan.data.saved_at) < this.#ownedSince);
+    for (const scan of foreign) await scans.remove(scan.id);
   }
 
   async #list(): Promise<ActivityListing | null> {

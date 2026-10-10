@@ -131,8 +131,11 @@ describe('Activity freshness token, another account or offline', () => {
 
 describe('merging the server list with the phone', () => {
   it('drops a row the server listed before but no longer has, and keeps one it never listed', async () => {
-    const { snap, api } = await rig([sentRow(1, true), sentRow(2, false)]);
+    const { snap, api, clock } = await rig([sentRow(1, false), sentRow(2, false)]);
+    api.pages_ = [[listed(1)]];
+    await snap.activity.revalidate();
     api.pages_ = [[]];
+    clock.advance(60_000);
     await snap.activity.revalidate();
     expect(ids(snap)).toEqual(['rpt_2']);
   });
@@ -146,7 +149,9 @@ describe('merging the server list with the phone', () => {
     expect(snap.queue.find('9'.repeat(64))?.isPending()).toBe(true);
     expect(snap.queue.find('1'.repeat(64))?.data.status?.status).toBe('verified');
   });
+});
 
+describe('merging after a delete', () => {
   it('never brings back a report deleted from Activity', async () => {
     const { snap, api } = await rig([sentRow(1, true)]);
     await snap.queue.load();

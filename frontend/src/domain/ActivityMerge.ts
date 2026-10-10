@@ -11,8 +11,10 @@ export interface ActivityListing {
 
 export interface MergeContext {
   readonly now: Date;
-  /** The rows on this phone were last synced for a different account. */
+  /** The phone's list token is missing or names another account, so its sent rows may not be this account's. */
   readonly ownerChanged: boolean;
+  /** Rows saved at or after this time (ms) were made in this sign-in, so they are the current account's. */
+  readonly ownedSince: number;
   /** Report ids the reporter deleted from Activity; the listing never brings them back. */
   readonly dismissed: ReadonlySet<string>;
 }
@@ -23,10 +25,10 @@ export interface MergePlan {
 }
 
 /**
- * Folds the server's list into this phone's rows. A listed report updates its row when its updated_at
- * changed, or becomes a new row. A sent row the complete listing lacks is dropped when the server
- * listed it before or another account's rows are on the phone; unsent rows always stay. A withdrawn report
- * never becomes a new row: the reporter took it back, and a deleted row must not come back that way.
+ * Folds the server's list into this phone's rows. A listed report updates its row when its updated_at changed,
+ * or becomes a new row; a withdrawn report never becomes a new row. A sent row the listing lacks is dropped:
+ * always when the owner changed (complete listing or not; rows made in this sign-in stay), else only when the
+ * listing is complete and the server listed it before. Unsent rows always stay.
  */
 export class ActivityMerge {
   static plan(local: readonly QueuedReport[], listing: ActivityListing, context: MergeContext): MergePlan {
@@ -35,7 +37,7 @@ export class ActivityMerge {
     const shown = listing.views.filter((view) => !context.dismissed.has(view.report_id));
     const save = shown.flatMap((view) => ActivityMerge.#update(byReportId.get(view.report_id) ?? byId.get(ListedReport.rowId(view)), view, context.now));
     const listed = new Set(listing.views.map((view) => view.report_id));
-    const remove = local.filter((row) => ActivityMerge.#gone(row, listed, listing.complete, context.ownerChanged)).map((row) => row.id);
+    const remove = local.filter((row) => ActivityMerge.#gone(row, listed, listing.complete, context)).map((row) => row.id);
     return { save, remove };
   }
 
@@ -49,9 +51,10 @@ export class ActivityMerge {
     return fresh || row.isPending() ? [] : [row.synced(view, now)];
   }
 
-  static #gone(row: QueuedReport, listed: ReadonlySet<string>, complete: boolean, ownerChanged: boolean): boolean {
+  static #gone(row: QueuedReport, listed: ReadonlySet<string>, complete: boolean, context: MergeContext): boolean {
     const reportId = row.data.report_id;
-    if (!complete || row.data.stage !== 'sent' || reportId === null || listed.has(reportId)) return false;
-    return ownerChanged || row.data.synced_at !== undefined;
+    if (row.data.stage !== 'sent' || reportId === null || listed.has(reportId)) return false;
+    if (context.ownerChanged) return Date.parse(row.data.saved_at) < context.ownedSince;
+    return complete && row.data.synced_at !== undefined;
   }
 }

@@ -108,8 +108,9 @@ interface ActivityParts {
   readonly queue: ReportQueue;
   readonly scans: ScanQueue;
   readonly clock: Clock;
-  readonly meta: IndexedDbMetaStore;
+  readonly identity: RequestIdentity;
   readonly dismissed: DismissedReports;
+  readonly meta: IndexedDbMetaStore;
 }
 
 interface QueueParts {
@@ -133,7 +134,7 @@ export class SnapServiceFactory {
     const hasher = new PhotoHasher(browser.crypto.subtle);
     const gps = new GpsWatcher(browser.geolocation, clock);
     const dismissed = new DismissedReports(meta);
-    const activity = SnapServiceFactory.#activity({ apis, queue, scans, clock, meta, dismissed }, auth, browser.crypto);
+    const activity = SnapServiceFactory.#activity({ apis, queue, scans, clock, identity, dismissed, meta }, auth, browser.crypto);
     return {
       queue,
       tracker: new ReportTracker(apis.reports, queue),
@@ -153,8 +154,8 @@ export class SnapServiceFactory {
 
   // Activity's server sync follows sign-in changes from the start.
   static #activity(parts: ActivityParts, auth: AuthService, crypto: Crypto): ActivitySync {
-    const { apis, queue, scans, clock, meta, dismissed } = parts;
-    const account = new AccountKey({ auth, subtle: crypto.subtle, meta, random: () => crypto.getRandomValues(new Uint8Array(16)) });
+    const { apis, queue, scans, clock, identity, dismissed, meta } = parts;
+    const account = new AccountKey(identity, crypto.subtle);
     const activity = new ActivitySync({ api: apis.reports, queue, scans, freshness: new ActivityFreshness(meta, clock), dismissed, account, clock });
     activity.watch(auth);
     return activity;
