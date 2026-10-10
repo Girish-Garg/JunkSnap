@@ -11,7 +11,6 @@ Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 1
 - Web app: https://demo.d3iec0rb3f75jm.amplifyapp.com
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
 - Android app: the APK is a GitHub Release (tag `app-v0.1.0`) built by the `android-release` workflow. It is a debug-signed prerelease until the release key is added; see [docs/android.md](docs/android.md).
-- Short writeup: [docs/submission/writeup.md](docs/submission/writeup.md)
 
 ## How a report flows
 
@@ -235,7 +234,6 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 - [Decisions](docs/decisions/)
 - [Handover: plan and tasks](docs/handover.md)
 - [Working agreement](docs/working.md) and [rules for every agent](AGENTS.md)
-- [Submission writeup](docs/submission/writeup.md) and [video script](docs/submission/video-script.md)
 
 ## Team
 
