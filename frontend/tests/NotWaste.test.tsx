@@ -18,6 +18,10 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () =
 const PHOTO = new TextEncoder().encode('jpeg').buffer;
 const NOT_WASTE = { decision: 'rejected', judge: { report_type: 'not_waste' } } as const;
 const UNCONFIRMED = { decision: 'rejected', judge: { report_type: 'waste_dump' } } as const;
+const VETO_BY = 'by bedrock/apac.amazon.nova-lite-v1:0@v1';
+const UNCLEAR = { ...NOT_WASTE, combiner: { version: `meta-v2+judge_veto:unclear ${VETO_BY}` } } as const;
+const LOW_SUPPORT = { ...UNCONFIRMED, combiner: { version: `meta-v2+judge_veto:low_support ${VETO_BY}` } } as const;
+const RETAKE = "Retake: we couldn't see waste clearly. Hold the phone steady and snap the waste in good light.";
 const MESSAGE = "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.";
 
 function view(status: ReportStatusView['status'], extra: Partial<ReportStatusView> = {}): ReportStatusView {
@@ -40,6 +44,13 @@ describe('ReportRejection', () => {
     const neighbours = view('rejected', { verification: { decision: 'community_check', judge: null } });
     expect(ReportRejection.reasonOf(neighbours)).toBeNull();
     expect(ReportRejection.reasonOf(view('unverified', { verification: NOT_WASTE }))).toBeNull();
+  });
+
+  it('names unclear when the unusable-photo veto rejected it, whatever the judge type', () => {
+    expect(ReportRejection.reasonOf(view('rejected', { verification: UNCLEAR }))).toBe('unclear');
+    expect(ReportRejection.reasonOf(view('rejected', { verification: LOW_SUPPORT }))).toBe('unconfirmed');
+    expect(ReportRejection.reasonOf(view('unverified', { verification: UNCLEAR }))).toBeNull();
+    expect(ReportProgress.of(sent(view('rejected', { verification: UNCLEAR })))).toEqual({ key: 'unclear', tone: 'alert' });
   });
 
   it('shows a firm alert badge and no celebration', () => {
@@ -127,5 +138,32 @@ describe('A report the models rejected without a not_waste answer', () => {
     expect(await screen.findByText('Waste not confirmed')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText("Our checks couldn't confirm waste in this photo.")).toHaveLength(2));
     expect(screen.queryByText(MESSAGE)).toBeNull();
+  });
+});
+
+describe('A report the judge could not see clearly', () => {
+  it('asks for a retake, in English', async () => {
+    const user = userEvent.setup();
+    const api = new FakeReportApi();
+    api.status_ = 'rejected';
+    api.verification_ = UNCLEAR;
+    await snapAndSend(user, api);
+    await user.click(await screen.findByRole('radio', { name: 'Vacant plot' }));
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByText('Retake: photo not clear')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(RETAKE)).toHaveLength(2));
+    expect(screen.queryByText(MESSAGE)).toBeNull();
+  });
+
+  it('asks for a retake, in Hindi', async () => {
+    const user = userEvent.setup();
+    const api = new FakeReportApi();
+    api.status_ = 'rejected';
+    api.verification_ = UNCLEAR;
+    await snapAndSend(user, api, 'hi');
+    await user.click(await screen.findByRole('radio', { name: 'खाली प्लॉट' }));
+    await user.click(screen.getByRole('button', { name: 'रिपोर्ट भेजें' }));
+    expect(await screen.findByText('फिर से लें: फ़ोटो साफ़ नहीं')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/हमें कचरा साफ़ नहीं दिखा।/)).toHaveLength(2));
   });
 });

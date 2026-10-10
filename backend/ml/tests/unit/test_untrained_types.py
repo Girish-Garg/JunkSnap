@@ -4,11 +4,10 @@ from dataclasses import replace
 
 import pytest
 from fakes import JUDGE_JSON, FakeDetector, FixedClock, make_case, provider_error, scripted_judge
-from model_fakes import FakeEmbedder, FakeObjectDetector, two_dim_heads
+from model_fakes import FakeEmbedder, FakeObjectDetector, meta_v2, two_dim_heads
 
 from ml.domain.case import VerificationResult
 from ml.domain.label_insights import LabelInsights
-from ml.domain.linear import MetaModel
 from ml.domain.verification import Claim, Thresholds
 from ml.ports.signal import Signal
 from ml.services.embedding_signal import EmbeddingSignal
@@ -18,20 +17,6 @@ from ml.services.stacked_verifier import StackedVerifier
 from ml.services.yolo_signal import YoloSignal
 
 FLYOVER = Claim("open_construction", "dusty_site")
-SIGNALS = ["rekognition_labels", "yolo", "embedding_classifier"]
-
-
-def meta_v2() -> MetaModel:
-    """meta-v2's shape and weights (docs/ml/eval.md); like the published file, no report_types."""
-    return MetaModel.from_json({
-        "version": "meta-v2",
-        "base": {"signals": SIGNALS, "weights": [0.25, 0.65, 1.27], "bias": 1.55},
-        "judged": {"signals": [*SIGNALS, "vision_judge"], "weights": [0.25, 0.65, 1.27, 0.17],
-                   "bias": 1.55},
-        "fallback": {"signals": ["rekognition_labels"], "weights": [1.20], "bias": -0.96},
-        "fallback_judged": {"signals": ["rekognition_labels", "vision_judge"],
-                            "weights": [0.68, 2.63], "bias": -2.84},
-    })
 
 
 def answer(report_type: str, context: str, confidence: float) -> str:

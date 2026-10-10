@@ -59,6 +59,8 @@ class JudgeAnswer(BaseModel):
     size_class: Literal["small", "medium", "large"] | None = None
     hazards: tuple[HazardAnswer, ...] = Field(default=(), max_length=5)
     scene_fits_site: bool | None = None
+    # Absent from older answers and other models' replies, so it defaults to a usable photo.
+    photo_unclear: bool = False
 
     def to_verdict(self) -> JudgeVerdict:
         """A context that does not belong to the report type becomes null."""
@@ -71,6 +73,7 @@ class JudgeAnswer(BaseModel):
             rationale=self.rationale.strip()[:RATIONALE_MAX],
             confidence=self.confidence,
             scene_fits_site=self.scene_fits_site,
+            unclear=self.photo_unclear,
         )
 
     def to_insights(self, source: InsightSource) -> Insights:

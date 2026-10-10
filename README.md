@@ -1,6 +1,31 @@
 # JunkSnap
 
-**Snap the junk. Prove it. Get it cleared.**
+**Snap the junk. Prove it. Get it cleared.** Residents photograph waste; JunkSnap blurs it, checks it with stacked models, maps it to the ward, MLA and MP, and drafts a cited letter for the resident to file.
+
+[![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://demo.d3iec0rb3f75jm.amplifyapp.com)
+[![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/saboot/releases/latest)
+[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+[![Built on AWS](https://img.shields.io/badge/built%20on-AWS-ff9900?logo=amazonwebservices&logoColor=white)](#aws-services-and-why)
+
+<img src="docs/media/junksnap-tour.gif" width="360" alt="The live JunkSnap web app on a phone: the Jodhpur map, a reported site and its blurred photo with its MLA and MP seats, then the Areas map and the Soorsagar area page">
+
+Built on AWS, in `ap-south-1` (full diagram under [Architecture](#architecture)):
+
+```mermaid
+flowchart LR
+  app["Web app (Amplify)<br/>Android app"] -->|sign in| cog["Cognito"]
+  app -->|presigned PUT| s3o[("S3 originals<br/>KMS")]
+  app --> cf["CloudFront"] --> alb["ALB"] --> api
+  cf -->|/media blurred photos| s3b[("S3 blurred")]
+  subgraph eks["EKS Auto Mode"]
+    api["api"] --> sqs["SQS"] --> worker["worker"] --> ml["ml"]
+    scores["scores CronJob"]
+  end
+  worker & ml --> rek["Rekognition<br/>faces, plates, labels"]
+  ml & api --> brk["Bedrock<br/>judge, letters"]
+  worker --> loc["Location<br/>Places v2"]
+  api & worker & scores --> ddb[("DynamoDB")]
+```
 
 Dumps are not only the authorities' failure. People dump on empty plots, often because there is nowhere legal to put waste. JunkSnap measures all three causes: how fast the city clears dumps, how much residents dump, and whether people have anywhere legal to put waste.
 
@@ -11,7 +36,6 @@ Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 1
 - Web app: https://demo.d3iec0rb3f75jm.amplifyapp.com
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
 - Android app: the APK is a GitHub Release (tag `app-v0.1.0`) built by the `android-release` workflow. It is a debug-signed prerelease until the release key is added; see [docs/android.md](docs/android.md).
-- Short writeup: [docs/submission/writeup.md](docs/submission/writeup.md)
 
 ## How a report flows
 
@@ -218,9 +242,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 ## Limits
 
 - Photos show that waste exists, not who put it there. JunkSnap never names a person.
-- Model numbers come from public datasets, not from Jodhpur. Pile and bin boxes come from a teacher model.
 - No open ward map exists for Jodhpur, so letters and scores use the assembly and Lok Sabha seats there. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are built as unreviewed data files (`data/boundaries/*_wards.geojson`); they are not on the map and not used for lookups, scores or letters. Ward facts from the crawler stay marked unreviewed until a person checks them.
-- Rule entries in `data/rules/rules.json` are marked unreviewed until a person checks them against the PDFs; the word-for-word check runs on every quote regardless.
 - Letters are drafts, not legal advice. The resident files them; nothing is sent automatically.
 
 ## Data sources
@@ -235,7 +257,6 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 - [Decisions](docs/decisions/)
 - [Handover: plan and tasks](docs/handover.md)
 - [Working agreement](docs/working.md) and [rules for every agent](AGENTS.md)
-- [Submission writeup](docs/submission/writeup.md) and [video script](docs/submission/video-script.md)
 
 ## Team
 

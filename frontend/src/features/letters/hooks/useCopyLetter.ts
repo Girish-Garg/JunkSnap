@@ -13,10 +13,10 @@ function labelKey(state: CopyState, shares: boolean): string {
 }
 
 /**
- * Copies the letter as plain text; inside the Android app it opens the share sheet instead and
+ * Copies the letter as plain text, ending with the shared page's link; inside the Android app it opens the share sheet instead and
  * copies only if that fails. Clipboard access can be refused, and then the resident copies by hand.
  */
-export function useCopyLetter(draft: LetterBase, native: NativeBridge) {
+export function useCopyLetter(draft: LetterBase, native: NativeBridge, link?: string) {
   const { t } = useTranslation();
   const { sharer } = useServices();
   const [state, setState] = useState<CopyState>('idle');
@@ -27,7 +27,7 @@ export function useCopyLetter(draft: LetterBase, native: NativeBridge) {
       () => setState('failed'),
     );
   const copy = () => {
-    const text = new LetterText(t, draft).plain();
+    const text = new LetterText(t, draft).plain(link);
     if (!shares) return void copyText(text);
     void native.shareText(text).catch(() => copyText(text));
   };
