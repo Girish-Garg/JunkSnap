@@ -35,7 +35,7 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const queue = new SqsReportQueue(new SQSClient({ region }), settings.reportsQueueUrl);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock });
     const statuses = new ReportStatusReader(reports, settings.publicBaseUrl);
-    const mine = new MyReportsQuery(new DynamoUserReportLister(documents, settings.reportsTable), settings.publicBaseUrl);
+    const mine = new MyReportsQuery(new DynamoUserReportLister(documents, settings.reportsTable, app.log), settings.publicBaseUrl);
     const guard = RouteGuard.fromEnv(env);
     await app.register(new ReportEndpoints({ presigner, intake, statuses, mine }, guard).plugin());
   };

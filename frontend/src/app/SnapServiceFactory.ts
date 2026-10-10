@@ -103,6 +103,15 @@ interface ActionParts {
   readonly dismissed: DismissedReports;
 }
 
+interface ActivityParts {
+  readonly apis: Apis;
+  readonly queue: ReportQueue;
+  readonly scans: ScanQueue;
+  readonly clock: Clock;
+  readonly meta: IndexedDbMetaStore;
+  readonly dismissed: DismissedReports;
+}
+
 interface QueueParts {
   readonly db: JunkSnapDb;
   readonly apis: Apis;
@@ -124,11 +133,11 @@ export class SnapServiceFactory {
     const hasher = new PhotoHasher(browser.crypto.subtle);
     const gps = new GpsWatcher(browser.geolocation, clock);
     const dismissed = new DismissedReports(meta);
-    const account = new AccountKey(auth, browser.crypto.subtle);
+    const activity = SnapServiceFactory.#activity({ apis, queue, scans, clock, meta, dismissed }, auth, browser.crypto);
     return {
       queue,
       tracker: new ReportTracker(apis.reports, queue),
-      activity: new ActivitySync({ api: apis.reports, queue, freshness: new ActivityFreshness(meta, clock), dismissed, account, clock }),
+      activity,
       scans,
       scanTracker: new ScanTracker(apis.scans, scans),
       recorder,
@@ -140,6 +149,15 @@ export class SnapServiceFactory {
       compass: new CompassHeading(browser.orientation ?? null),
       ...SnapServiceFactory.#actions({ apis, identity, gps, queue, scans, dismissed, random: () => browser.crypto.getRandomValues(new Uint8Array(16)) }),
     };
+  }
+
+  // Activity's server sync follows sign-in changes from the start.
+  static #activity(parts: ActivityParts, auth: AuthService, crypto: Crypto): ActivitySync {
+    const { apis, queue, scans, clock, meta, dismissed } = parts;
+    const account = new AccountKey({ auth, subtle: crypto.subtle, meta, random: () => crypto.getRandomValues(new Uint8Array(16)) });
+    const activity = new ActivitySync({ api: apis.reports, queue, scans, freshness: new ActivityFreshness(meta, clock), dismissed, account, clock });
+    activity.watch(auth);
+    return activity;
   }
 
   // Site actions, Activity deletes and area letters share the sign-in gate and the device token.

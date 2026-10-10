@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DynamoUserReportLister } from "../src/adapters/DynamoUserReportLister.js";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { validateReportList, type ReportUpload } from "../src/contracts/index.gen.js";
-import { ExternalServiceError, InternalDataError, ValidationError } from "../src/domain/errors.js";
+import { ExternalServiceError, ValidationError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
 import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
@@ -110,6 +110,7 @@ class ScriptedClient {
   }
 }
 
+const quiet = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
 const row = (userId: string) => Report.receive({ ...upload(), upload_id: "upl_row_1" }, NOW, userId).toRecord();
 const cursorOf = (key: object) => Buffer.from(JSON.stringify(key)).toString("base64url");
 
@@ -117,7 +118,7 @@ describe("DynamoUserReportLister", () => {
   it("queries by-user newest first, snaps only, and returns the next key as a cursor", async () => {
     const last = { report_id: "rpt_row_1", user_id: USER, received_at: NOW };
     const client = new ScriptedClient([{ Items: [row(USER)], LastEvaluatedKey: last }]);
-    const page = await new DynamoUserReportLister(client.documents(), "reports").page(USER, { limit: 20, cursor: null });
+    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 20, cursor: null });
     expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_1"]);
     expect(page.nextCursor).toBe(cursorOf(last));
     expect(client.commands[0]?.input).toMatchObject({
@@ -134,7 +135,7 @@ describe("DynamoUserReportLister", () => {
   it("starts after the cursor's key", async () => {
     const key = { report_id: "rpt_row_1", user_id: USER, received_at: NOW };
     const client = new ScriptedClient([{ Items: [] }]);
-    const page = await new DynamoUserReportLister(client.documents(), "reports").page(USER, { limit: 5, cursor: cursorOf(key) });
+    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 5, cursor: cursorOf(key) });
     expect(page.nextCursor).toBeNull();
     expect(client.commands[0]?.input.ExclusiveStartKey).toEqual(key);
   });
@@ -144,17 +145,23 @@ describe("DynamoUserReportLister", () => {
     ["extra key fields", cursorOf({ report_id: "rpt_row_1", user_id: USER, received_at: NOW, site_id: "x" })],
     ["not json", Buffer.from("nope").toString("base64url")],
   ])("refuses a cursor with %s", async (_case, cursor) => {
-    const lister = new DynamoUserReportLister(new ScriptedClient([]).documents(), "reports");
+    const lister = new DynamoUserReportLister(new ScriptedClient([]).documents(), "reports", quiet);
     await expect(lister.page(USER, { limit: 5, cursor })).rejects.toThrow(ValidationError);
   });
 
-  it("never returns a row that names another user", async () => {
-    const lister = new DynamoUserReportLister(new ScriptedClient([{ Items: [row(OTHER_USER)] }]).documents(), "reports");
-    await expect(lister.page(USER, { limit: 5, cursor: null })).rejects.toThrow(InternalDataError);
+  it("skips with a warning a row that names another user or is malformed, and keeps the rest", async () => {
+    const sink = new LogSink();
+    const logger = new JsonLoggerFactory(sink).create({ service: "api", stage: "dev" });
+    const items = [row(OTHER_USER), { report_id: "rpt_broken", user_id: USER }, row(USER)];
+    const lister = new DynamoUserReportLister(new ScriptedClient([{ Items: items }]).documents(), "reports", logger);
+    const page = await lister.page(USER, { limit: 5, cursor: null });
+    expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_1"]);
+    const warnings = sink.records().filter((record) => record.message === "skipped a listed report");
+    expect(warnings.map((record) => record.reason)).toEqual(["another user's row", "malformed row"]);
   });
 
   it("turns DynamoDB errors into ExternalServiceError", async () => {
-    const lister = new DynamoUserReportLister(new ScriptedClient([new Error("throttled")]).documents(), "reports");
+    const lister = new DynamoUserReportLister(new ScriptedClient([new Error("throttled")]).documents(), "reports", quiet);
     await expect(lister.page(USER, { limit: 5, cursor: null })).rejects.toThrow(ExternalServiceError);
   });
 });

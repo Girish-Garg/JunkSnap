@@ -42,6 +42,11 @@ export class ActivityFreshness {
     return this.#clock.now().getTime() - Date.parse(token.synced_at) >= this.#ttlMs;
   }
 
+  /** Sign-out: no account's list is on this phone any more. */
+  async clear(): Promise<void> {
+    await this.#store.set(KEY, '');
+  }
+
   async mark(owner: string, newest: string | null): Promise<void> {
     const token: ActivityToken = { owner, synced_at: this.#clock.now().toISOString(), newest };
     await this.#store.set(KEY, JSON.stringify(token));

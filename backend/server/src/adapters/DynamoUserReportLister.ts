@@ -1,8 +1,9 @@
 import { QueryCommand, type DynamoDBDocumentClient, type QueryCommandOutput } from "@aws-sdk/lib-dynamodb";
-import { ExternalServiceError, InternalDataError, ValidationError } from "../domain/errors.js";
+import { ExternalServiceError, ValidationError } from "../domain/errors.js";
 import { Report } from "../domain/Report.js";
 import { ReportId } from "../domain/ReportId.js";
 import type { ReportRecord } from "../domain/ReportRecord.js";
+import type { Logger } from "../ports/Logger.js";
 import type { UserReportLister, UserReportPage, UserReportPageRequest } from "../ports/UserReportLister.js";
 
 type StartKey = Record<string, unknown>;
@@ -14,16 +15,18 @@ const KEY_NAMES = ["report_id", "user_id", "received_at"] as const;
 export class DynamoUserReportLister implements UserReportLister {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
+  readonly #logger: Logger;
 
-  constructor(client: DynamoDBDocumentClient, table: string) {
+  constructor(client: DynamoDBDocumentClient, table: string, logger: Logger) {
     this.#client = client;
     this.#table = table;
+    this.#logger = logger;
   }
 
   async page(userId: string, request: UserReportPageRequest): Promise<UserReportPage> {
     const start = request.cursor === null ? undefined : DynamoUserReportLister.#decode(request.cursor, userId);
     const output = await this.#query(userId, request.limit, start);
-    const reports = (output.Items ?? []).map((item) => Report.fromRecord(DynamoUserReportLister.#record(item, userId)));
+    const reports = (output.Items ?? []).flatMap((item) => this.#report(item, userId));
     const last = output.LastEvaluatedKey;
     return { reports, nextCursor: last === undefined ? null : Buffer.from(JSON.stringify(last)).toString("base64url") };
   }
@@ -62,12 +65,15 @@ export class DynamoUserReportLister implements UserReportLister {
     return key as StartKey;
   }
 
-  // The GSI holds only this user's rows; a row naming anyone else is a broken index, never shown.
-  static #record(item: Record<string, unknown>, userId: string): ReportRecord {
-    const valid = ReportId.isValid(item.report_id) && typeof item.status === "string" && item.user_id === userId;
-    if (!valid || !Array.isArray(item.completed_steps)) {
-      throw new InternalDataError(`reports item ${String(item.report_id)} on by-user is malformed`);
+  // The GSI holds only this user's rows. A malformed row, or one naming anyone else, is skipped with a
+  // warning (never shown), so one bad row cannot hide the rest of the user's list.
+  #report(item: Record<string, unknown>, userId: string): Report[] {
+    const valid = ReportId.isValid(item.report_id) && typeof item.status === "string" && Array.isArray(item.completed_steps);
+    if (valid && item.user_id === userId) {
+      return [Report.fromRecord(item as unknown as ReportRecord)];
     }
-    return item as unknown as ReportRecord;
+    const reason = valid ? "another user's row" : "malformed row";
+    this.#logger.warn({ report_id: String(item.report_id), index: "by-user", reason }, "skipped a listed report");
+    return [];
   }
 }

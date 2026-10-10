@@ -25,7 +25,8 @@ export interface MergePlan {
 /**
  * Folds the server's list into this phone's rows. A listed report updates its row when its updated_at
  * changed, or becomes a new row. A sent row the complete listing lacks is dropped when the server
- * listed it before or another account's rows are on the phone; unsent rows always stay.
+ * listed it before or another account's rows are on the phone; unsent rows always stay. A withdrawn report
+ * never becomes a new row: the reporter took it back, and a deleted row must not come back that way.
  */
 export class ActivityMerge {
   static plan(local: readonly QueuedReport[], listing: ActivityListing, context: MergeContext): MergePlan {
@@ -40,6 +41,7 @@ export class ActivityMerge {
 
   static #update(row: QueuedReport | undefined, view: ReportStatusView, now: Date): readonly QueuedReport[] {
     if (!row) {
+      if (view.status === 'withdrawn') return [];
       const created = ListedReport.toQueued(view, now);
       return created ? [created] : [];
     }

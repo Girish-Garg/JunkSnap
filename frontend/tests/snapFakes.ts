@@ -196,7 +196,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   const recorder = new VideoRecorder(fakeRecorderFactory, clock);
   const hasher = new PhotoHasher(crypto.subtle);
   const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation(), clock);
-  const { activity, dismissed } = testActivity(options, { api, queue, clock });
+  const { activity, dismissed } = testActivity(options, { api, queue, scans, clock });
   return {
     queue,
     tracker: new ReportTracker(api, queue),
@@ -215,11 +215,13 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   };
 }
 
-function testActivity(options: SnapTestOptions, ports: Pick<ActivitySyncPorts, 'api' | 'queue' | 'clock'>) {
+function testActivity(options: SnapTestOptions, ports: Pick<ActivitySyncPorts, 'api' | 'queue' | 'scans' | 'clock'>) {
   const meta = options.meta ?? new MemoryMetaStore();
   const dismissed = new DismissedReports(meta);
-  const account = new AccountKey(options.auth, crypto.subtle);
-  return { activity: new ActivitySync({ ...ports, freshness: new ActivityFreshness(meta, ports.clock), dismissed, account }), dismissed };
+  const account = new AccountKey({ auth: options.auth, subtle: crypto.subtle, meta, random: () => crypto.getRandomValues(new Uint8Array(16)) });
+  const activity = new ActivitySync({ ...ports, freshness: new ActivityFreshness(meta, ports.clock), dismissed, account });
+  activity.watch(options.auth);
+  return { activity, dismissed };
 }
 
 function testActions(siteActions: SiteActionService, ports: Omit<ActivityRemoverPorts, 'sites'>): Pick<SnapServices, 'siteActions' | 'remover'> {
