@@ -1,11 +1,12 @@
 import type { AreaCrawl } from '../domain/AreaCrawl';
+import type { AreaListing } from '../domain/AreaListing';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
 import type { AreaApi } from './AreaApi';
 import { HttpErrors } from './HttpErrors';
 
 type Fetch = typeof fetch;
 
-/** Both routes are public, so no token is sent. */
+/** Every route here is public, so no token is sent. */
 export class HttpAreaApi implements AreaApi {
   readonly #baseUrl: string;
   readonly #fetch: Fetch;
@@ -17,6 +18,11 @@ export class HttpAreaApi implements AreaApi {
 
   scores(kind: AreaKind, id: string): Promise<AreaScores> {
     return this.#get<AreaScores>(`/areas/${kind}/${encodeURIComponent(id)}/scores`);
+  }
+
+  list(kind: AreaKind, within: string, limit: number): Promise<AreaListing> {
+    const query = new URLSearchParams({ within, limit: String(limit) });
+    return this.#get<AreaListing>(`/areas/${kind}?${query.toString()}`);
   }
 
   crawl(districtId: string): Promise<AreaCrawl> {

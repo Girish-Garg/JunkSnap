@@ -6,6 +6,7 @@ import '../site.css';
 import { SiteActions } from './SiteActions';
 import { SiteBrands } from './SiteBrands';
 import { SiteCounts } from './SiteCounts';
+import { SiteReporters } from './SiteReporters';
 import { SiteHistoryFacts } from './SiteHistoryFacts';
 import { SiteLocationFacts } from './SiteLocationFacts';
 import { SiteLocationLine } from './SiteLocationLine';
@@ -35,6 +36,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
       <SitePhotoStrip photos={presenter.photos()} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
+      <SiteReporters site={details} />
       <SiteLocationFacts location={details.location} />
       <SiteBrands brands={details.brands} />
       <SiteHistoryFacts site={details} />

@@ -1,5 +1,6 @@
 import { SitePreviewCard } from '../../site/components/SitePreviewCard';
 import type { MapPageState } from '../hooks/useMapPage';
+import { BoundaryLegend } from './BoundaryLegend';
 import { FiltersButton } from './FiltersButton';
 import { MapControls } from './MapControls';
 import { MapStatus } from './MapStatus';
@@ -24,7 +25,8 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
       {selection.preview && (
         <SitePreviewCard site={selection.preview} userLocation={page.location.position} onDetails={selection.openDetails} />
       )}
-      {!listMode && <MapControls onLocate={page.location.locate} />}
+      {!listMode && <BoundaryLegend kind={page.boundary.kind} />}
+      {!listMode && <MapControls onLocate={page.location.locate} boundary={page.boundary} />}
     </>
   );
 }

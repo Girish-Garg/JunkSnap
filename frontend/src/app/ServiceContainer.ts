@@ -5,6 +5,7 @@ import type { ApiClient } from '../services/ApiClient';
 import type { AreaApi } from '../services/AreaApi';
 import { areaFixtureLoaders } from '../services/areaFixtures';
 import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
+import { BoundaryCatalog } from '../services/BoundaryCatalog';
 import type { AuthService } from '../services/AuthService';
 import { crawlFixtureLoaders } from '../services/crawlFixtures';
 import { GeoLocator } from '../services/GeoLocator';
@@ -49,6 +50,7 @@ export interface Services {
   readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
+  readonly boundaries: BoundaryCatalog;
   readonly locator: GeoLocator;
   readonly sharer: Sharer;
   readonly snap: SnapServices;
@@ -62,6 +64,7 @@ export class ServiceContainer implements Services {
   readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
+  readonly boundaries: BoundaryCatalog;
   readonly locator: GeoLocator;
   readonly sharer: Sharer;
   readonly snap: SnapServices;
@@ -73,6 +76,7 @@ export class ServiceContainer implements Services {
     this.auth = services.auth;
     this.localization = services.localization;
     this.layers = services.layers;
+    this.boundaries = services.boundaries;
     this.locator = services.locator;
     this.sharer = services.sharer;
     this.snap = services.snap;
@@ -87,6 +91,7 @@ export class ServiceContainer implements Services {
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
+      boundaries: new BoundaryCatalog(BoundaryCatalog.defaultBaseUrl()),
       locator: new GeoLocator(browser.geolocation),
       sharer: new Sharer(browser.share),
       snap: SnapServiceFactory.build(config, browser, auth),

@@ -2,10 +2,12 @@ import type { Feature, FeatureCollection } from 'geojson';
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type Point } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
 import { HeatWeight } from '../../domain/HeatWeight';
+import type { BoundaryKind } from '../../domain/AreaListing';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
 import { BasemapTheme } from './BasemapTheme';
+import { BoundaryOverlay, type AreaHit, type BoundaryUrls } from './BoundaryOverlay';
 
 // OpenFreeMap needs no key; its style carries the OpenStreetMap credit for the attribution control.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
@@ -35,6 +37,9 @@ export interface SiteMapOptions {
   readonly attributionLabel: string;
   /** A site id, or null when the tap hit empty map. */
   readonly onPick: (siteId: string | null) => void;
+  /** A tap that hit no site but an area of the boundary layer shown. */
+  readonly onPickArea: (area: AreaHit) => void;
+  readonly boundaries: BoundaryUrls;
   readonly onViewChange: (view: MapView) => void;
 }
 
@@ -46,6 +51,7 @@ export class SiteMap {
   #mode: MapMode = 'auto';
   #ready = false;
   #userMarker: Marker | null = null;
+  readonly #boundaries: BoundaryOverlay;
 
   constructor(options: SiteMapOptions) {
     this.#layers = options.layers;
@@ -60,6 +66,7 @@ export class SiteMap {
     });
     this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
     this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => BasemapTheme.apply(next) });
+    this.#boundaries = new BoundaryOverlay(this.#map, options.boundaries, this.#layers.all()[0]?.id);
     this.#listen(options);
   }
 
@@ -71,6 +78,15 @@ export class SiteMap {
   select(siteId: string | null): void {
     this.#selectedId = siteId;
     this.#renderLayers();
+  }
+
+  showBoundaries(kind: BoundaryKind | null): void {
+    this.#boundaries.show(kind);
+  }
+
+  /** Area id to fill colour for the boundary kind shown. */
+  paintAreas(colors: ReadonlyMap<string, string>): void {
+    this.#boundaries.paint(colors);
   }
 
   setMode(mode: MapMode): void {
@@ -107,7 +123,7 @@ export class SiteMap {
     this.#map.remove();
   }
 
-  #listen({ onPick, onViewChange }: SiteMapOptions): void {
+  #listen({ onPick, onPickArea, onViewChange }: SiteMapOptions): void {
     // A zero-size container gives an empty box; the resize that follows fires moveend with the real one.
     const emitView = () => {
       if (this.#map.getContainer().clientHeight > 0) onViewChange(this.#view());
@@ -119,7 +135,12 @@ export class SiteMap {
         .catch((error: unknown) => console.error('Could not add site layers', error));
     });
     this.#map.on('moveend', emitView);
-    this.#map.on('click', (event) => onPick(this.#pick(event.point)));
+    this.#map.on('click', (event) => {
+      const siteId = this.#pick(event.point);
+      const area = siteId === null ? this.#boundaries.pick(event.point) : null;
+      if (area) onPickArea(area);
+      else onPick(siteId);
+    });
     for (const id of this.#layers.interactiveIds()) {
       this.#map.on('mouseenter', id, () => this.#setCursor('pointer'));
       this.#map.on('mouseleave', id, () => this.#setCursor(''));
@@ -131,6 +152,7 @@ export class SiteMap {
     this.#map.addSource(SOURCE_ID, { type: 'geojson', data: this.#collection() });
     this.#ready = true;
     this.#renderLayers();
+    this.#boundaries.ready();
   }
 
   // Layers describe themselves from mode and selection; re-adding three layers is cheap.

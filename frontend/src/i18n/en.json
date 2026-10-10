@@ -141,7 +141,16 @@
     "brands": "Packaging seen at this site",
     "noAssembly": "No assembly map here yet",
     "seatOutdated": "Boundary out of date",
-    "district": "District"
+    "district": "District",
+    "evidence": "Who reported it",
+    "reporters_one": "{{count}} person reported this",
+    "reporters_other": "{{count}} people reported this",
+    "noBinReporters": "{{count}} of {{min}} people reported no bin here",
+    "bin": {
+      "nearest": "Nearest known bin: {{distance}} (OpenStreetMap)",
+      "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
+      "notMapped": "Bins not mapped here yet"
+    }
   },
   "snap": {
     "title": "Report a waste site",
@@ -525,6 +534,76 @@
       "failed": "The letter could not be drafted. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     },
-    "copyFailed": "Could not copy. Select the letter text and copy it yourself."
+    "copyFailed": "Could not copy. Select the letter text and copy it yourself.",
+    "evidence": {
+      "title": "Evidence",
+      "reports": "Reports",
+      "reporters": "People who reported",
+      "notCounted": "Not counted",
+      "verified": "Verified reports",
+      "first": "First reported",
+      "last": "Last reported",
+      "photoAlt": "Blurred photo {{n}}",
+      "material": "{{material}} about {{pct}}% ({{count}} reports)",
+      "size": {
+        "small": "Small pile",
+        "medium": "Medium pile",
+        "large": "Large pile"
+      },
+      "hazard": "Hazard seen: {{hazard}}",
+      "hazards": {
+        "burning": "burning",
+        "medical_waste": "medical waste",
+        "e_waste": "e-waste",
+        "dead_animal": "dead animal",
+        "chemicals": "chemicals"
+      },
+      "near": {
+        "school": "Near a school, {{distance}} (OpenStreetMap)",
+        "hospital": "Near a hospital, {{distance}} (OpenStreetMap)",
+        "water": "Near a water body, {{distance}} (OpenStreetMap)",
+        "drain": "Near an open drain, {{distance}} (OpenStreetMap)"
+      }
+    }
+  },
+  "boundaries": {
+    "button": "Map areas",
+    "title": "Areas on the map",
+    "off": "Off",
+    "layer": {
+      "ward": "Wards",
+      "assembly": "Assembly",
+      "loksabha": "Lok Sabha"
+    },
+    "noWards": "Ward map not available yet.",
+    "legend": "Map colours",
+    "byScore": "Score, darker is worse",
+    "byCount": "Verified reports, no score yet",
+    "outdated": "Outdated seat boundary",
+    "unreviewed": "Unreviewed",
+    "scoreRule": "A score shows after 10 verified reports."
+  },
+  "ranking": {
+    "open": "City ranking",
+    "title": "{{city}} ranking",
+    "close": "Close ranking",
+    "intro": "Areas worst first by the mean of their shown scores. A score shows only after 10 verified reports; areas without one come last, unranked.",
+    "cityLabel": "City",
+    "kindLabel": "Area type",
+    "city": {
+      "jodhpur": "Jodhpur",
+      "jaipur": "Jaipur"
+    },
+    "listLabel": "Areas, worst first",
+    "rank": "Rank {{n}}",
+    "unranked": "Not ranked",
+    "meanOf": "Mean of {{k}} shown scores",
+    "notEnough": "Not enough reports ({{n}} of {{min}})",
+    "noData": "Can't be measured here yet",
+    "reports": "{{n}} verified reports",
+    "loading": "Loading ranking",
+    "loadFailed": "Could not load the ranking.",
+    "empty": "No areas of this type have reports in this city yet.",
+    "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
   }
 }

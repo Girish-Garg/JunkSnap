@@ -10,6 +10,7 @@ import { AuthFlowProvider } from '../src/features/auth/components/AuthFlowProvid
 import { LanguagePreference, type KeyValueStore, type Language } from '../src/i18n/LanguagePreference';
 import { Localization } from '../src/i18n/Localization';
 import { LayerRegistry } from '../src/layers/LayerRegistry';
+import { BoundaryCatalog } from '../src/services/BoundaryCatalog';
 import { GeoLocator } from '../src/services/GeoLocator';
 import { areaFixtureLoaders } from '../src/services/areaFixtures';
 import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
@@ -19,6 +20,9 @@ import { MockAuthService } from '../src/services/MockAuthService';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 import { testSnapServices, type SnapTestOptions } from './snapFakes';
+
+// The layers scripts/simplify_boundaries.py writes before any ward file exists.
+export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {} } };
 
 export class MemoryStore implements KeyValueStore {
   readonly #values = new Map<string, string>();
@@ -47,6 +51,7 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
     auth,
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),
+    boundaries: new BoundaryCatalog('/boundaries/', async () => Response.json(TEST_BOUNDARY_INDEX)),
     locator: new GeoLocator(undefined),
     sharer: new Sharer({ clipboard: { writeText: async () => undefined } as unknown as Clipboard }),
     snap: testSnapServices({ ...snap, auth }),
