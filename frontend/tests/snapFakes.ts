@@ -1,6 +1,6 @@
 import type { SnapServices } from '../src/app/SnapServices';
 import type { QueuedReportData } from '../src/domain/QueuedReport';
-import type { ReportDraft } from '../src/domain/ReportUpload';
+import type { GpsFix, ReportDraft } from '../src/domain/ReportUpload';
 import type { AuthService } from '../src/services/AuthService';
 import { CameraCapture } from '../src/services/CameraCapture';
 import type { Clock } from '../src/services/Clock';
@@ -24,6 +24,10 @@ export class MemoryReportStore implements ReportStore {
 
   async all(): Promise<readonly QueuedReportData[]> {
     return [...this.rows.values()];
+  }
+
+  async get(id: string): Promise<QueuedReportData | undefined> {
+    return this.rows.get(id);
   }
 
   async put(report: QueuedReportData): Promise<void> {
@@ -70,23 +74,55 @@ export class FakeEncoder implements ImageEncoder {
   async fromVideo(): Promise<ArrayBuffer> {
     return this.bytes;
   }
+}
 
-  async fromFile(): Promise<ArrayBuffer> {
-    return this.bytes;
+/** watchPosition that reports the first fix at once; emit() sends later ones, fail() a problem. */
+export class FakeGeolocation {
+  #onFix: PositionCallback | null = null;
+  #onError: PositionErrorCallback | null = null;
+  readonly #first: GpsFix | null;
+
+  constructor(first: GpsFix | null = { lat: 26.26183, lon: 73.00352, accuracy_m: 6 }) {
+    this.#first = first;
+  }
+
+  api(): Geolocation {
+    return {
+      watchPosition: (onFix: PositionCallback, onError: PositionErrorCallback) => {
+        this.#onFix = onFix;
+        this.#onError = onError;
+        if (this.#first) this.emit(this.#first);
+        return 1;
+      },
+      clearWatch: () => undefined,
+    } as unknown as Geolocation;
+  }
+
+  emit({ lat, lon, accuracy_m }: GpsFix): void {
+    const coords = { latitude: lat, longitude: lon, accuracy: accuracy_m } as GeolocationCoordinates;
+    this.#onFix?.({ coords, timestamp: Date.now() } as GeolocationPosition);
+  }
+
+  fail(code: number): void {
+    this.#onError?.({ code } as GeolocationPositionError);
   }
 }
 
-/** watchPosition that reports one fix at once. */
 export function fixedGeolocation(accuracy = 6): Geolocation {
-  const coords = { latitude: 26.26183, longitude: 73.00352, accuracy } as GeolocationCoordinates;
-  return {
-    watchPosition: (onFix: PositionCallback) => {
-      onFix({ coords, timestamp: Date.now() } as GeolocationPosition);
-      return 1;
+  return new FakeGeolocation({ lat: 26.26183, lon: 73.00352, accuracy_m: accuracy }).api();
+}
+
+/** getUserMedia that hands back an empty stream, or rejects with the given DOMException name. */
+export function fakeMediaDevices(failWith?: string): MediaDevices & { readonly calls: number } {
+  const media = {
+    calls: 0,
+    getUserMedia: async () => {
+      media.calls += 1;
+      if (failWith) throw new DOMException('camera', failWith);
+      return { getTracks: () => [] } as unknown as MediaStream;
     },
-    clearWatch: () => undefined,
-    getCurrentPosition: () => undefined,
-  } as unknown as Geolocation;
+  };
+  return media as unknown as MediaDevices & { readonly calls: number };
 }
 
 export const fixedIdentity = (idToken: string | null = null): RequestIdentity => ({
@@ -104,19 +140,22 @@ export interface SnapTestOptions {
   readonly api?: ReportApi;
   readonly geolocation?: Geolocation;
   readonly store?: ReportStore;
+  /** null leaves the page without a camera API. */
+  readonly mediaDevices?: MediaDevices | null;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
   const clock = new FakeClock();
   const device = new DeviceIdentity(new MemoryMetaStore(), () => crypto.getRandomValues(new Uint8Array(16)));
-  const identity: RequestIdentity = { idToken: () => options.auth.idToken(), deviceToken: () => device.token() };
+  const identity: RequestIdentity = { idToken: (force) => options.auth.idToken(force), deviceToken: () => device.token() };
   const api = options.api ?? new MockReportApi(sampleSiteLoader, 0);
   const store = options.store ?? new MemoryReportStore();
   const queue = new ReportQueue({ store, sender: new ReportSender(api, identity, clock), clock, lock: new QueueLock(undefined) });
+  const media = options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices());
   return {
     queue,
     tracker: new ReportTracker(api, queue),
-    camera: new CameraCapture(undefined),
+    camera: new CameraCapture(media),
     encoder: new FakeEncoder(),
     hasher: new PhotoHasher(crypto.subtle),
     gps: new GpsWatcher(options.geolocation ?? fixedGeolocation()),

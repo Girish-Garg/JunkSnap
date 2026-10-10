@@ -3,6 +3,7 @@ import type { QueuedReportData } from '../domain/QueuedReport';
 /** The phone's own reports, pending and sent. */
 export interface ReportStore {
   all(): Promise<readonly QueuedReportData[]>;
+  get(id: string): Promise<QueuedReportData | undefined>;
   put(report: QueuedReportData): Promise<void>;
   delete(id: string): Promise<void>;
 }

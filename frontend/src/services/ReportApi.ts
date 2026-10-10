@@ -13,6 +13,7 @@ export interface ReportApi {
 
 /** Who is asking: the Cognito ID token when signed in, and this phone's device token. */
 export interface RequestIdentity {
-  idToken(): Promise<string | null>;
+  /** forceRefresh asks Cognito for a new token even if the cached one looks valid. */
+  idToken(forceRefresh?: boolean): Promise<string | null>;
   deviceToken(): Promise<string>;
 }

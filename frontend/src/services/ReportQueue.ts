@@ -75,14 +75,25 @@ export class ReportQueue {
     await this.flush();
   }
 
+  /** Re-reads the stored row, so a change saved meanwhile (by a send step) is not overwritten. */
+  async update(id: string, change: (report: QueuedReport) => QueuedReport): Promise<void> {
+    const row = await this.#ports.store.get(id);
+    if (row) await this.save(change(QueuedReport.fromData(row)));
+  }
+
   flush(): Promise<void> {
-    this.#flushing ??= this.#ports.lock
-      .run(() => this.#drain())
-      .finally(() => {
-        this.#flushing = null;
-        this.#schedule();
-      });
+    this.#flushing ??= this.#untilIdle().finally(() => {
+      this.#flushing = null;
+      this.#schedule();
+    });
     return this.#flushing;
+  }
+
+  // A report added while a drain was finishing is due now; drain again rather than wait for a trigger.
+  async #untilIdle(): Promise<void> {
+    do {
+      await this.#ports.lock.run(() => this.#drain());
+    } while (this.#nextDue());
   }
 
   async #drain(): Promise<void> {

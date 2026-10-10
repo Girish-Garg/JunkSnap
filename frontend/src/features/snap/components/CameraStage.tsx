@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useCamera, type CameraState } from '../hooks/useCamera';
 import type { GpsState } from '../hooks/useGpsFix';
 import type { SnapFlow } from '../hooks/useSnapFlow';
+import { CameraHelp } from './CameraHelp';
 import { GpsChip } from './GpsChip';
-import { PhoneCameraButton } from './PhoneCameraButton';
+import { ShutterControls } from './ShutterControls';
 import { SnapFooter } from './SnapFooter';
 
 interface CameraStageProps {
@@ -24,10 +25,10 @@ export function CameraStage({ flow, gps }: CameraStageProps) {
   const video = useRef<HTMLVideoElement>(null);
   const camera = useCamera(video);
   const { capture } = flow;
-  const live = camera === 'live';
-  const message = viewfinderMessage(camera, capture);
+  const message = viewfinderMessage(camera.state, capture);
+  const failed = camera.state === 'live' || camera.state === 'starting' ? null : camera.state;
   const shoot = () => {
-    if (video.current) capture.fromVideo(video.current);
+    if (video.current && gps.fix) capture.fromVideo(video.current, gps.fix);
   };
   return (
     <div className="snap-camera">
@@ -40,10 +41,11 @@ export function CameraStage({ flow, gps }: CameraStageProps) {
         )}
         <GpsChip gps={gps} />
       </div>
-      <div className={live ? 'snap-camera__controls' : 'snap-camera__controls snap-camera__controls--fallback'}>
-        {live && <button type="button" className="shutter" aria-label={t('snap.shutter')} disabled={capture.busy} onClick={shoot} />}
-        <PhoneCameraButton onFile={capture.fromFile} primary={!live} />
-      </div>
+      {failed ? (
+        <CameraHelp problem={failed} onRetry={camera.retry} />
+      ) : (
+        <ShutterControls ready={camera.state === 'live' && !capture.busy} gps={gps} onShoot={shoot} />
+      )}
       <SnapFooter />
     </div>
   );

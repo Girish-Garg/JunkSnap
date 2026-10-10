@@ -35,7 +35,7 @@ export class SnapServiceFactory {
   static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService): SnapServices {
     const db = new JunkSnapDb();
     const device = new DeviceIdentity(new IndexedDbMetaStore(db), () => browser.crypto.getRandomValues(new Uint8Array(16)));
-    const identity: RequestIdentity = { idToken: () => auth.idToken(), deviceToken: () => device.token() };
+    const identity: RequestIdentity = { idToken: (force) => auth.idToken(force), deviceToken: () => device.token() };
     const api = REPORT_API_BUILDERS[config.apiMode](config, identity);
     const clock = new SystemClock();
     const sender = new ReportSender(api, identity, clock);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import type { GpsFix, ReportDraft } from '../../../domain/ReportUpload';
+import type { ReportDraft } from '../../../domain/ReportUpload';
 import { usePhotoCapture, type CapturedPhoto } from './usePhotoCapture';
 
 export type SnapPhase =
@@ -18,10 +18,10 @@ export function useSnapFlow() {
   const [phase, setPhase] = useState<SnapPhase>(CAMERA);
   const [saveFailed, setSaveFailed] = useState(false);
   const capture = usePhotoCapture((photo) => setPhase({ kind: 'review', photo }));
-  const send = async (photo: CapturedPhoto, choice: ReportChoice, gps: GpsFix) => {
+  const send = async (photo: CapturedPhoto, choice: ReportChoice) => {
     setSaveFailed(false);
     try {
-      const draft: ReportDraft = { ...choice, gps, sha256: photo.sha256, captured_at: photo.capturedAt };
+      const draft: ReportDraft = { ...choice, gps: photo.gps, sha256: photo.sha256, captured_at: photo.capturedAt };
       const report = await snap.queue.add(draft, photo.bytes);
       setPhase({ kind: 'sent', id: report.id });
     } catch {

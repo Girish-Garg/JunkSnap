@@ -1,3 +1,4 @@
+import type { QueuedReport } from '../domain/QueuedReport';
 import type { AuthService } from './AuthService';
 import type { ReportQueue } from './ReportQueue';
 
@@ -20,12 +21,12 @@ export class QueueTriggers {
   /** Returns a function that stops listening. */
   start(): () => void {
     const { window, document, auth } = this.#sources;
-    const flush = () => void this.#queue.flush();
+    const flush = () => void this.#resume();
     const onVisible = () => {
       if (document.visibilityState === 'visible') flush();
     };
     const onAuth = () => {
-      if (auth.currentUser()) void this.#queue.retry((report) => report.data.problem === 'sign_in');
+      if (auth.currentUser()) void this.#queue.retry(QueueTriggers.#waitingForSignIn);
     };
     window.addEventListener('online', flush);
     document.addEventListener('visibilitychange', onVisible);
@@ -36,5 +37,16 @@ export class QueueTriggers {
       document.removeEventListener('visibilitychange', onVisible);
       unsubscribe();
     };
+  }
+
+  /** Reads (and refreshes) the token first, so reports parked for sign-in go as soon as one is valid. */
+  async #resume(): Promise<void> {
+    const token = await this.#sources.auth.idToken().catch(() => null);
+    if (token) await this.#queue.retry(QueueTriggers.#waitingForSignIn);
+    else await this.#queue.flush();
+  }
+
+  static #waitingForSignIn(report: QueuedReport): boolean {
+    return report.data.problem === 'sign_in';
   }
 }

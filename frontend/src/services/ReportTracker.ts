@@ -28,8 +28,7 @@ export class ReportTracker {
     if (!reportId) return;
     try {
       const status = await this.#api.status(reportId);
-      const latest = this.#queue.find(id);
-      if (latest) await this.#queue.save(latest.withStatus(status));
+      await this.#queue.update(id, (latest) => latest.withStatus(status));
     } catch (error) {
       if (!(error instanceof ApiError)) throw error;
     }

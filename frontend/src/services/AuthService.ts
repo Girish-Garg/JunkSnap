@@ -21,7 +21,7 @@ export interface AuthService {
   resetPassword(email: string, code: string, newPassword: string): Promise<void>;
   signOut(): Promise<void>;
   /** A fresh Cognito ID token for Authorization: Bearer, or null for a guest. */
-  idToken(): Promise<string | null>;
+  idToken(forceRefresh?: boolean): Promise<string | null>;
   /** The fixed code a mock sends, shown as a hint; null for a real provider. */
   sampleCode(): string | null;
 }

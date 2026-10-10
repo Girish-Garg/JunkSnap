@@ -13,6 +13,10 @@ export class IndexedDbReportStore implements ReportStore {
     return (await this.#db.open()).getAll('reports');
   }
 
+  async get(id: string): Promise<QueuedReportData | undefined> {
+    return (await this.#db.open()).get('reports', id);
+  }
+
   async put(report: QueuedReportData): Promise<void> {
     await (await this.#db.open()).put('reports', report);
   }

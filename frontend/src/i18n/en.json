@@ -144,12 +144,11 @@
     "title": "Report a waste site",
     "close": "Close",
     "shutter": "Take photo",
-    "phoneCamera": "Use phone camera",
     "starting": "Starting camera",
     "saving": "Saving photo",
-    "camera_denied": "Camera is blocked. Allow it in the browser settings, or use the phone camera.",
-    "camera_unavailable": "The camera could not start. Use the phone camera instead.",
-    "insecure": "This page cannot open the camera here. Use the phone camera.",
+    "camera_denied": "Camera access is blocked.",
+    "camera_unavailable": "The camera could not start.",
+    "insecure": "The camera needs a secure (https) page.",
     "encode_failed": "Could not save that photo. Try again.",
     "saveFailed": "Could not save the report on this phone. Try again.",
     "gps": {
@@ -181,6 +180,23 @@
       "uploaded": "Photo uploaded",
       "sent": "Report sent",
       "checked": "Photo checked"
+    },
+    "tryAgain": "Try again",
+    "waitingForGps": "Waiting for your location before the first photo.",
+    "help": {
+      "camera_denied": [
+        "Tap the lock or the ⓘ icon next to the web address.",
+        "Open Permissions or Site settings.",
+        "Set Camera to Allow, then tap Try again."
+      ],
+      "camera_unavailable": [
+        "Close other apps that use the camera.",
+        "Then tap Try again."
+      ],
+      "insecure": [
+        "Open JunkSnap from its https link.",
+        "Then tap Try again."
+      ]
     }
   },
   "account": {

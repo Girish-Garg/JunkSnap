@@ -39,7 +39,7 @@ export function SnapRoute() {
         {t(TITLES[phase.kind])}
       </h2>
       {phase.kind === 'camera' && <CameraStage flow={flow} gps={gps} />}
-      {phase.kind === 'review' && <ReviewStage key={phase.photo.sha256} photo={phase.photo} flow={flow} gps={gps} />}
+      {phase.kind === 'review' && <ReviewStage key={phase.photo.sha256} photo={phase.photo} flow={flow} />}
       {phase.kind === 'sent' && <SentStage id={phase.id} onAgain={flow.restart} />}
     </BottomSheet>
   );

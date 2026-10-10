@@ -51,8 +51,9 @@ describe('ReportQueue and sign-in', () => {
     expect(queue.find(added.id)?.data).toMatchObject({ stage: 'saved', problem: 'sign_in' });
   });
 
-  it('waits for sign-in on 401 and sends after a retry', async () => {
+  it('waits for sign-in when a refreshed token still gets 401, and sends after a retry', async () => {
     const { api, clock, queue } = setup();
+    api.failNext('presign', 401, 'unauthorized');
     api.failNext('presign', 401, 'unauthorized');
     const added = await queue.add(sampleDraft(), PHOTO);
     await queue.flush();

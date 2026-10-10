@@ -105,8 +105,8 @@ export class AmplifyAuthService implements AuthService {
   }
 
   /** Amplify refreshes an expired ID token with the refresh token. */
-  async idToken(): Promise<string | null> {
-    const session = await CognitoErrors.guard(() => this.#api.fetchAuthSession());
+  async idToken(forceRefresh = false): Promise<string | null> {
+    const session = await CognitoErrors.guard(() => this.#api.fetchAuthSession({ forceRefresh }));
     const token = session.tokens?.idToken;
     const email = token?.payload.email;
     this.#setUser(typeof email === 'string' ? { email } : null);
