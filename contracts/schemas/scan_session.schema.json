@@ -17,8 +17,8 @@
       "pattern": "^[A-Za-z0-9-]{1,128}$",
       "description": "Cognito sub of the signed-in user, opaque (decision 20261010-0227). The api sets it from the verified token and ignores any value the phone sends."
     },
-    "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"], "description": "Picked before recording; every frame report gets it, and verification still checks it." },
-    "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged"] },
+    "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin", "auto"], "description": "Picked before recording; every frame report gets it, and verification still checks it. auto is an area scout (contracts v1.10): the models name each frame's type and context, and frames they find nothing in make no report." },
+    "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged", "auto"], "description": "auto lets the models name the place in each frame; required with report_type auto, never allowed with no_bin." },
     "started_at": { "type": "string", "format": "date-time", "description": "When recording started; t_ms 0." },
     "ended_at": { "type": "string", "format": "date-time" },
     "duration_ms": { "type": "integer", "minimum": 1, "maximum": 60000, "description": "Video length; at most 60 s." },
@@ -79,10 +79,11 @@
     }
   },
   "allOf": [
-    { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
+    { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "auto"] } } } },
     { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
-    { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
-    { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } },
-    { "if": { "properties": { "report_type": { "const": "overflowing_bin" } } }, "then": { "properties": { "context": { "enum": ["overflowing", "damaged"] } } } }
+    { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain", "auto"] } } } },
+    { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site", "auto"] } } } },
+    { "if": { "properties": { "report_type": { "const": "overflowing_bin" } } }, "then": { "properties": { "context": { "enum": ["overflowing", "damaged", "auto"] } } } },
+    { "if": { "properties": { "report_type": { "const": "auto" } } }, "then": { "properties": { "context": { "const": "auto" } } } }
   ]
 }

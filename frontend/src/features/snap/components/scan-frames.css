@@ -1,0 +1,64 @@
+/* A scan's frames in Activity: blurred thumbnails in a scrolling strip, each with its result under it. */
+.scan-frames {
+  display: flex;
+  gap: var(--s-2);
+  max-width: 100%;
+  margin: var(--s-1) 0 0;
+  padding: 0 0 var(--s-1);
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x proximity;
+}
+
+.scan-frame {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  width: 64px;
+  scroll-snap-align: start;
+}
+
+.scan-frame__thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--divider);
+  border-radius: var(--radius-s);
+  background: var(--tile);
+  object-fit: cover;
+}
+
+.scan-frame__thumb--missing {
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+}
+
+.scan-frame__result {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: center;
+}
+
+.scan-frame--added .scan-frame__thumb,
+.scan-frame--waiting .scan-frame__thumb {
+  border-color: var(--accent);
+}
+
+.scan-frame--added .scan-frame__result,
+.scan-frame--waiting .scan-frame__result {
+  color: var(--accent-ink);
+}
+
+.scan-frame--not_waste .scan-frame__thumb,
+.scan-frame--skipped .scan-frame__thumb,
+.scan-frame--hidden .scan-frame__thumb {
+  opacity: 0.6;
+}
+
+.scan-frame--failed .scan-frame__result {
+  color: var(--status-open);
+}

@@ -89,6 +89,8 @@ describe("VideoScanProcessor", () => {
     expect(reports.rows.get(id.reportId)).toEqual({
       report_id: id.reportId,
       received_at: NOW.toISOString(),
+      // 18 m from the first frame, so still the first spot.
+      scan_spot: 0,
       upload: {
         upload_id: id.uploadId,
         report_type: "open_construction",
@@ -109,6 +111,30 @@ describe("VideoScanProcessor", () => {
     const hinted = reports.rows.get(id.reportId);
     expect(validateReportUpload(hinted?.upload)).toEqual(hinted?.upload);
     expect(validateReportUpload(plain?.upload)).toEqual(plain?.upload);
+  });
+
+  it("groups frames into spots of 20 m around each spot's first frame", async () => {
+    await processor({ video: VIDEO }).process("scn_jpr_1");
+    const spotOf = (tMs: number) => reports.rows.get(ScanFrameId.of("scn_jpr_1", tMs).reportId)?.scan_spot;
+    expect([0, 1000, 2000, 3600, 4000, 5000, 6000, 7000].map(spotOf)).toEqual([0, 0, 0, 0, 0, 5000, 5000, 5000]);
+  });
+
+  it("gives an area scout's frames a concrete placeholder claim and lets the models name type and context", async () => {
+    const session = sampleSession({ report_type: "auto", context: "auto" });
+    await processor({ video: VIDEO, session }).process("scn_jpr_1");
+    const rows = [...reports.rows.values()];
+    expect(rows).toHaveLength(8);
+    for (const row of rows) {
+      expect(row).toMatchObject({ auto_claim: "type", upload: { report_type: "waste_dump", context: "other" } });
+      expect(() => validateReportUpload(row.upload)).not.toThrow();
+    }
+  });
+
+  it("lets the models name only the place when the person picked the type", async () => {
+    const session = sampleSession({ report_type: "overflowing_bin", context: "auto" });
+    await processor({ video: VIDEO, session }).process("scn_jpr_1");
+    const row = [...reports.rows.values()][0];
+    expect(row).toMatchObject({ auto_claim: "context", upload: { report_type: "overflowing_bin", context: "overflowing" } });
   });
 
   it("parses the scan_session.jpr-1 fixture and turns it into rows that pass the report_upload contract", async () => {

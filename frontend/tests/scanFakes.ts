@@ -1,15 +1,40 @@
 import { ApiError } from '../src/domain/ApiError';
-import type { AcceptedScan, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatusView } from '../src/domain/ScanUpload';
+import type { AcceptedScan, FrameFinding, FrameResult, ScanFound, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatusView } from '../src/domain/ScanUpload';
 import type { ScanApi } from '../src/services/ScanApi';
 import type { RecorderFactory } from '../src/services/VideoRecorder';
 
 type Call = 'presign' | 'put' | 'submit' | 'status';
+
+const frame = (i: number, result: FrameResult, report_type: FrameFinding['report_type'], site_id: string | null): FrameFinding => ({
+  report_id: `rpt_${'abcdef'[i] ?? 'z'}`,
+  t_ms: i * 1000,
+  result,
+  report_type,
+  site_id,
+  blurred_url: result === 'skipped' ? null : `https://cdn.test/media/reports/rpt_${i}.jpg`,
+});
+
+/** Six frames: two of one dump, one overflowing bin, two not waste and a repeat view. */
+export const SAMPLE_FOUND: ScanFound = {
+  sites: 2,
+  by_type: { waste_dump: 1, overflowing_bin: 1 },
+  checking: 0,
+  frames: [
+    frame(0, 'waiting', 'waste_dump', 'site_1'),
+    frame(1, 'waiting', 'waste_dump', 'site_1'),
+    frame(2, 'skipped', 'waste_dump', null),
+    frame(3, 'added', 'overflowing_bin', 'site_2'),
+    frame(4, 'not_waste', 'waste_dump', null),
+    frame(5, 'not_waste', 'waste_dump', null),
+  ],
+};
 
 /** Records every call; failNext queues a failure for the next call of a kind. */
 export class FakeScanApi implements ScanApi {
   readonly calls: { readonly kind: Call; readonly body?: unknown }[] = [];
   readonly #failures = new Map<Call, ApiError[]>();
   done = true;
+  found: ScanFound = SAMPLE_FOUND;
 
   failNext(kind: Call, status: number, code = 'error'): void {
     this.#failures.set(kind, [...(this.#failures.get(kind) ?? []), new ApiError(status, code, `${kind} failed`)]);
@@ -38,8 +63,9 @@ export class FakeScanApi implements ScanApi {
   async status(scanId: string): Promise<ScanStatusView> {
     this.#record('status', scanId);
     const frames = this.done ? { sampled: 8, kept: 6, dropped_no_fix: 2 } : null;
-    const report_ids = this.done ? ['rpt_a', 'rpt_b', 'rpt_c', 'rpt_d', 'rpt_e', 'rpt_f'] : [];
-    return { scan_id: scanId, status: this.done ? 'done' : 'processing', reason: null, frames, report_ids, updated_at: '2026-10-10T04:01:00Z' };
+    const report_ids = this.done ? SAMPLE_FOUND.frames.map((frame) => frame.report_id) : [];
+    const found = this.done ? this.found : null;
+    return { scan_id: scanId, status: this.done ? 'done' : 'processing', reason: null, frames, report_ids, found, updated_at: '2026-10-10T04:01:00Z' };
   }
 
   #record(kind: Call, body: unknown): void {

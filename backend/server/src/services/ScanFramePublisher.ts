@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import type { ReportUpload, ScanSession } from "../contracts/index.gen.js";
 import type { CandidateFrame } from "../domain/ScanFrame.js";
 import { ScanFrameId } from "../domain/ScanFrameId.js";
+import { ScanClaim } from "../domain/scout/ScanClaim.js";
+import { ScanSpots } from "../domain/scout/ScanSpots.js";
 import type { FrameReportRepository } from "../ports/FrameReportRepository.js";
 import type { ScanMediaStore } from "../ports/ScanMediaStore.js";
 import type { ScanQueue } from "../ports/ScanQueue.js";
@@ -25,32 +27,34 @@ export class ScanFramePublisher {
   }
 
   async publish(scan: ScanSession, frames: readonly CandidateFrame[]): Promise<string[]> {
+    const spots = new ScanSpots().assign(frames);
     const reportIds: string[] = [];
     for (const frame of frames) {
-      reportIds.push(await this.#publishOne(scan, frame));
+      reportIds.push(await this.#publishOne(scan, frame, spots.get(frame.tMs) ?? frame.tMs));
     }
     return reportIds;
   }
 
   // A retried scan keeps rows it already wrote but sends every message again; SQS is at least once anyway.
-  async #publishOne(scan: ScanSession, frame: CandidateFrame): Promise<string> {
+  async #publishOne(scan: ScanSession, frame: CandidateFrame, spot: number): Promise<string> {
     const id = ScanFrameId.of(scan.scan_id, frame.tMs);
     if (!(await this.#ports.reports.exists(id.reportId))) {
       const jpeg = await this.#ports.scratch.read(frame.path);
       const sha256 = createHash("sha256").update(jpeg).digest("hex");
       await this.#ports.media.putOriginal(id.originalKey, jpeg, sha256);
-      const upload = ScanFramePublisher.#upload(scan, frame, id, sha256);
-      await this.#ports.reports.createQueued({ report_id: id.reportId, upload, received_at: this.#now().toISOString() });
+      const { claim, autoClaim } = new ScanClaim(scan).frame();
+      const upload = { ...ScanFramePublisher.#upload(scan, frame, id, sha256), ...claim };
+      const auto = autoClaim === undefined ? {} : { auto_claim: autoClaim };
+      const row = { report_id: id.reportId, upload, received_at: this.#now().toISOString(), scan_spot: spot, ...auto };
+      await this.#ports.reports.createQueued(row);
     }
     await this.#ports.queue.sendReport(id.reportId);
     return id.reportId;
   }
 
-  static #upload(scan: ScanSession, frame: CandidateFrame, id: ScanFrameId, sha256: string): ReportUpload {
+  static #upload(scan: ScanSession, frame: CandidateFrame, id: ScanFrameId, sha256: string): Omit<ReportUpload, "report_type" | "context"> {
     return {
       upload_id: id.uploadId,
-      report_type: scan.report_type,
-      context: scan.context,
       capture_mode: "scan",
       scan: { scan_id: scan.scan_id, t_ms: frame.tMs },
       sha256,

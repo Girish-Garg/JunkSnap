@@ -27,6 +27,9 @@ export interface SiteMergerDeps {
   readonly retry: ConflictRetry;
 }
 
+// The worker merges up to 10 reports at once (one SQS batch), so in each round of conflicts at least one writer wins.
+export const MERGE_ATTEMPTS = 11;
+
 type Outcome = "founded" | "merged" | "unchanged";
 
 export interface MergeResult {
@@ -58,6 +61,10 @@ export class SiteMerger {
   }
 
   async #attempt(report: MergeableReport): Promise<Merged> {
+    const spotSite = await this.#spotSite(report);
+    if (spotSite !== null) {
+      return this.#mergeInto(spotSite.siteId, report);
+    }
     const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType));
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
@@ -65,6 +72,15 @@ export class SiteMerger {
     }
     const target = await this.#deps.picker.pick(report, nearby);
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
+  }
+
+  // A consistent read by id: the geohash index may not show a site another frame of the scan founded a moment ago.
+  async #spotSite(report: MergeableReport): Promise<Site | null> {
+    if (report.spotSiteId === undefined) {
+      return null;
+    }
+    const site = await this.#deps.sites.get(report.spotSiteId);
+    return site !== null && (site.holds(report.reportId) || site.accepts(report)) ? site : null;
   }
 
   async #nearby(point: GeoPoint, radius: number): Promise<Site[]> {
@@ -99,6 +115,14 @@ export class SiteMerger {
     const existing = await this.#deps.sites.get(site.siteId);
     if (existing?.holds(report.reportId)) {
       return { site: existing, outcome: "unchanged" };
+    }
+    // Another frame of the same scan spot founded it first.
+    if (existing?.accepts(report)) {
+      return this.#mergeInto(existing.siteId, report);
+    }
+    // The spot's site was hidden by neighbours since: the frame founds a site of its own, as a photo would.
+    if (report.spotSiteId !== undefined) {
+      return this.#found({ ...report, spotSiteId: undefined });
     }
     throw new InternalDataError(`${site.siteId} exists without its founding report ${report.reportId}`);
   }

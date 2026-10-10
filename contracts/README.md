@@ -20,6 +20,8 @@ Contracts v1.8 (decision 20261010-1630-hem-community-notes, issue 101) adds `POS
 
 Contracts v1.9 (decision 20261010-1700-hem-site-removal) adds `DELETE /sites/{id}/reports/mine` (a reporter withdraws their reports from a site that is not verified) and its inline response, the site `status` value `removed` with the optional `removed_reason` and `removed_at`, the optional `cleaned_by`, the vote value `cleaned` and the optional `site.votes.cleaned`, the report status `withdrawn`, the error `site_verified`, and table-only fields (`reports.withdrawn_at`, `sites.withdrawn_report_ids`, `withdraw_window_start` and `withdraw_count` on `users` and `devices`). `GET /sites?bbox` now also leaves out `removed` and `cleaned` sites. Additive only; new fixture `site.jdh-5`.
 
+Contracts v1.10 (decision 20261010-1745-hem-area-scout, issue 107) adds the area scout. `scan_session` `report_type` and `context` take the new value `auto`: `auto`/`auto` is an area scout (the models name each frame's type and context), and a picked type with `context: auto` lets the models name only the place; `no_bin` never takes `auto`. The verify request takes `auto` the same way. The `reports` row gets the table-only `auto_claim` and `scan_spot`, and `GET /scans/{id}` the optional `found`. `report_upload`, `site` and `verification_result` are unchanged: a frame report always carries a concrete type. Additive only; new fixture `scan_session.jdh-6`.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -83,7 +85,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | Duplicate | pHash Hamming distance 8 or less to an earlier photo within 100 m | worker |
 | Rate limit | Each counted per user and per device; the stricter one applies. Snap: 20 photos per hour, counted on `reports` through `by-user` and `by-device` over the last hour of `received_at` (scan frames excluded). Scan: 1 frame per second of video, which the frame sampler enforces; frames never count toward the Snap limit. Letters: 5 per hour, counted with a windowed counter (`letter_window_start`, `letter_count`) on the `users` row and on the `devices` row, reset once an hour has passed since `letter_window_start` and updated with a conditional write | api (presign) and worker for photos; worker for frames; api for letters |
 | Scan video | `video/webm` or `video/mp4`, at most 60 s, 1280 by 720 and 40 MB; else 400 `scan_too_large` at presign, or scan `failed` with `invalid_video` | api (presign), worker |
-| Scan frames | 1 per second; a phone-hinted frame replaces the plain one in its second. Drop a frame when the nearest GPS fix is more than 3 s away or its `accuracy_m` is over 50 | worker |
+| Scan frames | 1 per second; a phone-hinted frame replaces the plain one in its second. Drop a frame when the nearest GPS fix is more than 3 s away or its `accuracy_m` is over 50. Keep one frame per view: drop a frame whose 64-bit difference hash is within 5 bits of the last kept frame, or within 20 bits of a kept frame less than 10 m away (the better hinted of the two stays) | worker |
 | Votes | voter GPS within 1 km of the site, else 403 `too_far` | api |
 | Withdrawals | 10 per hour, per user and per device, windowed like letters on `withdraw_window_start` and `withdraw_count` (users and devices rows); 429 `rate_limited` | api |
 | Cleanup photo | GPS within 50 m of the site (`near_site` check) | worker |
@@ -130,7 +132,11 @@ Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never
 
 **Cleanup.** The worker moderates and blurs the after-photo (`cln_` id, `near_site` check), then calls `/internal/verify` with `purpose: cleanup`. For a cleanup, `is_clean == (decision == "auto_verified")`, and the schema enforces it. The worker accepts the cleanup only when moderation passed and `is_clean` is true. On acceptance the site's `status` becomes `cleaned`, `cleaned_by` becomes `after_photo`, and `cleaned_at` and `cleanup_photo_url` are set. `cleanup_status` goes `checking` to `accepted` or `rejected`, and resets to `none` when the site reopens.
 
-**Scans** (decision 20261010-0203). The phone records the video and the GPS track in sync, PUTs the video with the presigned URL, then posts the `scan_session`. For a `kind: scan` message the worker checks the video against the scan video limit, cuts one frame per second, and maps each frame's `t_ms` onto `gps_track` by linear interpolation between the fixes before and after it; the frame's `accuracy_m` is the larger of the two. It drops frames under the scan frame rule. For each kept frame it writes the JPEG to `reports/{upload_id}.jpg` in the originals bucket, a `report_upload` with `capture_mode: scan`, the `scan` link and the session's type, context, `device_token` and `user_id`, and the report row (`queued`), then sends a `kind: report` message. From there the frame runs the normal pipeline, moderation and blur included. Consecutive frames of one spot usually fail the duplicate check, so one ride past adds one report per spot. The video is never public and never goes to a model.
+**Scans** (decision 20261010-0203). The phone records the video and the GPS track in sync, PUTs the video with the presigned URL, then posts the `scan_session`. For a `kind: scan` message the worker checks the video against the scan video limit, cuts one frame per second, and maps each frame's `t_ms` onto `gps_track` by linear interpolation between the fixes before and after it; the frame's `accuracy_m` is the larger of the two. It drops frames under the scan frame rule. For each kept frame it writes the JPEG to `reports/{upload_id}.jpg` in the originals bucket, a `report_upload` with `capture_mode: scan`, the `scan` link and the session's type, context, `device_token` and `user_id`, and the report row (`queued`), then sends a `kind: report` message. From there the frame runs the normal pipeline, moderation, blur and the same verification as a photo included. The video is never public and never goes to a model.
+
+Spots (contracts v1.10): the worker groups the kept frames of a scan into spots, each frame joining the first spot whose first frame is within 20 m, and writes the spot's first `t_ms` as `scan_spot` on the report row. Frames of one spot and one type always merge into one site, whatever their embeddings, so one person's ride past a dump is one site with one backer. That site's id is `site_` plus the first 26 hex characters of SHA-256 of `<scan_id>:<scan_spot>:<report_type>`; the merger reads it by id before the geohash query, and a frame that loses the race to found it merges into it. The worker merges up to 10 reports at once, so a site merge retries up to 11 times on a version conflict.
+
+Area scout (contracts v1.10): with `report_type: auto` each frame row carries the placeholder claim `waste_dump`/`other` and `auto_claim: type`; the worker sends `report_type: auto, context: auto` to `/internal/verify`, and ml always runs the judge. Unless the decision is `rejected`, the report takes the judge's `report_type` and `context` (a context of another type becomes the type's fallback: `other`, `overflowing`, `stagnant` or `uncovered_debris`); a judge answer of `not_waste` or `no_bin` rejects the frame, and no answer at all fails the message so SQS retries. With a picked type and `context: auto` the row carries the type's fallback context and `auto_claim: context`; the worker sends `context: auto`, and the report takes the judge's context when the judge saw the same type. `no_bin` is never found from video.
 
 **Letters.** Every citation has `verified: true`, and `verifier.verified` equals `verifier.total` and the number of citations. A draft that fails the quote verifier falls back to the template letter with the same verified citations; an unverified quote never ships. Cc follows `site.location`: the councillor only when there is a ward, the MLA only when there is an assembly seat (outside Rajasthan the MP only), and never the MP of a Lok Sabha seat with `status: outdated`.
 
@@ -188,7 +194,7 @@ Scan presign request and response. The phone PUTs the video with exactly these h
 }
 ```
 
-`GET /scans/{id}` response. `status` is `queued`, `processing`, `done` or `failed`; `reason` is null, `invalid_video` or `retries_exhausted`. `report_ids` lists the frame reports made so far; poll each one with `GET /reports/{id}`.
+`GET /scans/{id}` response. `status` is `queued`, `processing`, `done` or `failed`; `reason` is null, `invalid_video` or `retries_exhausted`. `report_ids` lists the frame reports queued so far, passed or not; poll each one with `GET /reports/{id}`. `found` (contracts v1.10) is null until `status` is `done`; then it is read from the frame reports on every call: `sites` counts the distinct sites that frames the models passed landed in, `by_type` the same per report type, `checking` the frames still in the pipeline, and `frames` each frame in time order with its `result` (`checking`; `added` to a verified site; `waiting` for neighbours in an unverified site; `not_waste`; `skipped` when moderation stopped it, a repeat view for example; `hidden` when neighbours hid its site; `failed` for `needs_review`; `withdrawn` when you withdrew it) and its public blurred copy (null when there is none). Only `sites` counts findings: a frame report is never a finding by itself.
 
 ```json
 {
@@ -197,6 +203,15 @@ Scan presign request and response. The phone PUTs the video with exactly these h
   "reason": null,
   "frames": { "sampled": 8, "kept": 8, "dropped_no_fix": 0 },
   "report_ids": ["rpt_jpr_1", "<7 more>"],
+  "found": {
+    "sites": 1,
+    "by_type": { "open_construction": 1 },
+    "checking": 0,
+    "frames": [
+      { "report_id": "rpt_jpr_1", "t_ms": 4000, "result": "waiting", "report_type": "open_construction", "site_id": "site_jpr_1", "blurred_url": "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jpr_1.jpg" },
+      "<7 more>"
+    ]
+  },
   "received_at": "2026-10-10T04:02:20Z",
   "updated_at": "2026-10-10T04:02:52Z"
 }
@@ -236,7 +251,7 @@ Area letter request: `{"issue": "waste_dump", "language": "en", "device_token": 
 
 Note request: `{"text": "<1 to 280 characters>", "language": "en", "device_token": "<uuid>"}`. `language` is `en` or `hi`.
 
-Verify request (worker to ml). `purpose` is `report` or `cleanup`; `ml` only ever reads the blurred copy.
+Verify request (worker to ml). `purpose` is `report` or `cleanup`; `ml` only ever reads the blurred copy. For a scan frame with an `auto_claim` (contracts v1.10), `report_type` and `context` are both `auto` (an area scout), or `context` alone is `auto`. ml then always runs the judge; a scout claim is supported by any type but `no_bin` and denied by `not_waste` and `no_bin`; a cleanup never takes `auto`.
 
 ```json
 {
@@ -257,7 +272,7 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 
 | Table | Partition key | Sort key | GSIs | Holds |
 |---|---|---|---|---|
-| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`) top-level, `received_at`, `updated_at`, `status`, `completed_steps` (worker steps already done, from `moderate`, `verify`, `brands`, `locate`, `merge`, so a retried message resumes), `moderation_result`, `verification_result`, `brand_labels`, `location` (the full `location_lookup` the worker wrote), `site_id`, `withdrawn_at` (only on a withdrawn report) |
+| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`) top-level, `received_at`, `updated_at`, `status`, `completed_steps` (worker steps already done, from `moderate`, `verify`, `brands`, `locate`, `merge`, so a retried message resumes), `moderation_result`, `verification_result`, `brand_labels`, `location` (the full `location_lookup` the worker wrote), `site_id`, `withdrawn_at` (only on a withdrawn report), and for scan frames the table-only `scan_spot` (t_ms of the frame's spot) and `auto_claim` (`type` or `context`, contracts v1.10) |
 | `cleanups` | `cleanup_id` | none | none | `site_id`, `upload_id`, `device_token`, `user_id`, `gps`, `sha256`, `captured_at`, `received_at`, `status`, `moderation_result`, `verification_result` |
 | `scans` | `scan_id` | none | none | `scan_session` fields (with `user_id`), `received_at`, `status`, `reason`, `frames`, `report_ids` |
 | `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`) top-level, `lat`, `lon`, `geohash4`, and the internals: `version` (each write sets it one higher, conditional on the stored value), `report_ids`, `merged_reports` (`[{report_id, verified, insights, point}]`, where `point` is `{lat, lon}` of where the reporter stood, null on older rows; no-bin zones centre on the mean of these points), `reporter_devices`, `reporter_users`, `reporter_ids` (the photo people, one per user id else device token), `yes_voters` and `no_voters` (people whose latest vote is yes or no), `verified_backers` (`backers.count` frozen at verification, null before), `me_too_count`, `embedding_key`, `pending_cleanup_id`, `withdrawn_report_ids` (reports their reporter withdrew; kept, never counted; decision 20261010-1700); a row without `backers` predates decision 20261010-1530 and waits for the backers migration; the api builds the Feature |
@@ -354,6 +369,7 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 | `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin zone (`zone_radius_m` 1000) in seat `s20-ac-127` that 10 people confirmed; nearest mapped bin 4.2 km |
 | `jdh-3` | Jodhpur | `site_jdh_3`: contaminated_water, choked_drain, reopened | an accepted cleanup (`cln_jdh_3c` moderation and verification, insights null), then reopened; a hazard and nearby places |
 | `jdh-5` | Jodhpur | `site_jdh_5`: waste_dump, roadside, removed, unverified | its only reporter withdrew the report (decision 20261010-1700): `removed_reason: withdrawn`, left out of the map and the scores |
+| `jdh-6` | Jodhpur | none | an area scout scan session (`scn_jdh_6`, `report_type` and `context` `auto`): 6 s at walking pace |
 | `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, unverified, 2 of 10 backers | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
 
 All fixture data is sample data, except `ward_record.jdh-1`, which is a real, unreviewed crawler record (its body `jodhpur-uttar-mc` predates the November 2025 merger; its id follows the ward rule). Coordinates are plausible; seat codes match the loaded boundaries; the brand and OpenStreetMap ids are invented; rule quotes are placeholders; user ids are random. Sample ids are short; real ids follow the rules above. No fixture names a person.

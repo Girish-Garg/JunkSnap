@@ -36,6 +36,7 @@ export class SiteReportMerger implements ReportMerger {
     const upload = Report.fromRecord(record).upload();
     const near = this.#places.near(upload.gps.lat, upload.gps.lon);
     const bin = this.#bins.measure(new GeoPoint(upload.gps.lat, upload.gps.lon), location.town);
-    return { upload, moderation, verification, location, near, bin, brands: record.brand_labels ?? [] };
+    const spot = record.scan_spot === undefined ? {} : { scanSpot: record.scan_spot };
+    return { upload, moderation, verification, location, near, bin, brands: record.brand_labels ?? [], ...spot };
   }
 }

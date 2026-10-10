@@ -9,6 +9,7 @@ from ml.domain.errors import ConfigError
 from ml.domain.purposes import Purpose
 from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
+from ml.services.judge_decides_combiner import AUTO_CLAIM_REASON, JudgeDecidesCombiner
 
 # Hand-set, not fitted. The judge only runs on unsure or split cases, so it breaks ties.
 FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
@@ -42,7 +43,9 @@ class FixedWeightCombiner(Combiner):
 
     @override
     def for_claim(self, claim: Claim) -> Combiner:
-        """Hand-set weights fit every report type."""
+        """Hand-set weights fit every report type; an auto claim also needs the judge's answer."""
+        if claim.judge_required:
+            return JudgeDecidesCombiner(self, AUTO_CLAIM_REASON)
         return self
 
     def probability(self, signals: Sequence[SignalResult]) -> float:

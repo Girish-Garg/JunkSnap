@@ -1,0 +1,21 @@
+{
+  "scan_id": "scn_jdh_6",
+  "device_token": "5b2e8f41-7c3a-4d19-a6e0-2f8c91d4b7a5",
+  "user_id": "7d4e2a91-6c35-4b8f-9e10-3a5c8b2f6d47",
+  "report_type": "auto",
+  "context": "auto",
+  "started_at": "2026-10-10T05:11:40Z",
+  "ended_at": "2026-10-10T05:11:46Z",
+  "duration_ms": 6000,
+  "video_key": "scans/scn_jdh_6.mp4",
+  "video_sha256": "9c1f4e7a2b8d3065e1f7a9c4b2d8e6f03a5c7b9d1e2f4a6c8b0d2e4f6a8c0e2b",
+  "gps_track": [
+    { "t_ms": 0, "lat": 26.27012, "lon": 73.04581, "accuracy_m": 12, "speed_mps": null, "heading": null },
+    { "t_ms": 1000, "lat": 26.27016, "lon": 73.04584, "accuracy_m": 11, "speed_mps": 3.9, "heading": 36 },
+    { "t_ms": 2000, "lat": 26.2702, "lon": 73.04587, "accuracy_m": 11, "speed_mps": 4.1, "heading": 35 },
+    { "t_ms": 3000, "lat": 26.27024, "lon": 73.0459, "accuracy_m": 10, "speed_mps": 4.0, "heading": 37 },
+    { "t_ms": 4000, "lat": 26.27028, "lon": 73.04593, "accuracy_m": 10, "speed_mps": 4.2, "heading": 36 },
+    { "t_ms": 5000, "lat": 26.27032, "lon": 73.04596, "accuracy_m": 11, "speed_mps": 4.0, "heading": 35 },
+    { "t_ms": 6000, "lat": 26.27036, "lon": 73.04599, "accuracy_m": 12, "speed_mps": 3.8, "heading": 36 }
+  ]
+}

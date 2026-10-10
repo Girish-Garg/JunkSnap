@@ -27,10 +27,11 @@ export class DynamoFrameReportRepository implements FrameReportRepository {
     }
   }
 
-  async createQueued({ report_id, upload, received_at }: QueuedFrameReport): Promise<void> {
+  async createQueued({ report_id, upload, received_at, ...extra }: QueuedFrameReport): Promise<void> {
+    const auto = Object.fromEntries(Object.entries(extra).filter(([, value]) => value !== undefined));
     const command = new PutCommand({
       TableName: this.#table,
-      Item: { report_id, ...upload, received_at, status: "queued", updated_at: received_at, completed_steps: [], version: 1 },
+      Item: { report_id, ...upload, ...auto, received_at, status: "queued", updated_at: received_at, completed_steps: [], version: 1 },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
     try {

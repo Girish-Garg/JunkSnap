@@ -4,10 +4,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ml.domain.auto_claims import claim_for
 from ml.domain.case import VerifyInput
 from ml.domain.errors import InvalidClaimError
 from ml.domain.purposes import Purpose
-from ml.domain.verification import CaseFeatures, Claim
+from ml.domain.verification import CaseFeatures
 from ml.services.judge_answer import ContextName
 
 
@@ -26,10 +27,11 @@ class VerifyBody(BaseModel):
     purpose: Literal["report", "cleanup"]
     # Only blurred copies under media/ may reach a model.
     blurred_key: str = Field(pattern=r"^media/[a-z]+/(rpt|cln)_[a-z0-9_]{1,40}\.jpg$")
+    # auto (contracts v1.10): a scan frame whose type, or only place, the judge names.
     report_type: Literal[
-        "waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"
+        "waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin", "auto"
     ]
-    context: ContextName
+    context: ContextName | Literal["auto"]
     features: FeaturesBody
 
     def to_input(self) -> VerifyInput:
@@ -39,12 +41,15 @@ class VerifyBody(BaseModel):
             raise InvalidClaimError(f"{purpose.name} needs a {purpose.id_prefix}_ report_id")
         if not self.blurred_key.startswith(purpose.media_folder):
             raise InvalidClaimError(f"{purpose.name} needs a key under {purpose.media_folder}")
+        claim = claim_for(self.report_type, self.context)
+        if claim.judge_required and not purpose.accepts_auto_claims:
+            raise InvalidClaimError(f"{purpose.name} needs a picked type and context")
         features = self.features
         return VerifyInput(
             report_id=self.report_id,
             purpose=self.purpose,
             blurred_key=self.blurred_key,
-            claim=Claim(self.report_type, self.context),
+            claim=claim,
             features=CaseFeatures(
                 features.gps_accuracy_m, features.reputation, features.nearby_verified_reports
             ),

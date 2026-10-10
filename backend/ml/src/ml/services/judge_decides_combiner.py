@@ -9,6 +9,9 @@ from ml.domain.purposes import Purpose
 from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
 
+# A scan frame's auto claim (contracts v1.10): only the judge names a type or place.
+AUTO_CLAIM_REASON = "auto claim: the judge names the type or place"
+
 
 class JudgeDecidesCombiner(Combiner):
     """Decorator: asks for the judge on every case; the inner combiner (fixed weights) decides.

@@ -4,6 +4,7 @@ import { FrameHash } from "../src/domain/FrameHash.js";
 import type { CandidateFrame } from "../src/domain/ScanFrame.js";
 import { ScanFrameId } from "../src/domain/ScanFrameId.js";
 import { FramePlanner } from "../src/services/FramePlanner.js";
+import { SCAN_FRAME_RULES } from "../src/domain/scanLimits.js";
 import { FrameSelector } from "../src/services/FrameSelector.js";
 
 const BOX = { left: 0.1, top: 0.1, width: 0.2, height: 0.2 };
@@ -13,8 +14,13 @@ function hint(tMs: number, score: number): ScanDetection {
   return { t_ms: tMs, score, box: BOX };
 }
 
-function frame(tMs: number, bits: bigint, hintScore?: number): CandidateFrame {
-  return { tMs, gps: GPS, path: `frame-${tMs}.jpg`, hash: new FrameHash(bits), ...(hintScore === undefined ? {} : { hintScore }) };
+// About 15 m north per second, so frames a second apart are never the same spot.
+function moving(tMs: number): CandidateFrame["gps"] {
+  return { ...GPS, lat: GPS.lat + (tMs / 1000) * 0.000135 };
+}
+
+function frame(tMs: number, bits: bigint, hintScore?: number, gps = moving(tMs)): CandidateFrame {
+  return { tMs, gps, path: `frame-${tMs}.jpg`, hash: new FrameHash(bits), ...(hintScore === undefined ? {} : { hintScore }) };
 }
 
 describe("FrameHash", () => {
@@ -97,8 +103,31 @@ describe("FrameSelector", () => {
   });
 
   it("takes the duplicate threshold from its constructor", () => {
-    const strict = new FrameSelector(0);
+    const strict = new FrameSelector({ ...SCAN_FRAME_RULES, duplicateDistance: 0 });
     expect(strict.select([frame(0, 0n), frame(1000, 1n)])).toHaveLength(2);
     expect(strict.select([frame(0, 0n), frame(1000, 0n)])).toHaveLength(1);
+  });
+});
+
+describe("FrameSelector near-duplicates", () => {
+  const selector = new FrameSelector();
+  const still = (tMs: number, bits: bigint, hintScore?: number) => frame(tMs, bits, hintScore, { ...GPS, lat: GPS.lat + tMs * 1e-8 });
+
+  it("keeps one frame of a 6 s clip that stands at one spot and shows a similar view", () => {
+    const base = 0x0ff00ff00ff00ff0n;
+    const clip = [0, 1000, 2000, 3000, 4000, 5000, 6000].map((tMs, i) => still(tMs, base ^ (0b1111111111n << BigInt(i * 7))));
+    expect(selector.select(clip).map((chosen) => chosen.tMs)).toEqual([0]);
+  });
+
+  it("swaps in the better ranked frame of a spot, and keeps a different view at the same spot", () => {
+    const base = 0x0ff00ff00ff00ff0n;
+    const kept = selector.select([still(0, base), still(1000, base ^ 0xfffffn, 0.7), still(2000, ~base)]);
+    expect(kept.map((chosen) => chosen.tMs)).toEqual([1000, 2000]);
+  });
+
+  it("keeps similar views that are more than 10 m apart", () => {
+    const base = 0x0ff00ff00ff00ff0n;
+    const kept = selector.select([frame(0, base), frame(1000, base ^ 0xfffffn)]);
+    expect(kept).toHaveLength(2);
   });
 });
