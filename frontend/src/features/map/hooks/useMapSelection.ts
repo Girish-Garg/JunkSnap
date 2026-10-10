@@ -18,22 +18,21 @@ export function useMapSelection(loaded: readonly SiteFeature[]) {
     (site: SiteFeature) => {
       setPreview(null);
       showSite(site);
-      // Another site replaces the open one, so back still returns to the map in one step.
+      // Another site replaces the open one, so back still returns to the map in one step. The card's or the
+      // list's history entry comes off first (useSheetNavigation), so nothing is left under the sheet.
       const path = sitePath(site.properties.site_id);
       if (openId) sheets.swap(path);
       else sheets.open(path);
     },
     [sheets, showSite, openId, setPreview],
   );
-  const showPlace = useCallback(
-    (place: Pick<Place, 'sites' | 'point'>) => {
-      setPreview(place.sites.length === 1 ? (place.sites[0] ?? null) : null);
-      setCamera(PlaceCamera.for(place));
-    },
-    [setPreview],
-  );
+  const showPlace = useCallback((place: Pick<Place, 'sites' | 'point'>) => {
+    setPreview(place.sites.length === 1 ? (place.sites[0] ?? null) : null);
+    setCamera(PlaceCamera.for(place));
+  }, [setPreview]);
   const frame = useCallback((points: readonly LonLat[]) => setCamera({ points }), []);
   const selectedId = openId ?? preview?.properties.site_id ?? null;
-  const closeStack = useCallback(() => setPreview(null), [setPreview]);
-  return { openId, selectedId, preview, stack, camera, pick, pickStack, closeStack, showSite, openDetails, showPlace, frame };
+  // Closes the preview card or the stack list, whichever is up.
+  const clearPick = useCallback(() => setPreview(null), [setPreview]);
+  return { openId, selectedId, preview, stack, camera, pick, pickStack, clearPick, showSite, openDetails, showPlace, frame };
 }

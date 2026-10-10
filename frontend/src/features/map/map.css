@@ -93,7 +93,8 @@
 .searchbar__input {
   flex: 1;
   min-width: 0;
-  height: 40px;
+  /* The whole 48 px bar is the field's tap target. */
+  height: 100%;
   padding: 0;
   line-height: 40px;
   border: 0;

@@ -43,6 +43,8 @@
 
   --target: 48px;
   --nav-height: 68px;
+  /* How far the raised Report button (and its ring) reaches up into the map and over a sheet's foot. */
+  --report-overhang: calc(var(--s-6) + var(--s-2));
   --panel-width: 420px;
   --outline: 2px;
 

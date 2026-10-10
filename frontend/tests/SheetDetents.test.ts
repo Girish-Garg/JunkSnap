@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SheetDetents } from '../src/ui/SheetDetents';
 
-const CONTAINER_PX = 800;
+const CONTAINER_PX = { heightPx: 800, topInsetPx: 0 };
 
 describe('SheetDetents', () => {
   it('snaps a slow drag to the nearest height', () => {
