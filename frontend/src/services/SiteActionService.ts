@@ -1,5 +1,6 @@
 import type { CleanupAccepted, LetterDraft, LetterLanguage, VoteChoice, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import type { NoteLanguage, SiteNote } from '../domain/Community';
+import type { PhotoFlagReason, PhotoFlagResult } from '../domain/PhotoFlag';
 import type { GpsFix } from '../domain/ReportUpload';
 import type { GpsWatcher } from './GpsWatcher';
 import type { ReportApi, RequestIdentity } from './ReportApi';
@@ -53,6 +54,13 @@ export class SiteActionService {
   async note(siteId: string, text: string, language: NoteLanguage): Promise<SiteNote> {
     const device_token = await this.#ports.identity.deviceToken();
     return this.#signedIn.run(() => this.#ports.api.note(siteId, { text, language, device_token }));
+  }
+
+  /** Reports one site photo; a blank description is left out (decision 20261011-0310-hem-photo-flags). */
+  async flagPhoto(siteId: string, photoId: string, reason: PhotoFlagReason, text: string): Promise<PhotoFlagResult> {
+    const device_token = await this.#ports.identity.deviceToken();
+    const described = text.trim() === '' ? {} : { text: text.trim() };
+    return this.#signedIn.run(() => this.#ports.api.flagPhoto(siteId, photoId, { reason, device_token, ...described }));
   }
 
   /** Takes this user's reports off a site that is not verified yet. */

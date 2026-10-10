@@ -13,6 +13,8 @@ export interface NotesAdapters {
   readonly sites: SiteReader;
   readonly notes: NoteStore;
   readonly reportNotes: ReportNoteReader;
+  // Shown photo report descriptions (decision 20261011-0310-hem-photo-flags).
+  readonly photoReports: ReportNoteReader;
   readonly writer: CommunityWriter;
   readonly counters: LetterCounters;
   readonly moderator: NoteModerator;
@@ -45,10 +47,14 @@ export class NotesAssembly {
     this.#logger = logger;
   }
 
-  service(adapters: NotesAdapters): NoteService {
+  // One refresher per process, shared by notes and photo reports, so its per-site debounce holds for both.
+  refresher(adapters: NotesAdapters): CommunityRefresher {
+    const analyzer = new NoteAnalyzer(adapters.router, new WordingCheck(), this.#logger);
+    return new CommunityRefresher({ ...adapters, analyzer, logger: this.#logger });
+  }
+
+  service(adapters: NotesAdapters, refresher: CommunityRefresher = this.refresher(adapters)): NoteService {
     const logger = this.#logger;
-    const analyzer = new NoteAnalyzer(adapters.router, new WordingCheck(), logger);
-    const refresher = new CommunityRefresher({ ...adapters, analyzer, logger });
     return new NoteService({
       sites: adapters.sites,
       limiter: new LetterRateLimiter(adapters.counters, this.#notesPerHour, "notes"),

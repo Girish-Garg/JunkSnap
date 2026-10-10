@@ -14,7 +14,7 @@ import { SiteLocationFacts } from './SiteLocationFacts';
 import { SiteLocationLine } from './SiteLocationLine';
 import { SiteOpenActions } from './SiteOpenActions';
 import { SitePanelHeader } from './SitePanelHeader';
-import { SitePhotoStrip } from './SitePhotoStrip';
+import { SitePhotoSection } from './SitePhotoSection';
 
 export const SITE_TITLE_ID = 'site-panel-title';
 
@@ -46,7 +46,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
           <SiteOpenActions site={site} presenter={presenter} onChanged={changed} />
         </>
       )}
-      <SitePhotoStrip photos={presenter.photos()} />
+      <SitePhotoSection siteId={details.site_id} photos={presenter.photos()} reportable={!closed} onChanged={changed} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
       <SiteReporters site={details} />

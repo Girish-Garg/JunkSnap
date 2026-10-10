@@ -1,10 +1,11 @@
 import { ApiError } from '../src/domain/ApiError';
 import type { NoteRequest, SiteNote } from '../src/domain/Community';
+import type { PhotoFlagRequest, PhotoFlagResult } from '../src/domain/PhotoFlag';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../src/domain/SiteActions';
 import { sampleLetterLoader } from '../src/services/siteFixtures';
 import type { SiteActionsApi } from '../src/services/SiteActionsApi';
 
-type Call = 'vote' | 'cleanup' | 'letter' | 'note' | 'withdraw';
+type Call = 'vote' | 'cleanup' | 'letter' | 'note' | 'withdraw' | 'flagPhoto';
 
 /** Records every call with its site id and body; each failNext makes one more call of a kind fail. */
 export class FakeSiteActionsApi implements SiteActionsApi {
@@ -45,6 +46,12 @@ export class FakeSiteActionsApi implements SiteActionsApi {
     const status = this.siteRemoved ? 'removed' : 'open';
     const backers = { count: this.siteRemoved ? 1 : 2, needed: 10, photo_people: 1, vote_people: 0 };
     return { site_id: siteId, withdrawn_report_ids: ['rpt_mine'], site_removed: this.siteRemoved, status, verification: 'unverified', backers };
+  }
+
+  async flagPhoto(siteId: string, photoId: string, request: PhotoFlagRequest): Promise<PhotoFlagResult> {
+    this.#record('flagPhoto', siteId, { photoId, ...request });
+    const text_status = request.text === undefined ? 'none' : 'shown';
+    return { site_id: siteId, photo_id: photoId, reason: request.reason, text_status, photo: { count: 1, warned: false, hidden: false }, site_status: 'open', created_at: '2026-10-11T03:10:00Z' };
   }
 
   #record(kind: Call, siteId: string, body: unknown): void {

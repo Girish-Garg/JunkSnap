@@ -6,6 +6,7 @@ import { validateBrandLabel } from "./brand_label.gen.js";
 import { validateLetterDraft } from "./letter_draft.gen.js";
 import { validateLocationLookup } from "./location_lookup.gen.js";
 import { validateModerationResult } from "./moderation_result.gen.js";
+import { validatePhotoFlag } from "./photo_flag.gen.js";
 import { validateReportUpload } from "./report_upload.gen.js";
 import { validateScanSession } from "./scan_session.gen.js";
 import { validateSite } from "./site.gen.js";
@@ -21,6 +22,7 @@ export { type BrandLabel, brandLabelSchema, validateBrandLabel } from "./brand_l
 export { type LetterDraft, letterDraftSchema, validateLetterDraft } from "./letter_draft.gen.js";
 export { type LocationLookup, locationLookupSchema, validateLocationLookup } from "./location_lookup.gen.js";
 export { type ModerationResult, moderationResultSchema, validateModerationResult } from "./moderation_result.gen.js";
+export { type PhotoFlag, photoFlagSchema, validatePhotoFlag } from "./photo_flag.gen.js";
 export { type ReportUpload, reportUploadSchema, validateReportUpload } from "./report_upload.gen.js";
 export { type ScanSession, scanSessionSchema, validateScanSession } from "./scan_session.gen.js";
 export { type Site, siteSchema, validateSite } from "./site.gen.js";
@@ -37,6 +39,7 @@ export const CONTRACT_VALIDATORS = {
   letter_draft: validateLetterDraft,
   location_lookup: validateLocationLookup,
   moderation_result: validateModerationResult,
+  photo_flag: validatePhotoFlag,
   report_upload: validateReportUpload,
   scan_session: validateScanSession,
   site: validateSite,

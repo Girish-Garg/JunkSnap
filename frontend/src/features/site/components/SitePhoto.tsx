@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../../ui/Icon';
+import { PhotoCover } from '../../../ui/PhotoCover';
 
 interface SitePhotoProps {
   /** Blurred public copy only, never an original. */
@@ -8,9 +9,11 @@ interface SitePhotoProps {
   readonly alt: string;
   /** Opens the full-screen viewer; without it the photo is not a button (e.g. the preview card). */
   readonly onOpen?: () => void;
+  /** Several people reported it: behind a tap-to-view cover first. */
+  readonly warned?: boolean;
 }
 
-export function SitePhoto({ url, alt, onOpen }: SitePhotoProps) {
+export function SitePhoto({ url, alt, onOpen, warned = false }: SitePhotoProps) {
   const { t } = useTranslation();
   const [broken, setBroken] = useState(false);
   if (url === null || broken) {
@@ -24,13 +27,15 @@ export function SitePhoto({ url, alt, onOpen }: SitePhotoProps) {
   const image = <img src={url} alt={alt} loading="lazy" draggable={false} onError={() => setBroken(true)} />;
   return (
     <li className="photo-strip__item">
-      {onOpen ? (
-        <button type="button" className="photo-open" title={t('viewer.open')} onClick={onOpen}>
-          {image}
-        </button>
-      ) : (
-        image
-      )}
+      <PhotoCover warned={warned}>
+        {onOpen ? (
+          <button type="button" className="photo-open" title={t('viewer.open')} onClick={onOpen}>
+            {image}
+          </button>
+        ) : (
+          image
+        )}
+      </PhotoCover>
     </li>
   );
 }

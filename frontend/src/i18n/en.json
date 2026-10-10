@@ -191,6 +191,7 @@
     "closed": {
       "title": "No longer on the map",
       "removed": "Its reporter withdrew the report, so this site left the map. It takes no more votes, photos or letters.",
+      "photosReported": "Several people reported its photos, so this site left the map. It takes no more votes, photos or letters.",
       "expired": "This site expired and left the map. If the waste is still there, report it again with a new photo.",
       "rejected": "Neighbours said this is not a waste site, so it was hidden from the map. It takes no more votes or letters.",
       "rejectedNoBin": "Neighbours said there is a bin within 1 km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",
@@ -1090,5 +1091,37 @@
     "pin": "Pin: one reported site; colour and icon show the type",
     "unverified": "Dashed pin: not verified yet; 1/10 counts the people backing it",
     "stack": "Stacked pin: several sites at one spot"
+  },
+  "photoReport": {
+    "action": "Report this photo",
+    "actionNumbered": "Report photo {{n}}",
+    "title": "Report this photo",
+    "intro": "One report changes nothing on its own. When several people report a photo it is covered, and when many do it is hidden.",
+    "reasonLabel": "What is wrong with it?",
+    "reasons": {
+      "unrelated": "Unrelated or not waste",
+      "person_or_property": "Shows a person or private property",
+      "duplicate": "Duplicate",
+      "offensive": "Offensive"
+    },
+    "textLabel": "Tell us more (optional)",
+    "left": "{{left}} characters left",
+    "privacy": "No names, phone numbers or house numbers. What you write is checked first and never shown, and your name is never shown.",
+    "send": "Send report",
+    "sending": "Sending…",
+    "cancel": "Cancel",
+    "close": "Close photo report",
+    "done": "Thanks. Your report was counted. A photo is covered only after several people report it.",
+    "coverTitle": "Several people reported this photo",
+    "coverAction": "Tap to view",
+    "errors": {
+      "own_photo": "You took this photo, so a neighbour has to report it.",
+      "rate_limited": "At most 10 photo reports an hour. Try again later.",
+      "not_found": "This photo or site is no longer on the map.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The report did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more.",
+      "location": "The report did not go through. Try again."
+    }
   }
 }

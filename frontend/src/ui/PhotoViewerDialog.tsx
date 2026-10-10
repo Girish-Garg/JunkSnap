@@ -13,10 +13,12 @@ import { usePrefetch } from './usePrefetch';
 interface PhotoViewerDialogProps {
   readonly state: PhotoViewerState;
   readonly viewer: PhotoViewerControl;
+  /** Reports the photo at this index; only offered on reportable photos. */
+  readonly onReport?: (index: number) => void;
 }
 
 /** The open viewer: counter, close, the photo, paging buttons and the caption. */
-export function PhotoViewerDialog({ state, viewer }: PhotoViewerDialogProps) {
+export function PhotoViewerDialog({ state, viewer, onReport }: PhotoViewerDialogProps) {
   const { t } = useTranslation();
   const layer = useRef<HTMLDivElement>(null);
   const { photos, index } = state;
@@ -36,7 +38,7 @@ export function PhotoViewerDialog({ state, viewer }: PhotoViewerDialogProps) {
       </div>
       <PhotoViewerStage key={photo.url} photo={photo} onOutcome={paging.onOutcome} />
       <PhotoViewerPager index={index} total={photos.length} onPrevious={paging.previous} onNext={paging.next} />
-      <PhotoViewerCaption date={photo.date} />
+      <PhotoViewerCaption date={photo.date} onReport={onReport && photo.reportable ? () => onReport(index) : undefined} />
     </div>
   );
 }
