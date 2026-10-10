@@ -8,7 +8,10 @@ export interface MapNoticeInput {
   readonly loaded: boolean;
   readonly loadedCount: number;
   readonly shownCount: number;
+  /** The view is wider than the map loads at once, so only its middle has sites. */
   readonly clamped: boolean;
+  /** A GET /sites query hit its 500 cap, so older sites are missing. */
+  readonly truncated?: boolean;
   /** A toast's i18n key; it shows before every other notice while it lasts. */
   readonly flash?: string | null;
 }
@@ -29,6 +32,7 @@ const RULES: readonly Rule[] = [
   [(s) => s.locationProblem === 'unavailable', { icon: 'locate', key: 'notice.locationUnavailable', tone: 'info' }],
   [(s) => s.loadedCount > 0 && s.shownCount === 0, { icon: 'info', key: 'notice.filteredEmpty', tone: 'info' }],
   [(s) => s.clamped, { icon: 'search', key: 'notice.zoomIn', tone: 'info' }],
+  [(s) => s.truncated === true, { icon: 'search', key: 'notice.capped', tone: 'info' }],
   [(s) => s.loaded && s.loadedCount === 0, { icon: 'info', key: 'notice.empty', tone: 'info' }],
 ];
 

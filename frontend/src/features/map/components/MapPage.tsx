@@ -32,7 +32,7 @@ export function MapPage() {
           onOpen={selection.openDetails}
         />
         <MapOverlay page={page} listMode={listMode} />
-        {filters.open && <FiltersSheet filters={filters} sites={page.loaded} onClose={() => filters.setOpen(false)} />}
+        {filters.open && <FiltersSheet filters={filters} onClose={() => filters.setOpen(false)} />}
         <Outlet context={context} />
       </div>
       <NavBar />

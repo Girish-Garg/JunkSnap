@@ -10,7 +10,7 @@ const COLLECTING = /We're collecting official ward data for this area/;
 vi.mock('../src/features/map/components/SiteMapView', async () => {
   const { useEffect } = await import('react');
   const { BBox } = await import('../src/domain/BBox');
-  const view = { bbox: BBox.around([73.02, 26.27], 0.99), clamped: false };
+  const view = { bbox: BBox.around([73.02, 26.27], 0.99) };
   return {
     SiteMapView: ({ onViewChange }: { onViewChange: (next: typeof view) => void }) => {
       useEffect(() => onViewChange(view), [onViewChange]);
