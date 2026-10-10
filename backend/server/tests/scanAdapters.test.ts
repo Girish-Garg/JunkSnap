@@ -151,7 +151,7 @@ describe("DynamoFrameReportRepository", () => {
     await expect(reports.createQueued(report)).resolves.toBeUndefined();
     expect(await reports.exists("rpt_a")).toBe(true);
     expect(dynamo.inputs[0]).toMatchObject({
-      Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z" },
+      Item: { report_id: "rpt_a", upload_id: "upl_a", status: "queued", received_at: "2026-10-10T04:03:00Z", completed_steps: [], version: 1 },
       ConditionExpression: "attribute_not_exists(report_id)",
     });
   });
