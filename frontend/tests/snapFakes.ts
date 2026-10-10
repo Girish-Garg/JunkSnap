@@ -13,31 +13,43 @@ import { QueueLock } from '../src/services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
 import { ReportQueue } from '../src/services/ReportQueue';
 import { ReportSender } from '../src/services/ReportSender';
-import type { MetaStore, ReportStore } from '../src/services/ReportStore';
+import type { ItemStore, MetaStore, ReportStore } from '../src/services/ReportStore';
 import { ReportTracker } from '../src/services/ReportTracker';
+import type { ScanApi } from '../src/services/ScanApi';
+import { ScanCapture } from '../src/services/ScanCapture';
+import { ScanQueue } from '../src/services/ScanQueue';
+import { ScanSender } from '../src/services/ScanSender';
+import { ScanTracker } from '../src/services/ScanTracker';
 import { sampleSiteLoader } from '../src/services/siteFixtures';
+import { MockScanApi } from '../src/services/MockScanApi';
+import { VideoRecorder } from '../src/services/VideoRecorder';
+import type { QueueItemData } from '../src/domain/QueueItem';
+import type { QueuedScanData } from '../src/domain/QueuedScan';
+import { fakeRecorderFactory } from './scanFakes';
 
 export const DEVICE_TOKEN = '3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14';
 
-export class MemoryReportStore implements ReportStore {
-  readonly rows = new Map<string, QueuedReportData>();
+export class MemoryItemStore<Data extends QueueItemData> implements ItemStore<Data> {
+  readonly rows = new Map<string, Data>();
 
-  async all(): Promise<readonly QueuedReportData[]> {
+  async all(): Promise<readonly Data[]> {
     return [...this.rows.values()];
   }
 
-  async get(id: string): Promise<QueuedReportData | undefined> {
+  async get(id: string): Promise<Data | undefined> {
     return this.rows.get(id);
   }
 
-  async put(report: QueuedReportData): Promise<void> {
-    this.rows.set(report.id, report);
+  async put(item: Data): Promise<void> {
+    this.rows.set(item.id, item);
   }
 
   async delete(id: string): Promise<void> {
     this.rows.delete(id);
   }
 }
+
+export class MemoryReportStore extends MemoryItemStore<QueuedReportData> {}
 
 export class MemoryMetaStore implements MetaStore {
   readonly values = new Map<string, string>();
@@ -138,26 +150,37 @@ export function sampleDraft(sha256 = 'a'.repeat(64)): ReportDraft {
 export interface SnapTestOptions {
   readonly auth: AuthService;
   readonly api?: ReportApi;
+  readonly scanApi?: ScanApi;
   readonly geolocation?: Geolocation;
   readonly store?: ReportStore;
   /** null leaves the page without a camera API. */
   readonly mediaDevices?: MediaDevices | null;
+  readonly clock?: FakeClock;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
-  const clock = new FakeClock();
+  const clock = options.clock ?? new FakeClock();
   const device = new DeviceIdentity(new MemoryMetaStore(), () => crypto.getRandomValues(new Uint8Array(16)));
   const identity: RequestIdentity = { idToken: (force) => options.auth.idToken(force), deviceToken: () => device.token() };
   const api = options.api ?? new MockReportApi(sampleSiteLoader, 0);
   const store = options.store ?? new MemoryReportStore();
   const queue = new ReportQueue({ store, sender: new ReportSender(api, identity, clock), clock, lock: new QueueLock(undefined) });
   const media = options.mediaDevices === null ? undefined : (options.mediaDevices ?? fakeMediaDevices());
+  const scanApi = options.scanApi ?? new MockScanApi(0);
+  const scans = new ScanQueue({ store: new MemoryItemStore<QueuedScanData>(), sender: new ScanSender(scanApi, identity, clock), clock, lock: new QueueLock(undefined) });
+  const recorder = new VideoRecorder(fakeRecorderFactory, clock);
+  const hasher = new PhotoHasher(crypto.subtle);
+  const gps = new GpsWatcher(options.geolocation ?? fixedGeolocation());
   return {
     queue,
     tracker: new ReportTracker(api, queue),
+    scans,
+    scanTracker: new ScanTracker(scanApi, scans),
+    recorder,
+    scanCapture: new ScanCapture({ recorder, gps, hasher, queue: scans, clock }),
     camera: new CameraCapture(media),
     encoder: new FakeEncoder(),
-    hasher: new PhotoHasher(crypto.subtle),
-    gps: new GpsWatcher(options.geolocation ?? fixedGeolocation()),
+    hasher,
+    gps,
   };
 }

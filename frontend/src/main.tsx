@@ -24,10 +24,11 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   mediaDevices: navigator.mediaDevices,
   crypto: window.crypto,
   locks: navigator.locks,
+  mediaRecorder: typeof MediaRecorder === 'undefined' ? undefined : MediaRecorder,
 });
-// Saved reports start sending as soon as the app opens; the sign-in (if any) is read first.
+// Saved photos and videos start sending as soon as the app opens; the sign-in (if any) is read first.
 void services.auth.restore().finally(() => {
-  new QueueTriggers(services.snap.queue, { window, document, auth: services.auth }).start();
+  new QueueTriggers([services.snap.queue, services.snap.scans], { window, document, auth: services.auth }).start();
 });
 const root = document.getElementById('root');
 if (!root) throw new Error('index.html has no #root element');

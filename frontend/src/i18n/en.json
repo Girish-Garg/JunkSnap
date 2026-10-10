@@ -200,6 +200,11 @@
         "Open JunkSnap from its https link.",
         "Then tap Try again."
       ]
+    },
+    "mode": {
+      "label": "Capture",
+      "photo": "Photo",
+      "video": "Video"
     }
   },
   "account": {
@@ -288,7 +293,9 @@
     "remove": "Remove",
     "openSite": "Open site",
     "noPhoto": "Blurred photo not ready yet",
-    "photoAlt": "Blurred photo of your report"
+    "photoAlt": "Blurred photo of your report",
+    "videos": "Videos",
+    "photos": "Photos"
   },
   "queue": {
     "waiting_one": "{{count}} report waiting to send",
@@ -308,5 +315,42 @@
     "community_check": "Waiting for a neighbour check",
     "rejected": "Not accepted after checking",
     "needs_review": "Needs a manual check"
+  },
+  "scan": {
+    "record": "Start recording",
+    "stop": "Stop recording",
+    "timer": "Recording {{elapsed}} / {{limit}}",
+    "saving": "Saving the video",
+    "pickFirst": "Pick the type and place, then record up to a minute while you move slowly.",
+    "recorder_unsupported": "This browser cannot record video. Use Photo instead.",
+    "video_too_short": "Record at least 1 second.",
+    "video_too_large": "The video is over 40 MB. Record a shorter one.",
+    "encode_failed": "Could not save the video. Try again.",
+    "camera_denied": "Camera access is blocked.",
+    "camera_unavailable": "The camera could not start.",
+    "insecure": "The camera needs a secure (https) page.",
+    "sentTitle": "Video saved",
+    "again": "Record another",
+    "activityTitle": "Video {{seconds}} s",
+    "result_one": "{{count}} report made from {{frames}} frames",
+    "result_other": "{{count}} reports made from {{frames}} frames",
+    "steps": {
+      "saved": "Saved on this phone",
+      "uploaded": "Video uploaded",
+      "sent": "Sent for frame checks",
+      "processed": "Frames checked"
+    },
+    "progress": {
+      "sending": "Sending",
+      "offline": "Waiting for network",
+      "sign_in": "Sign in to send",
+      "rate_limited": "Limit reached, sending later",
+      "server": "Server busy, trying again soon",
+      "refused": "Not accepted",
+      "queued": "In line",
+      "processing": "Cutting frames",
+      "done": "Done",
+      "failed": "This video could not be used"
+    }
   }
 }

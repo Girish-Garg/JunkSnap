@@ -1,7 +1,14 @@
 import { JunkSnapError } from './JunkSnapError';
 
 /** insecure: the page is not on HTTPS, so the browser hides the camera and WebCrypto. */
-export type CaptureProblem = 'camera_denied' | 'camera_unavailable' | 'insecure' | 'encode_failed';
+export type CaptureProblem =
+  | 'camera_denied'
+  | 'camera_unavailable'
+  | 'insecure'
+  | 'encode_failed'
+  | 'recorder_unsupported'
+  | 'video_too_short'
+  | 'video_too_large';
 
 export class CaptureError extends JunkSnapError {
   readonly problem: CaptureProblem;
