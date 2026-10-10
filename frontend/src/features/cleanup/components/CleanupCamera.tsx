@@ -24,7 +24,7 @@ export function CleanupCamera({ flow, gps }: CleanupCameraProps) {
   return (
     <div className="snap-camera">
       <div className="viewfinder viewfinder--video">
-        <video ref={video} className="viewfinder__video" playsInline muted aria-hidden="true" />
+        <video ref={video} className="viewfinder__video" autoPlay playsInline muted aria-hidden="true" />
         <GpsChip gps={gps} />
       </div>
       {failed ? (
