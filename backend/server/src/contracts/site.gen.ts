@@ -55,7 +55,7 @@ export interface Site {
      */
     status: "open" | "cleaned" | "reopened" | "removed" | "expired";
     /**
-     * Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at.
+     * Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, an accepted cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at.
      */
     expires_at?: string;
     /**
@@ -1162,7 +1162,7 @@ export const siteSchema = {
         "expires_at": {
           "type": "string",
           "format": "date-time",
-          "description": "Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, a cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at."
+          "description": "Contracts v1.12, decision 20261010-1855: 90 days (SITE_TTL_DAYS) after the site's last activity (a merged report, any vote, an accepted cleanup photo). After it an open or reopened site counts as expired, on read and when the scores CronJob marks it. Not in required so older rows stay valid; a row without it expires 90 days after last_reported_at."
         },
         "clearance": {
           "type": "object",

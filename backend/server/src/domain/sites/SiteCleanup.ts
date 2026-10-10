@@ -79,29 +79,27 @@ export class SiteCleanup {
     const shown = clearance.count > 0 || props.clearance !== undefined ? { clearance: clearance.view() } : {};
     const at = clearance.clearedAt();
     if (at === null) {
-      return { props: { ...props, ...shown }, internals };
+      return { props: { ...props, ...shown, ...SiteCleanup.#idle(props, clearance.count) }, internals };
     }
     const cleanup_status = props.cleanup_status === "pending_confirmation" ? "accepted" : props.cleanup_status;
     const cleaned = { status: "cleaned", cleaned_at: at, cleaned_by: clearance.byPhoto() ? "after_photo" : "votes" } as const;
     return { props: { ...props, ...shown, ...cleaned, cleanup_status }, internals };
   }
 
-  // A newer photo means the waste is back: a cleaned site reopens and earlier cleared words stop counting.
-  reopen(previousLastReport: string): SiteParts {
-    const { props, internals } = this.#parts;
-    if (props.status === "cleaned") {
-      return { props: { ...props, ...SiteCleanup.#reset(props), status: "reopened", cleanup_status: "none" }, internals };
-    }
-    const newer = Date.parse(props.last_reported_at) > Date.parse(previousLastReport);
-    if (!newer) {
-      return this.#parts;
-    }
-    const cleanup_status = props.cleanup_status === "pending_confirmation" ? "none" : props.cleanup_status;
-    return { props: { ...props, ...SiteCleanup.#reset(props), cleanup_status }, internals };
+  // Nobody's word counts any more (a newer report, or the uploader said still there): no longer pending.
+  static #idle(props: SiteProperties, count: number): Partial<SiteProperties> {
+    return count === 0 && props.cleanup_status === "pending_confirmation" ? { cleanup_status: "none" } : {};
   }
 
-  static #reset(props: SiteProperties): Partial<SiteProperties> {
-    return props.clearance === undefined ? {} : { clearance: NO_CLEARANCE };
+  // A photo the models passed means waste is back: a cleaned site reopens. A pending site keeps its words here;
+  // the merger then recounts them with the votes (settle), so only words after the newest report still count.
+  reopen(): SiteParts {
+    const { props, internals } = this.#parts;
+    if (props.status !== "cleaned") {
+      return this.#parts;
+    }
+    const reset = props.clearance === undefined ? {} : { clearance: NO_CLEARANCE };
+    return { props: { ...props, ...reset, status: "reopened", cleanup_status: "none" }, internals };
   }
 
   #assertAwaits(cleanupId: string): void {

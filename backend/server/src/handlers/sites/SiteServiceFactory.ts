@@ -95,6 +95,7 @@ export class SiteServiceFactory {
     const embeddings = new S3EmbeddingStore(s3, this.#settings.originalsBucket, this.#calls);
     return new SiteMerger({
       sites: this.#sites(),
+      votes: this.#votes(),
       cells: this.#cells,
       picker: new MergeTargetPicker(embeddings),
       reports: this.#reports(),

@@ -12,13 +12,16 @@ import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { SiteExpiredError } from "../../src/domain/sites/SiteErrors.js";
 import type { Clock } from "../../src/ports/sites/Clock.js";
+import type { ModerationResult, VerificationResult } from "../../src/contracts/index.gen.js";
+import type { Vote } from "../../src/domain/sites/VoteTally.js";
 import { CleanupIntake } from "../../src/services/sites/CleanupIntake.js";
+import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
-import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, evidence, northOf, report } from "./builders.js";
+import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, evidence, fixture, northOf, report, siteFixture } from "./builders.js";
 import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository } from "./fakes.js";
 import { conditionFailed, failure, ScriptedClient } from "./ScriptedClient.js";
 
@@ -43,8 +46,10 @@ function setup() {
   const clock = new SetClock();
   const retry = new ConflictRetry();
   const finder = new SiteFinder(sites, new NgeohashCells(), clock);
-  const votes = new VoteService({ sites, votes: new FakeVoteRepository(), reports: new FakeReportStatus(), clock, retry });
-  const intake = new CleanupIntake({ sites, cleanups: new FakeCleanups(), queue: new FakeQueue(), clock, retry });
+  const [ballots, cleanups] = [new FakeVoteRepository(), new FakeCleanups()];
+  const votes = new VoteService({ sites, votes: ballots, reports: new FakeReportStatus(), clock, retry });
+  const intake = new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry });
+  const service = new CleanupService({ sites, cleanups, votes: ballots, media: new PublicMedia(BASE_URL), retry });
   const listedOn = async (when: Date) => {
     clock.at = when;
     return (await finder.inBox(AROUND)).map((feature) => feature.properties.site_id);
@@ -53,7 +58,37 @@ function setup() {
     clock.at = when;
     return votes.cast(SITE, { deviceToken: DEVICE_B, userId: "voter", choice: "confirm", point: NEARBY });
   };
-  return { sites, clock, finder, intake, listedOn, vote };
+  // An after-photo sent on the given day; the models pass it or not.
+  const cleanupPhoto = async (when: Date, passes: boolean) => {
+    clock.at = when;
+    const request = { upload_id: `upl_${when.getTime()}`, device_token: DEVICE_B, sha256: "a".repeat(64), gps: { lat: BASE_LAT, lon: BASE_LON, accuracy_m: 8 }, captured_at: when.toISOString() };
+    const { cleanup_id: id } = await intake.submit(SITE, request, "cleaner");
+    const results = { moderation: { ...MODERATION, report_id: id }, verification: { ...VERIFICATION, report_id: id } };
+    return service.apply(id, passes ? results : { moderation: null, verification: null });
+  };
+  return { sites, clock, finder, intake, listedOn, vote, cleanupPhoto };
+}
+
+const MODERATION = fixture<ModerationResult>("moderation_result.jdh-3.json");
+const VERIFICATION = fixture<VerificationResult>("verification_result.jdh-3.json");
+
+// The scores CronJob marks the site expired between the vote's check and its count.
+class CronRacingVotes extends FakeVoteRepository {
+  readonly #sites: FakeSiteRepository;
+
+  constructor(sites: FakeSiteRepository) {
+    super();
+    this.#sites = sites;
+  }
+
+  override async put(vote: Vote): Promise<void> {
+    await super.put(vote);
+    const site = await this.#sites.get(SITE);
+    site?.expireIfLapsed(day(200));
+    if (site) {
+      await this.#sites.save(site);
+    }
+  }
 }
 
 describe("site expiry (decision 20261010-1855)", () => {
@@ -89,12 +124,32 @@ describe("site expiry (decision 20261010-1855)", () => {
     expect(sites.feature(SITE).properties.expires_at).toBe(day(170).toISOString());
   });
 
-  it("is refreshed by a cleanup photo", async () => {
-    const { clock, intake, sites } = setup();
-    clock.at = day(60);
-    const request = { upload_id: "upl_c1", device_token: DEVICE_B, sha256: "a".repeat(64), gps: { lat: BASE_LAT, lon: BASE_LON, accuracy_m: 8 }, captured_at: day(60).toISOString() };
-    await intake.submit(SITE, request, "cleaner");
+  it("is refreshed by an accepted cleanup photo, never by a rejected one", async () => {
+    const { cleanupPhoto, sites } = setup();
+    expect(await cleanupPhoto(day(30), false)).toBe("rejected");
+    expect(sites.feature(SITE).properties.expires_at).toBe(day(90).toISOString());
+    expect(await cleanupPhoto(day(60), true)).toBe("accepted");
     expect(sites.feature(SITE).properties.expires_at).toBe(day(150).toISOString());
+  });
+
+  it("shows a row stored before the decision with the expiry its last report sets", async () => {
+    const { sites, finder } = setup();
+    const stored = siteFixture("jdh-2");
+    expect(stored.properties.expires_at).toBeUndefined();
+    sites.putFeature(stored);
+    const shown = (await finder.byId(stored.properties.site_id)).properties;
+    expect(shown.expires_at).toBe(new Date(Date.parse(stored.properties.last_reported_at) + 90 * 86_400_000).toISOString());
+  });
+
+  it("answers 404 to a vote whose site the CronJob marked expired before the vote was counted", async () => {
+    const sites = new FakeSiteRepository();
+    sites.put(Site.found(report()));
+    const clock = new SetClock();
+    clock.at = day(89);
+    const voting = new VoteService({ sites, votes: new CronRacingVotes(sites), reports: new FakeReportStatus(), clock, retry: new ConflictRetry() });
+    const cast = voting.cast(SITE, { deviceToken: DEVICE_B, userId: "voter", choice: "confirm", point: NEARBY });
+    await expect(cast).rejects.toThrow(SiteExpiredError);
+    expect(sites.feature(SITE).properties.status).toBe("expired");
   });
 
   it("refuses votes and cleanup photos once expired, as not found", async () => {
@@ -110,6 +165,7 @@ describe("site expiry (decision 20261010-1855)", () => {
     const { sites } = setup();
     const merger = new SiteMerger({
       sites,
+      votes: new FakeVoteRepository(),
       cells: new NgeohashCells(),
       picker: new MergeTargetPicker(new FakeEmbeddings()),
       reports: new FakeReportStatus(),

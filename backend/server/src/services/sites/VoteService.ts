@@ -43,14 +43,16 @@ export class VoteService {
       choice: ballot.choice,
       votedAt: now.toISOString(),
     });
-    const settled = await this.#deps.retry.run(() => this.#settle(siteId));
+    const settled = await this.#deps.retry.run(() => this.#settle(siteId, now));
     await this.#deps.reports.followSite(settled.reportIds, settled.verification);
     return settled.voteResult();
   }
 
-  // Re-reads every vote, so concurrent voters converge on the same count.
-  async #settle(siteId: string): Promise<Site> {
+  // Re-reads every vote, so concurrent voters converge on the same count. If the scores CronJob marked the site
+  // expired since the vote was admitted, the voter gets 404 instead of a count on a site off the map.
+  async #settle(siteId: string, now: Date): Promise<Site> {
     const site = await this.#load(siteId);
+    site.assertActive(now);
     site.recordVotes(VoteTally.of(await this.#deps.votes.forSite(siteId)));
     await this.#deps.sites.save(site);
     return site;

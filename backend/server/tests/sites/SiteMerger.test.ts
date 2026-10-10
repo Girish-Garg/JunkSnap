@@ -11,7 +11,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_URL, clearByPhotos, DEVICE_B, evidence, fixture, northOf, report } from "./builders.js";
-import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FixedClock, NOW } from "./fakes.js";
+import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
 
 // A geohash index that has not caught up with the table yet.
 class LaggingIndexSites extends FakeSiteRepository {
@@ -26,6 +26,7 @@ function setup(sites = new FakeSiteRepository()) {
   const embeddings = new FakeEmbeddings();
   const merger = new SiteMerger({
     sites,
+    votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(embeddings),
     reports,
@@ -121,7 +122,8 @@ describe("SiteMerger merging", () => {
     const cleaned = Site.found(report());
     clearByPhotos(cleaned, NOW);
     sites.put(cleaned);
-    expect((await merger.merge(evidence({ id: "jdh_3", decision: "community_check" }))).siteId).toBe("site_jdh_1");
+    const later = evidence({ id: "jdh_3", decision: "community_check", capturedAt: "2026-10-10T07:00:00Z" });
+    expect((await merger.merge(later)).siteId).toBe("site_jdh_1");
     expect(sites.feature("site_jdh_1").properties).toMatchObject({ status: "reopened", cleanup_status: "none" });
   });
 

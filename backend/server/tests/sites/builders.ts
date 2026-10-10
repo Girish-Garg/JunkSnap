@@ -13,6 +13,7 @@ import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { UNMEASURED, type BinMeasure } from "../../src/domain/bins/KnownBin.js";
+import { expiryOf } from "../../src/domain/SiteExpiry.js";
 import type {
   NearPlace,
   ReportContext,
@@ -39,6 +40,11 @@ export function fixture<T>(name: string): T {
 
 export function siteFixture(sample: string): SiteFeature {
   return fixture<SiteFeature>(`site.${sample}.json`);
+}
+
+// The Feature the api shows for a stored site: a row without expires_at shows 90 days after its last report.
+export function shown(feature: SiteFeature): SiteFeature {
+  return { ...feature, properties: { ...feature.properties, expires_at: expiryOf(feature.properties) } };
 }
 
 export function northOf(metres: number): number {

@@ -6,6 +6,7 @@ import type { MergeableReportFactory } from "../../domain/sites/MergeableReportF
 import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
 import { Site } from "../../domain/sites/Site.js";
 import { StaleSiteError } from "../../domain/sites/SiteErrors.js";
+import { VoteTally } from "../../domain/sites/VoteTally.js";
 import type { Verification } from "../../domain/sites/SiteTypes.js";
 import { ZeroScoreRows } from "../../domain/sites/ZeroScoreRows.js";
 import type { AreaScoreSeeder } from "../../ports/sites/AreaScoreSeeder.js";
@@ -13,11 +14,14 @@ import type { Clock } from "../../ports/sites/Clock.js";
 import type { GeoCells } from "../../ports/sites/GeoCells.js";
 import type { ReportStatusWriter } from "../../ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
+import type { VoteRepository } from "../../ports/sites/VoteRepository.js";
 import type { ConflictRetry } from "./ConflictRetry.js";
 import type { MergeTargetPicker } from "./MergeTargetPicker.js";
 
 export interface SiteMergerDeps {
   readonly sites: SiteRepository;
+  // Cleared votes are recounted against the newest report (decision 20261010-1855).
+  readonly votes: VoteRepository;
   readonly cells: GeoCells;
   readonly picker: MergeTargetPicker;
   readonly reports: ReportStatusWriter;
@@ -99,6 +103,7 @@ export class SiteMerger {
       throw new StaleSiteError(`${siteId} changed while merging ${report.reportId}`);
     }
     site.merge(report);
+    site.recordVotes(VoteTally.of(await this.#deps.votes.forSite(siteId)));
     await this.#deps.sites.save(site);
     return { site, outcome: "merged" };
   }

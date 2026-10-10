@@ -11,7 +11,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, DEVICE_C, evidence, northOf, userOf } from "./builders.js";
-import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FixedClock } from "./fakes.js";
+import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock } from "./fakes.js";
 
 // Decision 20261011-0400: a long-range pin can be dropped anywhere within 500 m, so it joins a site only on a
 // matching photo. Without both embeddings, or with an unrelated photo, it founds its own site.
@@ -33,6 +33,7 @@ function setup() {
   const embeddings = new FakeEmbeddings();
   const merger = new SiteMerger({
     sites,
+    votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(embeddings),
     reports: new FakeReportStatus(),

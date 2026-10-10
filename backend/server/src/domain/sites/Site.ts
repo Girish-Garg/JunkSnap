@@ -1,4 +1,4 @@
-import { isLapsed, refreshedExpiry } from "../SiteExpiry.js";
+import { expiryOf, isLapsed, refreshedExpiry } from "../SiteExpiry.js";
 import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
@@ -120,9 +120,8 @@ export class Site {
     if (!this.accepts(report)) {
       throw new InvalidTransitionError(`${report.reportId} cannot merge into ${this.siteId}`);
     }
-    const previousLastReport = this.#props.last_reported_at;
     this.#adopt(new SiteAddition(this.snapshot(), report).apply());
-    this.#apply(this.#cleanup().reopen(previousLastReport));
+    this.#apply(this.#cleanup().reopen());
     this.#touch(report.reportedAt);
     this.#settle();
     this.#recount();
@@ -130,7 +129,7 @@ export class Site {
 
   // A rejected, removed or expired site takes no votes; own_site (same user or device) is checked before distance.
   admitVoter(voter: Voter, from: GeoPoint, choice: VoteChoice, at: Date): void {
-    this.#assertActive(at);
+    this.assertActive(at);
     if (this.#props.verification === "rejected") {
       throw new SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
     }
@@ -184,11 +183,9 @@ export class Site {
     this.recordVotes(tally);
   }
 
-  // The after-photo is activity, so it refreshes the expiry (decision 20261010-1855).
   startCleanup(cleanupId: string, at: Date): void {
-    this.#assertActive(at);
+    this.assertActive(at);
     this.#apply(this.#cleanup().start(cleanupId));
-    this.#touch(at.toISOString());
   }
 
   awaitsCleanup(cleanupId: string): boolean {
@@ -196,9 +193,11 @@ export class Site {
   }
 
   // One person's word that it is cleared; the site is cleaned only once 3 people say so (decision 20261010-1855).
+  // Only an accepted photo refreshes the expiry, so rejected junk photos cannot keep a site alive.
   acceptCleanup(photo: AfterPhoto, tally: VoteTally): void {
     this.#assertNotRemoved();
     this.#apply(this.#cleanup().accept(photo, tally));
+    this.#touch(photo.at);
   }
 
   rejectCleanup(cleanupId: string): void {
@@ -212,10 +211,12 @@ export class Site {
 
   // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
   // A removed site shows no photo or after-photo; the stored item keeps the URLs for the audit trail (decision 20261010-1700).
+  // A row from before decision 20261010-1855 shows the expiry its last report sets.
   toFeature(): SiteFeature {
     const shown = publishedPoint(this.#point, this.#props);
     const hidden = { photo_urls: [] as PhotoUrls, cleanup_photo_url: null };
-    const properties = this.isRemoved() ? { ...this.#props, ...hidden } : this.#props;
+    const dated = { ...this.#props, expires_at: expiryOf(this.#props) };
+    const properties = this.isRemoved() ? { ...dated, ...hidden } : dated;
     return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties };
   }
 
@@ -296,7 +297,8 @@ export class Site {
     }
   }
 
-  #assertActive(at: Date): void {
+  // Votes and cleanups need a site that is neither removed nor expired at this time (decision 20261010-1855).
+  assertActive(at: Date): void {
     this.#assertNotRemoved();
     if (isLapsed(this.#props, at)) {
       throw new SiteExpiredError("This site expired after 90 days without a new report, vote or after-photo");

@@ -16,9 +16,12 @@ import { CleanupIntake } from "../../src/services/sites/CleanupIntake.js";
 import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
+import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
+import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
+import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
-import { BASE_LAT, BASE_LON, BASE_URL, fixture, northOf, report } from "./builders.js";
-import { FakeCleanups, FakeQueue, FakeReportStatus, FakeSiteRepository, FakeVoteRepository, RecordingLogger } from "./fakes.js";
+import { BASE_LAT, BASE_LON, BASE_URL, evidence, fixture, northOf, report } from "./builders.js";
+import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, RecordingLogger } from "./fakes.js";
 
 const SITE = "site_jdh_1";
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
@@ -59,7 +62,21 @@ function setup() {
   };
   const vote = (person: string, choice: VoteChoice) => voting.cast(SITE, { deviceToken: `device-${person}`, userId: person, choice, point: NEARBY });
   const props = () => validateSite(sites.feature(SITE)).properties;
-  return { sites, clock, finder, intake, service, photo, vote, props };
+  const merger = new SiteMerger({
+    sites,
+    votes,
+    cells: new NgeohashCells(),
+    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    reports: new FakeReportStatus(),
+    scores: new FakeScoreSeeder(),
+    clock,
+    reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
+    retry,
+  });
+  // A waste photo from another person, taken at the given time, merged by the worker.
+  const wastePhoto = (id: string, capturedAt: string) =>
+    merger.merge(evidence({ id, device: "5b1d3c2e-7f4a-4e6b-8c9d-0a1b2c3d4e5f", lat: northOf(5), capturedAt }));
+  return { sites, clock, finder, intake, service, photo, vote, props, wastePhoto };
 }
 
 describe("cleared by several people (decision 20261010-1855)", () => {
@@ -124,14 +141,10 @@ describe("cleared by several people (decision 20261010-1855)", () => {
   });
 
   it("starts again after a new waste photo: earlier words no longer count", async () => {
-    const { sites, clock, photo, vote, props } = setup();
+    const { clock, photo, vote, props, wastePhoto } = setup();
     await photo("p1");
     await vote("p2", "cleaned");
-    const site = await sites.get(SITE);
-    site?.merge(report({ id: "jdh_1r", device: "5b1d3c2e-7f4a-4e6b-8c9d-0a1b2c3d4e5f", lat: northOf(5), capturedAt: "2026-10-10T07:00:00Z" }));
-    if (site) {
-      await sites.save(site);
-    }
+    await wastePhoto("jdh_1r", "2026-10-10T07:00:00Z");
     expect(props()).toMatchObject({ status: "open", cleanup_status: "none", clearance: { count: 0, needed: 3 } });
     clock.jump(120);
     await vote("p3", "cleaned");
@@ -163,13 +176,9 @@ describe("clearing edge cases (decision 20261010-1855)", () => {
   });
 
   it("says cleared by votes when the only after-photo came before the newest report", async () => {
-    const { sites, clock, photo, vote, props } = setup();
+    const { clock, photo, vote, props, wastePhoto } = setup();
     await photo("p1");
-    const site = await sites.get(SITE);
-    site?.merge(report({ id: "jdh_1r", device: "5b1d3c2e-7f4a-4e6b-8c9d-0a1b2c3d4e5f", lat: northOf(5), capturedAt: "2026-10-10T07:00:00Z" }));
-    if (site) {
-      await sites.save(site);
-    }
+    await wastePhoto("jdh_1r", "2026-10-10T07:00:00Z");
     clock.jump(120);
     for (const person of ["p2", "p3", "p4"]) {
       await vote(person, "cleaned");
@@ -190,5 +199,26 @@ describe("clearing edge cases (decision 20261010-1855)", () => {
     expect(await service.apply(id, results)).toBe("rejected");
     expect(props().status).toBe("expired");
     expect(props().clearance).toBeUndefined();
+  });
+});
+
+describe("a late waste photo and the cleared words (decision 20261010-1855)", () => {
+  it("keeps the words given after the photo was taken, and drops only the older ones", async () => {
+    const { photo, vote, props, wastePhoto } = setup();
+    await photo("p1");
+    await vote("p2", "cleaned");
+    expect(props()).toMatchObject({ clearance: { count: 2, needed: 3 } });
+    // Taken at 06:01:30, after p1's photo was sent (06:01) but before p2's vote (06:02); it arrives later.
+    await wastePhoto("jdh_1r", "2026-10-10T06:01:30Z");
+    expect(props()).toMatchObject({ status: "open", cleanup_status: "pending_confirmation", clearance: { count: 1, needed: 3 } });
+  });
+
+  it("leaves a site cleaned when the waste photo was taken before the people cleared it", async () => {
+    const { photo, props, wastePhoto } = setup();
+    await photo("p1");
+    await photo("p2");
+    await photo("p3");
+    await wastePhoto("jdh_1r", "2026-10-10T05:00:00Z");
+    expect(props()).toMatchObject({ status: "cleaned", report_count: 2, clearance: { count: 3 } });
   });
 });
