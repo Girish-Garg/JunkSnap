@@ -38,6 +38,8 @@ export interface SiteInternals {
   readonly reports: readonly MergedReport[];
   readonly reporterDevices: readonly string[];
   readonly reporterUsers: readonly string[];
+  // One id per person: the user id, else the device token; site.reporters is its length.
+  readonly reporterIds: readonly string[];
   readonly meTooCount: number;
   readonly embeddingKey: string | null;
   readonly pendingCleanupId: string | null;

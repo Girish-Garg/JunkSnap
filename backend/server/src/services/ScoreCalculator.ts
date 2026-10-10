@@ -12,7 +12,7 @@ import { CitizenScore, type CitizenMeasure } from "./CitizenScore.js";
 import { CityScore, type CityMeasure } from "./CityScore.js";
 import { Diagnoser } from "./Diagnoser.js";
 
-export const FORMULA_VERSION = "scores-v1";
+export const FORMULA_VERSION = "scores-v2";
 export const MIN_VERIFIED_REPORTS = 10;
 
 export interface AreaInput {
@@ -33,7 +33,7 @@ export interface ScoreParts {
 type Scored = Pick<WardScores, "scores" | "metrics" | "diagnosis">;
 type Score = WardScores["scores"]["city"];
 
-// scores-v1, docs/decisions/20261010-0238-hem-area-score-formulas.md.
+// scores-v2: docs/decisions/20261010-0238-hem-area-score-formulas.md with bin access from 20261010-1430.
 export class ScoreCalculator {
   readonly #parts: ScoreParts;
 
@@ -72,7 +72,7 @@ export class ScoreCalculator {
   #score(sites: AreaSites, window: DataWindow, facts: AreaFactSheet): Scored {
     const { city, citizen, binAccess, diagnoser } = this.#parts;
     const clearing = city.measure(sites, window);
-    const bins = binAccess.measure(sites, facts.disposalPoints);
+    const bins = binAccess.measure(sites);
     const { redumpedPct, medianDaysToClear, clearedWithin7DaysPct } = clearing;
     const people = citizen.measure({ sites, window, areaKm2: facts.areaKm2, redumpedPct });
     const scores = {
@@ -98,7 +98,8 @@ export class ScoreCalculator {
       no_bin_response_pct: rounded(city.noBinResponsePct, 1),
       new_dumps_per_km2_month: rounded(citizen.newDumpsPerKm2Month, 1),
       share_vacant_plot_drain_roadside_pct: rounded(citizen.shareVacantPlotDrainRoadsidePct, 1),
-      median_distance_to_disposal_m: rounded(bins.medianDistanceToDisposalM, 0),
+      median_distance_to_disposal_m: rounded(bins.medianDistanceToBinM, 0),
+      no_bin_within_3km_pct: rounded(bins.noBinWithin3kmPct, 1),
     };
   }
 
@@ -116,6 +117,7 @@ export class ScoreCalculator {
       new_dumps_per_km2_month: null,
       share_vacant_plot_drain_roadside_pct: null,
       median_distance_to_disposal_m: null,
+      no_bin_within_3km_pct: null,
     };
     return { scores: { city: withheld(), citizen: withheld(), bin_access: withheld() }, metrics, diagnosis: [] };
   }

@@ -20,7 +20,7 @@ const WHAT: Readonly<Record<SiteContext, string>> = {
 
 const REQUEST: Readonly<Record<ReportType, string>> = {
   waste_dump: "We request that the site be cleared and that a bin or collection point be provided nearby.",
-  no_bin: "We request that waste bins be placed here and that regular collection be arranged.",
+  no_bin: "No waste bin or collection point within 3 km of this site. We request that waste bins be placed here and that regular collection be arranged.",
   contaminated_water: "We request that the water and drains here be cleaned and the source of contamination be checked.",
   open_construction: "We request that the debris be covered or removed and that dust control measures be enforced.",
 };

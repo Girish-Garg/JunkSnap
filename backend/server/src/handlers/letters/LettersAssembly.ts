@@ -3,6 +3,7 @@ import { RoutingRepository } from "../../adapters/letters/RoutingRepository.js";
 import { RuleRepository } from "../../adapters/letters/RuleRepository.js";
 import { ConfigError } from "../../domain/errors.js";
 import type { Logger } from "../../ports/Logger.js";
+import { BinSettings } from "../../settings/BinSettings.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
 import type { LetterWriter } from "../../ports/letters/LetterWriter.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
@@ -13,6 +14,7 @@ import { HindiWording } from "../../services/letters/HindiWording.js";
 import { LetterRateLimiter, type LetterCounters } from "../../services/letters/LetterRateLimiter.js";
 import { LetterRouter } from "../../services/letters/LetterRouter.js";
 import { LetterService } from "../../services/letters/LetterService.js";
+import { NoBinEligibility } from "../../services/letters/NoBinEligibility.js";
 import { ProseDrafter } from "../../services/letters/ProseDrafter.js";
 import { QuoteVerifier } from "../../services/letters/QuoteVerifier.js";
 import { TemplateLetter } from "../../services/letters/TemplateLetter.js";
@@ -28,10 +30,12 @@ export interface LettersAdapters {
 export class LettersAssembly {
   readonly #rulesDir: string;
   readonly #logger: Logger;
+  readonly #bins: BinSettings;
 
-  constructor(rulesDir: string, logger: Logger) {
+  constructor(rulesDir: string, logger: Logger, bins: BinSettings = BinSettings.fromEnv({})) {
     this.#rulesDir = rulesDir;
     this.#logger = logger;
+    this.#bins = bins;
   }
 
   async service(adapters: LettersAdapters): Promise<LetterService> {
@@ -49,6 +53,7 @@ export class LettersAssembly {
       limiter: new LetterRateLimiter(adapters.counters),
       drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
+      noBin: new NoBinEligibility(this.#bins.minReporters, this.#bins.radiusM),
     });
   }
 

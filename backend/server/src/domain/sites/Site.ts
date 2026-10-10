@@ -97,6 +97,7 @@ export class Site {
     }
     this.#addReporter(report);
     this.#addEvidence(report);
+    this.#adoptBinMeasure(report);
     if (report.autoVerified) {
       this.#confirmByReport();
       this.#refreshInsights();
@@ -180,6 +181,7 @@ export class Site {
       reports: [...reports, merged],
       reporterDevices: withItem(reporterDevices, report.deviceToken),
       reporterUsers: report.userId === null ? reporterUsers : withItem(reporterUsers, report.userId),
+      reporterIds: withItem(this.#internals.reporterIds, report.userId ?? report.deviceToken),
       meTooCount: meTooCount + (meToo ? 1 : 0),
       embeddingKey: embeddingKey ?? report.embeddingKey,
     };
@@ -224,9 +226,20 @@ export class Site {
     const verified = this.#internals.reports.flatMap((report) =>
       report.verified && report.insights !== null ? [report.insights] : [],
     );
-    const insights = new InsightMerge(verified).merged(this.#props.insights?.near ?? []);
+    const kept = this.#props.insights;
+    const bin = { nearest_bin: kept?.nearest_bin ?? null, no_bin_within_3km: kept?.no_bin_within_3km ?? null };
+    const insights = new InsightMerge(verified).merged(kept?.near ?? [], bin);
     const burning = insights.hazards.some((entry) => entry.hazard === "burning");
     this.#props = { ...this.#props, insights, burning };
+  }
+
+  // A site founded before bins were measured takes the first measured reading of a report merged into it.
+  #adoptBinMeasure(report: MergeableReport): void {
+    const insights = this.#props.insights;
+    if (insights === undefined || typeof insights.no_bin_within_3km === "boolean" || report.bin.no_bin_within_3km === null) {
+      return;
+    }
+    this.#props = { ...this.#props, insights: { ...insights, ...report.bin } };
   }
 
   #reportedBy(voter: Voter): boolean {
@@ -237,7 +250,7 @@ export class Site {
 
   #recount(): void {
     const corroborations = this.#internals.meTooCount + this.#props.votes.confirm;
-    this.#props = { ...this.#props, corroborations };
+    this.#props = { ...this.#props, corroborations, reporters: Math.max(1, this.#internals.reporterIds.length) };
   }
 
   #assertAwaits(cleanupId: string): void {

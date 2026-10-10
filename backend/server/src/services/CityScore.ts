@@ -13,7 +13,7 @@ export interface CityMeasure {
   readonly value: number | null;
 }
 
-// scores-v1 city: how fast and how lastingly the city clears verified sites.
+// scores-v1 and v2 city: how fast and how lastingly the city clears verified sites.
 export class CityScore {
   measure(sites: AreaSites, window: DataWindow): CityMeasure {
     const verified = sites.verified();

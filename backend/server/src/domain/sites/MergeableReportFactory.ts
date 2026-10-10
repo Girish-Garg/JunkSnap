@@ -32,6 +32,7 @@ export class MergeableReportFactory {
       photoUrl: blurredKey === null ? null : this.#media.urlFor(blurredKey),
       insights: verification.insights ?? null,
       near: evidence.near,
+      bin: evidence.bin,
       brands: evidence.brands.map(MergeableReportFactory.#brand),
       location: MergeableReportFactory.#location(location),
       pilot: location.district.id === PILOT_DISTRICT_ID,

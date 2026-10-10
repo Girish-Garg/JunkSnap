@@ -35,7 +35,8 @@ export class SiteTemplate {
       last_reported_at: report.reportedAt,
       cleaned_at: null,
       pilot: report.pilot,
-      insights: new InsightMerge([]).merged([...report.near]),
+      reporters: 1,
+      insights: new InsightMerge([]).merged([...report.near], report.bin),
     };
     return { type: "Feature", geometry: { type: "Point", coordinates: report.point.coordinates() }, properties };
   }
@@ -45,6 +46,7 @@ export class SiteTemplate {
       reports: [],
       reporterDevices: [],
       reporterUsers: [],
+      reporterIds: [],
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,

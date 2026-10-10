@@ -5,6 +5,7 @@ import type {
   ReportUpload,
   VerificationResult,
 } from "../../contracts/index.gen.js";
+import type { BinMeasure } from "../bins/KnownBin.js";
 import type { GeoPoint } from "./GeoPoint.js";
 import type { NearPlace, ReportContext, ReportInsights, ReportType, SiteBrand, SiteLocation } from "./SiteTypes.js";
 
@@ -15,6 +16,7 @@ export interface MergeEvidence {
   readonly verification: VerificationResult;
   readonly location: LocationLookup;
   readonly near: readonly NearPlace[];
+  readonly bin: BinMeasure;
   readonly brands: readonly BrandLabel[];
 }
 
@@ -32,6 +34,7 @@ export interface MergeableReport {
   readonly photoUrl: string | null;
   readonly insights: ReportInsights | null;
   readonly near: readonly NearPlace[];
+  readonly bin: BinMeasure;
   readonly brands: readonly SiteBrand[];
   readonly location: SiteLocation;
   readonly pilot: boolean;

@@ -7,7 +7,6 @@ import { WardRecordAreaFacts } from "../../src/adapters/WardRecordAreaFacts.js";
 import type { WardRecord } from "../../src/contracts/index.gen.js";
 import { AreaKey } from "../../src/domain/AreaKey.js";
 import { InternalDataError } from "../../src/domain/errors.js";
-import { GeoPoint } from "../../src/domain/GeoPoint.js";
 import { ScoresSettings } from "../../src/settings/ScoresSettings.js";
 import { readContract } from "./siteBuilder.js";
 
@@ -22,7 +21,7 @@ const FIXTURE = readContract<WardRecord>("fixtures/ward_record.jdh-1.json");
 const { source_url, fetched_at, page_sha256 } = readContract<{ ward_number: Provenance }>("fixtures/ward_record.jdh-1.json").ward_number;
 const PROVENANCE: Provenance = { source_url, fetched_at, page_sha256 };
 const LAYER = { ...PROVENANCE, count: 1, features: [{ ref: "osm:node/1", coords: [[26.26, 73.0]] }] };
-const NOTHING = { areaKm2: null, disposalPoints: [], placesMapped: false };
+const NOTHING = { areaKm2: null, placesMapped: false };
 
 function reviewedWard(number: number, extra: Partial<WardRecord> = {}): WardRecord {
   const id = `jodhpur-mc-w${number}`;
@@ -78,7 +77,7 @@ describe("WardRecordAreaFacts", () => {
 
   it("joins a ward area on its local body's city and ward number for km² and disposal points", async () => {
     const facts = await (await load(assets)).factsFor(wardArea(37), ["jodhpur-mc"]);
-    expect(facts).toEqual({ areaKm2: 2.5, disposalPoints: [new GeoPoint(26.2589, 73.0071)], placesMapped: true });
+    expect(facts).toEqual({ areaKm2: 2.5, placesMapped: true });
     expect((await load(assets)).skippedRecords()).toEqual([]);
   });
 

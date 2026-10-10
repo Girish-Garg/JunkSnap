@@ -20,7 +20,7 @@ export interface CitizenMeasure {
   readonly raw: number | null;
 }
 
-// scores-v1 citizen: new dumping per km² and month, dumping on open ground, re-dumping.
+// scores-v1 and v2 citizen: new dumping per km² and month, dumping on open ground, re-dumping.
 export class CitizenScore {
   measure({ sites, window, areaKm2, redumpedPct }: CitizenInput): CitizenMeasure {
     const dumps = sites.verified().filter((site) => site.isType("waste_dump"));

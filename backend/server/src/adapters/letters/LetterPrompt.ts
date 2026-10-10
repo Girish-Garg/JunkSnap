@@ -5,7 +5,7 @@ const LANGUAGES: Readonly<Record<Language, string>> = { en: "English", hi: "Hind
 
 const REQUEST: Readonly<Record<ReportType, string>> = {
   waste_dump: "clear the site and provide a bin or collection point nearby",
-  no_bin: "place waste bins here and arrange regular collection",
+  no_bin: "state that no waste bin or collection point lies within 3 km of this site, then ask to place waste bins here and arrange regular collection",
   contaminated_water: "clean the water and drains here and check the source of contamination",
   open_construction: "cover or remove the debris and enforce dust control measures",
 };

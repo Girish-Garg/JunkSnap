@@ -108,6 +108,61 @@ export interface LetterDraft {
   model: string;
   version: string;
   created_at: string;
+  /**
+   * What the letter rests on, for the app to show and print with it: counts, dates, blurred photo links and the measured insights. Copied from the site when the draft is made.
+   */
+  evidence: {
+    report_count: number;
+    /**
+     * Distinct people who reported the site; null on sites from before it was counted.
+     */
+    reporters: number | null;
+    verified_count: number;
+    first_reported_at: string;
+    last_reported_at: string;
+    /**
+     * Blurred public copies only.
+     *
+     * @maxItems 6
+     */
+    photo_urls:
+      | []
+      | [string]
+      | [string, string]
+      | [string, string, string]
+      | [string, string, string, string]
+      | [string, string, string, string, string]
+      | [string, string, string, string, string, string];
+    /**
+     * The site's measured insights used in the letter; null when the site has none.
+     */
+    insights: null | {
+      reports: number;
+      composition: {
+        material: string;
+        share_pct: number;
+        reports: number;
+      }[];
+      size_class: "small" | "medium" | "large" | null;
+      hazards: string[];
+      near: {
+        kind: "school" | "hospital" | "water" | "drain";
+        distance_m: number;
+      }[];
+    };
+    /**
+     * The site's nearest known bin or collection point, given for waste_dump and no_bin sites; null otherwise or when none is known.
+     */
+    nearest_bin: null | {
+      distance_m: number;
+      ref: string;
+      source_url: string;
+    };
+    /**
+     * As site.insights.no_bin_within_3km, for waste_dump and no_bin sites; null otherwise.
+     */
+    no_bin_within_3km: boolean | null;
+  };
 }
 
 export const letterDraftSchema = {
@@ -133,7 +188,8 @@ export const letterDraftSchema = {
     "provider",
     "model",
     "version",
-    "created_at"
+    "created_at",
+    "evidence"
   ],
   "properties": {
     "letter_id": {
@@ -322,6 +378,184 @@ export const letterDraftSchema = {
     "created_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_count",
+        "reporters",
+        "verified_count",
+        "first_reported_at",
+        "last_reported_at",
+        "photo_urls",
+        "insights",
+        "nearest_bin",
+        "no_bin_within_3km"
+      ],
+      "description": "What the letter rests on, for the app to show and print with it: counts, dates, blurred photo links and the measured insights. Copied from the site when the draft is made.",
+      "properties": {
+        "report_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reporters": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "Distinct people who reported the site; null on sites from before it was counted."
+        },
+        "verified_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "first_reported_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_reported_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "photo_urls": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "Blurred public copies only."
+        },
+        "insights": {
+          "description": "The site's measured insights used in the letter; null when the site has none.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "reports",
+                "composition",
+                "size_class",
+                "hazards",
+                "near"
+              ],
+              "properties": {
+                "reports": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "composition": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "material",
+                      "share_pct",
+                      "reports"
+                    ],
+                    "properties": {
+                      "material": {
+                        "type": "string"
+                      },
+                      "share_pct": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "reports": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                },
+                "size_class": {
+                  "enum": [
+                    "small",
+                    "medium",
+                    "large",
+                    null
+                  ]
+                },
+                "hazards": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "near": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "kind",
+                      "distance_m"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "school",
+                          "hospital",
+                          "water",
+                          "drain"
+                        ]
+                      },
+                      "distance_m": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "nearest_bin": {
+          "description": "The site's nearest known bin or collection point, given for waste_dump and no_bin sites; null otherwise or when none is known.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "distance_m",
+                "ref",
+                "source_url"
+              ],
+              "properties": {
+                "distance_m": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "source_url": {
+                  "type": "string",
+                  "pattern": "^https?://"
+                }
+              }
+            }
+          ]
+        },
+        "no_bin_within_3km": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "As site.insights.no_bin_within_3km, for waste_dump and no_bin sites; null otherwise."
+        }
+      }
     }
   }
 };

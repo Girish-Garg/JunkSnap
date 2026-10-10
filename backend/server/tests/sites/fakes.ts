@@ -91,6 +91,7 @@ export class FakeSiteRepository implements SiteRepository {
       reports: [],
       reporterDevices: [],
       reporterUsers: [],
+      reporterIds: [],
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,

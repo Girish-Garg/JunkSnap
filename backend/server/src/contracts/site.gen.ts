@@ -30,6 +30,9 @@ export interface Site {
      * Kept in properties so MapLibre can promoteId it.
      */
     site_id: string;
+    /**
+     * no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430).
+     */
     report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
     context:
       | "vacant_plot"
@@ -143,6 +146,10 @@ export interface Site {
      * True inside the Jodhpur pilot area.
      */
     pilot: boolean;
+    /**
+     * Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it.
+     */
+    reporters?: number;
     /**
      * Merged insights (decision 20261010-0202) of the site's verified reports only, the same reports burning comes from. Recomputed whenever a report on the site becomes verified: by the worker on merge, or by the api when votes settle the site. Not in required so v1 producers stay valid; the worker always writes it.
      */
@@ -876,6 +883,21 @@ export interface Site {
         ref: string;
         source: LayerSource;
       }[];
+      /**
+       * The nearest known bin or collection point (OpenStreetMap waste baskets, waste disposal, recycling and transfer stations from the crawler's disposal map layer, and reviewed ward-record disposal points), measured from the site when it was founded. Null when none is known for the site's town. Not in required so older rows stay valid; the worker always writes it.
+       */
+      nearest_bin?: null | {
+        distance_m: number;
+        /**
+         * The bin's id at the source, for example osm:node/123.
+         */
+        ref: string;
+        source: LayerSource;
+      };
+      /**
+       * True when no known bin or collection point lies within BIN_RADIUS_M (3000 m by default) of the site; null when the site's town has no crawled bin data, so nothing can be said. Not in required so older rows stay valid; the worker always writes it.
+       */
+      no_bin_within_3km?: boolean | null;
     };
   };
 }
@@ -990,7 +1012,8 @@ export const siteSchema = {
             "no_bin",
             "contaminated_water",
             "open_construction"
-          ]
+          ],
+          "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)."
         },
         "context": {
           "enum": [
@@ -1255,6 +1278,11 @@ export const siteSchema = {
           "type": "boolean",
           "description": "True inside the Jodhpur pilot area."
         },
+        "reporters": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it."
+        },
         "insights": {
           "type": "object",
           "additionalProperties": false,
@@ -1418,6 +1446,44 @@ export const siteSchema = {
                   }
                 }
               }
+            },
+            "nearest_bin": {
+              "description": "The nearest known bin or collection point (OpenStreetMap waste baskets, waste disposal, recycling and transfer stations from the crawler's disposal map layer, and reviewed ward-record disposal points), measured from the site when it was founded. Null when none is known for the site's town. Not in required so older rows stay valid; the worker always writes it.",
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "distance_m",
+                    "ref",
+                    "source"
+                  ],
+                  "properties": {
+                    "distance_m": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "ref": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "The bin's id at the source, for example osm:node/123."
+                    },
+                    "source": {
+                      "$ref": "#/$defs/layer_source"
+                    }
+                  }
+                }
+              ]
+            },
+            "no_bin_within_3km": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "True when no known bin or collection point lies within BIN_RADIUS_M (3000 m by default) of the site; null when the site's town has no crawled bin data, so nothing can be said. Not in required so older rows stay valid; the worker always writes it."
             }
           }
         }

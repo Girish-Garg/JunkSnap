@@ -5,7 +5,7 @@ import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { CitizenScore } from "../../src/services/CitizenScore.js";
 import { Diagnoser } from "../../src/services/Diagnoser.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
-import { HERE, NO_FACTS, NOW, northOf, site, WARD } from "./siteBuilder.js";
+import { binned, NO_FACTS, NOW, site, WARD } from "./siteBuilder.js";
 
 const calculator = ScoreCalculator.standard();
 
@@ -13,22 +13,23 @@ function calculate(sites: readonly AreaSite[], facts: AreaFactSheet = NO_FACTS) 
   return calculator.calculate({ area: WARD, sites, facts, now: NOW });
 }
 
-// 10 verified reports over 4 verified sites; the decision file's worked example.
-function workedExample(): AreaSite[] {
+// 10 verified reports over 4 verified sites; nearest bins 300, 300, 3600 and 900 m when measured.
+function workedExample(measured = true): AreaSite[] {
+  const bin = (distance: number) => (measured ? binned(distance) : null);
   return [
-    site({ verifiedCount: 4, firstReportedAt: "2026-10-01T00:00:00Z", cleanedAt: "2026-10-03T00:00:00Z", status: "cleaned" }),
-    site({ verifiedCount: 3, context: "other", firstReportedAt: "2026-10-05T00:00:00Z", cleanedAt: "2026-10-06T00:00:00Z", status: "reopened" }),
-    site({ verifiedCount: 2, reportType: "no_bin", context: "no_bin", firstReportedAt: "2026-10-15T00:00:00Z" }),
-    site({ verifiedCount: 1, context: "roadside", firstReportedAt: "2026-10-18T00:00:00Z" }),
+    site({ verifiedCount: 4, firstReportedAt: "2026-10-01T00:00:00Z", cleanedAt: "2026-10-03T00:00:00Z", status: "cleaned", insights: bin(300) }),
+    site({ verifiedCount: 3, context: "other", firstReportedAt: "2026-10-05T00:00:00Z", cleanedAt: "2026-10-06T00:00:00Z", status: "reopened", insights: bin(300) }),
+    site({ verifiedCount: 2, reportType: "no_bin", context: "no_bin", firstReportedAt: "2026-10-15T00:00:00Z", insights: bin(3600) }),
+    site({ verifiedCount: 1, context: "roadside", firstReportedAt: "2026-10-18T00:00:00Z", insights: bin(900) }),
   ];
 }
 
-const FULL_FACTS: AreaFactSheet = { areaKm2: 2, disposalPoints: [northOf(300), northOf(5_000)], placesMapped: true };
+const FULL_FACTS: AreaFactSheet = { areaKm2: 2, placesMapped: true };
 
 describe("ScoreCalculator guardrail", () => {
   it("withholds every score, metric and diagnosis at 9 verified reports but keeps the counts", () => {
     const row = calculate([site({ verifiedCount: 5 }), site({ verifiedCount: 4, reportType: "no_bin", context: "no_pickup" })]);
-    expect(row.counts).toEqual({ verified_reports: 9, no_bin_reports: 4, sites: 2, open_sites: 2, cleaned_sites: 0, reopened_sites: 0 });
+    expect(row.counts).toEqual({ verified_reports: 9, no_bin_reports: 4, sites: 2, open_sites: 2, cleaned_sites: 0, reopened_sites: 0, sites_without_bin_within_3km: 0 });
     for (const score of Object.values(row.scores)) {
       expect(score).toEqual({ value: null, reason: "too_few_reports" });
     }
@@ -50,7 +51,7 @@ describe("ScoreCalculator guardrail", () => {
       site({ verifiedCount: 0, verification: "community_check", status: "reopened" }),
       site({ verifiedCount: 7, verification: "rejected" }),
     ]);
-    expect(row.counts).toEqual({ verified_reports: 3, no_bin_reports: 0, sites: 2, open_sites: 0, cleaned_sites: 1, reopened_sites: 1 });
+    expect(row.counts).toEqual({ verified_reports: 3, no_bin_reports: 0, sites: 2, open_sites: 0, cleaned_sites: 1, reopened_sites: 1, sites_without_bin_within_3km: 0 });
   });
 });
 
@@ -63,7 +64,7 @@ describe("ScoreCalculator window, pilot and version", () => {
     ]);
     expect(row.data_window).toEqual({ from: "2026-10-08T05:00:00Z", to: "2026-10-20T00:00:00Z" });
     expect(row.computed_at).toBe("2026-10-20T00:00:00Z");
-    expect(row.formula_version).toBe("scores-v1");
+    expect(row.formula_version).toBe("scores-v2");
   });
 
   it("flags the area as pilot when any of its sites is", () => {
@@ -77,7 +78,7 @@ describe("ScoreCalculator window, pilot and version", () => {
   });
 });
 
-describe("ScoreCalculator scores-v1 formulas", () => {
+describe("ScoreCalculator scores-v2 formulas", () => {
   it("computes the city score from clearing speed, 7-day clearing, re-dumping and no-bin response", () => {
     const row = calculate(workedExample());
     expect(row.metrics).toMatchObject({
@@ -90,22 +91,24 @@ describe("ScoreCalculator scores-v1 formulas", () => {
     expect(row.scores.city).toEqual({ value: 58, reason: null });
   });
 
-  it("computes bin access and the bin-adjusted citizen score from the ward facts", () => {
+  it("measures bin access from the sites' nearest known bins, never from no_bin report counts", () => {
     const row = calculate(workedExample(), FULL_FACTS);
     expect(row.metrics).toMatchObject({
       new_dumps_per_km2_month: 2.4,
       share_vacant_plot_drain_roadside_pct: 62.5,
-      median_distance_to_disposal_m: 300,
+      median_distance_to_disposal_m: 600,
+      no_bin_within_3km_pct: 25,
     });
-    // mean(100 - 20, 100 - 300 / 10) = 75
-    expect(row.scores.bin_access).toEqual({ value: 75, reason: null });
-    // raw = mean(100 - 5 x 3 / 2 / (19 / 30), 100 - 62.5, 100 - 50) = 58.55; adjusted by (100 - 75) / 200
-    expect(row.scores.citizen).toEqual({ value: 64, reason: null });
+    expect(row.counts.sites_without_bin_within_3km).toBe(1);
+    // mean(100 - 25, 100 - 600 / 30) = 77.5
+    expect(row.scores.bin_access).toEqual({ value: 78, reason: null });
+    // raw = mean(100 - 5 x 3 / 2 / (19 / 30), 100 - 62.5, 100 - 50) = 58.55; adjusted by (100 - 77.5) / 200
+    expect(row.scores.citizen).toEqual({ value: 63, reason: null });
     expect(row.diagnosis).toEqual(["repeat_spot"]);
   });
 
-  it("gives no_data for citizen without km² and for bin access without disposal points", () => {
-    const row = calculate(workedExample());
+  it("gives no_data for citizen without km² and for bin access when no site was measured", () => {
+    const row = calculate(workedExample(false));
     expect(row.scores.citizen).toEqual({ value: null, reason: "no_data" });
     expect(row.scores.bin_access).toEqual({ value: null, reason: "no_data" });
     expect(row.metrics.new_dumps_per_km2_month).toBeNull();
@@ -114,7 +117,7 @@ describe("ScoreCalculator scores-v1 formulas", () => {
   });
 
   it("leaves citizen unadjusted when only bin access is missing", () => {
-    const row = calculate(workedExample(), { ...FULL_FACTS, disposalPoints: [] });
+    const row = calculate(workedExample(false), FULL_FACTS);
     expect(row.scores.citizen).toEqual({ value: 59, reason: null });
   });
 
@@ -125,10 +128,16 @@ describe("ScoreCalculator scores-v1 formulas", () => {
     expect(calculate(old).metrics).toMatchObject({ cleared_within_7_days_pct: 0, median_days_to_clear: 8 });
   });
 
-  it("measures distance from each verified site to its nearest disposal point", () => {
-    const sites = [site({ verifiedCount: 5, point: HERE }), site({ verifiedCount: 5, point: northOf(1_300) })];
-    const row = calculate(sites, { ...FULL_FACTS, disposalPoints: [northOf(1_000)] });
-    expect(row.metrics.median_distance_to_disposal_m).toBe(650);
+  it("leaves unmeasured sites out of the no-bin share and counts a site with no bin in the searched area", () => {
+    const sites = [
+      site({ verifiedCount: 4, insights: binned(1000) }),
+      site({ verifiedCount: 4, insights: binned(null) }),
+      site({ verifiedCount: 4 }),
+      site({ verifiedCount: 4, verification: "community_check", insights: binned(null) }),
+    ];
+    const row = calculate(sites);
+    expect(row.metrics).toMatchObject({ no_bin_within_3km_pct: 50, median_distance_to_disposal_m: 1000 });
+    expect(row.counts.sites_without_bin_within_3km).toBe(1);
   });
 });
 

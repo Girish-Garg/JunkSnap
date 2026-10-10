@@ -31,7 +31,7 @@
       "required": ["site_id", "report_type", "context", "status", "verification", "report_count", "verified_count", "corroborations", "votes", "photo_urls", "cleanup_status", "cleanup_photo_url", "burning", "location", "brands", "first_reported_at", "last_reported_at", "cleaned_at", "pilot"],
       "properties": {
         "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
-        "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
+        "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"], "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)." },
         "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"] },
         "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
         "verification": {
@@ -126,6 +126,7 @@
         "last_reported_at": { "type": "string", "format": "date-time" },
         "cleaned_at": { "type": ["string", "null"], "format": "date-time", "description": "Last confirmed cleanup; null if never cleaned." },
         "pilot": { "type": "boolean", "description": "True inside the Jodhpur pilot area." },
+        "reporters": { "type": "integer", "minimum": 1, "description": "Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it." },
         "insights": {
           "type": "object",
           "additionalProperties": false,
@@ -194,6 +195,26 @@
                   "source": { "$ref": "#/$defs/layer_source" }
                 }
               }
+            },
+            "nearest_bin": {
+              "description": "The nearest known bin or collection point (OpenStreetMap waste baskets, waste disposal, recycling and transfer stations from the crawler's disposal map layer, and reviewed ward-record disposal points), measured from the site when it was founded. Null when none is known for the site's town. Not in required so older rows stay valid; the worker always writes it.",
+              "anyOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["distance_m", "ref", "source"],
+                  "properties": {
+                    "distance_m": { "type": "number", "minimum": 0 },
+                    "ref": { "type": "string", "minLength": 1, "description": "The bin's id at the source, for example osm:node/123." },
+                    "source": { "$ref": "#/$defs/layer_source" }
+                  }
+                }
+              ]
+            },
+            "no_bin_within_3km": {
+              "type": ["boolean", "null"],
+              "description": "True when no known bin or collection point lies within BIN_RADIUS_M (3000 m by default) of the site; null when the site's town has no crawled bin data, so nothing can be said. Not in required so older rows stay valid; the worker always writes it."
             }
           }
         }

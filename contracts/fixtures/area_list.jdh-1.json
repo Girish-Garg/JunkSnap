@@ -16,7 +16,8 @@
         "sites": 6,
         "open_sites": 5,
         "cleaned_sites": 1,
-        "reopened_sites": 0
+        "reopened_sites": 0,
+        "sites_without_bin_within_3km": 0
       },
       "min_verified_reports": 10,
       "scores": {
@@ -40,12 +41,13 @@
         "no_bin_response_pct": 0,
         "new_dumps_per_km2_month": 9.4,
         "share_vacant_plot_drain_roadside_pct": 72.7,
-        "median_distance_to_disposal_m": 640
+        "median_distance_to_disposal_m": 640,
+        "no_bin_within_3km_pct": 0
       },
       "diagnosis": [
         "infrastructure_gap"
       ],
-      "formula_version": "scores-v1",
+      "formula_version": "scores-v2",
       "pilot": true,
       "data_window": {
         "from": "2026-10-08T02:30:00Z",
@@ -172,7 +174,8 @@
         "sites": 3,
         "open_sites": 3,
         "cleaned_sites": 0,
-        "reopened_sites": 0
+        "reopened_sites": 0,
+        "sites_without_bin_within_3km": 0
       },
       "min_verified_reports": 10,
       "scores": {
@@ -196,10 +199,11 @@
         "no_bin_response_pct": null,
         "new_dumps_per_km2_month": null,
         "share_vacant_plot_drain_roadside_pct": null,
-        "median_distance_to_disposal_m": null
+        "median_distance_to_disposal_m": null,
+        "no_bin_within_3km_pct": null
       },
       "diagnosis": [],
-      "formula_version": "scores-v1",
+      "formula_version": "scores-v2",
       "pilot": true,
       "data_window": {
         "from": "2026-10-09T05:10:00Z",

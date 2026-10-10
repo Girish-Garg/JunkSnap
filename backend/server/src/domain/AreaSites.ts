@@ -60,6 +60,7 @@ export class AreaSites {
       open_sites: counted.filter((site) => site.hasStatus("open")).length,
       cleaned_sites: counted.filter((site) => site.hasStatus("cleaned")).length,
       reopened_sites: counted.filter((site) => site.hasStatus("reopened")).length,
+      sites_without_bin_within_3km: this.verified().filter((site) => site.noBinNearby()).length,
     };
   }
 }

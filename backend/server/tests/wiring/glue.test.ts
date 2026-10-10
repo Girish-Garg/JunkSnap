@@ -11,6 +11,8 @@ import { Site } from "../../src/domain/sites/Site.js";
 import type { CleanupOutcome } from "../../src/domain/sites/Cleanup.js";
 import type { BrandLabeller } from "../../src/services/brands/BrandLabeller.js";
 import type { ModerationService } from "../../src/services/moderation/ModerationService.js";
+import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
+import { BinLocator } from "../../src/services/BinLocator.js";
 import { NearPlacesFinder } from "../../src/services/NearPlacesFinder.js";
 import type { CleanupService } from "../../src/services/sites/CleanupService.js";
 import type { MergeResult, SiteMerger } from "../../src/services/sites/SiteMerger.js";
@@ -131,15 +133,18 @@ describe("SiteReportMerger", () => {
   function merger(result: MergeResult) {
     const seen: MergeEvidence[] = [];
     const sites = { merge: async (evidence: MergeEvidence) => (seen.push(evidence), result) };
-    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer])) };
+    const bin = { point: new GeoPoint(26.2702, 73.0035), ref: "osm:node/2", source: layer.source };
+    const bins = new BinLocator({ bins: [bin], mappedTowns: ["jodhpur"] }, 3000);
+    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer]), bins) };
   }
 
-  it("hands over the evidence with nearby places and follows the site's status", async () => {
+  it("hands over the evidence with nearby places and the nearest bin, and follows the site's status", async () => {
     const { seen, subject } = merger({ siteId: "site_jdh_1", outcome: "founded", reportStatus: "verified" });
     const record = { ...Report.receive(upload(), RECEIVED).toRecord(), moderation_result: moderation(), verification_result: verification(), location: location() };
     expect(await subject.merge(record)).toEqual({ siteId: "site_jdh_1", verification: "verified" });
     const near = [{ kind: "school", ref: "osm:node/1", distance_m: 20 }];
     expect(seen[0]).toMatchObject({ upload: { upload_id: "upl_jdh_1" }, location: location(), brands: [], near });
+    expect(seen[0]?.bin).toMatchObject({ nearest_bin: { ref: "osm:node/2" }, no_bin_within_3km: false });
   });
 
   it("refuses a report that skipped moderation, verification or location", async () => {

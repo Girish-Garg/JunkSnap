@@ -1,6 +1,7 @@
 import type { LetterDraft } from "../../contracts/index.gen.js";
 import { InternalDataError, NotFoundError } from "../../domain/errors.js";
 import { NotVerifiedError } from "../../domain/letters/errors.js";
+import { LetterEvidence } from "../../domain/letters/LetterEvidence.js";
 import { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { Rule } from "../../domain/letters/Rule.js";
 import type { Addressees, Channel, Citation, Language, Requester } from "../../domain/letters/types.js";
@@ -10,6 +11,7 @@ import type { SiteReader } from "../../ports/letters/SiteReader.js";
 import type { ClausePicker } from "./ClausePicker.js";
 import type { LetterRateLimiter } from "./LetterRateLimiter.js";
 import type { LetterRouter } from "./LetterRouter.js";
+import type { NoBinEligibility } from "./NoBinEligibility.js";
 import type { DraftedProse, ProseDrafter } from "./ProseDrafter.js";
 import type { QuoteVerifier } from "./QuoteVerifier.js";
 
@@ -28,6 +30,7 @@ export interface LetterServiceParts {
   readonly limiter: LetterRateLimiter;
   readonly drafter: ProseDrafter;
   readonly stamp: LetterStamp;
+  readonly noBin: NoBinEligibility;
 }
 
 type NonEmpty<T> = [T, ...T[]];
@@ -61,6 +64,7 @@ export class LetterService {
     if (!site.verified) {
       throw new NotVerifiedError("This site is not verified yet, so no letter can be drafted for it.");
     }
+    this.#parts.noBin.check(site);
     return site;
   }
 
@@ -88,6 +92,7 @@ export class LetterService {
       template_fallback: prose.templateFallback,
       ...prose.provenance,
       created_at: now.toISOString().replace(/\.\d{3}Z$/, "Z"),
+      evidence: new LetterEvidence(site).section(),
     };
   }
 

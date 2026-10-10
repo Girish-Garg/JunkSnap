@@ -134,6 +134,19 @@ export class AreaSite {
     return this.#props.burning || (this.#props.insights?.hazards.length ?? 0) > 0;
   }
 
+  // From site.insights, measured when the site was founded; null when not measured.
+  nearestBinM(): number | null {
+    return this.#props.insights?.nearest_bin?.distance_m ?? null;
+  }
+
+  binMeasured(): boolean {
+    return typeof this.#props.insights?.no_bin_within_3km === "boolean";
+  }
+
+  noBinNearby(): boolean {
+    return this.#props.insights?.no_bin_within_3km === true;
+  }
+
   hasNearbyPlaces(): boolean {
     return (this.#props.insights?.near.length ?? 0) > 0;
   }
