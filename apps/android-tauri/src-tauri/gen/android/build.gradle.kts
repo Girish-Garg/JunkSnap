@@ -16,6 +16,15 @@ allprojects {
     }
 }
 
+// JunkSnap: tauri-plugin-sharekit 0.3.1 compiles against API 35, but tauri-android needs 36+
+// (the release AAR metadata check fails otherwise). Compile every Android library against 36.
+subprojects {
+    pluginManager.withPlugin("com.android.library") {
+        extensions.getByType(com.android.build.api.variant.LibraryAndroidComponentsExtension::class.java)
+            .finalizeDsl { it.compileSdk = 36 }
+    }
+}
+
 tasks.register("clean").configure {
     delete("build")
 }
