@@ -191,7 +191,9 @@ a {
 .badge--cleaned,
 .badge--alert,
 .badge--progress-good,
-.badge--progress-alert {
+.badge--progress-alert,
+.badge--progress-wait,
+.badge--progress-muted {
   padding-left: var(--s-2);
 }
 
@@ -200,7 +202,9 @@ a {
 .badge--cleaned::before,
 .badge--alert::before,
 .badge--progress-good::before,
-.badge--progress-alert::before {
+.badge--progress-alert::before,
+.badge--progress-wait::before,
+.badge--progress-muted::before {
   content: '';
   width: 6px;
   height: 6px;
@@ -224,6 +228,18 @@ a {
 .badge--progress-good {
   background: var(--status-cleaned-tint);
   color: var(--status-cleaned);
+}
+
+/* Waiting on neighbours or the checks: the amber of "reopened", with its dot and word. */
+.badge--progress-wait {
+  background: var(--status-reopened-tint);
+  color: var(--status-reopened);
+}
+
+/* Withdrawn: settled and quiet. */
+.badge--progress-muted {
+  background: var(--status-check-tint);
+  color: var(--status-check);
 }
 
 .notice {

@@ -31,7 +31,9 @@ function scan(reportIds: readonly string[]): QueuedScan {
 function rig(frames: Record<string, ReportStatusView | null> = {}, answers: Record<string, WithdrawalResult | ApiError> = {}) {
   const removed: string[] = [];
   const withdrawn: string[] = [];
+  const dismissed: string[] = [];
   const remover = new ActivityRemover({
+    dismissed: { add: async (id) => void dismissed.push(id) },
     reports: { remove: async (id) => void removed.push(id) },
     scans: { remove: async (id) => void removed.push(id) },
     statuses: {
@@ -50,7 +52,7 @@ function rig(frames: Record<string, ReportStatusView | null> = {}, answers: Reco
       },
     },
   });
-  return { remover, removed, withdrawn };
+  return { remover, removed, withdrawn, dismissed };
 }
 
 describe('ActivityRemover for a photo row', () => {

@@ -1,3 +1,4 @@
+import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, NoBinUpload, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import { HttpTransport } from './HttpTransport';
@@ -21,6 +22,11 @@ export class HttpReportApi implements ReportApi {
   /** The bearer token opens the user's report; the device token alone opens only an old guest report. */
   status(reportId: string): Promise<ReportStatusView> {
     return this.#http.json<ReportStatusView>(`/reports/${encodeURIComponent(reportId)}`, {});
+  }
+
+  mine(cursor: string | null): Promise<ReportListPage> {
+    const query = new URLSearchParams({ limit: '50', ...(cursor === null ? {} : { cursor }) });
+    return this.#http.json<ReportListPage>(`/me/reports?${query.toString()}`, {});
   }
 
   putPhoto(upload: PresignResponse, photo: ArrayBuffer): Promise<void> {

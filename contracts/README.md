@@ -28,6 +28,8 @@ Contracts v1.12 (decision 20261010-1855-hem-cleaned-quorum-expiry) adds the `cle
 
 Contracts v1.13 (decision 20261011-0900-hem-blur-fallback, issue 110) adds the optional `moderation_result.blur.regions` (every region blurred, by kind, including the dark-photo `band`) and `blur.low_light`. Blurred public copies carry the S3 object metadata `blur-policy` (no key change). Additive only; `moderation_result.jdh-1` shows the new fields.
 
+Contracts v1.14 (decision 20261011-0254-hem-my-reports-listing) adds the signed-in route `GET /me/reports?limit=&cursor=` and its response schema `report_list`: the user's own Snap reports (photos and no-bin, no scan frames), newest first, read from the existing `reports` `by-user` GSI. No existing shape, table or key changes. Scans are not listed yet: the `scans` table has no GSI on `user_id`.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -52,6 +54,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `site_note` | api (`POST /sites/{id}/notes`) | frontend site sheet |
 | `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location; read at worker start), scores (area, population, disposal points; read every run); per city each keeps the file with more `reviewed` records, then one with `map_layers` over one without, then the newer `generated_at` |
 | `area_crawl` | api, from the `crawls` row (`not_started` without one) | frontend area pages and Areas list (the crawl banner) |
+| `report_list` | api (`GET /me/reports`): the user's own reports, each as `GET /reports/{id}` shows it | frontend Activity (restores it after sign-in and on a new phone) |
 
 `data/wards/<city>.json` also holds `map_layers`: city-wide OpenStreetMap layers (`disposal`, `school`, `hospital`, `water`, `drain`), each `{kind, count, source_url, fetched_at, page_sha256, features: [{ref, coords}]}`, where `ref` is `osm:<type>/<id>` and `coords` are `[lat, lon]` pairs (one for a place, the vertices for a line or area). The worker finds `site.insights.near` in these layers, so it works where a site has no ward. The city file and its layers have no schema yet (W1, issue 9).
 
@@ -77,7 +80,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 - One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
 - Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /areas/district/{id}/crawl`, `GET /share/sites/{id}`, `GET /share/areas/{kind}/{id}`, `GET /healthz`.
-- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `DELETE /sites/{id}/reports/mine`, `POST /sites/{id}/letters`, `POST /sites/{id}/notes`, `POST /areas/{kind}/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
+- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `DELETE /sites/{id}/reports/mine`, `POST /sites/{id}/letters`, `POST /sites/{id}/notes`, `POST /areas/{kind}/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /me/reports`, `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
 - `user_id` is the token's `sub`, opaque. The api writes it on reports, scans, votes and cleanups, and ignores any `user_id` in a request body. These routes still send `device_token`.
 - `GET /reports/{id}` and `GET /scans/{id}` return 404 unless the token's user owns the item. A guest report made before accounts (no `user_id`) opens with its `X-Device-Token`.
@@ -109,6 +112,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /uploads/presign` | api | presign request | 200 presign response | URL valid for `PRESIGN_TTL_SECONDS` |
 | `POST /reports` | api | `report_upload` | 202 `{"report_id", "status": "queued"}` | `capture_mode: snap` from the phone; stores `received_at`, `user_id` and, with a `target`, `target_distance_m`; sends an SQS message; 422 `target_too_far` for a target over 500 m from `gps` (see Long-range marking) |
 | `GET /reports/{id}` | api | `Authorization`, or `X-Device-Token` for a guest report | 200 report status | 404 unless the user owns it (or the device made a guest report) |
+| `GET /me/reports?limit=&cursor=` | api | `Authorization` | 200 `report_list` | signed in; only rows whose `user_id` is the token's `sub` (`reports` `by-user`, newest `received_at` first, `capture_mode: snap` only); `limit` 1 to 50, default 20; `cursor` is the opaque `next_cursor` of the page before and opens only the user it was issued to, else 400 `bad_request`; guest reports made before accounts never appear |
 | `POST /scans/presign` | api | scan presign request | 200 scan presign response | 400 `scan_too_large` over the scan video limit |
 | `POST /scans` | api | `scan_session` | 202 `{"scan_id", "status": "queued"}` | stores `received_at` and `user_id`, sends `kind: scan` to SQS |
 | `GET /scans/{id}` | api | `Authorization` | 200 scan status | 404 unless the user owns the scan |
