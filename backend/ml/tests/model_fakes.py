@@ -59,3 +59,19 @@ def meta_model() -> MetaModel:
         "judged": {"signals": [*signals, "vision_judge"], "weights": [1.0, 1.0, 1.0, 3.0],
                    "bias": 0.0},
     })
+
+
+META_SIGNALS = ["rekognition_labels", "yolo", "embedding_classifier"]
+
+
+def meta_v2() -> MetaModel:
+    """meta-v2's shape and weights (docs/ml/eval.md); like the published file, no report_types."""
+    return MetaModel.from_json({
+        "version": "meta-v2",
+        "base": {"signals": META_SIGNALS, "weights": [0.25, 0.65, 1.27], "bias": 1.55},
+        "judged": {"signals": [*META_SIGNALS, "vision_judge"], "weights": [0.25, 0.65, 1.27, 0.17],
+                   "bias": 1.55},
+        "fallback": {"signals": ["rekognition_labels"], "weights": [1.20], "bias": -0.96},
+        "fallback_judged": {"signals": ["rekognition_labels", "vision_judge"],
+                            "weights": [0.68, 2.63], "bias": -2.84},
+    })
