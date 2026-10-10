@@ -3,21 +3,22 @@ interface TauriApi {
   readonly core: { invoke(command: string, args?: Record<string, unknown>): Promise<unknown> };
 }
 
-/** The app's one native print method (MainActivity.kt); the Android WebView ignores window.print(). */
-interface PrintApi {
+/** The app's native methods (MainActivity.kt); the Android WebView ignores window.print(). */
+interface AndroidApi {
   print(): void;
+  openAppSettings(): void;
 }
 
 export interface NativeHost {
   readonly __TAURI__?: TauriApi;
-  readonly JunkSnapPrint?: PrintApi;
+  readonly JunkSnapAndroid?: AndroidApi;
   print(): void;
 }
 
 // Android's share chooser reports "cancelled" even after the resident picked an app.
 const SHARE_CLOSED = /cancel/i;
 
-/** Print and share inside the Android app; the browser's own print everywhere else. */
+/** Print, share and app settings inside the Android app; the browser's own print elsewhere. */
 export class NativeBridge {
   readonly #host: NativeHost;
 
@@ -30,9 +31,18 @@ export class NativeBridge {
     return this.#host.__TAURI__ !== undefined;
   }
 
+  /** Inside the app, a blocked camera or location is allowed again in the app's settings. */
+  canOpenAppSettings(): boolean {
+    return this.#host.JunkSnapAndroid !== undefined;
+  }
+
+  openAppSettings(): void {
+    this.#host.JunkSnapAndroid?.openAppSettings();
+  }
+
   /** The system print dialog, which offers Save as PDF. */
   print(): void {
-    if (this.#host.JunkSnapPrint) this.#host.JunkSnapPrint.print();
+    if (this.#host.JunkSnapAndroid) this.#host.JunkSnapAndroid.print();
     else this.#host.print();
   }
 

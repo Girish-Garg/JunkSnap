@@ -198,6 +198,13 @@
       "checked": "Photo checked"
     },
     "tryAgain": "Try again",
+    "openSettings": "Open app settings",
+    "helpApp": {
+      "camera_denied": [
+        "Tap Try again and choose Allow when Android asks.",
+        "If Android no longer asks, tap Open app settings, then Permissions, Camera, Allow."
+      ]
+    },
     "waitingForGps": "Waiting for your location before the first photo.",
     "help": {
       "camera_denied": [

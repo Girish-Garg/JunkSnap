@@ -1,0 +1,196 @@
+# Builds the JunkSnap Android APK (apps/android-tauri) against one stage, signs it and publishes it.
+# Manual runs pick the stage; tags app-v<major>.<minor>.<patch> build demo and make a GitHub Release.
+# Setup (repository variables and secrets): docs/android.md.
+name: android-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage whose api and web app the APK talks to
+        type: choice
+        options: [demo, dev]
+        default: demo
+  push:
+    tags: ["app-v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  STAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.stage || 'demo' }}
+  JAVA_VERSION: "21"
+  NODE_VERSION: "24"
+  RUST_VERSION: "1.96.0"
+  ANDROID_PLATFORM: "platforms;android-36"
+  ANDROID_BUILD_TOOLS: "36.0.0"
+  ANDROID_NDK: "27.2.12479018"
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write # only used to create the GitHub Release on tags
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#app-v}"
+            if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::tag $GITHUB_REF_NAME must look like app-v1.2.3"; exit 1
+            fi
+          else
+            version="0.1.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $STAGE version $version"
+
+      - name: Stage values from repository variables (public, not secrets)
+        shell: bash
+        env:
+          DEV_API_URL: ${{ vars.DEV_API_URL }}
+          DEV_COGNITO_USER_POOL_ID: ${{ vars.DEV_COGNITO_USER_POOL_ID }}
+          DEV_COGNITO_CLIENT_ID: ${{ vars.DEV_COGNITO_CLIENT_ID }}
+          DEV_WEB_URL: ${{ vars.DEV_WEB_URL }}
+          DEV_UPLOADS_BUCKET: ${{ vars.DEV_UPLOADS_BUCKET }}
+          DEMO_API_URL: ${{ vars.DEMO_API_URL }}
+          DEMO_COGNITO_USER_POOL_ID: ${{ vars.DEMO_COGNITO_USER_POOL_ID }}
+          DEMO_COGNITO_CLIENT_ID: ${{ vars.DEMO_COGNITO_CLIENT_ID }}
+          DEMO_WEB_URL: ${{ vars.DEMO_WEB_URL }}
+          DEMO_UPLOADS_BUCKET: ${{ vars.DEMO_UPLOADS_BUCKET }}
+        run: |
+          prefix="${STAGE^^}"
+          # repository variable suffix -> env var read by scripts/android_stage.py
+          declare -A targets=(
+            [API_URL]=VITE_API_URL [COGNITO_USER_POOL_ID]=VITE_COGNITO_USER_POOL_ID
+            [COGNITO_CLIENT_ID]=VITE_COGNITO_CLIENT_ID [WEB_URL]=VITE_WEB_URL
+            [UPLOADS_BUCKET]=JUNKSNAP_UPLOADS_BUCKET
+          )
+          missing=0
+          for suffix in "${!targets[@]}"; do
+            source_name="${prefix}_${suffix}"
+            value="${!source_name}"
+            if [[ -z "$value" ]]; then
+              missing=1
+              echo "::error::repository variable $source_name is not set (docs/android.md)"
+            fi
+            echo "${targets[$suffix]}=$value" >> "$GITHUB_ENV"
+          done
+          exit $missing
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - name: Android SDK packages (pinned)
+        shell: bash
+        run: |
+          sdkmanager --install "$ANDROID_PLATFORM" "build-tools;$ANDROID_BUILD_TOOLS" "ndk;$ANDROID_NDK" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            apps/android-tauri/package-lock.json
+
+      - name: Rust with the Android targets (pinned)
+        shell: bash
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal \
+            --target aarch64-linux-android --target armv7-linux-androideabi
+          rustup default "$RUST_VERSION"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: apps/android-tauri/src-tauri -> target
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Release keystore (when the secrets exist)
+        id: keystore
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [[ -z "$KEYSTORE_B64" ]]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANDROID_KEYSTORE_B64 is not set: this APK is signed with a throwaway debug key"
+            exit 0
+          fi
+          base64 -d <<<"$KEYSTORE_B64" > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build the APK (arm64 and armv7)
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 scripts/build_android.py "$STAGE" --settings env \
+            --target aarch64 armv7 --version "${{ steps.version.outputs.version }}"
+
+      - name: Name, checksum and notes
+        id: package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SIGNED: ${{ steps.keystore.outputs.signed }}
+        run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          mkdir -p dist-apk
+          name="junksnap-${STAGE}-${VERSION}.apk"
+          cp "apps/android-tauri/out/junksnap-${STAGE}.apk" "dist-apk/$name"
+          cd dist-apk
+          sha256sum "$name" > "$name.sha256"
+          sha="$(cut -d' ' -f1 "$name.sha256")"
+          "$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS/apksigner" verify --print-certs "$name" | grep -E "certificate (DN|SHA-256)" | tee signer.txt
+          {
+            echo "JunkSnap Android $VERSION for the **$STAGE** stage (arm64-v8a and armeabi-v7a)."
+            echo
+            echo "SHA-256 of \`$name\`: \`$sha\`"
+            echo
+            if [[ "$SIGNED" == "true" ]]; then
+              echo "Signed with the JunkSnap release key."
+            else
+              echo "> **Warning: test build.** No release keystore was configured, so this APK is signed with a"
+              echo "> throwaway debug key made on the build machine. Android will not update it from another build:"
+              echo "> uninstall the old JunkSnap first. Do not share it as a release."
+            fi
+            echo
+            echo "Install: copy the APK to the phone and open it (allow installs from that app), or \`adb install -r $name\`."
+          } > notes.md
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          cat notes.md
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: dist-apk/
+          if-no-files-found: error
+
+      - name: GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          name: JunkSnap Android ${{ steps.version.outputs.version }}
+          body_path: dist-apk/notes.md
+          files: |
+            dist-apk/${{ steps.package.outputs.name }}
+            dist-apk/${{ steps.package.outputs.name }}.sha256

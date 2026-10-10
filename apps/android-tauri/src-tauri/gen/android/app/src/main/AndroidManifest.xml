@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- JunkSnap: navigator.onLine and the online event (offline upload queue) need this in a
+         WebView. Video records without sound and print/share use system screens, so there is no
+         RECORD_AUDIO and no storage permission. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- JunkSnap: in-app camera (Snap, Scan) and GPS for each report. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
