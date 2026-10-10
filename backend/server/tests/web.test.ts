@@ -105,6 +105,13 @@ describe("CORS", () => {
     expect(other?.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
+  it("allows DELETE from a listed origin, for withdrawing a report", async () => {
+    const env = { JUNKSNAP_STAGE: "demo", CORS_ORIGINS: "https://app.example.org" };
+    const request = { ...preflight("https://app.example.org"), headers: { origin: "https://app.example.org", "access-control-request-method": "DELETE" } };
+    const response = await (await start(env)).inject(request);
+    expect(response.headers["access-control-allow-methods"]).toContain("DELETE");
+  });
+
   it("refuses to build the api in demo without CORS_ORIGINS", async () => {
     await expect(start({ JUNKSNAP_STAGE: "demo" })).rejects.toThrow(ConfigError);
   });

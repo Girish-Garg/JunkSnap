@@ -1,9 +1,10 @@
 import type { CommunitySignals } from './Community';
 // The site action bodies in contracts/README.md (votes, cleanup, letters) and letter_draft.schema.json.
 import type { GpsFix } from './ReportUpload';
-import type { SiteBackers, SiteVerification, SiteVotes } from './Site';
+import type { SiteBackers, SiteStatus, SiteVerification, SiteVotes } from './Site';
 
-export type VoteChoice = 'confirm' | 'reject';
+/** cleaned: the waste is gone; 3 more people saying so than still there clears the site (decision 20261010-1700). */
+export type VoteChoice = 'confirm' | 'reject' | 'cleaned';
 
 export interface VoteRequest {
   readonly device_token: string;
@@ -16,6 +17,16 @@ export interface VoteResult {
   readonly votes: SiteVotes;
   readonly backers: SiteBackers;
   readonly verification: SiteVerification;
+}
+
+/** DELETE /sites/{id}/reports/mine: site_removed when the caller was its only reporter. */
+export interface WithdrawalResult {
+  readonly site_id: string;
+  readonly withdrawn_report_ids: readonly string[];
+  readonly site_removed: boolean;
+  readonly status: SiteStatus;
+  readonly verification: SiteVerification;
+  readonly backers: SiteBackers;
 }
 
 /** Sent after the after-photo was PUT with a purpose: cleanup presign. */

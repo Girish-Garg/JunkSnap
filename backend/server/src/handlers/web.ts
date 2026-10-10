@@ -30,7 +30,8 @@ export async function createApp(
     genReqId: () => randomUUID(),
     requestIdHeader: "x-request-id",
   });
-  await app.register(cors, { origin });
+  // DELETE is for withdrawing a report (decision 20261010-1700); the plugin allows only GET, HEAD and POST by default.
+  await app.register(cors, { origin, methods: ["GET", "HEAD", "POST", "DELETE"] });
   app.addHook("onRequest", async (request, reply) => {
     reply.header("x-request-id", request.id);
   });

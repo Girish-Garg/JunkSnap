@@ -211,7 +211,7 @@ describe("Site votes", () => {
     const site = verified(Site.found(report({ decision: "community_check" })));
     expect(site.voteResult()).toEqual({
       site_id: "site_jdh_1",
-      votes: { confirm: 9, reject: 0 },
+      votes: { confirm: 9, reject: 0, cleaned: 0 },
       backers: { count: 10, needed: 10, photo_people: 1, vote_people: 9 },
       verification: "verified",
     });

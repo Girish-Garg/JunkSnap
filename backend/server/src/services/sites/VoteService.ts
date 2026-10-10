@@ -34,7 +34,7 @@ export class VoteService {
   // Reports follow their site on every vote, so a failed status write heals on the next one.
   async cast(siteId: string, ballot: Ballot): Promise<VoteResult> {
     const site = await this.#load(siteId);
-    site.admitVoter(ballot, ballot.point);
+    site.admitVoter(ballot, ballot.point, ballot.choice);
     await this.#deps.votes.put({
       siteId,
       deviceToken: ballot.deviceToken,

@@ -1,3 +1,4 @@
+import type { ActivityRemover } from '../services/ActivityRemover';
 import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
 import type { ScanCapture } from '../services/ScanCapture';
@@ -27,4 +28,6 @@ export interface SnapServices {
   readonly siteActions: SiteActionService;
   readonly areaLetters: AreaLetterService;
   readonly noBin: NoBinReporter;
+  /** Deletes Activity rows, withdrawing reports from unverified sites first (decision 20261010-1700). */
+  readonly remover: ActivityRemover;
 }

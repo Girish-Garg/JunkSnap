@@ -6,7 +6,8 @@ import type {
   VerificationResult,
 } from "../contracts/index.gen.js";
 
-export type ReportStatus = "queued" | "processing" | "unverified" | "verified" | "rejected" | "needs_review";
+// withdrawn: the reporter took the report back from an unverified site (decision 20261010-1700).
+export type ReportStatus = "queued" | "processing" | "unverified" | "verified" | "rejected" | "needs_review" | "withdrawn";
 // A merged report follows its site (decision 20261010-1530).
 export type SiteVerification = "unverified" | "verified" | "rejected";
 export type StepName = "moderate" | "verify" | "brands" | "locate" | "merge";

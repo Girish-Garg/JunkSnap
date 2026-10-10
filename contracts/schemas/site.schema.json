@@ -33,7 +33,10 @@
         "site_id": { "type": "string", "pattern": "^site_[a-z0-9_]{1,40}$", "description": "Kept in properties so MapLibre can promoteId it." },
         "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"], "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)." },
         "context": { "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged"] },
-        "status": { "enum": ["open", "cleaned", "reopened"], "description": "open -> cleaned (only with an after-photo the pipeline confirms) -> reopened." },
+        "status": { "enum": ["open", "cleaned", "reopened", "removed"], "description": "open -> cleaned (an after-photo the pipeline confirms, or cleared votes: people whose latest vote is cleaned, cast after last_reported_at, at least 3 more than people whose latest vote is confirm cast after the first of them; see cleaned_by) -> reopened when a new photo merges in. removed (decision 20261010-1700): every report on an unverified site was withdrawn by its reporter; final, kept for the audit trail. GET /sites?bbox leaves out cleaned and removed sites." },
+        "removed_reason": { "enum": ["withdrawn", null], "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. Null otherwise. Not in required so older rows stay valid." },
+        "removed_at": { "type": ["string", "null"], "format": "date-time", "description": "When the site was removed; null otherwise. Not in required so older rows stay valid." },
+        "cleaned_by": { "enum": ["after_photo", "votes", null], "description": "Decision 20261010-1700: what set the last cleaned status: an accepted after-photo or the cleared votes. Null before the first cleanup. Not in required so older rows stay valid." },
         "verification": {
           "enum": ["unverified", "verified", "rejected"],
           "description": "Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value."
@@ -60,7 +63,8 @@
           "required": ["confirm", "reject"],
           "properties": {
             "confirm": { "type": "integer", "minimum": 0 },
-            "reject": { "type": "integer", "minimum": 0 }
+            "reject": { "type": "integer", "minimum": 0 },
+            "cleaned": { "type": "integer", "minimum": 0, "description": "People whose latest vote says the site is cleared (decision 20261010-1700). Not in required so older rows stay valid." }
           }
         },
         "photo_urls": {

@@ -4,7 +4,7 @@ import type { BrandSighting, CompositionEstimate, PlaceKind, SiteInsights } from
 import { DAY_MS, istParts } from "./scoreUtils.js";
 
 export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] as const;
-export const SITE_STATUSES = ["open", "cleaned", "reopened"] as const;
+export const SITE_STATUSES = ["open", "cleaned", "reopened", "removed"] as const;
 export const VERIFICATIONS = ["unverified", "verified", "rejected"] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -66,8 +66,9 @@ export class AreaSite {
     return new AreaSite({ ...this.#props, reportTimes });
   }
 
+  // Rejected and removed (every report withdrawn, decision 20261010-1700) sites never count.
   isCounted(): boolean {
-    return this.#props.verification !== "rejected";
+    return this.#props.verification !== "rejected" && this.#props.status !== "removed";
   }
 
   isVerified(): boolean {
@@ -114,7 +115,7 @@ export class AreaSite {
   }
 
   everCleared(): boolean {
-    return this.#props.cleanedAt !== null || this.#props.status !== "open";
+    return this.#props.cleanedAt !== null || this.#props.status === "cleaned" || this.#props.status === "reopened";
   }
 
   isRepeatSpot(): boolean {

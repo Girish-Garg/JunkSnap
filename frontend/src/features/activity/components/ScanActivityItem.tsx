@@ -5,6 +5,7 @@ import { useFormatter } from '../../../i18n/useFormatter';
 import { Button } from '../../../ui/Button';
 import { Icon } from '../../../ui/Icon';
 import { ScanStatusLine } from '../../snap/components/ScanStatusLine';
+import { ActivityDelete } from './ActivityDelete';
 
 /** One recording: its type and place, length, status and how many frame reports it made. */
 export function ScanActivityItem({ scan }: { readonly scan: QueuedScan }) {
@@ -31,6 +32,7 @@ export function ScanActivityItem({ scan }: { readonly scan: QueuedScan }) {
               {t('activity.retry')}
             </Button>
           )}
+          <ActivityDelete target={{ scan }} />
         </div>
       </div>
     </li>

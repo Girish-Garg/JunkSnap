@@ -34,6 +34,13 @@ export class ReportTracker {
     }
   }
 
+  /** The api withdrew these reports; Activity shows them as withdrawn at once, without another read. */
+  async markWithdrawn(reportIds: readonly string[]): Promise<void> {
+    const ids = new Set(reportIds);
+    const mine = this.#queue.snapshot().filter((report) => report.data.report_id !== null && ids.has(report.data.report_id));
+    await Promise.all(mine.map((report) => this.#queue.update(report.id, (latest) => latest.withdrawn())));
+  }
+
   async refreshOpen(): Promise<void> {
     await this.#queue.load();
     const open = this.#queue.snapshot().filter((report) => ReportTracker.isOpen(report));

@@ -11,7 +11,7 @@
     "verified_count": 0,
     "corroborations": 1,
     "backers": { "count": 2, "needed": 10, "photo_people": 1, "vote_people": 1 },
-    "votes": { "confirm": 1, "reject": 0 },
+    "votes": { "confirm": 1, "reject": 0, "cleaned": 0 },
     "photo_urls": ["https://d111111abcdef8.cloudfront.net/media/reports/rpt_jpr_1.jpg"],
     "cleanup_status": "none",
     "cleanup_photo_url": null,

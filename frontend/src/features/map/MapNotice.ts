@@ -9,6 +9,8 @@ export interface MapNoticeInput {
   readonly loadedCount: number;
   readonly shownCount: number;
   readonly clamped: boolean;
+  /** A toast's i18n key; it shows before every other notice while it lasts. */
+  readonly flash?: string | null;
 }
 
 export interface MapNoticeView {
@@ -32,6 +34,7 @@ const RULES: readonly Rule[] = [
 
 export class MapNotice {
   static pick(input: MapNoticeInput): MapNoticeView | null {
+    if (input.flash) return { icon: 'info', key: input.flash, tone: 'info' };
     return RULES.find(([applies]) => applies(input))?.[1] ?? null;
   }
 }

@@ -31,7 +31,7 @@ export class AreaIssueSites {
   }
 
   hasSites(): boolean {
-    return this.#all.some((stored) => stored.site.properties.verification !== "rejected");
+    return this.#all.some((stored) => AreaIssueSites.#standing(stored.site));
   }
 
   name(): string {
@@ -75,8 +75,13 @@ export class AreaIssueSites {
   #onIssue(): StoredAreaSite[] {
     return this.#all.filter(({ site }) => {
       const matches = this.issue === "all" || site.properties.report_type === this.issue;
-      return matches && site.properties.verification !== "rejected";
+      return matches && AreaIssueSites.#standing(site);
     });
+  }
+
+  // Rejected sites and removed (withdrawn) sites never count (decisions 20261010-1530 and -1700).
+  static #standing(site: Site): boolean {
+    return site.properties.verification !== "rejected" && site.properties.status !== "removed";
   }
 
   // Decision 20261010-1630: a no-bin zone counts once 10 people confirmed it; a mapped bin nearby is evidence, not a gate.

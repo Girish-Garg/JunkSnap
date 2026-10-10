@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useServices } from '../../../app/useServices';
 import type { BBox } from '../../../domain/BBox';
 import type { SiteFeature } from '../../../domain/Site';
@@ -9,12 +9,18 @@ export interface SitesState {
   readonly failed: boolean;
 }
 
+export interface SitesLoad extends SitesState {
+  /** Fetches the same box again, so withdrawn, rejected and cleared sites leave the map without a reload. */
+  readonly refresh: () => void;
+}
+
 const NOT_LOADED: SitesState = { sites: [], loaded: false, failed: false };
 
 /** Keeps the last list on screen while the next one loads. */
-export function useSites(bbox: BBox | null): SitesState {
+export function useSites(bbox: BBox | null): SitesLoad {
   const { api } = useServices();
   const [state, setState] = useState<SitesState>(NOT_LOADED);
+  const [version, setVersion] = useState(0);
   useEffect(() => {
     if (!bbox) return undefined;
     let current = true;
@@ -30,6 +36,7 @@ export function useSites(bbox: BBox | null): SitesState {
     return () => {
       current = false;
     };
-  }, [api, bbox]);
-  return state;
+  }, [api, bbox, version]);
+  const refresh = useCallback(() => setVersion((count) => count + 1), []);
+  return { ...state, refresh };
 }

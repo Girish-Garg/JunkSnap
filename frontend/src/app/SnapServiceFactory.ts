@@ -19,6 +19,7 @@ import { JunkSnapDb } from '../services/JunkSnapDb';
 import { MockReportApi } from '../services/MockReportApi';
 import { MockScanApi } from '../services/MockScanApi';
 import { NoBinReporter } from '../services/NoBinReporter';
+import { ActivityRemover } from '../services/ActivityRemover';
 import { PhotoEncoder } from '../services/PhotoEncoder';
 import { PhotoHasher } from '../services/PhotoHasher';
 import { QueueLock } from '../services/QueueLock';
@@ -80,6 +81,15 @@ const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: Reque
   }),
 };
 
+interface ActionParts {
+  readonly apis: Apis;
+  readonly identity: RequestIdentity;
+  readonly gps: GpsWatcher;
+  readonly queue: ReportQueue;
+  readonly scans: ScanQueue;
+  readonly random: () => Uint8Array;
+}
+
 export class SnapServiceFactory {
   static build(config: AppConfig, browser: SnapBrowserApis, auth: AuthService): SnapServices {
     const db = new JunkSnapDb();
@@ -108,16 +118,19 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
-      ...SnapServiceFactory.#actions(apis, identity, gps, () => browser.crypto.getRandomValues(new Uint8Array(16))),
+      ...SnapServiceFactory.#actions({ apis, identity, gps, queue, scans, random: () => browser.crypto.getRandomValues(new Uint8Array(16)) }),
     };
   }
 
-  // Site actions and area letters share the sign-in gate and the device token.
-  static #actions(apis: Apis, identity: RequestIdentity, gps: GpsWatcher, random: () => Uint8Array): Pick<SnapServices, 'siteActions' | 'areaLetters' | 'noBin'> {
+  // Site actions, Activity deletes and area letters share the sign-in gate and the device token.
+  static #actions(parts: ActionParts): Pick<SnapServices, 'siteActions' | 'areaLetters' | 'noBin' | 'remover'> {
+    const { apis, identity, gps, queue, scans, random } = parts;
+    const siteActions = new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps });
     return {
-      siteActions: new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps }),
+      siteActions,
       areaLetters: new AreaLetterService(apis.areaLetters, identity),
       noBin: new NoBinReporter(apis.reports, identity, random),
+      remover: new ActivityRemover({ reports: queue, scans, statuses: apis.reports, sites: siteActions }),
     };
   }
 

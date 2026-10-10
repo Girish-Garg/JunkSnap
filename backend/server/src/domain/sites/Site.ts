@@ -1,7 +1,7 @@
 import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
-import { mergeRadiusM, publishedPoint, zoneCentre } from "./NoBinZone.js";
+import { mergeRadiusM, publishedPoint } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import {
   AlreadyCleanedError,
@@ -9,27 +9,29 @@ import {
   InvalidTransitionError,
   OwnSiteError,
   SiteRejectedError,
+  SiteRemovedError,
+  SiteVerifiedError,
   TooFarError,
 } from "./SiteErrors.js";
-import type { SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, Voter, VoteResult } from "./SiteTypes.js";
+import type { PhotoUrls, SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, VoteChoice, Voter, VoteResult } from "./SiteTypes.js";
+import { SiteAddition } from "./SiteAddition.js";
 import { SiteTemplate } from "./SiteTemplate.js";
-import { earlierTime, laterTime, mergeBrands, newestPhotos, withItem } from "./utils.js";
+import { SiteWithdrawal } from "./SiteWithdrawal.js";
+import { reportedBy } from "./utils.js";
 import type { VoteTally } from "./VoteTally.js";
+import type { Withdrawal, WithdrawalResult } from "./Withdrawal.js";
 
 const VOTE_RADIUS_M = 1000;
 
-// Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (a new photo merges in).
+// Lifecycle: open -> cleaned (accepted after-photo or cleared votes) -> reopened (a new photo merges in); removed when withdrawn.
 // Verification: unverified -> verified at 10 backers, or rejected by the no-vote valve (decision 20261010-1530).
 export class Site {
-  #point: GeoPoint;
-  #props: SiteProperties;
-  #internals: SiteInternals;
+  #point!: GeoPoint;
+  #props!: SiteProperties;
+  #internals!: SiteInternals;
 
   private constructor(state: SiteState) {
-    const [lon, lat] = state.feature.geometry.coordinates;
-    this.#point = new GeoPoint(lat, lon);
-    this.#props = state.feature.properties;
-    this.#internals = state.internals;
+    this.#adopt(state);
   }
 
   static restore(state: SiteState): Site {
@@ -75,18 +77,26 @@ export class Site {
     return this.#internals.version;
   }
 
+  // A withdrawn report still counts as held, so a redelivered merge changes nothing.
   holds(reportId: string): boolean {
-    return this.#internals.reports.some((report) => report.reportId === reportId);
+    const { reports, withdrawnReports } = this.#internals;
+    return reports.some((report) => report.reportId === reportId) || withdrawnReports.includes(reportId);
+  }
+
+  // On the active map: not rejected, removed or cleaned (decision 20261010-1700).
+  isRemoved(): boolean {
+    return this.#props.status === "removed";
   }
 
   isListed(): boolean {
-    return this.#props.verification !== "rejected";
+    const { verification, status } = this.#props;
+    return verification !== "rejected" && status !== "removed" && status !== "cleaned";
   }
 
-  // Same type, within 40 m, not rejected; the models already passed the photo.
+  // Same type, within 40 m, not rejected or removed; the models already passed the photo.
   accepts(report: MergeableReport): boolean {
-    const { report_type, verification } = this.#props;
-    if (report_type !== report.reportType || verification === "rejected") {
+    const { report_type, verification, status } = this.#props;
+    if (report_type !== report.reportType || verification === "rejected" || status === "removed") {
       return false;
     }
     return this.#point.distanceTo(report.point) <= mergeRadiusM(report_type);
@@ -99,23 +109,22 @@ export class Site {
     if (!this.accepts(report)) {
       throw new InvalidTransitionError(`${report.reportId} cannot merge into ${this.siteId}`);
     }
-    this.#addReporter(report);
-    this.#addEvidence(report);
-    if (this.#props.report_type === "no_bin") {
-      this.#point = zoneCentre(this.#internals.reports, this.#point);
-    }
-    this.#adoptBinMeasure(report);
+    this.#adopt(new SiteAddition(this.snapshot(), report).apply());
     this.#reopenIfCleaned();
     this.#settle();
     this.#recount();
   }
 
-  // A rejected site takes no votes; own_site (same user or device) is checked before distance.
-  admitVoter(voter: Voter, from: GeoPoint): void {
-    if (!this.isListed()) {
+  // A rejected or removed site takes no votes; own_site (same user or device) is checked before distance.
+  admitVoter(voter: Voter, from: GeoPoint, choice: VoteChoice = "confirm"): void {
+    this.#assertNotRemoved();
+    if (this.#props.verification === "rejected") {
       throw new SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
     }
-    if (this.#reportedBy(voter)) {
+    if (choice === "cleaned" && this.#props.status === "cleaned") {
+      throw new AlreadyCleanedError("This site is already marked cleared");
+    }
+    if (reportedBy(this.#internals, voter)) {
       throw new OwnSiteError("You reported this site, so a neighbour has to check it");
     }
     if (this.#point.distanceTo(from) > VOTE_RADIUS_M) {
@@ -123,12 +132,33 @@ export class Site {
     }
   }
 
-  // Votes always count, but only an unverified site can change verification.
+  // Votes always count, but only an unverified site can change verification; cleared votes can clean any open site.
+  // A removed site keeps its verification and backers as they were, like #resettle.
   recordVotes(tally: VoteTally): void {
-    this.#props = { ...this.#props, votes: { confirm: tally.confirm, reject: tally.reject } };
+    this.#props = { ...this.#props, votes: { confirm: tally.confirm, reject: tally.reject, cleaned: tally.cleaned } };
     this.#internals = { ...this.#internals, yesVoters: tally.yesPeople, noVoters: tally.noPeople };
+    if (this.isRemoved()) {
+      return;
+    }
     this.#settle();
+    this.#clearIfVoted(tally);
     this.#recount();
+  }
+
+  // Decision 20261010-1700: the reporter takes their reports back while the site is not verified.
+  withdraw(request: Withdrawal): WithdrawalResult {
+    if (this.#props.verification === "verified") {
+      throw new SiteVerifiedError("Ten people have verified this site, so your report stays");
+    }
+    const withdrawal = new SiteWithdrawal(this.snapshot(), request);
+    const ids = withdrawal.withdrawnIds();
+    // Nothing left to withdraw (a retried call) changes nothing.
+    if (ids.length > 0) {
+      this.#adopt(withdrawal.apply());
+      this.#resettle();
+    }
+    const { site_id, status, verification, backers } = this.#props;
+    return { site_id, withdrawn_report_ids: ids, site_removed: status === "removed", status, verification, backers };
   }
 
   // Migration to decision 20261010-1530: recounts from the stored photos and votes, forgetting the old verdict.
@@ -141,6 +171,7 @@ export class Site {
   }
 
   startCleanup(cleanupId: string): void {
+    this.#assertNotRemoved();
     if (this.#props.status === "cleaned") {
       throw new AlreadyCleanedError("This site is already marked cleared");
     }
@@ -159,8 +190,9 @@ export class Site {
   }
 
   acceptCleanup(cleanupId: string, photoUrl: string, cleanedAt: string): void {
+    this.#assertNotRemoved();
     this.#assertAwaits(cleanupId);
-    const cleared = { status: "cleaned", cleanup_status: "accepted", cleanup_photo_url: photoUrl } as const;
+    const cleared = { status: "cleaned", cleanup_status: "accepted", cleanup_photo_url: photoUrl, cleaned_by: "after_photo" } as const;
     this.#props = { ...this.#props, ...cleared, cleaned_at: cleanedAt };
     this.#internals = { ...this.#internals, pendingCleanupId: null };
   }
@@ -177,9 +209,12 @@ export class Site {
   }
 
   // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
+  // A removed site shows no photo or after-photo; the stored item keeps the URLs for the audit trail (decision 20261010-1700).
   toFeature(): SiteFeature {
     const shown = publishedPoint(this.#point, this.#props);
-    return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties: this.#props };
+    const hidden = { photo_urls: [] as PhotoUrls, cleanup_photo_url: null };
+    const properties = this.isRemoved() ? { ...this.#props, ...hidden } : this.#props;
+    return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties };
   }
 
   // The stored state keeps the exact centre; zones merge on it.
@@ -188,33 +223,12 @@ export class Site {
     return { feature: { type: "Feature", geometry, properties: this.#props }, internals: this.#internals };
   }
 
-  #addReporter(report: MergeableReport): void {
-    const { reports, reporterDevices, reporterUsers, meTooCount, embeddingKey } = this.#internals;
-    const meToo = report.meTooSiteId === this.siteId && !this.#reportedBy(report);
-    const point = { lat: report.point.lat, lon: report.point.lon };
-    const merged = { reportId: report.reportId, verified: false, insights: report.insights, point };
-    this.#internals = {
-      ...this.#internals,
-      reports: [...reports, merged],
-      reporterDevices: withItem(reporterDevices, report.deviceToken),
-      reporterUsers: report.userId === null ? reporterUsers : withItem(reporterUsers, report.userId),
-      reporterIds: withItem(this.#internals.reporterIds, report.userId ?? report.deviceToken),
-      meTooCount: meTooCount + (meToo ? 1 : 0),
-      embeddingKey: embeddingKey ?? report.embeddingKey,
-    };
-  }
-
-  #addEvidence(report: MergeableReport): void {
-    const props = this.#props;
-    const photos = report.photoUrl === null ? props.photo_urls : [report.photoUrl, ...props.photo_urls];
-    this.#props = {
-      ...props,
-      report_count: props.report_count + 1,
-      photo_urls: newestPhotos(photos),
-      brands: mergeBrands(props.brands, report.brands),
-      first_reported_at: earlierTime(props.first_reported_at, report.reportedAt),
-      last_reported_at: laterTime(props.last_reported_at, report.reportedAt),
-    };
+  #clearIfVoted(tally: VoteTally): void {
+    const at = tally.clearedAt(this.#props.last_reported_at);
+    if (at === null || this.#props.status === "cleaned" || this.#props.status === "removed") {
+      return;
+    }
+    this.#props = { ...this.#props, status: "cleaned", cleaned_at: at, cleaned_by: "votes" };
   }
 
   #reopenIfCleaned(): void {
@@ -258,24 +272,30 @@ export class Site {
     this.#props = { ...this.#props, insights, burning };
   }
 
-  // A site founded before bins were measured takes the first measured reading of a report merged into it.
-  #adoptBinMeasure(report: MergeableReport): void {
-    const insights = this.#props.insights;
-    if (insights === undefined || typeof insights.no_bin_within_3km === "boolean" || report.bin.no_bin_within_3km === null) {
-      return;
-    }
-    this.#props = { ...this.#props, insights: { ...insights, ...report.bin } };
-  }
-
-  #reportedBy(voter: Voter): boolean {
-    const { reporterDevices, reporterUsers } = this.#internals;
-    const sameUser = voter.userId !== null && reporterUsers.includes(voter.userId);
-    return sameUser || reporterDevices.includes(voter.deviceToken);
-  }
-
   #recount(): void {
     const corroborations = this.#internals.meTooCount + this.#props.votes.confirm;
     this.#props = { ...this.#props, corroborations, reporters: Math.max(1, this.#internals.reporterIds.length) };
+  }
+
+  // A removed site keeps its counts as they were, for the audit trail.
+  #resettle(): void {
+    if (this.#props.status !== "removed") {
+      this.#settle();
+      this.#recount();
+    }
+  }
+
+  #assertNotRemoved(): void {
+    if (this.#props.status === "removed") {
+      throw new SiteRemovedError("This site was withdrawn by its reporter");
+    }
+  }
+
+  #adopt(state: SiteState): void {
+    const [lon, lat] = state.feature.geometry.coordinates;
+    this.#point = new GeoPoint(lat, lon);
+    this.#props = state.feature.properties;
+    this.#internals = state.internals;
   }
 
   #assertAwaits(cleanupId: string): void {

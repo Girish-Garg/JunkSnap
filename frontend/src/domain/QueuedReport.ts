@@ -110,6 +110,12 @@ export class QueuedReport {
     return this.#with({ status });
   }
 
+  /** Decision 20261010-1700: the reporter took this report back; a report never checked has nothing to withdraw. */
+  withdrawn(): QueuedReport {
+    const status = this.data.status;
+    return status === null ? this : this.#with({ status: { ...status, status: 'withdrawn' } });
+  }
+
   /** retryAt null with a refused problem ends the item; otherwise it waits. */
   failed(problem: SendProblem, retryAt: Date | null): QueuedReport {
     const stage = problem === 'refused' ? 'failed' : this.data.stage;

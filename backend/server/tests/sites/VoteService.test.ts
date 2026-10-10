@@ -40,7 +40,7 @@ describe("VoteService", () => {
     const result = await service.cast("site_jdh_1", ballot(DEVICE_B));
     expect(result).toEqual({
       site_id: "site_jdh_1",
-      votes: { confirm: 1, reject: 0 },
+      votes: { confirm: 1, reject: 0, cleaned: 0 },
       backers: { count: 2, needed: 10, photo_people: 1, vote_people: 1 },
       verification: "unverified",
     });
@@ -92,7 +92,7 @@ describe("VoteService", () => {
     const { service } = setup();
     await service.cast("site_jdh_1", ballot(DEVICE_B, "reject"));
     const result = await service.cast("site_jdh_1", ballot(DEVICE_B, "confirm"));
-    expect(result.votes).toEqual({ confirm: 1, reject: 0 });
+    expect(result.votes).toEqual({ confirm: 1, reject: 0, cleaned: 0 });
   });
 
   it("repairs the statuses on the next vote after a failed status write", async () => {

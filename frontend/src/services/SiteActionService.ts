@@ -1,4 +1,4 @@
-import type { CleanupAccepted, LetterDraft, LetterLanguage, VoteChoice, VoteResult } from '../domain/SiteActions';
+import type { CleanupAccepted, LetterDraft, LetterLanguage, VoteChoice, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import type { NoteLanguage, SiteNote } from '../domain/Community';
 import type { GpsFix } from '../domain/ReportUpload';
 import type { GpsWatcher } from './GpsWatcher';
@@ -53,6 +53,11 @@ export class SiteActionService {
   async note(siteId: string, text: string, language: NoteLanguage): Promise<SiteNote> {
     const device_token = await this.#ports.identity.deviceToken();
     return this.#signedIn.run(() => this.#ports.api.note(siteId, { text, language, device_token }));
+  }
+
+  /** Takes this user's reports off a site that is not verified yet. */
+  withdraw(siteId: string): Promise<WithdrawalResult> {
+    return this.#signedIn.run(() => this.#ports.api.withdraw(siteId));
   }
 
   async letter(siteId: string, language: LetterLanguage): Promise<LetterDraft> {

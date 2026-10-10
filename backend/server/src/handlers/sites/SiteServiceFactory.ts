@@ -5,7 +5,10 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { AwsCalls } from "../../adapters/sites/AwsCalls.js";
 import { DynamoAreaScoreSeeder } from "../../adapters/sites/DynamoAreaScoreSeeder.js";
 import { DynamoCleanupRepository } from "../../adapters/sites/DynamoCleanupRepository.js";
+import { DynamoLetterCounter } from "../../adapters/letters/DynamoLetterCounter.js";
 import { DynamoReportStatusWriter } from "../../adapters/sites/DynamoReportStatusWriter.js";
+import { DynamoReportWithdrawer } from "../../adapters/sites/DynamoReportWithdrawer.js";
+import { DynamoSiteReportReader } from "../../adapters/sites/DynamoSiteReportReader.js";
 import { DynamoSiteRepository } from "../../adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../adapters/sites/DynamoVoteRepository.js";
 import { NgeohashCells } from "../../adapters/sites/NgeohashCells.js";
@@ -17,15 +20,20 @@ import { MergeableReportFactory } from "../../domain/sites/MergeableReportFactor
 import { PublicMedia } from "../../domain/sites/PublicMedia.js";
 import type { Logger } from "../../ports/Logger.js";
 import { CleanupIntake } from "../../services/sites/CleanupIntake.js";
+import { LetterRateLimiter } from "../../services/letters/LetterRateLimiter.js";
 import { CleanupService } from "../../services/sites/CleanupService.js";
 import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../services/sites/MergeTargetPicker.js";
 import { SiteFinder } from "../../services/sites/SiteFinder.js";
 import { SiteMerger } from "../../services/sites/SiteMerger.js";
 import { VoteService } from "../../services/sites/VoteService.js";
+import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
 import { SitesSettings } from "../../settings/SitesSettings.js";
 import type { Env } from "../../settings/utils.js";
+
+// Decision 20261010-1700: withdrawals an hour, per user and per device.
+const WITHDRAWALS_PER_HOUR = 10;
 
 export interface SiteClients {
   readonly dynamo: DynamoDBDocumentClient;
@@ -95,6 +103,22 @@ export class SiteServiceFactory {
       scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,
       reportFactory: new MergeableReportFactory(this.#media()),
+      retry: this.#retry,
+    });
+  }
+
+  withdrawalService(): WithdrawalService {
+    const { dynamo } = this.#clients;
+    const { tables } = this.#settings;
+    const counter = (name: string, keyName: string) => new DynamoLetterCounter(dynamo, { name, keyName, prefix: "withdraw" });
+    const counters = { devices: counter(tables.devices, "device_token"), users: counter(tables.users, "user_id") };
+    return new WithdrawalService({
+      sites: this.#sites(),
+      rows: new DynamoSiteReportReader(dynamo, tables.reports, this.#media(), this.#calls),
+      withdrawer: new DynamoReportWithdrawer(dynamo, tables.reports, this.#calls),
+      reports: this.#reports(),
+      limiter: new LetterRateLimiter(counters, WITHDRAWALS_PER_HOUR, "withdrawals"),
+      clock: this.#clock,
       retry: this.#retry,
     });
   }
