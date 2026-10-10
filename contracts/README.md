@@ -10,6 +10,8 @@ Contracts v1.3 (decision 20261010-1422, issue 76) adds `GET /areas/{kind}?within
 
 Contracts v1.4 (decision 20261010-1430, issue 79) measures bin access: `site.reporters`, `site.insights.nearest_bin` and `no_bin_within_3km`, `ward_scores` `counts.sites_without_bin_within_3km` and `metrics.no_bin_within_3km_pct` (formula scores-v2), and `letter_draft.evidence`.
 
+Contracts v1.5 (decision 20261010-1445-hem-ward-crawler-service, issue 78) adds the `crawls` table, the `crawl/` prefix in the originals bucket, the public route `GET /areas/district/{id}/crawl` with the new `area_crawl` shape, the `crawler` CronJob and image, and the `CRAWL_*` and `CRAWLS_TABLE` variables. No existing shape changes.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -30,7 +32,8 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `ward_scores` | `scores` CronJob, with area `insights`; worker creates the first zero-count row | api, frontend area page |
 | `area_list` | api (`GET /areas/{kind}`): ranked `ward_scores` rows within a district or local body | frontend city ranking |
 | `letter_draft` | api | frontend letter preview |
-| `ward_record` | ward crawler (offline Python, `data/ward_crawler`): the `records` array of `data/wards/<city>.json` | worker (location), scores (area, population, disposal points) |
+| `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location), scores (area, population, disposal points); each reads the newer of the two files per city |
+| `area_crawl` | api, from the `crawls` row (`not_started` without one) | frontend area pages and Areas list (the crawl banner) |
 
 `data/wards/<city>.json` also holds `map_layers`: city-wide OpenStreetMap layers (`disposal`, `school`, `hospital`, `water`, `drain`), each `{kind, count, source_url, fetched_at, page_sha256, features: [{ref, coords}]}`, where `ref` is `osm:<type>/<id>` and `coords` are `[lat, lon]` pairs (one for a place, the vertices for a line or area). The worker finds `site.insights.near` in these layers, so it works where a site has no ward. The city file and its layers have no schema yet (W1, issue 9).
 
@@ -54,7 +57,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 ## Auth
 
 - One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
-- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /healthz`.
+- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /areas/district/{id}/crawl`, `GET /healthz`.
 - Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
 - `user_id` is the token's `sub`, opaque. The api writes it on reports, scans, votes and cleanups, and ignores any `user_id` in a request body. These routes still send `device_token`.
@@ -94,6 +97,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
 | `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
+| `GET /areas/district/{id}/crawl` | api | none | 200 `area_crawl` | any district id matching `[a-z0-9-]{1,64}` answers 200 (`not_started` when the `crawls` table has no row); else 400 `bad_request` |
 | `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`, and for a `no_bin` site unless `reporters` is at least `NO_BIN_MIN_REPORTERS` and `insights.no_bin_within_3km` is true (the message gives the reason, for example "3 of 5 people reported no bin here; nearest known bin 4.2 km"); 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
 
@@ -228,6 +232,7 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 | `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
 | `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
 | `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`, top-level, plus `within`: the sorted district and local body ids of the area's sites (from `site.location.district.id` and `site.location.local_body.id`); the CronJob overwrites both, the api strips `within` and the keys before validating the body |
+| `crawls` | `district_id` | none | none | one row per district: `district_name`, `status` (`queued`, `running`, `done`, `failed`, `no_sources`), `queued_at`, `started_at`, `last_crawled_at`, `next_due_at`, `expected_by`, `city` (the source file), `wards_found`, `wards_key`, `results` (per source: `url`, `status`, `wards_found`, `page_sha256`, `fetched_at`, `detail`), `error`, `attempts`, and `verified_report_ids` (a string set, only until the district is queued) |
 
 Every GSI (`by-site`, `by-device`, `by-user`, `by-geohash`) projects ALL attributes, so a query returns whole items and needs no second read.
 
@@ -244,6 +249,11 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `datasets/{dataset}/...` | openly licensed public training images, their records and the OWLv2 teacher boxes (`teacher_boxes.jsonl`); models are trained and evaluated on public data only (decision 20261010-1245-hem-ml-public-data-only); offline training only, no pod has access |
 | same | `models/{name}/{sha256[:12]}-{file}` | trained model files (YOLO ONNX, SigLIP ONNX, embedding heads, meta-learner, phone model), written by `backend/ml/training` `learn publish`; `ml` reads them at start and checks the SHA-256 pinned in `backend/ml/src/ml/settings/models.json` |
 | same | `datasets/manifest.jsonl` | the dataset manifest (one line per image, with its split), written by `backend/ml/training` when it is over 5 MB; offline training only, no pod has access |
+| same | `crawl/pages/{sha256}.json` and `crawl/pages/{sha256}.bin` | every page the crawler fetched: `{url, sha256, fetched_at, content_type, etag, last_modified, text}` and the raw bytes (`sha256` is of the bytes); `crawler` only |
+| same | `crawl/urls/{sha256(url)[:24]}.json` | the newest page for a URL: `{url, sha256, fetched_at, checked_at, etag, last_modified}`, for conditional refetches; `crawler` only |
+| same | `crawl/extractions/{key}.json` | one model extraction per page chunk: `{key, prompt_version, models, source_url, page_sha256, chunk_sha256, model: {provider, model, version}, wards, created_at}`; `key` is SHA-256 of the prompt version, the model chain, the request and the chunk, so a changed prompt or page misses; `crawler` only |
+| same | `crawl/layers/{city}/{kind}.json` | the last OpenStreetMap layer fetched for a city, reused for `CRAWL_INTERVAL_DAYS` and when Overpass is busy; `crawler` only |
+| same | `crawl/wards/{city}.json` | the crawl output, same shape as `data/wards/<city>.json`; `crawler` writes, `worker` and `scores` read |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
 
@@ -265,7 +275,11 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `AWS_REGION` | api, worker, scores, ml | `ap-south-1` |
 | `REPORTS_TABLE`, `CLEANUPS_TABLE`, `SCANS_TABLE`, `SITES_TABLE`, `VOTES_TABLE`, `DEVICES_TABLE`, `USERS_TABLE`, `SCORES_TABLE` | api: all; worker: all; scores: reports, sites, scores; ml: none | `junksnap-<stage>-<table>` |
 | `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | api | the stage's user pool id and its app client id (no client secret); the api builds the issuer and JWKS URL from them and `AWS_REGION` |
-| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` and reads `models/`) | `junksnap-<stage>-originals-<account_id>` |
+| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` and reads `models/`), scores and worker (read `crawl/wards/`), crawler (`crawl/`) | `junksnap-<stage>-originals-<account_id>` |
+| `CRAWLS_TABLE` | api (read), worker (queue a district), crawler | `junksnap-<stage>-crawls` |
+| `CRAWL_ACTIVATE_AFTER` | worker | verified reports in a district before it is queued for a crawl; default `1` |
+| `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
+| `CRAWL_MODELS` | crawler | optional JSON list of Bedrock extraction models in order, `[{"model_id", "version", "usd_per_million_in", "usd_per_million_out"}]`; the CronJob uses Nova Pro, then Nova Lite |
 | `PUBLIC_BUCKET` | worker, ml (reads `media/` only) | `junksnap-<stage>-public-<account_id>` |
 | `PUBLIC_BASE_URL` | api, worker | CloudFront base URL, no trailing slash |
 | `REPORTS_QUEUE_URL` | api, worker | URL of `junksnap-<stage>-reports` |
@@ -290,8 +304,8 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 ## Stages and names
 
 - Stages: `dev` for building, `demo` for the recording. Region `ap-south-1` for everything.
-- One EKS Auto Mode cluster, `junksnap`, with namespaces `junksnap-dev` and `junksnap-demo`. Deployments `api`, `worker` and `ml`, plus the CronJob `scores` (every 15 minutes). Containers listen on 8000; the `api` and `ml` Services listen on 80.
-- Images, in ECR repositories of the same names: `junksnap-server` runs `api`, `worker` and `scores` (one image, a different command each); `junksnap-ml` runs `ml`.
+- One EKS Auto Mode cluster, `junksnap`, with namespaces `junksnap-dev` and `junksnap-demo`. Deployments `api`, `worker` and `ml`, plus the CronJobs `scores` (every 15 minutes) and `crawler` (hourly: queued and due districts from the `crawls` table). Containers listen on 8000; the `api` and `ml` Services listen on 80.
+- Images, in ECR repositories of the same names: `junksnap-server` runs `api`, `worker` and `scores` (one image, a different command each); `junksnap-ml` runs `ml`; `junksnap-crawler` (`data/ward_crawler`) runs `crawler`.
 - AWS resources are named `junksnap-<stage>-<thing>`; bucket names add `-<account_id>` because S3 names are global; secrets use `junksnap/<stage>/<name>`. Tags: `project=junksnap`, `stage=<stage>`.
 
 ## Seed samples
