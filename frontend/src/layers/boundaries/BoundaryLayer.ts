@@ -4,6 +4,8 @@ import type { LayerSpecification } from 'maplibre-gl';
 export interface BoundaryContext {
   readonly polygonSource: string;
   readonly labelSource: string;
+  /** The app's dark theme: markers use their dark badge and light text. */
+  readonly dark: boolean;
 }
 
 /** One MapLibre layer of the map's areas (assembly seats where they exist, Lok Sabha seats elsewhere). */

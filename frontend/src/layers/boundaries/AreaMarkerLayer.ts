@@ -14,25 +14,24 @@ const BADGE: ExpressionSpecification = [
   BADGE_IMAGES.plain,
 ];
 
-// Same as --text and --text-secondary in theme.css; MapLibre paint needs plain values.
-const NAME_COLOR = '#1f1f1f';
-const VALUE_COLOR = '#5f6368';
+// --text and --text-secondary from src/ui/tokens.css, light and dark; MapLibre needs plain values.
+const TEXT_COLORS = {
+  light: { name: '#221c15', value: '#5f5446' },
+  dark: { name: '#f7f0e4', value: '#c9bdaa' },
+} as const;
 
-// Name, then the shown score or report count as a bare number (the badge glyph says which); else the name.
-const TEXT: ExpressionSpecification = [
-  'case',
-  ['has', 'marker_value'],
-  [
-    'format',
-    ['get', 'name'],
-    { 'text-font': ['literal', ['Noto Sans Bold']], 'text-color': NAME_COLOR },
-    '\n',
-    {},
-    ['get', 'marker_value'],
-    { 'font-scale': 0.9, 'text-color': VALUE_COLOR },
-  ],
-  ['format', ['get', 'name'], { 'text-font': ['literal', ['Noto Sans Bold']], 'text-color': NAME_COLOR }],
-];
+/** Name, then the shown score or report count as a bare number (the badge glyph says which); else the name. */
+export function markerText(dark: boolean): ExpressionSpecification {
+  const colors = TEXT_COLORS[dark ? 'dark' : 'light'];
+  const bold: ExpressionSpecification = ['literal', ['Noto Sans Bold']];
+  const name = { 'text-font': bold, 'text-color': colors.name };
+  return [
+    'case',
+    ['has', 'marker_value'],
+    ['format', ['get', 'name'], name, '\n', {}, ['get', 'marker_value'], { 'font-scale': 0.9, 'text-color': colors.value }],
+    ['format', ['get', 'name'], name],
+  ];
+}
 
 /**
  * Each area's marker: a small badge at its pole of inaccessibility with its name, a score or photo glyph
@@ -43,14 +42,14 @@ export class AreaMarkerLayer implements BoundaryLayer {
   readonly id = 'boundary-marker';
   readonly onTop = true;
 
-  spec({ labelSource }: BoundaryContext): LayerSpecification {
+  spec({ labelSource, dark }: BoundaryContext): LayerSpecification {
     return {
       id: this.id,
       type: 'symbol',
       source: labelSource,
       minzoom: MARKER_MIN_ZOOM,
       layout: {
-        'text-field': TEXT,
+        'text-field': markerText(dark),
         'text-font': ['Noto Sans Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 8, 10, 12, 12, 15, 14],
         'text-max-width': 10,

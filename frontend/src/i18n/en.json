@@ -154,7 +154,9 @@
       "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
       "notMapped": "Bins not mapped here yet"
     },
-    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body"
+    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body",
+    "noWardShort": "Not mapped yet",
+    "noWardLineShort": "Ward: not mapped yet"
   },
   "snap": {
     "title": "Report a waste site",
@@ -597,7 +599,8 @@
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
     "legendChip": "Legend",
-    "caveat": "Scores show after 10 verified reports"
+    "caveat": "Scores show after 10 verified reports",
+    "outdated": "Dashed outline: seat boundary out of date"
   },
   "ranking": {
     "open": "City ranking",

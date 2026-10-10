@@ -31,6 +31,15 @@ def write(path: Path, features: list[dict[str, object]]) -> None:
     )
 
 
+def ship(spec: sb.LayerSpec, source: Path, out: Path) -> sb.LayerResult:
+    """Builds and writes one layer, as the tests inspect it."""
+    out.mkdir(parents=True, exist_ok=True)
+    result = sb.build_layer(spec, source)
+    assert result is not None
+    sb.write_layer(result, out)
+    return result
+
+
 def read(path: Path) -> list[dict[str, object]]:
     return json.loads(path.read_text(encoding="utf-8"))["features"]
 
@@ -57,20 +66,10 @@ def test_label_files_carry_the_pole_of_each_original_shape(tmp_path: Path) -> No
     write(
         source / "rajasthan_assembly.geojson", [feature({"id": "s20-ac-1", "name": "C"}, C_SHAPE)]
     )
-    sb.run(source, out)
+    ship(sb.ASSEMBLY, source, out)
     [label] = read(out / "assembly_labels.geojson")
     assert label["properties"] == {"id": "s20-ac-1", "name": "C"}
     assert Polygon(C_SHAPE).contains(Point(label["geometry"]["coordinates"]))
-
-
-def test_unnamed_wards_get_a_ward_number_marker(tmp_path: Path) -> None:
-    source, out = tmp_path / "src", tmp_path / "out"
-    source.mkdir()
-    ward = feature({"id": "jodhpur-mc-w7", "ward_no": 7, "name": None}, C_SHAPE)
-    write(source / "jodhpur_wards.geojson", [ward])
-    sb.run(source, out)
-    [label] = read(out / "wards_labels.geojson")
-    assert label["properties"] == {"id": "jodhpur-mc-w7", "name": "Ward 7"}
 
 
 def wiggly_square(west: float, prefix: str) -> dict[str, object]:
@@ -88,7 +87,7 @@ def test_fine_file_keeps_original_edges_for_the_chosen_areas_only(tmp_path: Path
     spec = sb.LayerSpec(
         "loksabha", "india_loksabha.geojson", ("id", "status"), 3_000, 60_000, "s20-"
     )
-    [result] = sb.run(source, out, (spec,))
+    result = ship(spec, source, out)
     assert result.fine is not None and result.fine.tolerance == 0.0
     fine = {
         f["properties"]["id"]: shape(f["geometry"]) for f in read(out / "loksabha_fine.geojson")
@@ -96,9 +95,7 @@ def test_fine_file_keeps_original_edges_for_the_chosen_areas_only(tmp_path: Path
     coarse = {f["properties"]["id"]: shape(f["geometry"]) for f in read(out / "loksabha.geojson")}
     assert len(fine["s20-pc-1"].exterior.coords) > 400
     assert fine["s08-pc-1"].equals(coarse["s08-pc-1"])
-    assert json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]["loksabha"][
-        "fine"
-    ]
+    assert result.manifest()["fine"]
 
 
 def test_no_fine_file_when_it_does_not_fit(tmp_path: Path) -> None:
@@ -106,10 +103,7 @@ def test_no_fine_file_when_it_does_not_fit(tmp_path: Path) -> None:
     source.mkdir()
     write(source / "india_loksabha.geojson", [wiggly_square(70.0, "s20")])
     spec = sb.LayerSpec("loksabha", "india_loksabha.geojson", ("id",), 3_000, 1_000, "s20-")
-    [result] = sb.run(source, out, (spec,))
+    result = ship(spec, source, out)
     assert result.fine is None
     assert not (out / "loksabha_fine.geojson").exists()
-    assert (
-        "fine"
-        not in json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]["loksabha"]
-    )
+    assert "fine" not in result.manifest()

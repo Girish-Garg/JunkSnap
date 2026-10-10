@@ -1,5 +1,5 @@
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import { AreaMarkerLayer, BADGE_IMAGES } from '../../layers/boundaries/AreaMarkerLayer';
+import { AreaMarkerLayer, BADGE_IMAGES, markerText } from '../../layers/boundaries/AreaMarkerLayer';
 import { BoundaryFillLayer } from '../../layers/boundaries/BoundaryFillLayer';
 import type { BoundaryContext, BoundaryLayer } from '../../layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../../layers/boundaries/BoundaryLineLayer';
@@ -37,7 +37,8 @@ const LAYERS: readonly BoundaryLayer[] = [
   new OutdatedLineLayer(),
   new AreaMarkerLayer(),
 ];
-const PICKABLE = ['boundary-marker', 'boundary-fill'];
+const MARKER_LAYER = 'boundary-marker';
+const PICKABLE = [MARKER_LAYER, 'boundary-fill'];
 const POLYGONS = 'boundary-polygons';
 const LABELS = 'boundary-labels';
 // Original edges load once the map is zoomed in past the city view.
@@ -60,6 +61,7 @@ export class BoundaryOverlay {
   #colors: ReadonlyMap<string, string> = new Map();
   #fineLoaded = false;
   #ready = false;
+  #dark = false;
 
   constructor(map: MapLibreMap, files: BoundaryFiles, siteLayerId: string | undefined) {
     this.#map = map;
@@ -67,17 +69,31 @@ export class BoundaryOverlay {
     this.#siteLayerId = siteLayerId;
     this.#markers = new AreaMarkerSource(map, files, LABELS);
     map.on('zoomend', () => this.#loadFineEdges());
-    new MarkerTooltip(map, 'boundary-marker');
+    new MarkerTooltip(map, MARKER_LAYER);
   }
 
   /** Called once the style and the site layers are in. */
   ready(): void {
     this.#ready = true;
-    for (const [kind, name] of Object.entries(BADGE_IMAGES) as [BadgeKind, string][]) {
-      const badge = BadgeArt.create(kind);
-      if (!this.#map.hasImage(name)) this.#map.addImage(name, badge, badge.options);
-    }
+    this.#drawBadges();
     this.#render();
+  }
+
+  /** Dark badges with light text in the dark theme, switched in place like the basemap. */
+  setDark(dark: boolean): void {
+    if (dark === this.#dark) return;
+    this.#dark = dark;
+    if (!this.#ready) return;
+    this.#drawBadges();
+    if (this.#map.getLayer(MARKER_LAYER)) this.#map.setLayoutProperty(MARKER_LAYER, 'text-field', markerText(dark));
+  }
+
+  #drawBadges(): void {
+    for (const [kind, name] of Object.entries(BADGE_IMAGES) as [BadgeKind, string][]) {
+      const badge = BadgeArt.create(kind, this.#dark);
+      if (this.#map.hasImage(name)) this.#map.updateImage(name, badge);
+      else this.#map.addImage(name, badge, badge.options);
+    }
   }
 
   show(view: BoundaryView | null): void {
@@ -118,7 +134,7 @@ export class BoundaryOverlay {
     const polygons = { type: 'geojson', data: this.#files.polygonsUrl(), promoteId: 'id' } as const;
     this.#map.addSource(POLYGONS, { ...polygons, attribution: attribution ?? SEAT_CREDIT });
     this.#map.addSource(LABELS, { type: 'geojson', data: AreaMarkerSource.merge(null, new Map()) });
-    const context: BoundaryContext = { polygonSource: POLYGONS, labelSource: LABELS };
+    const context: BoundaryContext = { polygonSource: POLYGONS, labelSource: LABELS, dark: this.#dark };
     const underLabels = this.#firstBasemapLabel();
     for (const layer of LAYERS) this.#map.addLayer(layer.spec(context), layer.onTop ? this.#siteLayer() : underLabels);
     this.#markers.load();
