@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import type { LetterDraft } from '../../../domain/SiteActions';
 import { LetterText } from '../LetterText';
+import { LetterAddress } from './LetterAddress';
 import { LetterCitations } from './LetterCitations';
+import { LetterEvidence } from './LetterEvidence';
 
 interface LetterViewProps {
   readonly draft: LetterDraft;
@@ -15,25 +17,9 @@ export function LetterView({ draft, forPrint = false }: LetterViewProps) {
   const text = new LetterText(t, draft);
   return (
     <article className={forPrint ? 'letter letter--print' : 'letter'} lang={draft.language} aria-label={draft.subject} aria-hidden={forPrint || undefined}>
-      <dl className="letter__address">
-        <div>
-          <dt>{text.label('to')}</dt>
-          <dd>{text.to()}</dd>
-        </div>
-        {draft.cc.length > 0 && (
-          <div>
-            <dt>{text.label('ccLabel')}</dt>
-            {draft.cc.map((cc) => (
-              <dd key={cc.seat.id}>{text.cc(cc)}</dd>
-            ))}
-          </div>
-        )}
-        <div>
-          <dt>{text.label('subject')}</dt>
-          <dd className="letter__subject">{draft.subject}</dd>
-        </div>
-      </dl>
+      <LetterAddress draft={draft} text={text} />
       <p className="letter__body">{draft.body}</p>
+      {draft.evidence && <LetterEvidence evidence={draft.evidence} text={text} language={draft.language} />}
       <LetterCitations citations={draft.citations} text={text} />
       {draft.template_fallback && <p className="letter__note">{text.label('templateFallback')}</p>}
       <p className="letter__note">{text.label('residentFiles')}</p>

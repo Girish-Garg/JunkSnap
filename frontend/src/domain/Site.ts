@@ -94,6 +94,8 @@ export interface SiteProperties {
   readonly last_reported_at: string;
   readonly cleaned_at: string | null;
   readonly pilot: boolean;
+  /** v1.4: distinct people who reported the site (user id, else device); absent on older rows. */
+  readonly reporters?: number;
   /** Optional in v1.1 so older producers stay valid; the worker always writes it. */
   readonly insights?: SiteInsights;
 }

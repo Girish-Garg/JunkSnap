@@ -141,7 +141,16 @@
     "brands": "इस स्थल पर दिखी पैकेजिंग",
     "noAssembly": "यहाँ अभी विधानसभा नक्शा नहीं",
     "seatOutdated": "सीमा पुरानी है",
-    "district": "ज़िला"
+    "district": "ज़िला",
+    "evidence": "किसने रिपोर्ट किया",
+    "reporters_one": "{{count}} व्यक्ति ने इसकी रिपोर्ट की",
+    "reporters_other": "{{count}} लोगों ने इसकी रिपोर्ट की",
+    "noBinReporters": "{{min}} में से {{count}} लोगों ने यहाँ कूड़ेदान न होने की रिपोर्ट की",
+    "bin": {
+      "nearest": "सबसे पास का ज्ञात कूड़ेदान: {{distance}} (OpenStreetMap)",
+      "noneWithin3km": "3 किमी के अंदर कोई ज्ञात कूड़ेदान नहीं (OpenStreetMap, वार्ड रिकॉर्ड)",
+      "notMapped": "यहाँ कूड़ेदान अभी नक्शे पर नहीं हैं"
+    }
   },
   "snap": {
     "title": "कचरा स्थल की रिपोर्ट करें",
@@ -521,6 +530,36 @@
       "failed": "पत्र का मसौदा नहीं बना। फिर कोशिश करें।",
       "sign_in": "आपका साइन इन समाप्त हो गया है। फिर से साइन इन करके दोबारा कोशिश करें।"
     },
-    "copyFailed": "कॉपी नहीं हुआ। पत्र का पाठ चुनकर खुद कॉपी करें।"
+    "copyFailed": "कॉपी नहीं हुआ। पत्र का पाठ चुनकर खुद कॉपी करें।",
+    "evidence": {
+      "title": "साक्ष्य",
+      "reports": "रिपोर्ट",
+      "reporters": "रिपोर्ट करने वाले लोग",
+      "notCounted": "गिने नहीं गए",
+      "verified": "सत्यापित रिपोर्ट",
+      "first": "पहली रिपोर्ट",
+      "last": "आख़िरी रिपोर्ट",
+      "photoAlt": "धुंधली फ़ोटो {{n}}",
+      "material": "{{material}} लगभग {{pct}}% ({{count}} रिपोर्ट)",
+      "size": {
+        "small": "छोटा ढेर",
+        "medium": "मध्यम ढेर",
+        "large": "बड़ा ढेर"
+      },
+      "hazard": "ख़तरा दिखा: {{hazard}}",
+      "hazards": {
+        "burning": "जलना",
+        "medical_waste": "मेडिकल कचरा",
+        "e_waste": "ई-कचरा",
+        "dead_animal": "मरा हुआ जानवर",
+        "chemicals": "रसायन"
+      },
+      "near": {
+        "school": "स्कूल के पास, {{distance}} (OpenStreetMap)",
+        "hospital": "अस्पताल के पास, {{distance}} (OpenStreetMap)",
+        "water": "जल स्रोत के पास, {{distance}} (OpenStreetMap)",
+        "drain": "खुली नाली के पास, {{distance}} (OpenStreetMap)"
+      }
+    }
   }
 }

@@ -81,6 +81,30 @@
   overflow-wrap: anywhere;
 }
 
+/* Evidence reuses the facts rows; photos are small blurred thumbnails that also print. */
+.letter__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.letter__photos img {
+  display: block;
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-s);
+  background: var(--tile);
+  object-fit: cover;
+}
+
+.letter__insights {
+  margin: var(--space-1) 0 0;
+  padding-left: 20px;
+}
+
 .letter__verified {
   margin-top: var(--space-1);
   font-weight: 600;

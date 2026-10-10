@@ -18,7 +18,7 @@ export function LetterChooser({ flow }: { readonly flow: LetterFlow }) {
       <Segmented label={t('letter.language')} options={LANGUAGES} value={flow.language} onChange={flow.setLanguage} />
       {flow.problem && (
         <p className="form__error" role="alert">
-          {t(`letter.errors.${flow.problem}`)}
+          {flow.reason ?? t(`letter.errors.${flow.problem}`)}
         </p>
       )}
       <Button onClick={flow.request} disabled={flow.busy}>
