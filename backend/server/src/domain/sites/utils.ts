@@ -1,4 +1,4 @@
-import type { PhotoUrls, SiteBrand } from "./SiteTypes.js";
+import type { PhotoUrls, SiteBrand, Voter } from "./SiteTypes.js";
 
 const MAX_PHOTOS = 6;
 
@@ -27,4 +27,9 @@ export function earlierTime(a: string, b: string): string {
 
 export function laterTime(a: string, b: string): string {
   return Date.parse(b) > Date.parse(a) ? b : a;
+}
+
+// A person is a user id, else a device token (decision 20261010-1530).
+export function personOf(voter: Voter): string {
+  return voter.userId ?? voter.deviceToken;
 }

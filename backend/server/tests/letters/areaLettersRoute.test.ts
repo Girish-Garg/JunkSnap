@@ -114,6 +114,15 @@ describe("DynamoAreaLetterSites", () => {
     expect(JSON.stringify(batch.sites[0]?.site)).not.toContain("u1");
   });
 
+  it("reads a row from before ten-person verification as an unverified site instead of dropping it", async () => {
+    const { backers: _gone, ...older } = stored("site_old", { verification: "community_check", reporter_ids: ["u1"] });
+    expect(_gone).toBeDefined();
+    const page: ScanCommandOutput = { $metadata: {}, Items: [older] };
+    const batch = await new DynamoAreaLetterSites({ send: async () => page }, "t").sitesIn(AreaKey.parse("assembly", ASSEMBLY));
+    expect(batch.unreadable).toBe(0);
+    expect(batch.sites[0]?.site.properties).toMatchObject({ verification: "unverified", backers: { count: 5, photo_people: 5, vote_people: 0 } });
+  });
+
   it("projects only the contract fields and reporter ids", async () => {
     const commands: ScanCommand[] = [];
     const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), { $metadata: {} }) }, "t");

@@ -28,7 +28,6 @@ export interface MergeableReport {
   readonly deviceToken: string;
   readonly userId: string | null;
   readonly reportedAt: string;
-  readonly autoVerified: boolean;
   readonly embeddingKey: string | null;
   readonly meTooSiteId: string | null;
   readonly photoUrl: string | null;

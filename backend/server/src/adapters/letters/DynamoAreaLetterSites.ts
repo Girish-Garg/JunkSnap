@@ -4,6 +4,7 @@ import type { AreaKey, AreaKind } from "../../domain/AreaKey.js";
 import { ExternalServiceError } from "../../domain/errors.js";
 import type { StoredAreaSite } from "../../domain/letters/AreaIssueSites.js";
 import type { AreaLetterSites, AreaSiteBatch } from "../../ports/letters/AreaLetterSites.js";
+import { LegacySiteFields } from "../sites/LegacySiteFields.js";
 
 const PROPERTY_KEYS = Object.keys(siteSchema.properties.properties.properties);
 // Only what the site contract and the reporter count need; the item's other private fields stay in DynamoDB.
@@ -71,7 +72,9 @@ export class DynamoAreaLetterSites implements AreaLetterSites {
     }
   }
 
-  static #stored(item: Record<string, unknown>): StoredAreaSite | null {
+  // Rows from before decision 20261010-1530 read as unverified sites instead of being dropped.
+  static #stored(stored: Record<string, unknown>): StoredAreaSite | null {
+    const item = new LegacySiteFields().upgrade(stored);
     const properties = Object.fromEntries(PROPERTY_KEYS.filter((key) => key in item).map((key) => [key, item[key]]));
     let site: Site;
     try {

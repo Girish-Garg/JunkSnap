@@ -1,0 +1,46 @@
+/* Backers progress (decision 20261010-1530); theme tokens only, the restyle owns the look. */
+.backers {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.backers__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.backers__label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.backers__detail {
+  color: var(--text-secondary);
+}
+
+.backers__bar {
+  width: 100%;
+  height: var(--space-1);
+  appearance: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--tile);
+  overflow: hidden;
+}
+
+.backers__bar::-webkit-progress-bar {
+  background: var(--tile);
+}
+
+.backers__bar::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.backers__bar::-moz-progress-bar {
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}

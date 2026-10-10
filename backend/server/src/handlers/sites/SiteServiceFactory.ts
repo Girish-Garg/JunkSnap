@@ -8,7 +8,6 @@ import { DynamoCleanupRepository } from "../../adapters/sites/DynamoCleanupRepos
 import { DynamoReportStatusWriter } from "../../adapters/sites/DynamoReportStatusWriter.js";
 import { DynamoSiteRepository } from "../../adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../adapters/sites/DynamoVoteRepository.js";
-import { DynamoVoterReputation } from "../../adapters/sites/DynamoVoterReputation.js";
 import { NgeohashCells } from "../../adapters/sites/NgeohashCells.js";
 import { S3EmbeddingStore } from "../../adapters/sites/S3EmbeddingStore.js";
 import { SiteItemMapper } from "../../adapters/sites/SiteItemMapper.js";
@@ -73,7 +72,6 @@ export class SiteServiceFactory {
     return new VoteService({
       sites: this.#sites(),
       votes: new DynamoVoteRepository(dynamo, tables.votes, this.#calls),
-      reputation: new DynamoVoterReputation(dynamo, tables, this.#calls),
       reports: this.#reports(),
       clock: this.#clock,
       retry: this.#retry,

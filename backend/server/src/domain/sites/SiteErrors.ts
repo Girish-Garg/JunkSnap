@@ -25,5 +25,10 @@ export class AlreadyCleanedError extends InvalidTransitionError {
   override readonly code: ErrorCode = "already_cleaned";
 }
 
+// A rejected site is hidden from the map and takes no more votes.
+export class SiteRejectedError extends InvalidTransitionError {
+  override readonly code: ErrorCode = "site_rejected";
+}
+
 // Another writer saved the site first; the caller reloads and tries again.
 export class StaleSiteError extends JunkSnapError {}

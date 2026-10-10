@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:contracts": "tsx scripts/genContracts.ts"
+    "gen:contracts": "tsx scripts/genContracts.ts",
+    "migrate:backers": "tsx src/handlers/migrateBackers.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1148.0",

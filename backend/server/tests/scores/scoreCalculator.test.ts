@@ -48,7 +48,7 @@ describe("ScoreCalculator guardrail", () => {
   it("never counts rejected sites, and counts only verified reports on verified sites", () => {
     const row = calculate([
       site({ verifiedCount: 3, status: "cleaned", cleanedAt: "2026-10-11T00:00:00Z" }),
-      site({ verifiedCount: 0, verification: "community_check", status: "reopened" }),
+      site({ verifiedCount: 0, verification: "unverified", status: "reopened" }),
       site({ verifiedCount: 7, verification: "rejected" }),
     ]);
     expect(row.counts).toEqual({ verified_reports: 3, no_bin_reports: 0, sites: 2, open_sites: 0, cleaned_sites: 1, reopened_sites: 1, sites_without_bin_within_3km: 0 });
@@ -60,7 +60,7 @@ describe("ScoreCalculator window, pilot and version", () => {
     const row = calculate([
       site({ firstReportedAt: "2026-10-09T03:40:00Z" }),
       site({ firstReportedAt: "2026-10-01T00:00:00Z", verification: "rejected" }),
-      site({ firstReportedAt: "2026-10-08T05:00:00Z", verification: "community_check" }),
+      site({ firstReportedAt: "2026-10-08T05:00:00Z", verification: "unverified" }),
     ]);
     expect(row.data_window).toEqual({ from: "2026-10-08T05:00:00Z", to: "2026-10-20T00:00:00Z" });
     expect(row.computed_at).toBe("2026-10-20T00:00:00Z");
@@ -133,7 +133,7 @@ describe("ScoreCalculator scores-v2 formulas", () => {
       site({ verifiedCount: 4, insights: binned(1000) }),
       site({ verifiedCount: 4, insights: binned(null) }),
       site({ verifiedCount: 4 }),
-      site({ verifiedCount: 4, verification: "community_check", insights: binned(null) }),
+      site({ verifiedCount: 4, verification: "unverified", insights: binned(null) }),
     ];
     const row = calculate(sites);
     expect(row.metrics).toMatchObject({ no_bin_within_3km_pct: 50, median_distance_to_disposal_m: 1000 });

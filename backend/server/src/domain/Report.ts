@@ -20,8 +20,9 @@ import type { VerifyFeatures, VerifyRequest } from "./VerifyRequest.js";
 
 const OPEN_STATUSES: ReadonlySet<ReportStatus> = new Set(["queued", "processing"]);
 const DECISION_STATUS: Readonly<Record<VerificationResult["decision"], ReportStatus>> = {
-  auto_verified: "verified",
-  community_check: "community_check",
+  // A passed photo alone never verifies anything (decision 20261010-1530).
+  auto_verified: "unverified",
+  community_check: "unverified",
   rejected: "rejected",
 };
 const UPLOAD_FIELDS = [

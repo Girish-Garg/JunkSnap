@@ -19,7 +19,6 @@ import {
   FakeCleanups,
   FakeQueue,
   FakeReportStatus,
-  FakeReputation,
   FakeSiteRepository,
   FakeVoteRepository,
   FixedClock,
@@ -64,7 +63,7 @@ function variant(sample: string, id: string, changes: Partial<SiteFeature["prope
 }
 
 async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance> {
-  const reporter = { reporterDevices: [DEVICE_A], reporterUsers: [userOf(DEVICE_A)] };
+  const reporter = { reporterDevices: [DEVICE_A], reporterUsers: [userOf(DEVICE_A)], reporterIds: [userOf(DEVICE_A)] };
   for (const sample of ["jdh-1", "jdh-2", "jdh-3"]) {
     sites.putFeature(siteFixture(sample), reporter);
   }
@@ -74,10 +73,9 @@ async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance>
   const retry = new ConflictRetry();
   votes = new FakeVoteRepository();
   cleanups = new FakeCleanups();
-  const reputation = new FakeReputation();
   const routes = new SiteRoutes({
     finder: new SiteFinder(sites, new NgeohashCells()),
-    votes: new VoteService({ sites, votes, reputation, reports: new FakeReportStatus(), clock, retry }),
+    votes: new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry }),
     cleanups: new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry }),
     users: new GuardedSiteUsers(new FakeGuard()),
   });
@@ -149,7 +147,12 @@ describe("POST /sites/{id}/votes", () => {
   it("records the vote under the signed-in user, ignoring a user_id in the body", async () => {
     const response = await post({ ...VOTE, user_id: "someone-else" });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ site_id: "site_jpr_1", votes: { confirm: 1, reject: 0 }, verification: "community_check" });
+    expect(response.json()).toEqual({
+      site_id: "site_jpr_1",
+      votes: { confirm: 1, reject: 0 },
+      backers: { count: 2, needed: 10, photo_people: 1, vote_people: 1 },
+      verification: "unverified",
+    });
     expect((await votes.forSite("site_jpr_1"))[0]?.userId).toBe(userOf(DEVICE_B));
   });
 

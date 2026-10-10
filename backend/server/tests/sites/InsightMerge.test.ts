@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateSite } from "../../src/contracts/index.gen.js";
 import { InsightMerge } from "../../src/domain/sites/InsightMerge.js";
 import { Site } from "../../src/domain/sites/Site.js";
+import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import type { NearPlace, ReportInsights } from "../../src/domain/sites/SiteTypes.js";
 import { DEVICE_B, report } from "./builders.js";
 
@@ -68,17 +69,21 @@ describe("InsightMerge", () => {
   });
 });
 
+const yes = (n: number) => ({ siteId: "s", deviceToken: `d${n}`, userId: null, choice: "confirm" as const, votedAt: "2026-10-10T05:00:00Z" });
+
 describe("Site insights", () => {
   it("keeps the founding report's nearby places as the site's, through later merges", () => {
     const site = Site.found(report({ decision: "community_check", near: [SCHOOL] }));
     expect(site.toFeature().properties.insights?.near).toEqual([SCHOOL]);
     site.merge(report({ id: "jdh_2", device: DEVICE_B, near: [] }));
+    site.recordVotes(VoteTally.of(Array.from({ length: 8 }, (_, n) => yes(n))));
     const properties = validateSite(site.toFeature()).properties;
-    expect(properties.insights).toMatchObject({ reports: 1, near: [SCHOOL] });
+    expect(properties.insights).toMatchObject({ reports: 2, near: [SCHOOL] });
   });
 
   it("merges only reports without insights as zero reports", () => {
     const site = Site.found(report({ insights: null }));
+    site.recordVotes(VoteTally.of(Array.from({ length: 9 }, (_, n) => yes(n))));
     expect(site.toFeature().properties).toMatchObject({ verified_count: 1, insights: { reports: 0, composition: [] } });
   });
 });

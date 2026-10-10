@@ -56,10 +56,10 @@ describe('SitePanel photos, location and brands', () => {
 });
 
 describe('SitePanel for the fixtures and Hindi', () => {
-  it('makes Confirm the main action while neighbours check', async () => {
+  it('makes Confirm the main action and shows the backers while unverified', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
     expect(factValue('Ward')).toHaveTextContent('No open ward map');
-    expect(screen.getByText('Waiting for a neighbour check')).toBeInTheDocument();
+    expect(screen.getByText('Unverified')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm' })).toHaveClass('action-row__button--primary');
     expect(screen.queryByText('Packaging seen at this site')).not.toBeInTheDocument();
   });
@@ -80,5 +80,15 @@ describe('SitePanel for the fixtures and Hindi', () => {
     expect(factValue('वार्ड')).toHaveTextContent('Ward 37');
     const firstReported = new LocaleFormatter('hi').dateTime(site.properties.first_reported_at);
     expect(factValue('पहली रिपोर्ट')).toHaveTextContent(firstReported);
+  });
+});
+
+describe('SitePanel backers', () => {
+  it('shows n of 10 people confirmed and the vote for an unverified site', async () => {
+    await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
+    expect(screen.getByText('2 of 10 people confirmed')).toBeInTheDocument();
+    expect(screen.getByText('1 by photo, 1 by vote')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('value', '2');
+    expect(screen.getByRole('button', { name: "Yes, it's waste" })).toBeInTheDocument();
   });
 });
