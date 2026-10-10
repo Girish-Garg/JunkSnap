@@ -98,3 +98,33 @@ describe('two requests to go back at once', () => {
     expect(HistoryLayers.open()).toHaveLength(0);
   });
 });
+
+// Review of PR #118: a link tapped while a field had focus left the field's entry under the next sheet.
+describe('a link tapped while typing', () => {
+  it('takes the field entry off first, so the new sheet sits one level above the list', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/areas' });
+    await waitFor(() => expect(seen.last).not.toBeNull());
+    act(() => seen.last?.onViewChange({ bbox: new BBox(72.5, 26, 76, 27.2) }));
+    const field = await screen.findByLabelText('Find an area');
+    await user.click(field);
+    await waitFor(() => expect(HistoryLayers.open()).toHaveLength(1));
+    await user.click(await screen.findByRole('link', { name: /Sardarpura/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Sardarpura' })).toBeInTheDocument();
+    await waitFor(() => expect(HistoryLayers.open()).toHaveLength(0));
+    await user.click(screen.getByRole('button', { name: 'Close area' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Areas' })).toBeInTheDocument();
+  });
+});
+
+describe('the leaving mark', () => {
+  it('counts only while its step back is pending, and a new entry never inherits it', () => {
+    window.history.replaceState({ unwinding: Date.now() - 5000 }, '');
+    expect(HistoryLayers.leaving()).toBe(false);
+    window.history.replaceState({ unwinding: Date.now() }, '');
+    expect(HistoryLayers.leaving()).toBe(true);
+    HistoryLayers.push('fresh');
+    expect(window.history.state).not.toHaveProperty('unwinding');
+    expect(HistoryLayers.leaving()).toBe(false);
+  });
+});

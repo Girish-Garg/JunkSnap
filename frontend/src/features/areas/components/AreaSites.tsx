@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 import { sitePath } from '../../../app/paths';
-import { useSheetNavigation } from '../../../app/useSheetNavigation';
+import { SheetLink } from '../../../app/SheetLink';
 import { AreaKey } from '../../../domain/AreaKey';
 import type { AreaScores } from '../../../domain/AreaScores';
 import { TypeIcon } from '../../../ui/TypeIcon';
@@ -15,7 +14,6 @@ interface AreaSitesProps {
 export function AreaSites({ area }: AreaSitesProps) {
   const { t } = useTranslation();
   const { sites } = useMapContext();
-  const { linkState } = useSheetNavigation();
   const key = new AreaKey(area.kind, area.id, area.name);
   const held = sites.filter((site) => key.holds(site));
   if (held.length === 0) return null;
@@ -25,13 +23,13 @@ export function AreaSites({ area }: AreaSitesProps) {
       <ul className="area-sites__list">
         {held.map(({ properties: site }) => (
           <li key={site.site_id}>
-            <Link className="area-site" to={sitePath(site.site_id)} state={linkState}>
+            <SheetLink className="area-site" to={sitePath(site.site_id)}>
               <TypeIcon type={site.report_type} size={24} />
               <span className="area-site__text">
                 <span>{t(`reportType.${site.report_type}`)}</span>
                 <span className="area-row__meta">{t(`status.${site.status}`)}</span>
               </span>
-            </Link>
+            </SheetLink>
           </li>
         ))}
       </ul>

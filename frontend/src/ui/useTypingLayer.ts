@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
 import { useHistoryLayer } from './useHistoryLayer';
+import { DESKTOP_QUERY, useMediaQuery } from './useMediaQuery';
 
 /** Fields that bring up the keyboard (not switches, radios or sliders). */
 export const TYPING_FIELDS = 'textarea, input:not([type=checkbox], [type=radio], [type=range], [type=button], [type=submit])';
 
-// The window grows by at least this much when the soft keyboard goes away.
+// The visible area grows by at least this much when the soft keyboard goes away.
 const KEYBOARD_PX = 150;
 
 function isTyping(target: EventTarget | null): boolean {
@@ -16,34 +17,45 @@ function releaseField(sheet: RefObject<HTMLElement | null>): void {
   if (field instanceof HTMLElement && isTyping(field) && sheet.current?.contains(field)) field.blur();
 }
 
+// The keyboard shrinks the visual viewport in a browser (the page keeps its size) and the whole window in the
+// Android app (the WebView resizes); the visual viewport follows both.
+function visibleHeight(): number {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
 // Android hides the keyboard on the first back press without telling the page, and the field keeps focus.
-// When the window grows back, the field is let go too, so the bottom bar returns.
-function useKeyboardClose(release: () => void): void {
+// When the visible area grows back, the field is let go too, so the bottom bar returns. Phones only.
+function useKeyboardClose(release: () => void, enabled: boolean): void {
   useEffect(() => {
-    let height = window.innerHeight;
+    if (!enabled) return undefined;
+    const target = window.visualViewport ?? window;
+    let height = visibleHeight();
     const onResize = () => {
-      if (window.innerHeight - height > KEYBOARD_PX) release();
-      height = window.innerHeight;
+      if (visibleHeight() - height > KEYBOARD_PX) release();
+      height = visibleHeight();
     };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [release]);
+    target.addEventListener('resize', onResize);
+    return () => target.removeEventListener('resize', onResize);
+  }, [release, enabled]);
 }
 
 /**
- * While a text field in the sheet has focus, it is one more level: back and Escape first let go of the field
- * (and its keyboard), so a half-written note is not lost with the whole sheet.
+ * On phones, a text field in the sheet with the keyboard up is one more level: back and Escape first let go
+ * of the field (and its keyboard), so a half-written note is not lost with the whole sheet. Desktop has no
+ * soft keyboard, so there Escape and back close the sheet as before.
  */
 export function useTypingLayer(sheet: RefObject<HTMLElement | null>) {
-  const [typing, setTyping] = useState(false);
+  const phone = !useMediaQuery(DESKTOP_QUERY);
+  const [focused, setFocused] = useState(false);
+  const typing = focused && phone;
   const release = useCallback(() => releaseField(sheet), [sheet]);
   useHistoryLayer('typing', typing, release);
-  useKeyboardClose(release);
+  useKeyboardClose(release, phone);
   useEffect(() => {
     const element = sheet.current;
     if (!element) return undefined;
-    const onFocusIn = (event: FocusEvent) => setTyping(isTyping(event.target));
-    const onFocusOut = () => setTyping(false);
+    const onFocusIn = (event: FocusEvent) => setFocused(isTyping(event.target));
+    const onFocusOut = () => setFocused(false);
     element.addEventListener('focusin', onFocusIn);
     element.addEventListener('focusout', onFocusOut);
     return () => {

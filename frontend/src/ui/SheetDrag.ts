@@ -21,6 +21,18 @@ function ownsDrag(target: EventTarget): boolean {
   return target instanceof Element && target.closest(OWN_DRAG) !== null;
 }
 
+// React bubbles events through portals, so a dialog portaled out of the sheet (the photo viewer) would
+// otherwise start a sheet drag; only touches that land inside the sheet's own DOM count.
+function inside(event: PointerEvent<HTMLElement>): boolean {
+  return event.target instanceof Node && event.currentTarget.contains(event.target);
+}
+
+// A first finger or the main mouse button, inside the sheet, on a phone, and not on a control with its own drag.
+function grabbable(event: PointerEvent<HTMLElement>, origin: GestureOrigin): boolean {
+  if (!inside(event) || !event.isPrimary || event.button !== 0 || SheetDrag.sidePanel()) return false;
+  return origin === 'bar' || !ownsDrag(event.target);
+}
+
 /** Feeds pointer events to SheetGesture and paints its frames on the sheet through two CSS variables. */
 export class SheetDrag {
   #handlers: SheetDragHandlers = { onSettle: () => undefined, onDismiss: () => undefined };
@@ -36,8 +48,7 @@ export class SheetDrag {
 
   begin(event: PointerEvent<HTMLElement>, origin: GestureOrigin, from: Detent): void {
     const sheet = event.currentTarget.closest<HTMLElement>('.sheet');
-    if (!sheet || !event.isPrimary || event.button !== 0 || SheetDrag.sidePanel()) return;
-    if (origin === 'body' && ownsDrag(event.target)) return;
+    if (!sheet || !grabbable(event, origin)) return;
     const atTop = origin === 'bar' || event.currentTarget.scrollTop <= 0;
     this.#sheet = sheet;
     this.#space = SheetDrag.#measure(sheet);
