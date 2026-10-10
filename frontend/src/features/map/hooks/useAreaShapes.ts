@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useServices } from '../../../app/useServices';
-import { AreaAdjacency } from '../../../domain/AreaAdjacency';
-import { AreaColouring } from '../../../domain/AreaColouring';
-import { AreaShapes } from '../../../domain/AreaShapes';
+import type { AreaShapes } from '../../../domain/AreaShapes';
 import { TINT_COUNT } from '../../../layers/boundaries/AreaTints';
 
 export interface AreaShapesState {
@@ -14,24 +12,24 @@ export interface AreaShapesState {
 
 const NONE: AreaShapesState = { shapes: null, tints: new Map() };
 
-/** Reads the map's area polygons once the layer is drawn and colours them so no two neighbours match. */
-export function useAreaShapes(enabled: boolean): AreaShapesState {
+/**
+ * The map's area polygons and their neighbour tints, for one index version; null skips the read (no areas
+ * layer). BoundaryCatalog reads and colours them once per version, so the map page is the only caller and
+ * hands the tints on to its sheets (MapContext).
+ */
+export function useAreaShapes(version: string | null): AreaShapesState {
   const { boundaries } = useServices();
   const [state, setState] = useState<AreaShapesState>(NONE);
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (version === null) return undefined;
     let current = true;
-    boundaries.polygons().then(
-      (polygons) => {
-        // A missing or odd file leaves the areas untinted, as before.
-        if (!current || !Array.isArray(polygons.features)) return;
-        setState({ shapes: new AreaShapes(polygons), tints: AreaColouring.of(AreaAdjacency.of(polygons), TINT_COUNT) });
-      },
+    boundaries.areaShapes(version, TINT_COUNT).then(
+      (shapes) => current && setState({ shapes, tints: shapes.tints }),
       (error: unknown) => console.error('Could not read the area polygons', error),
     );
     return () => {
       current = false;
     };
-  }, [boundaries, enabled]);
-  return enabled ? state : NONE;
+  }, [boundaries, version]);
+  return version === null ? NONE : state;
 }

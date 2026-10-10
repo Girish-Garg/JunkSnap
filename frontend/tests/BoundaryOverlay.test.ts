@@ -119,6 +119,6 @@ describe('BoundaryOverlay tints and focus', () => {
     overlay.setDark(true);
     const painted = map.setPaintProperty.mock.calls.map(([layer, name]) => `${String(layer)}.${String(name)}`);
     expect(painted).toEqual(['boundary-fill.fill-color', 'boundary-line.line-color', 'boundary-line-focus.line-color']);
-    expect(JSON.stringify(map.setPaintProperty.mock.calls[0])).toContain('#e0b456');
+    expect(JSON.stringify(map.setPaintProperty.mock.calls[0])).toContain('#cdb47a');
   });
 });

@@ -52,11 +52,14 @@ describe('BoundaryFillLayer', () => {
   it('shows the score colour over the tint once the api shows a score, more strongly', () => {
     const opacity = prop(spec, 'paint', 'fill-opacity');
     expect(withState(fill, { tint: 2, fill: '#e2786a', scored: true })).toEqual(colour('#e2786a'));
-    expect(withState(opacity, { scored: true }, 10)).toBe(0.55);
+    expect(withState(opacity, { scored: true }, 10)).toBe(0.3);
     // A neighbour tint stays light: about 10 to 15%.
     for (const zoom of [5, 10, 12, 15, 18]) {
       expect(withState(opacity, { tint: 2 }, zoom)).toBeGreaterThanOrEqual(0.1);
       expect(withState(opacity, { tint: 2 }, zoom)).toBeLessThanOrEqual(0.15);
+      // A score stays a wash too: stronger than a tint, never above 30%.
+      expect(withState(opacity, { scored: true }, zoom)).toBeGreaterThan(withState(opacity, { tint: 2 }, zoom) as number);
+      expect(withState(opacity, { scored: true }, zoom)).toBeLessThanOrEqual(0.3);
     }
   });
 

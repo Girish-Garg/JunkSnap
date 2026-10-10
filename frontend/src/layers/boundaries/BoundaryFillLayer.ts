@@ -3,6 +3,8 @@ import { fillColor, TINT_OPACITY } from './AreaTints';
 import type { BoundaryContext, BoundaryLayer, ThemedProperties } from './BoundaryLayer';
 
 const SCORED: ExpressionSpecification = ['boolean', ['feature-state', 'scored'], false];
+// A shown score is a little stronger than a tint but stays a wash, so a scored seat never reads as an alarm.
+const SCORE_OPACITY = { far: 0.3, near: 0.22 } as const;
 
 /**
  * Every area filled: a soft neighbour tint (AreaColouring through `tint` feature state) so one area reads apart
@@ -20,7 +22,7 @@ export class BoundaryFillLayer implements BoundaryLayer {
       paint: {
         'fill-color': fillColor(context.dark),
         // Lighter as streets and pins take over; tints stay faint at every zoom.
-        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, ['case', SCORED, 0.55, TINT_OPACITY.far], 15, ['case', SCORED, 0.3, TINT_OPACITY.near]],
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, ['case', SCORED, SCORE_OPACITY.far, TINT_OPACITY.far], 15, ['case', SCORED, SCORE_OPACITY.near, TINT_OPACITY.near]],
       },
     };
   }

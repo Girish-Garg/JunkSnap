@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import areasText from '../public/boundaries/areas.geojson?raw';
 import { AreaAdjacency } from '../src/domain/AreaAdjacency';
 import { AreaColouring } from '../src/domain/AreaColouring';
-import { AreaShapes, type AreaPolygons } from '../src/domain/AreaShapes';
+import type { AreaPolygons } from '../src/domain/AreaShapes';
 import { AREA_TINTS, TINT_COUNT } from '../src/layers/boundaries/AreaTints';
+import { BoundaryCatalog } from '../src/services/BoundaryCatalog';
 
 // Vitest hands CSS imports back empty, so the stylesheet is read from disk (the app has no Node types).
 type FileReader = { readFileSync(path: string, encoding: 'utf8'): string };
@@ -58,8 +59,25 @@ describe('AreaColouring on the real areas.geojson', () => {
   });
 });
 
+describe('BoundaryCatalog.areaShapes', () => {
+  it('reads and colours the polygons once per index version and shares the result', async () => {
+    const grid: AreaPolygons = { type: 'FeatureCollection', features: [square('a', 0, 0), square('b', 1, 0)] };
+    const fetched: string[] = [];
+    const catalog = new BoundaryCatalog('/b/', async (input) => {
+      fetched.push(String(input));
+      return Response.json(grid);
+    });
+    const first = catalog.areaShapes('718-835239', TINT_COUNT);
+    expect(catalog.areaShapes('718-835239', TINT_COUNT)).toBe(first);
+    const shapes = await first;
+    expect(shapes.tints.get('a')).not.toBe(shapes.tints.get('b'));
+    expect(catalog.areaShapes('720-900000', TINT_COUNT)).not.toBe(first);
+    expect(fetched).toEqual(['/b/areas.geojson']);
+  });
+});
+
 describe('AreaShapes', () => {
-  const shapes = new AreaShapes(AREAS);
+  const shapes = AreaColouring.shapes(AREAS, TINT_COUNT);
 
   it('finds the seat a point lies in, and nothing outside every area', () => {
     expect(shapes.containing([73.02, 26.27])).toBe('s20-ac-128');
@@ -79,9 +97,34 @@ describe('area tint tokens', () => {
     expect(tokens(theme ?? '')).toEqual(AREA_TINTS.dark);
   });
 
-  it('has 8 to 10 tints, none of them the flag saffron, green or navy or a full red', () => {
+  it('has 8 to 10 tints', () => {
     expect(TINT_COUNT).toBeGreaterThanOrEqual(8);
     expect(TINT_COUNT).toBeLessThanOrEqual(10);
-    for (const banned of ['#ff9933', '#138808', '#000080', '#ff0000']) expect([...AREA_TINTS.light, ...AREA_TINTS.dark]).not.toContain(banned);
+  });
+
+  it('keeps every tint near a party hue (saffron, green, blue, red) muted', () => {
+    const loud = [...AREA_TINTS.light, ...AREA_TINTS.dark].filter((hex) => {
+      const { hue, saturation } = hsl(hex);
+      return PARTY_HUES.some(([from, to]) => hue >= from && hue < to) && saturation > MAX_PARTY_SATURATION;
+    });
+    expect(loud).toEqual([]);
+    // The check itself catches the flag colours and a full red.
+    for (const flag of ['#ff9933', '#138808', '#000080', '#ff0000']) expect(PARTY_HUES.some(([from, to]) => hsl(flag).hue >= from && hsl(flag).hue < to)).toBe(true);
   });
 });
+
+// Hue ranges (degrees) of saffron, green, blue and red, where a tint must stay greyed.
+const PARTY_HUES: readonly (readonly [number, number])[] = [[0, 15], [15, 45], [90, 160], [200, 250], [345, 360]];
+const MAX_PARTY_SATURATION = 0.55;
+
+// HSL hue in degrees and saturation 0 to 1 of a #rrggbb colour.
+function hsl(hex: string): { readonly hue: number; readonly saturation: number } {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16) / 255);
+  const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
+  const delta = max - min;
+  const light = (max + min) / 2;
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * light - 1));
+  const sector = max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  const hue = delta === 0 ? 0 : (sector * 60 + 360) % 360;
+  return { hue, saturation };
+}

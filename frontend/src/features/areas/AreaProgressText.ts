@@ -10,7 +10,7 @@ const COUNT_KEYS = ['verified_reports', 'no_bin_reports', 'sites', 'open_sites',
 export interface ProgressLines {
   /** Always shown, zeros included: "Sites: 0 · verified reports: 0". */
   readonly counts: string;
-  /** "No reports yet", "Not enough reports yet (n of 10 verified)" or the shown score with its count. */
+  /** "No reports yet", "Not enough reports yet (n of 10 verified)", "Score withheld for now", or the shown score with its count. */
   readonly status: string;
 }
 
@@ -32,6 +32,7 @@ export class AreaProgressText {
 
   #status(progress: AreaProgress, verified: string): string {
     if (progress.stage === 'none') return this.#t('areas.noReports');
+    if (progress.stage === 'withheld') return this.#t('areas.scoreWithheld');
     if (progress.score === null) return this.#t('areas.notEnough', { n: verified, min: this.#format.number(progress.min) });
     return this.#t('areas.scoreLine', { n: this.#format.number(progress.score), reports: verified });
   }

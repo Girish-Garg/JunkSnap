@@ -463,13 +463,16 @@
     "noVerifiedSites": "No verified sites yet",
     "rowCounts": "Sites: {{sites}} · verified reports: {{verified}}",
     "listLoading": "Loading areas",
-    "listFailed": "Could not load the areas.",
     "noReports": "No reports yet",
     "scoreLine": "Score {{n}} of 100 · from {{reports}} verified reports",
     "openArea": "Open area",
     "closeCard": "Close area card",
     "pilotNote": "Jodhpur is the pilot city: every seat is listed here, reported or not.",
-    "localBodyNote": "Area letters go to its head. Its ward maps are not reviewed yet, so reports are counted by seat and district for now."
+    "localBodyNote": "Area letters go to its head. Its ward maps are not reviewed yet, so reports are counted by seat and district for now.",
+    "retry": "Try again",
+    "listPartial": "Couldn't load some counts. Areas marked below are not zero; their counts are unknown for now.",
+    "countsFailed": "Couldn't load counts",
+    "scoreWithheld": "Score withheld for now"
   },
   "activity": {
     "title": "Activity",

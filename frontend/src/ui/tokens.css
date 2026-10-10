@@ -99,7 +99,7 @@
 
   /* Map area tints (AreaTints.ts mirrors them): muted, spread round the wheel, drawn at about 15% only to tell
      neighbouring areas apart, never as party colours at strength (DESIGN.md). */
-  --area-tint-1: #c08a1e;
+  --area-tint-1: #a38a4e;
   --area-tint-2: #7a8f22;
   --area-tint-3: #1f8f86;
   --area-tint-4: #4a6fa8;
@@ -155,14 +155,14 @@
     --type-water-tint: rgb(110 170 255 / 0.16);
     --type-construction-tint: rgb(200 160 140 / 0.16);
     --type-overflowing-tint: rgb(190 140 230 / 0.16);
-    --area-tint-1: #e0b456;
+    --area-tint-1: #cdb47a;
     --area-tint-2: #b7c25a;
     --area-tint-3: #5fc6bb;
     --area-tint-4: #8cabd6;
     --area-tint-5: #d495c4;
-    --area-tint-6: #d79a74;
+    --area-tint-6: #c99a7c;
     --area-tint-7: #b5b0a3;
-    --area-tint-8: #ea8fa8;
+    --area-tint-8: #d993a6;
     --status-open: #ff8a80;
     --status-open-tint: rgb(255 138 128 / 0.15);
     --status-cleaned: #82d39b;
@@ -205,14 +205,14 @@
   --type-water-tint: rgb(110 170 255 / 0.16);
   --type-construction-tint: rgb(200 160 140 / 0.16);
   --type-overflowing-tint: rgb(190 140 230 / 0.16);
-  --area-tint-1: #e0b456;
+  --area-tint-1: #cdb47a;
   --area-tint-2: #b7c25a;
   --area-tint-3: #5fc6bb;
   --area-tint-4: #8cabd6;
   --area-tint-5: #d495c4;
-  --area-tint-6: #d79a74;
+  --area-tint-6: #c99a7c;
   --area-tint-7: #b5b0a3;
-  --area-tint-8: #ea8fa8;
+  --area-tint-8: #d993a6;
   --status-open: #ff8a80;
   --status-open-tint: rgb(255 138 128 / 0.15);
   --status-cleaned: #82d39b;

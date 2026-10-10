@@ -22,12 +22,15 @@ function crossings(ring: readonly Position[], point: readonly [number, number]):
   }, 0);
 }
 
-/** Which area a point lies in, from the same polygons the map draws. */
+/** The polygons the map draws, each area's neighbour tint slot (AreaColouring), and which area a point lies in. */
 export class AreaShapes {
   readonly polygons: AreaPolygons;
+  /** Area id to tint slot; no two neighbours share one. */
+  readonly tints: ReadonlyMap<string, number>;
 
-  constructor(polygons: AreaPolygons) {
+  constructor(polygons: AreaPolygons, tints: ReadonlyMap<string, number>) {
     this.polygons = polygons;
+    this.tints = tints;
   }
 
   /** The id of the area holding the point (lon, lat), or null outside every area. */

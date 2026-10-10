@@ -56,8 +56,39 @@ describe('Areas tab lists every Jodhpur area', () => {
     const sardarpura = await seats.findByRole('link', { name: /Sardarpura/ });
     expect(sardarpura).toHaveTextContent('Sites: 3 · verified reports: 4');
     expect(sardarpura).toHaveTextContent('Not enough reports yet (4 of 10 verified)');
-    expect(seats.getByRole('link', { name: /Jodhpur/ })).toHaveTextContent(/Score 44 of 100 · from 14 verified reports/);
+    const jodhpur = seats.getByRole('link', { name: /Jodhpur/ });
+    expect(jodhpur).toHaveTextContent(/Score 44 of 100 · from 14 verified reports/);
+    expect(within(jodhpur).getByText('Pilot city')).toBeInTheDocument();
+    expect(within(sardarpura).queryByText('Pilot city')).not.toBeInTheDocument();
     expect(seats.getByRole('link', { name: /Bilara/ })).toHaveTextContent('No reports yet');
+  });
+});
+
+describe('Areas tab when a list fails', () => {
+  it('never shows zero counts for the areas of the failed list, and loads them on Try again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const base = testServices();
+    const failing = { assembly: true };
+    const areas: AreaApi = {
+      scores: (kind, id) => base.areas.scores(kind, id),
+      list: async (kind, within, limit) => {
+        if (kind === 'assembly' && failing.assembly) throw new Error('offline');
+        return { kind, within, total: 0, limit, areas: [] };
+      },
+      crawl: (districtId) => base.areas.crawl(districtId),
+    };
+    await renderApp(<AppRoutes />, { route: '/areas', services: new ServiceContainer({ ...base, areas }) });
+    const seats = await group('Assembly seats');
+    const osian = seats.getByRole('link', { name: /Osian/ });
+    expect(osian).toHaveTextContent("Couldn't load counts");
+    expect(osian).not.toHaveTextContent('No reports yet');
+    expect(osian).not.toHaveTextContent('Sites: 0');
+    expect((await group('Lok Sabha seats')).getByRole('link', { name: /Pali/ })).toHaveTextContent('No reports yet');
+    failing.assembly = false;
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(seats.getByRole('link', { name: /Osian/ })).toHaveTextContent('No reports yet'));
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
   });
 });
 

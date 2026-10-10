@@ -1,4 +1,5 @@
-import type { Neighbours } from './AreaAdjacency';
+import { AreaAdjacency, type Neighbours } from './AreaAdjacency';
+import { AreaShapes, type AreaPolygons } from './AreaShapes';
 
 /**
  * Gives every area one of `colours` palette slots so that no two neighbours share one (graph colouring).
@@ -9,6 +10,12 @@ import type { Neighbours } from './AreaAdjacency';
  * the least-used slot and a neighbour may repeat it, rather than going uncoloured.
  */
 export class AreaColouring {
+  /** The polygons with their tint slots; a file without a feature list gives no areas. */
+  static shapes(polygons: AreaPolygons, colours: number): AreaShapes {
+    const usable: AreaPolygons = Array.isArray(polygons.features) ? polygons : { type: 'FeatureCollection', features: [] };
+    return new AreaShapes(usable, AreaColouring.of(AreaAdjacency.of(usable), colours));
+  }
+
   static of(neighbours: Neighbours, colours: number): ReadonlyMap<string, number> {
     const order = [...neighbours.keys()].sort((a, b) => AreaColouring.#degree(neighbours, b) - AreaColouring.#degree(neighbours, a) || a.localeCompare(b));
     const slots = new Map<string, number>();

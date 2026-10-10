@@ -451,12 +451,12 @@ a {
   }
 }
 
-/* An area's map colour (TintSwatch): a pale wash of its --area-tint with a ring of it, as the map draws it. */
+/* An area's map colour (TintSwatch): the same 15% wash the map draws, with a softened ring of its --area-tint. */
 .tint-swatch {
   display: inline-block;
   flex: none;
-  border: 2px solid var(--swatch);
-  background: color-mix(in srgb, var(--swatch) 25%, var(--surface));
+  border: 2px solid color-mix(in srgb, var(--swatch) 55%, var(--surface));
+  background: color-mix(in srgb, var(--swatch) 15%, var(--surface));
 }
 
 .tint-swatch--small {

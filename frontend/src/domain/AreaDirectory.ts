@@ -1,12 +1,16 @@
 import { AREA_KINDS, AreaKey } from './AreaKey';
 import type { AreaListing } from './AreaListing';
-import type { AreaScores } from './AreaScores';
+import type { AreaKind, AreaScores } from './AreaScores';
 import type { SiteFeature } from './Site';
 
-/** One area in the Areas tab, with its scores row when the area list route has one; null means no reports yet. */
+/**
+ * One area in the Areas tab, with its scores row when the area list route has one. A null row means no reports
+ * yet, unless `unloaded`: then the list that would hold the row failed, and nothing is known about its counts.
+ */
 export interface AreaEntry {
   readonly area: AreaKey;
   readonly row: AreaScores | null;
+  readonly unloaded: boolean;
 }
 
 // The pilot city plus the districts around the map; more would mean a dozen more requests per open.
@@ -29,13 +33,14 @@ export class AreaDirectory {
 
   /**
    * Each area once, smallest kind first, then by name. A listed row fills in its area's counts and scores;
-   * an area no row names keeps row null (the worker writes a row only once a site lands there).
+   * a known area no row names keeps row null (the worker writes a row only once a site lands there), and is
+   * `unloaded` when the list of its kind for its city failed (`unloaded` kinds), so it never reads as zero.
    */
-  static of(listings: readonly AreaListing[], known: readonly AreaKey[] = []): readonly AreaEntry[] {
-    const byKey = new Map<string, AreaEntry>(known.map((area) => [area.key, { area, row: null }]));
+  static of(listings: readonly AreaListing[], known: readonly AreaKey[] = [], unloaded: ReadonlySet<AreaKind> = new Set()): readonly AreaEntry[] {
+    const byKey = new Map<string, AreaEntry>(known.map((area) => [area.key, { area, row: null, unloaded: unloaded.has(area.kind) }]));
     for (const row of listings.flatMap((listing) => listing.areas)) {
       const area = new AreaKey(row.area.kind, row.area.id, row.area.name);
-      byKey.set(area.key, { area, row });
+      byKey.set(area.key, { area, row, unloaded: false });
     }
     const rank = (entry: AreaEntry) => AREA_KINDS.indexOf(entry.area.kind);
     return [...byKey.values()].sort((a, b) => rank(a) - rank(b) || a.area.name.localeCompare(b.area.name));

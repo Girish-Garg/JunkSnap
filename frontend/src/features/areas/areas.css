@@ -382,3 +382,20 @@
   font-size: var(--text-small);
   line-height: var(--leading-small);
 }
+
+/* A list that failed: one notice with Try again, and its rows say their counts could not load (never zero). */
+.area-partial {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.area-row--unloaded .area-row__status {
+  color: var(--error);
+}
+
+.area-row__pilot {
+  margin-left: var(--s-2);
+  vertical-align: middle;
+}

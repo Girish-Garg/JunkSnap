@@ -61,6 +61,12 @@ describe('AreaDirectory.of with the pilot areas', () => {
   it('lists the pilot areas even when the list route has no rows at all', () => {
     expect(AreaDirectory.of([listing([])], PILOT_AREAS)).toHaveLength(PILOT_AREAS.length);
   });
+
+  it('marks a pilot area unloaded, never zero, when the list of its kind failed', () => {
+    const entries = AreaDirectory.of([], PILOT_AREAS, new Set(['assembly']));
+    expect(entries.filter((entry) => entry.area.kind === 'assembly').every((entry) => entry.unloaded && entry.row === null)).toBe(true);
+    expect(entries.filter((entry) => entry.area.kind !== 'assembly').some((entry) => entry.unloaded)).toBe(false);
+  });
 });
 
 describe('AreaProgress in words', () => {
@@ -82,6 +88,17 @@ describe('AreaProgress in words', () => {
     const row = areaRow({ reports: 0 });
     const cleared = { ...row, counts: { ...row.counts, sites: 0, open_sites: 0 } };
     expect(AreaProgress.of(cleared)).toMatchObject({ stage: 'few', sites: 0 });
+  });
+
+});
+
+describe('AreaProgress in words, from 10 verified reports', () => {
+  const text = new AreaProgressText((key, params) => `${key} ${JSON.stringify(params ?? {})}`, new LocaleFormatter('en'));
+
+  it('says "Score withheld for now", not "Not enough reports", when 10+ verified reports still have no score', () => {
+    const progress = AreaProgress.of(areaRow({ reports: 12, scores: { city: 'no_data', citizen: 'no_data', bin_access: 'no_data' } }));
+    expect(progress).toMatchObject({ stage: 'withheld', verified: 12, score: null });
+    expect(text.lines(progress).status).toBe('areas.scoreWithheld {}');
   });
 
   it('shows the mean of the shown scores with its count from 10 verified reports', () => {

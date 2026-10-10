@@ -2,12 +2,13 @@ import type { ExpressionSpecification } from 'maplibre-gl';
 
 /**
  * --area-tint-1 to --area-tint-8 in src/ui/tokens.css, light and dark (MapLibre paint needs plain values; a test
- * keeps the two in step). Muted ochre, olive, teal, slate, mauve, clay, stone and rose, spread round the wheel
- * so no one hue dominates; drawn at about 15% they only tell neighbours apart. Why these: frontend/DESIGN.md.
+ * keeps the two in step). Greyed ochre, olive, teal, slate, mauve, clay, stone and rose, spread round the wheel
+ * so no one hue dominates, and none near saffron, green, blue or red above HSL saturation 0.55; drawn at about
+ * 15% they only tell neighbours apart. Why these: frontend/DESIGN.md.
  */
 export const AREA_TINTS = {
-  light: ['#c08a1e', '#7a8f22', '#1f8f86', '#4a6fa8', '#9c4f93', '#b0603a', '#706b5f', '#c4567a'],
-  dark: ['#e0b456', '#b7c25a', '#5fc6bb', '#8cabd6', '#d495c4', '#d79a74', '#b5b0a3', '#ea8fa8'],
+  light: ['#a38a4e', '#7a8f22', '#1f8f86', '#4a6fa8', '#9c4f93', '#b0603a', '#706b5f', '#c4567a'],
+  dark: ['#cdb47a', '#b7c25a', '#5fc6bb', '#8cabd6', '#d495c4', '#c99a7c', '#b5b0a3', '#d993a6'],
 } as const;
 
 export const TINT_COUNT = AREA_TINTS.light.length;

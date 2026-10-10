@@ -5,10 +5,11 @@ import { AreaStanding } from './AreaStanding';
 const MIN_VERIFIED_REPORTS = 10;
 
 /**
- * none: no row, so no site was ever reported there; few: a row with every score withheld (below the threshold,
- * or its sites since cleared, expired or withdrawn); scored: a shown score.
+ * none: no row, so no site was ever reported there; few: a row below the threshold, every score withheld (or its
+ * sites since cleared, expired or withdrawn); withheld: enough verified reports, but the api still withholds every
+ * score (no_data); scored: a shown score.
  */
-export type AreaStage = 'none' | 'few' | 'scored';
+export type AreaStage = 'none' | 'few' | 'withheld' | 'scored';
 
 /**
  * Where an area stands for a list row or the map card, from its scores row or from no row at all.
@@ -32,7 +33,12 @@ export class AreaProgress {
 
   static of(row: AreaScores | null): AreaProgress {
     if (!row) return new AreaProgress('none', null, null);
-    const score = new AreaStanding(row).score;
-    return new AreaProgress(score === null ? 'few' : 'scored', row, score);
+    const standing = new AreaStanding(row);
+    return new AreaProgress(AreaProgress.#stage(standing), row, standing.score);
+  }
+
+  static #stage(standing: AreaStanding): AreaStage {
+    if (standing.score !== null) return 'scored';
+    return standing.reports >= standing.minReports ? 'withheld' : 'few';
   }
 }

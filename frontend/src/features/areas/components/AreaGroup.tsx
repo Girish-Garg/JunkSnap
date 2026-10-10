@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { AreaKind } from '../../../domain/AreaScores';
-import { useAreaShapes } from '../../map/hooks/useAreaShapes';
+import { useMapContext } from '../../map/useMapContext';
 import type { AreaEntry } from '../hooks/useAreaDirectory';
 import { AreaRow } from './AreaRow';
 
@@ -12,8 +12,8 @@ interface AreaGroupProps {
 /** One kind of area: each row links to its page and always shows its counts, zeros included, and where it stands. */
 export function AreaGroup({ kind, entries }: AreaGroupProps) {
   const { t } = useTranslation();
-  // Each seat the map draws carries its map colour, so a row and its area on the map match.
-  const { tints } = useAreaShapes(true);
+  // Each seat the map draws carries its map colour (coloured once by the map page), so a row and its area match.
+  const tints = useMapContext().areaTints;
   if (entries.length === 0) return null;
   return (
     <section className="area-group">

@@ -1,5 +1,6 @@
 import type { FeatureCollection, Point } from 'geojson';
-import type { AreaPolygons } from '../domain/AreaShapes';
+import { AreaColouring } from '../domain/AreaColouring';
+import type { AreaPolygons, AreaShapes } from '../domain/AreaShapes';
 
 type Fetch = typeof fetch;
 
@@ -8,6 +9,8 @@ export interface AreasIndex {
   readonly available: boolean;
   readonly fine: boolean;
   readonly attribution: string | null;
+  /** Changes whenever scripts/simplify_boundaries.py writes new files (feature count and sizes). */
+  readonly version: string;
 }
 
 /** The kind of seat an area of the map is; assembly where seats exist, Lok Sabha elsewhere. */
@@ -20,6 +23,8 @@ export type LabelPoints = FeatureCollection<
 >;
 
 interface LayerEntry {
+  readonly features?: number;
+  readonly bytes?: number;
   readonly fine?: unknown;
   readonly attribution?: string;
 }
@@ -31,7 +36,7 @@ interface Manifest {
 // Written by scripts/simplify_boundaries.py into public/boundaries/, which ships only the areas
 // layer (areas.geojson, areas_labels.geojson, areas_fine.geojson) and index.json.
 const AREAS = 'areas';
-const NONE: AreasIndex = { available: false, fine: false, attribution: null };
+const NONE: AreasIndex = { available: false, fine: false, attribution: null, version: '' };
 
 /** The boundary files served with the app. */
 export class BoundaryCatalog {
@@ -39,6 +44,7 @@ export class BoundaryCatalog {
   readonly #fetch: Fetch;
   #labels: Promise<LabelPoints> | null = null;
   #polygons: Promise<AreaPolygons> | null = null;
+  #shapes: { readonly key: string; readonly shapes: Promise<AreaShapes> } | null = null;
 
   constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init)) {
     this.#baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
@@ -57,7 +63,8 @@ export class BoundaryCatalog {
       if (!response.ok) return NONE;
       const entry = ((await response.json()) as Manifest).layers?.[AREAS];
       if (!entry) return NONE;
-      return { available: true, fine: entry.fine !== undefined, attribution: entry.attribution ?? null };
+      const version = `${String(entry.features ?? 0)}-${String(entry.bytes ?? 0)}`;
+      return { available: true, fine: entry.fine !== undefined, attribution: entry.attribution ?? null, version };
     } catch (error) {
       console.error('Could not read the boundary index', error);
       return NONE;
@@ -83,6 +90,21 @@ export class BoundaryCatalog {
       throw error;
     });
     return this.#polygons;
+  }
+
+  /**
+   * The area polygons with each area's neighbour tint slot, read and coloured once per index version and number
+   * of slots, then shared by the map, its card and the Areas tab. A failed read is tried again next time.
+   */
+  areaShapes(version: string, slots: number): Promise<AreaShapes> {
+    const key = `${version}|${String(slots)}`;
+    if (this.#shapes?.key === key) return this.#shapes.shapes;
+    const shapes = this.polygons().then((polygons) => AreaColouring.shapes(polygons, slots));
+    this.#shapes = { key, shapes };
+    shapes.catch(() => {
+      if (this.#shapes?.shapes === shapes) this.#shapes = null;
+    });
+    return shapes;
   }
 
   #fetchLabels(): Promise<LabelPoints> {
