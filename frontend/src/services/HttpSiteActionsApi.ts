@@ -1,4 +1,5 @@
 import type { NoteRequest, SiteNote } from '../domain/Community';
+import type { PhotoFlagRequest, PhotoFlagResult } from '../domain/PhotoFlag';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
 import { HttpTransport } from './HttpTransport';
 import type { RequestIdentity } from './ReportApi';
@@ -25,6 +26,10 @@ export class HttpSiteActionsApi implements SiteActionsApi {
 
   note(siteId: string, request: NoteRequest): Promise<SiteNote> {
     return this.#http.post<SiteNote>(`/sites/${encodeURIComponent(siteId)}/notes`, request);
+  }
+
+  flagPhoto(siteId: string, photoId: string, request: PhotoFlagRequest): Promise<PhotoFlagResult> {
+    return this.#http.post<PhotoFlagResult>(`/sites/${encodeURIComponent(siteId)}/photos/${encodeURIComponent(photoId)}/flags`, request);
   }
 
   withdraw(siteId: string): Promise<WithdrawalResult> {

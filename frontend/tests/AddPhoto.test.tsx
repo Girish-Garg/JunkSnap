@@ -24,7 +24,9 @@ describe('a site shows every photo with a count', () => {
   it('counts the report photos and the cleanup after-photo', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jdh_3')} userLocation={null} />);
     expect(screen.getByText('3 photos')).toBeInTheDocument();
-    expect(screen.getAllByRole('img', { name: /Blurred photo/ })).toHaveLength(3);
+    // site.jdh-3 has one photo several people reported: it is still in the carousel, behind its tap-to-view cover.
+    expect(screen.getAllByRole('img', { name: /Blurred photo/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Several people reported this photo/ })).toHaveLength(1);
   });
 
   it('says one photo, and no photos for a site without one', async () => {

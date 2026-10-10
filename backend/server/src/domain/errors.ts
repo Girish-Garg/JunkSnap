@@ -6,6 +6,7 @@ const HTTP_STATUS = {
   unauthorized: 401,
   forbidden: 403,
   own_site: 403,
+  own_photo: 403,
   too_far: 403,
   not_found: 404,
   area_not_found: 404,

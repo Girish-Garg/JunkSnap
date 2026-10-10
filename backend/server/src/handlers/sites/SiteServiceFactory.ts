@@ -19,6 +19,7 @@ import { SystemClock } from "../../adapters/sites/SystemClock.js";
 import { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../domain/sites/PublicMedia.js";
 import type { Logger } from "../../ports/Logger.js";
+import type { PhotoFlagServiceDeps } from "../../services/flags/PhotoFlagService.js";
 import { CleanupIntake } from "../../services/sites/CleanupIntake.js";
 import { LetterRateLimiter } from "../../services/letters/LetterRateLimiter.js";
 import { CleanupService } from "../../services/sites/CleanupService.js";
@@ -34,6 +35,8 @@ import type { Env } from "../../settings/utils.js";
 
 // Decision 20261010-1700: withdrawals an hour, per user and per device.
 const WITHDRAWALS_PER_HOUR = 10;
+
+export type FlagSiteParts = Pick<PhotoFlagServiceDeps, "sites" | "rows" | "clock" | "retry">;
 
 export interface SiteClients {
   readonly dynamo: DynamoDBDocumentClient;
@@ -120,6 +123,12 @@ export class SiteServiceFactory {
       clock: this.#clock,
       retry: this.#retry,
     });
+  }
+
+  // Photo reports (decision 20261011-0310-hem-photo-flags) read and save sites like votes do.
+  flagSiteParts(): FlagSiteParts {
+    const rows = new DynamoSiteReportReader(this.#clients.dynamo, this.#settings.tables.reports, this.#media(), this.#calls);
+    return { sites: this.#sites(), rows, clock: this.#clock, retry: this.#retry };
   }
 
   cleanupService(): CleanupService {

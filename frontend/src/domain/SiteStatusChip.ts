@@ -27,11 +27,11 @@ const BY_STATUS: Readonly<Record<string, ChipView>> = {
 
 /**
  * The one status chip of a site, on the pin card, the site sheet and the lists: "Waiting · 1 of 10", "Verified",
- * "Cleared · 1 of 3" while people confirm a clearing, "Cleared".
+ * "1 of 3 say cleared" while people confirm a clearing, "Cleared".
  */
 export class SiteStatusChip {
   static of(site: ChipFields): ChipView {
-    // People say it is cleared and it waits for enough of them (decision 20261010-1855): "Cleared · 1 of 3".
+    // People say it is cleared and it waits for enough of them (decision 20261010-1855): "1 of 3 say cleared".
     const clearing = new SiteLifecycle(site).pendingClearance();
     if (clearing) return { key: 'chip.clearing', params: { count: clearing.count, needed: clearing.needed }, tone: 'cleared' };
     const byStatus = BY_STATUS[site.status];
