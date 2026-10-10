@@ -6,6 +6,11 @@ import type { StoredAreaSite } from "../../domain/letters/AreaIssueSites.js";
 import type { AreaLetterSites, AreaSiteBatch } from "../../ports/letters/AreaLetterSites.js";
 
 const PROPERTY_KEYS = Object.keys(siteSchema.properties.properties.properties);
+// Only what the site contract and the reporter count need; the item's other private fields stay in DynamoDB.
+const PROJECTED = [...PROPERTY_KEYS, "lat", "lon", "reporter_ids", "reporter_devices"];
+const PROJECTION_NAMES = Object.fromEntries(PROJECTED.map((name, index) => [`#p${index}`, name]));
+// A filtered scan still reads the whole table; past this many pages the letter fails loudly instead of running long.
+const MAX_PAGES = 20;
 
 // site.location field that holds each area kind's ref.
 const LOCATION_FIELD: Readonly<Record<AreaKind, string>> = {
@@ -33,7 +38,12 @@ export class DynamoAreaLetterSites implements AreaLetterSites {
     const sites: StoredAreaSite[] = [];
     let unreadable = 0;
     let startKey: Record<string, unknown> | undefined;
+    let pages = 0;
     do {
+      pages += 1;
+      if (pages > MAX_PAGES) {
+        throw new ExternalServiceError(`Scan of ${this.#table} for ${area.toString()} passed ${MAX_PAGES} pages`);
+      }
       const page = await this.#scan(area, startKey);
       for (const item of page.Items ?? []) {
         const stored = DynamoAreaLetterSites.#stored(item);
@@ -49,7 +59,8 @@ export class DynamoAreaLetterSites implements AreaLetterSites {
     const command = new ScanCommand({
       TableName: this.#table,
       FilterExpression: "#location.#area.#id = :id",
-      ExpressionAttributeNames: { "#location": "location", "#area": LOCATION_FIELD[area.kind], "#id": "id" },
+      ProjectionExpression: Object.keys(PROJECTION_NAMES).join(", "),
+      ExpressionAttributeNames: { ...PROJECTION_NAMES, "#location": "location", "#area": LOCATION_FIELD[area.kind], "#id": "id" },
       ExpressionAttributeValues: { ":id": area.id },
       ExclusiveStartKey: startKey,
     });

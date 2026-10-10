@@ -12,7 +12,7 @@ Context: one letter per site does not show a pattern. Residents need one letter 
 Decision:
 - `POST /areas/{kind}/{id}/letters`, signed in, with body `{issue, language, device_token}`. `issue` is a report type or `all`. The response is the new schema `area_letter_draft`.
 - Addressees by office only. Ward and assembly go to each local body head with sites there. Lok Sabha and district go to the District Collector of each district, then those heads. Cc is the area's own seat for attention, never an outdated MP seat.
-- 409 `not_verified` until the issue's verified sites in the area hold 10 verified reports (the area guardrail); the message gives the count.
+- 409 `not_verified` until the issue's verified sites in the area hold 10 verified reports (the area guardrail); the message gives the count. A no-bin site counts only under 20261010-1430 (5 reporters, no bin measured within 3 km); the message lists the sites left out.
 - Same rule book, quote verifier, wording check, template fallback and 5-per-hour counters as site letters.
 - Evidence: issue counts, distinct reporters, up to 5 worst sites with photos and insights, measured scores only, and bin access.
 

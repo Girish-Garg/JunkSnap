@@ -23,11 +23,13 @@ export class AreaIssueSites {
   readonly area: AreaKey;
   readonly issue: AreaIssue;
   readonly #all: readonly StoredAreaSite[];
+  readonly #noBinMinReporters: number;
 
-  constructor(area: AreaKey, issue: AreaIssue, sites: readonly StoredAreaSite[]) {
+  constructor(area: AreaKey, issue: AreaIssue, sites: readonly StoredAreaSite[], noBinMinReporters: number) {
     this.area = area;
     this.issue = issue;
     this.#all = sites.filter((stored) => AREA_REF[area.kind](stored.site.properties.location)?.id === area.id);
+    this.#noBinMinReporters = noBinMinReporters;
   }
 
   hasSites(): boolean {
@@ -40,7 +42,7 @@ export class AreaIssueSites {
   }
 
   counted(): StoredAreaSite[] {
-    return this.#all.filter((stored) => this.#onIssue(stored.site) && stored.site.properties.verification !== "rejected");
+    return this.#onIssue().filter((stored) => this.#noBinProblem(stored.site) === null);
   }
 
   verified(): StoredAreaSite[] {
@@ -49,6 +51,17 @@ export class AreaIssueSites {
 
   verifiedReports(): number {
     return this.verified().reduce((total, stored) => total + stored.site.properties.verified_count, 0);
+  }
+
+  // Why no-bin sites of the issue were left out, as "reason (n sites)" for the 409 message.
+  noBinExclusions(): string[] {
+    const reasons = this.#onIssue().flatMap((stored) => {
+      const problem = this.#noBinProblem(stored.site);
+      return problem === null ? [] : [problem];
+    });
+    const counts = new Map<string, number>();
+    reasons.forEach((reason) => counts.set(reason, (counts.get(reason) ?? 0) + 1));
+    return [...counts].map(([reason, count]) => `${reason} (${count} ${count === 1 ? "site" : "sites"})`);
   }
 
   letterSites(): LetterSite[] {
@@ -61,7 +74,26 @@ export class AreaIssueSites {
     return lists.length === 0 ? null : new Set(lists.flat()).size || null;
   }
 
-  #onIssue(site: Site): boolean {
-    return this.issue === "all" || site.properties.report_type === this.issue;
+  #onIssue(): StoredAreaSite[] {
+    return this.#all.filter(({ site }) => {
+      const matches = this.issue === "all" || site.properties.report_type === this.issue;
+      return matches && site.properties.verification !== "rejected";
+    });
+  }
+
+  // Decision 20261010-1430 per site: a no-bin site counts only with enough reporters and no bin measured within 3 km.
+  #noBinProblem(site: Site): string | null {
+    const facts = site.properties;
+    if (facts.report_type !== "no_bin") {
+      return null;
+    }
+    if ((facts.reporters ?? 0) < this.#noBinMinReporters) {
+      return `fewer than ${this.#noBinMinReporters} people reported no bin`;
+    }
+    const measured = facts.insights?.no_bin_within_3km;
+    if (typeof measured !== "boolean") {
+      return "Bins not mapped here yet";
+    }
+    return measured ? null : "a known bin or collection point is within 3 km";
   }
 }

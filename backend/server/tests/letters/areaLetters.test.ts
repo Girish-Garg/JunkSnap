@@ -9,11 +9,12 @@ import {
   ASSEMBLY,
   areaLetterService,
   assemblySites,
+  noBinSite,
   FakeScores,
   quotingAreaWriter,
   REQUESTER,
 } from "./areaSupport.js";
-import { RecordingLogger, REAL_RULES_DIR, wardSite } from "./support.js";
+import { memoryCounters, RecordingLogger, REAL_RULES_DIR, wardSite } from "./support.js";
 
 const assembly = AreaKey.parse("assembly", ASSEMBLY);
 const request: AreaLetterRequest = { area: assembly, issue: "waste_dump", language: "en", requester: REQUESTER };
@@ -153,6 +154,46 @@ describe("AreaLetterService: when no letter can be drafted", () => {
     await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow(NotVerifiedError);
     await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow("Not enough verified reports yet (3 of 10)");
     await expect(service.draft({ ...request, issue: "open_construction" })).rejects.toThrow("(0 of 10)");
+  });
+
+  it("counts only no-bin sites with 5 reporters and no bin measured within 3 km, and says why", async () => {
+    const sites = [noBinSite("n1", 6, 6, true), noBinSite("n2", 5, 3, true), noBinSite("n3", 5, 7, false)];
+    const service = await areaLetterService({ sites });
+    await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow(
+      "Not enough verified reports yet (6 of 10) for this issue in this area. No-bin sites left out: fewer than 5 people reported no bin (1 site); a known bin or collection point is within 3 km (1 site).",
+    );
+  });
+
+  it("blocks a no-bin letter where bins are not mapped, however many reports there are", async () => {
+    const sites = [noBinSite("m1", 8, 9, null), noBinSite("m2", 7, 6, null)];
+    const service = await areaLetterService({ sites });
+    await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow(NotVerifiedError);
+    await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow("Bins not mapped here yet (2 sites)");
+  });
+
+  it("drafts a no-bin letter once enough eligible sites hold 10 verified reports", async () => {
+    const sites = [noBinSite("e1", 6, 6, true), noBinSite("e2", 5, 5, true), noBinSite("e3", 9, 2, null)];
+    const letter = await (await areaLetterService({ sites })).draft({ ...request, issue: "no_bin" });
+    expect(letter.evidence).toMatchObject({ verified_reports: 11, sites: 2, bin_access: { sites_measured: 2, sites_without_bin_within_3km: 2 } });
+  });
+
+  it("leaves ineligible no-bin sites out of an all letter", async () => {
+    const sites = [...assemblySites(), noBinSite("u9", 9, 1, null)];
+    const letter = await (await areaLetterService({ sites })).draft({ ...request, issue: "all" });
+    expect(letter.evidence.worst_sites.map((site) => site.site_id)).not.toContain("site_u9");
+    expect(letter.evidence.verified_reports).toBe(15);
+  });
+
+  it("refuses an over-limit requester before reading any site", async () => {
+    const counters = memoryCounters();
+    const service = await areaLetterService({ counters });
+    for (let letter = 0; letter < 5; letter += 1) {
+      await service.draft(request);
+    }
+    const reads = { count: 0 };
+    const counting = await areaLetterService({ counters, sites: [], onRead: () => (reads.count += 1) });
+    await expect(counting.draft(request)).rejects.toThrow(RateLimitedError);
+    expect(reads.count).toBe(0);
   });
 
   it("counts area letters in the same 5 an hour", async () => {

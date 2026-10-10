@@ -39,6 +39,8 @@ export interface AreaLetterParts {
   readonly drafter: ProseDrafter<AreaLetterBrief>;
   readonly stamp: LetterStamp;
   readonly logger: Logger;
+  // NO_BIN_MIN_REPORTERS: a no-bin site counts only with this many distinct reporters.
+  readonly noBinMinReporters: number;
 }
 
 type NonEmpty<T> = [T, ...T[]];
@@ -52,6 +54,7 @@ export class AreaLetterService {
 
   async draft(request: AreaLetterRequest): Promise<AreaLetterDraft> {
     const { router, limiter, drafter, stamp } = this.#parts;
+    await limiter.fits(request.requester, stamp.now());
     const sites = await this.#eligibleSites(request);
     const letterSites = sites.letterSites();
     const addressees = router.route(request.area, letterSites);
@@ -91,13 +94,15 @@ export class AreaLetterService {
     if (batch.unreadable > 0) {
       this.#parts.logger.warn({ area: request.area.toString(), unreadable: batch.unreadable }, "skipped sites that break the site contract");
     }
-    const sites = new AreaIssueSites(request.area, request.issue, batch.sites);
+    const sites = new AreaIssueSites(request.area, request.issue, batch.sites, this.#parts.noBinMinReporters);
     if (!sites.hasSites()) {
       throw new AreaNotFoundError(`No reported sites in ${request.area.kind} ${request.area.id} yet`);
     }
     const verified = sites.verifiedReports();
     if (verified < MIN_VERIFIED_REPORTS) {
-      throw new NotVerifiedError(`Not enough verified reports yet (${verified} of ${MIN_VERIFIED_REPORTS}) for this issue in this area.`);
+      const left = sites.noBinExclusions();
+      const why = left.length === 0 ? "" : ` No-bin sites left out: ${left.join("; ")}.`;
+      throw new NotVerifiedError(`Not enough verified reports yet (${verified} of ${MIN_VERIFIED_REPORTS}) for this issue in this area.${why}`);
     }
     return sites;
   }

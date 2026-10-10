@@ -85,6 +85,7 @@ export class LettersAssembly {
       drafter: new ProseDrafter<AreaLetterBrief>(adapters.writer, verifier, template, this.#logger),
       stamp: adapters.stamp,
       logger: this.#logger,
+      noBinMinReporters: this.#bins.minReporters,
     });
   }
 

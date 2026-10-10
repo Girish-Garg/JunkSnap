@@ -114,6 +114,24 @@ describe("DynamoAreaLetterSites", () => {
     expect(JSON.stringify(batch.sites[0]?.site)).not.toContain("u1");
   });
 
+  it("projects only the contract fields and reporter ids", async () => {
+    const commands: ScanCommand[] = [];
+    const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), { $metadata: {} }) }, "t");
+    await reader.sitesIn(AreaKey.parse("district", "rajasthan-jodhpur"));
+    const input = commands[0]?.input;
+    const projected = (input?.ProjectionExpression ?? "").split(", ").map((name) => input?.ExpressionAttributeNames?.[name]);
+    expect(projected).toEqual(expect.arrayContaining(["site_id", "location", "photo_urls", "lat", "lon", "reporter_ids", "reporter_devices"]));
+    expect(projected).not.toContain("reports");
+    expect(input?.ExpressionAttributeNames?.["#area"]).toBe("district");
+  });
+
+  it("stops after 20 pages with ExternalServiceError", async () => {
+    let calls = 0;
+    const endless = { send: async () => ((calls += 1), { $metadata: {}, Items: [], LastEvaluatedKey: { site_id: `site_${calls}` } }) };
+    await expect(new DynamoAreaLetterSites(endless, "t").sitesIn(AreaKey.parse("ward", "w-1"))).rejects.toThrow("passed 20 pages");
+    expect(calls).toBe(20);
+  });
+
   it("raises ExternalServiceError when the scan fails", async () => {
     const reader = new DynamoAreaLetterSites({ send: async () => Promise.reject(new Error("AccessDenied")) }, "t");
     await expect(reader.sitesIn(AreaKey.parse("ward", "jodhpur-mc-w37"))).rejects.toThrow(ExternalServiceError);

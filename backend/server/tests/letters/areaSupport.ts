@@ -32,14 +32,22 @@ export function areaSite(id: string, patch: Partial<Properties> = {}, reporterId
   return { site: siteWith(wardSite(), { site_id: `site_${id}`, ...patch }), reporterIds };
 }
 
-// Three waste dumps (12 verified reports), a rejected dump, a no-bin place (3) and a dump in another seat.
+// A verified no-bin place: within is site.insights.no_bin_within_3km (null when bins are not mapped there).
+export function noBinSite(id: string, verified: number, reporters: number, within: boolean | null): StoredAreaSite {
+  const base = wardSite().properties.insights;
+  const insights = base === undefined ? undefined : { ...base, nearest_bin: null, no_bin_within_3km: within };
+  const patch = { report_type: "no_bin", context: "no_pickup", verified_count: verified, report_count: verified, reporters, insights } as const;
+  return areaSite(id, patch);
+}
+
+// Three waste dumps (12 verified reports), a rejected dump, an eligible no-bin place (3) and a dump in another seat.
 export function assemblySites(): StoredAreaSite[] {
   return [
     areaSite("a1", { verified_count: 6, report_count: 7, first_reported_at: "2026-10-08T05:10:00Z" }, ["u1", "u2", "u3"]),
     areaSite("a2", { verified_count: 4, report_count: 4, status: "cleaned", cleaned_at: "2026-10-10T01:00:00Z" }, ["u2", "u4"]),
     areaSite("a3", { verified_count: 2, report_count: 3, last_reported_at: "2026-10-10T06:00:00Z" }, null),
     areaSite("a4", { verification: "rejected", verified_count: 0, report_count: 2 }),
-    areaSite("b1", { report_type: "no_bin", context: "no_pickup", verified_count: 3, report_count: 3 }),
+    noBinSite("b1", 3, 6, true),
     { site: siteWith(siteFixture("jpr-1"), { site_id: "site_far_9", verification: "verified", verified_count: 9 }), reporterIds: [] },
   ];
 }
@@ -48,13 +56,17 @@ export class FakeAreaSites implements AreaLetterSites {
   readonly #sites: readonly StoredAreaSite[];
   readonly #unreadable: number;
 
-  constructor(sites: readonly StoredAreaSite[], unreadable = 0) {
+  readonly #onRead: () => void;
+
+  constructor(sites: readonly StoredAreaSite[], unreadable = 0, onRead: () => void = () => {}) {
     this.#sites = sites;
     this.#unreadable = unreadable;
+    this.#onRead = onRead;
   }
 
   // The real adapter filters in DynamoDB; the domain filters again, so this returns everything.
   async sitesIn(): Promise<AreaSiteBatch> {
+    this.#onRead();
     return { sites: this.#sites, unreadable: this.#unreadable };
   }
 }
@@ -101,6 +113,7 @@ export function downAreaWriter(): FakeAreaWriter {
 export interface AreaServiceParts {
   readonly sites?: readonly StoredAreaSite[];
   readonly unreadable?: number;
+  readonly onRead?: () => void;
   readonly scores?: FakeScores;
   readonly writer?: AreaLetterWriter;
   readonly counters?: LetterCounters;
@@ -121,7 +134,7 @@ export async function areaLetterService(parts: AreaServiceParts = {}): Promise<A
     ...parts,
   };
   return new LettersAssembly(all.rulesDir, all.logger).areaService({
-    sites: new FakeAreaSites(all.sites, all.unreadable),
+    sites: new FakeAreaSites(all.sites, all.unreadable, all.onRead),
     scores: all.scores,
     counters: all.counters,
     writer: all.writer,
