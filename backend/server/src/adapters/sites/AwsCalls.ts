@@ -14,12 +14,20 @@ export class AwsCalls {
 
   // False when DynamoDB refused the write because its condition failed.
   async conditional(action: string, call: () => Promise<unknown>): Promise<boolean> {
-    try {
+    const written = await this.conditionalOutput(action, async () => {
       await call();
       return true;
+    });
+    return written ?? false;
+  }
+
+  // The call's output, or null when DynamoDB refused the write because its condition failed.
+  async conditionalOutput<T>(action: string, call: () => Promise<T>): Promise<T | null> {
+    try {
+      return await call();
     } catch (error) {
       if (error instanceof Error && error.name === CONDITION_FAILED) {
-        return false;
+        return null;
       }
       throw AwsCalls.#translated(action, error);
     }
