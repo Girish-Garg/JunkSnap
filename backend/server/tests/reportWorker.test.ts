@@ -125,6 +125,15 @@ describe("buildReportQueuePoller", () => {
     USERS_TABLE: "junksnap-dev-users",
     REPORTS_QUEUE_URL: QUEUE_URL,
     ML_URL: "http://ml",
+    SITES_TABLE: "junksnap-dev-sites",
+    VOTES_TABLE: "junksnap-dev-votes",
+    CLEANUPS_TABLE: "junksnap-dev-cleanups",
+    SCANS_TABLE: "junksnap-dev-scans",
+    SCORES_TABLE: "junksnap-dev-scores",
+    ORIGINALS_BUCKET: "junksnap-dev-originals-123456789012",
+    PUBLIC_BUCKET: "junksnap-dev-public-123456789012",
+    PUBLIC_BASE_URL: "https://d111111abcdef8.cloudfront.net",
+    ASSETS_DIR: "../../data",
   };
   const context = (vars: Record<string, string | undefined>) => ({
     settings: CoreSettings.fromEnv(vars),
@@ -132,12 +141,12 @@ describe("buildReportQueuePoller", () => {
     env: vars,
   });
 
-  it("builds the SQS poller from the environment without touching the network", () => {
-    expect(buildReportQueuePoller(context(env))).toBeInstanceOf(SqsQueuePoller);
+  it("builds the SQS poller from the environment and the repo data without touching the network", async () => {
+    expect(await buildReportQueuePoller(context(env))).toBeInstanceOf(SqsQueuePoller);
   });
 
-  it("names a missing variable", () => {
-    expect(() => buildReportQueuePoller(context({ ...env, ML_URL: undefined }))).toThrow(ConfigError);
-    expect(() => buildReportQueuePoller(context({ ...env, ML_URL: undefined }))).toThrow(/ML_URL/);
+  it("names a missing variable", async () => {
+    await expect(buildReportQueuePoller(context({ ...env, ML_URL: undefined }))).rejects.toThrow(ConfigError);
+    await expect(buildReportQueuePoller(context({ ...env, ML_URL: undefined }))).rejects.toThrow(/ML_URL/);
   });
 });

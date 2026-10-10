@@ -4,8 +4,8 @@ kind: Deployment
 metadata:
   name: worker
 spec:
-  # 0 until the SQS poller lands (#11); today's loop polls nothing.
-  replicas: 0
+  # One long-polling consumer; SQS spreads messages if this is raised.
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: worker
