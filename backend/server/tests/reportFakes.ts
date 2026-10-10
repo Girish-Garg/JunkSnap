@@ -8,11 +8,13 @@ import type {
 } from "../src/contracts/index.gen.js";
 import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { Report } from "../src/domain/Report.js";
-import type { MergeOutcome, ReportModerationRequest, ReportRecord } from "../src/domain/ReportRecord.js";
+import type { MergeOutcome, ReportModerationRequest, ReportRecord, StepName } from "../src/domain/ReportRecord.js";
 import type { VerifyRequest } from "../src/domain/VerifyRequest.js";
 import type { BrandReader, BrandReadRequest } from "../src/ports/BrandReader.js";
 import type { Clock } from "../src/ports/Clock.js";
 import type { MlVerifyClient } from "../src/ports/MlVerifyClient.js";
+import type { NearbyVerifiedCounter } from "../src/ports/NearbyVerifiedCounter.js";
+import type { PipelineStep } from "../src/ports/PipelineStep.js";
 import type { ReportLocator } from "../src/ports/ReportLocator.js";
 import type { ReportMerger } from "../src/ports/ReportMerger.js";
 import type { ReportModerator } from "../src/ports/ReportModerator.js";
@@ -208,4 +210,23 @@ export class FakeMerger implements ReportMerger {
     this.merged.push(report);
     return this.outcome;
   }
+}
+
+
+export class FakeNearbyCounter implements NearbyVerifiedCounter {
+  readonly asked: ReportRecord[] = [];
+
+  constructor(readonly value = 0) {}
+
+  async count(report: ReportRecord): Promise<number> {
+    this.asked.push(report);
+    return this.value;
+  }
+}
+
+// A step that records nothing, for wiring without a merge result.
+export class SkippedStep implements PipelineStep {
+  constructor(readonly name: StepName) {}
+
+  async run(): Promise<void> {}
 }

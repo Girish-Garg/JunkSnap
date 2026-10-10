@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
-import { StandInNearbyCounter } from "../src/adapters/StandInNearbyCounter.js";
-import { StandInStep } from "../src/adapters/StandInStep.js";
 import type { VerificationResult } from "../src/contracts/index.gen.js";
 import { ConcurrentUpdateError } from "../src/domain/ConcurrentUpdateError.js";
 import { InternalDataError, ValidationError } from "../src/domain/errors.js";
@@ -24,12 +22,14 @@ import {
   FakeLocator,
   FakeMerger,
   FakeModerator,
+  FakeNearbyCounter,
   FakeReportRepository,
   FakeReputationReader,
   FakeVerifier,
   FixedClock,
   Journal,
   moderation,
+  SkippedStep,
   upload,
   verification,
 } from "./reportFakes.js";
@@ -63,10 +63,10 @@ function wire({ verified = verification(), merge = null, moderated = moderation(
   const merger = merge === null ? undefined : new FakeMerger(journal, merge);
   const steps: PipelineStep[] = [
     new ModerateStep(moderator),
-    new VerifyStep(verifier, new ReporterReputation(reputations), new StandInNearbyCounter()),
+    new VerifyStep(verifier, new ReporterReputation(reputations), new FakeNearbyCounter()),
     new BrandsStep(new FakeBrandReader(journal)),
     new LocateStep(new FakeLocator(journal)),
-    merger === undefined ? new StandInStep("merge") : new MergeStep(merger),
+    merger === undefined ? new SkippedStep("merge") : new MergeStep(merger),
   ];
   const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
   const pipeline = new ReportPipeline({ steps, reports, clock: new FixedClock("2026-10-10T02:15:10Z"), logger });
@@ -172,13 +172,42 @@ describe("ReportPipeline", () => {
 
   it("lets one of two concurrent deliveries own the report; the other fails without needs_review", async () => {
     const { pipeline } = wire({ merge: { siteId: "site_jdh_1", verification: "verified" } });
-    const results = await Promise.allSettled([pipeline.handle(delivery(1)), pipeline.handle(delivery(3))]);
+    const results = await Promise.allSettled([pipeline.handle(delivery(1)), pipeline.handle(delivery(2))]);
     expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
     expect(results[1]).toMatchObject({ reason: expect.any(ConcurrentUpdateError) });
     expect(journal.calls).toEqual(ALL_STEPS);
     expect(reports.stored("rpt_jdh_1")).toMatchObject({ status: "verified", completed_steps: ALL_STEPS });
     await pipeline.handle(delivery(3));
     expect(journal.calls).toEqual(ALL_STEPS);
+  });
+
+  it("marks needs_review when the last receive loses a save race and the report is still processing", async () => {
+    const raced: PipelineStep = {
+      name: "brands",
+      run: async () => {
+        const stored = reports.stored("rpt_jdh_1");
+        reports.put({ ...stored, version: (stored.version ?? 0) + 1 });
+      },
+    };
+    const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
+    const clock = new FixedClock("2026-10-10T02:15:10Z");
+    const pipeline = new ReportPipeline({ steps: [raced], reports, clock, logger });
+    await expect(pipeline.handle(delivery(3))).rejects.toThrow(ConcurrentUpdateError);
+    expect(reports.stored("rpt_jdh_1").status).toBe("needs_review");
+  });
+
+  it("keeps a lost save race open for SQS to retry before the last receive", async () => {
+    const raced: PipelineStep = {
+      name: "brands",
+      run: async () => {
+        const stored = reports.stored("rpt_jdh_1");
+        reports.put({ ...stored, version: (stored.version ?? 0) + 1 });
+      },
+    };
+    const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
+    const pipeline = new ReportPipeline({ steps: [raced], reports, clock: new FixedClock(RECEIVED), logger });
+    await expect(pipeline.handle(delivery(2))).rejects.toThrow(ConcurrentUpdateError);
+    expect(reports.stored("rpt_jdh_1").status).toBe("processing");
   });
 
   it("does not mark needs_review over a report another worker settled meanwhile", async () => {
