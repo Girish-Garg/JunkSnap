@@ -30,20 +30,16 @@ class VetoRule(ABC):
 
 
 class JudgeDenies(VetoRule):
-    """The judge answered not_waste, or gave the claimed type almost no support."""
+    """A confident not_waste (claim support under 0.2); a weaker one falls through."""
 
     def __init__(self, low_support: float = LOW_SUPPORT) -> None:
         self._low = low_support
 
     def check(self, evidence: VetoEvidence) -> Veto | None:
         judge, verdict = evidence.judge(), evidence.verdict
-        if judge is None or verdict is None:
+        if judge is None or verdict is None or verdict.report_type != NOT_WASTE:
             return None
-        if verdict.report_type == NOT_WASTE:
-            return Veto(f"judge_veto:{NOT_WASTE}", (judge,))
-        if judge.score < self._low:
-            return Veto("judge_veto:low_support", (judge,))
-        return None
+        return Veto(f"judge_veto:{NOT_WASTE}", (judge,)) if judge.score < self._low else None
 
 
 class DetectorsDenyJudgeUnsure(VetoRule):

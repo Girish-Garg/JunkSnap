@@ -437,10 +437,12 @@
     "needs_review": "Needs a manual check",
     "unverified": "Waiting for 10 people to confirm",
     "community_check": "Waiting for a neighbour check",
-    "not_waste": "Not a waste site"
+    "not_waste": "Not a waste site",
+    "unconfirmed": "Waste not confirmed"
   },
   "rejection": {
-    "not_waste": "This doesn't look like a waste site. Please report only real dumps: false reports hide real problems and can limit your account.",
+    "not_waste": "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.",
+    "unconfirmed": "Our checks couldn't confirm waste in this photo.",
     "dismiss": "Dismiss"
   },
   "scan": {

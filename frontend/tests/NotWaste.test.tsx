@@ -17,7 +17,8 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () =
 
 const PHOTO = new TextEncoder().encode('jpeg').buffer;
 const NOT_WASTE = { decision: 'rejected', judge: { report_type: 'not_waste' } } as const;
-const MESSAGE = /This doesn't look like a waste site\. Please report only real dumps/;
+const UNCONFIRMED = { decision: 'rejected', judge: { report_type: 'waste_dump' } } as const;
+const MESSAGE = "This doesn't look like a waste site. Please only report real dumps — false reports hide real problems.";
 
 function view(status: ReportStatusView['status'], extra: Partial<ReportStatusView> = {}): ReportStatusView {
   return { report_id: 'rpt_test_1', status, site_id: null, blurred_url: null, updated_at: '2026-10-10T04:01:00Z', ...extra };
@@ -29,8 +30,11 @@ function sent(status: ReportStatusView | null): QueuedReport {
 }
 
 describe('ReportRejection', () => {
-  it('names not_waste only when the models turned the photo down', () => {
+  it('names not_waste only when the judge said not_waste, else unconfirmed', () => {
     expect(ReportRejection.reasonOf(view('rejected', { verification: NOT_WASTE }))).toBe('not_waste');
+    expect(ReportRejection.reasonOf(view('rejected', { verification: UNCONFIRMED }))).toBe('unconfirmed');
+    const noJudge = view('rejected', { verification: { decision: 'rejected', judge: null } });
+    expect(ReportRejection.reasonOf(noJudge)).toBe('unconfirmed');
     const unsafe = view('rejected', { moderation: { outcome: 'rejected' }, verification: null });
     expect(ReportRejection.reasonOf(unsafe)).toBeNull();
     const neighbours = view('rejected', { verification: { decision: 'community_check', judge: null } });
@@ -49,11 +53,11 @@ describe('ReportRejection', () => {
 describe('RejectionWatcher', () => {
   it('fires for a report seen open that comes back not waste, never for one already rejected', () => {
     const watcher = new RejectionWatcher();
-    expect(watcher.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBe(false);
+    expect(watcher.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBeNull();
     const fresh = new RejectionWatcher();
-    expect(fresh.turned([sent(null)])).toBe(false);
-    expect(fresh.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBe(true);
-    expect(fresh.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBe(false);
+    expect(fresh.turned([sent(null)])).toBeNull();
+    expect(fresh.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBe('not_waste');
+    expect(fresh.turned([sent(view('rejected', { verification: NOT_WASTE }))])).toBeNull();
   });
 });
 
@@ -108,5 +112,20 @@ describe('A report turned down as not waste, in Hindi', () => {
     await user.click(screen.getByRole('button', { name: 'रिपोर्ट भेजें' }));
     expect(await screen.findByText('यह कचरे की जगह नहीं है')).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByText(/यह कचरे की जगह नहीं लगती।/)).toHaveLength(2));
+  });
+});
+
+describe('A report the models rejected without a not_waste answer', () => {
+  it('gets the generic message, never the not-waste one', async () => {
+    const user = userEvent.setup();
+    const api = new FakeReportApi();
+    api.status_ = 'rejected';
+    api.verification_ = UNCONFIRMED;
+    await snapAndSend(user, api);
+    await user.click(await screen.findByRole('radio', { name: 'Vacant plot' }));
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByText('Waste not confirmed')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("Our checks couldn't confirm waste in this photo.")).toHaveLength(2));
+    expect(screen.queryByText(MESSAGE)).toBeNull();
   });
 });

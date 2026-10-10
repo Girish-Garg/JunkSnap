@@ -102,12 +102,21 @@ def test_without_the_veto_the_same_photo_went_to_community_check() -> None:
     assert stacked.verify(case).outcome.decision == "community_check"
 
 
-def test_judge_with_almost_no_support_for_the_claimed_type_vetoes() -> None:
+def test_a_weak_answer_of_the_claimed_type_falls_through_to_the_combiner() -> None:
     result = verify(prod_signals(), [judged("waste_dump", "vacant_plot", 0.1)])
 
-    assert result.outcome.decision == "rejected"
-    assert result.outcome.veto is not None
-    assert result.outcome.veto.reason == "judge_veto:low_support"
+    assert result.outcome.veto is None
+    assert result.outcome.decision == "community_check"
+
+
+def test_an_unsure_not_waste_against_strong_detectors_is_not_vetoed() -> None:
+    signals: list[Signal] = [FakeSignal("yolo", 0.9), FakeSignal("embedding_classifier", 0.9)]
+    unsure = INDOOR_ROOM.replace('"confidence": 0.95', '"confidence": 0.5')
+    result = verify(signals, [unsure], ASKS_THE_JUDGE)
+
+    assert result.signals[-1].score == pytest.approx(0.5)
+    assert result.outcome.veto is None
+    assert result.outcome.decision == "community_check"
 
 
 @pytest.mark.parametrize(

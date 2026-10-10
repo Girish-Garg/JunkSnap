@@ -14,6 +14,7 @@ const TONES: Readonly<Record<string, ProgressTone>> = {
   verified: 'good',
   rejected: 'alert',
   not_waste: 'alert',
+  unconfirmed: 'alert',
   refused: 'alert',
   sign_in: 'alert',
 };
@@ -35,7 +36,7 @@ export class ReportProgress {
     return status && !ReportStatuses.inPipeline(status.status) ? 4 : 3;
   }
 
-  /** Sent without a problem, and not turned down as not waste. */
+  /** Sent without a problem, and not turned down by the models. */
   static celebrates(report: QueuedReport): boolean {
     const { problem, stage, status } = report.data;
     return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null;
