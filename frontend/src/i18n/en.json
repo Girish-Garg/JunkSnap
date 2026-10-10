@@ -467,6 +467,7 @@
     "camera_unavailable": "The camera could not start.",
     "insecure": "The camera needs a secure (https) page.",
     "sentTitle": "Video saved",
+    "cameraStopped": "Camera stopped. Your clip so far is saved.",
     "again": "Record another",
     "activityTitle": "Video {{seconds}} s",
     "scout": "Area scout (auto)",

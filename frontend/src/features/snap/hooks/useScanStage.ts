@@ -15,9 +15,10 @@ function cameraProblem(state: CameraState): CaptureProblem | null {
 
 /** Everything the video stage shows: camera, choice (Auto unless changed), recorder, and whether recording may start. */
 export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: SnapFlow, gps: GpsState) {
-  const camera = useCamera(video, 'video');
-  const report = useScanChoice();
   const recorder = useScanRecorder(video, flow.scanSaved);
+  // A camera that freezes mid-recording ends the recording with the clip so far, then reopens.
+  const camera = useCamera(video, 'video', { holding: () => recorder.phase === 'recording', onLost: recorder.cut });
+  const report = useScanChoice();
   // Edge mode only: the strongest waste box of each analysed frame goes with the scan as a hint.
   const hintLog = useRef<ScanHintLog | null>(null);
   const hints = useEdgeHints(video, camera.state === 'live', (frame) => hintLog.current?.add(frame));

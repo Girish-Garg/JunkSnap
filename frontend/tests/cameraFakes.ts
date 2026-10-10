@@ -65,6 +65,7 @@ export class FakePage implements PageVisibility {
 /** A video track that can end like a real one. */
 export class FakeTrack extends EventTarget {
   stopped = false;
+  muted = false;
 
   stop(): void {
     this.stopped = true;

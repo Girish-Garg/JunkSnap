@@ -7,7 +7,7 @@ export type SnapPhase =
   | { readonly kind: 'camera' }
   | { readonly kind: 'review'; readonly photo: CapturedPhoto }
   | { readonly kind: 'sent'; readonly id: string }
-  | { readonly kind: 'scanSent'; readonly id: string };
+  | { readonly kind: 'scanSent'; readonly id: string; readonly cameraStopped?: boolean };
 
 export type CaptureMode = 'photo' | 'video' | 'nobin';
 
@@ -32,7 +32,7 @@ export function useSnapFlow() {
       setSaveFailed(true);
     }
   };
-  const scanSaved = (id: string) => setPhase({ kind: 'scanSent', id });
+  const scanSaved = (id: string, cameraStopped = false) => setPhase({ kind: 'scanSent', id, cameraStopped });
   return { phase, mode, setMode, capture, saveFailed, send, scanSaved, restart: () => setPhase(CAMERA) };
 }
 

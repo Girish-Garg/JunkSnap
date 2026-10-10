@@ -28,7 +28,7 @@ export class EdgeHintLoop {
   readonly #intervalMs: number;
   #handle: number | null = null;
   #running = false;
-  #analysed = -1;
+  #analysed = 0; // frame 0 is "nothing presented yet"
 
   constructor(ports: LoopPorts, intervalMs = HINT_INTERVAL_MS) {
     this.#ports = ports;

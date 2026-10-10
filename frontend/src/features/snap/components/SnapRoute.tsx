@@ -36,7 +36,7 @@ export function SnapRoute() {
       {phase.kind === 'camera' && <CaptureStage flow={flow} gps={gps} />}
       {phase.kind === 'review' && <ReviewStage key={phase.photo.sha256} photo={phase.photo} flow={flow} />}
       {phase.kind === 'sent' && <SentStage id={phase.id} onAgain={flow.restart} />}
-      {phase.kind === 'scanSent' && <ScanSentStage id={phase.id} onAgain={flow.restart} />}
+      {phase.kind === 'scanSent' && <ScanSentStage id={phase.id} cameraStopped={phase.cameraStopped ?? false} onAgain={flow.restart} />}
     </BottomSheet>
   );
 }
