@@ -20,11 +20,12 @@ export interface PinGroup {
 export interface PinGroupLimits {
   /** Sites closer than this share a pin at every zoom. */
   readonly nearMetres: number;
-  /** Sites whose pins would overlap on screen share a pin at that zoom; a pin disc is about 26 px. */
+  /** Sites whose pins or n/10 badges would overlap on screen share a pin at that zoom. */
   readonly overlapPx: number;
 }
 
-const DEFAULT_LIMITS: PinGroupLimits = { nearMetres: 15, overlapPx: 28 };
+// A pin disc is about 26 px and its n/10 badge about 34 by 20 px, 18 px below it: 40 px apart, neither touches.
+const DEFAULT_LIMITS: PinGroupLimits = { nearMetres: 15, overlapPx: 40 };
 
 /**
  * Groups site pins that sit on one spot (a photo site and a scan site, or two report types at one place) so

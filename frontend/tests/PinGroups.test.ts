@@ -103,9 +103,19 @@ describe('PinFeatures', () => {
     expect(PinFeatures.sites([dump, water]).features.map((feature) => feature.properties?.['site_id'])).toEqual(['site_dump', 'site_water']);
   });
 
+});
+
+describe('PinFeatures taps', () => {
   it('reads a tap on a stack or a site back from the rendered feature', () => {
     expect(PinFeatures.hit({ stack_ids: 'site_a,site_b', stack_count: 2 })).toEqual({ kind: 'stack', siteIds: ['site_a', 'site_b'] });
     expect(PinFeatures.hit({ site_id: 'site_a' })).toEqual({ kind: 'site', siteId: 'site_a' });
     expect(PinFeatures.hit(undefined)).toBeNull();
+  });
+
+  it('lets a selected pin drawn over its own stack yield to the stack, but not over another stack', () => {
+    const stack = { stack_ids: 'site_a,site_b', stack_count: 2 };
+    expect(PinFeatures.pick([{ site_id: 'site_a' }, stack])).toEqual({ kind: 'stack', siteIds: ['site_a', 'site_b'] });
+    expect(PinFeatures.pick([{ site_id: 'site_c' }, stack])).toEqual({ kind: 'site', siteId: 'site_c' });
+    expect(PinFeatures.pick([])).toBeNull();
   });
 });

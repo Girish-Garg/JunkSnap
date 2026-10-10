@@ -21,7 +21,7 @@ export class PinPicker {
       [point.x + TAP_TOLERANCE_PX, point.y + TAP_TOLERANCE_PX],
     ];
     const layers = this.#layers.interactiveIds().filter((id) => this.#map.getLayer(id));
-    const [hit] = this.#map.queryRenderedFeatures(box, { layers });
-    return PinFeatures.hit(hit?.properties);
+    const hits = this.#map.queryRenderedFeatures(box, { layers });
+    return PinFeatures.pick(hits.map((hit) => hit.properties));
   }
 }

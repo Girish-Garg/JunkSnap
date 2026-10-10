@@ -81,9 +81,9 @@ describe('StackPinsLayer.spec', () => {
     expect(prop(stacks.spec(context('heat')), 'layout', 'visibility')).toBe('none');
   });
 
-  it('leaves stacks out of the lone pins, whose n/10 badges drop out rather than smear together', () => {
+  it('leaves stacks out of the lone pins, whose n/10 badges always show', () => {
     const spec = new SitesLayer().spec(context('pins'));
     expect(spec).toMatchObject({ source: 'site-pins' });
-    expect(prop(spec, 'layout', 'text-allow-overlap')).toBe(false);
+    expect(prop(spec, 'layout', 'text-allow-overlap')).toBe(true);
   });
 });

@@ -49,8 +49,8 @@ export default class SitesLayer implements MapLayer {
         'text-font': ['Noto Sans Bold'],
         'text-size': 12,
         'text-offset': [0, 1.5],
-        // Pins that would overlap are stacked; a badge that still touches another drops out, never smears.
-        'text-allow-overlap': false,
+        // The n/10 badge always shows; pins close enough for badges to touch are drawn as one stack instead (PinGroups).
+        'text-allow-overlap': true,
         'text-optional': true,
       },
       paint: {

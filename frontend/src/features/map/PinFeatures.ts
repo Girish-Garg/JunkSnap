@@ -27,6 +27,17 @@ export class PinFeatures {
     return `pin-stack-${group.unverified ? 'unverified-' : ''}${group.lead}`;
   }
 
+  /**
+   * The pin a tap meant, from every feature under it, topmost first. A site drawn over the stack that holds it
+   * (the selected pin of a site opened from the list) yields to that stack, so the list stays one tap away.
+   */
+  static pick(hits: readonly (Readonly<Record<string, unknown>> | undefined)[]): PinHit | null {
+    const top = PinFeatures.hit(hits[0]);
+    if (top?.kind !== 'site') return top;
+    const stacks = hits.map((properties) => PinFeatures.hit(properties)).filter((hit) => hit?.kind === 'stack');
+    return stacks.find((stack) => stack.siteIds.includes(top.siteId)) ?? top;
+  }
+
   static hit(properties: Readonly<Record<string, unknown>> | undefined): PinHit | null {
     const stack = properties?.['stack_ids'];
     if (typeof stack === 'string' && stack) return { kind: 'stack', siteIds: stack.split(ID_SEPARATOR) };
