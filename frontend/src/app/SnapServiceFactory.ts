@@ -23,7 +23,12 @@ import { ScanCapture } from '../services/ScanCapture';
 import { ScanQueue } from '../services/ScanQueue';
 import { ScanSender } from '../services/ScanSender';
 import { ScanTracker } from '../services/ScanTracker';
-import { sampleSiteLoader } from '../services/siteFixtures';
+import { sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../services/siteFixtures';
+import { HttpSiteActionsApi } from '../services/HttpSiteActionsApi';
+import { MockApiClient } from '../services/MockApiClient';
+import { MockSiteActionsApi } from '../services/MockSiteActionsApi';
+import { SiteActionService } from '../services/SiteActionService';
+import type { SiteActionsApi } from '../services/SiteActionsApi';
 import { SystemClock } from '../services/SystemClock';
 import { VideoRecorder, type RecorderFactory } from '../services/VideoRecorder';
 import type { ApiMode, AppConfig } from './AppConfig';
@@ -40,13 +45,21 @@ export interface SnapBrowserApis {
 interface Apis {
   readonly reports: ReportApi;
   readonly scans: ScanApi;
+  readonly sites: SiteActionsApi;
 }
 
+const mockSites = new MockApiClient(siteFixtureLoaders);
+
 const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: RequestIdentity) => Apis>> = {
-  mock: () => ({ reports: new MockReportApi(sampleSiteLoader), scans: new MockScanApi() }),
+  mock: () => ({
+    reports: new MockReportApi(sampleSiteLoader),
+    scans: new MockScanApi(),
+    sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
+  }),
   live: (config, identity) => ({
     reports: new HttpReportApi(config.requireApiUrl(), identity),
     scans: new HttpScanApi(config.requireApiUrl(), identity),
+    sites: new HttpSiteActionsApi(config.requireApiUrl(), identity),
   }),
 };
 
@@ -78,6 +91,7 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
+      siteActions: new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps }),
     };
   }
 

@@ -2,8 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
-import { SitePanel } from '../src/features/site/components/SitePanel';
-import { fixtureSite, renderApp, testServices } from './helpers';
+import { renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
@@ -64,10 +63,10 @@ describe('sign-up and sign-in errors', () => {
 describe('gated site actions and password reset', () => {
   it('resumes a site action after signing in', async () => {
     const user = userEvent.setup();
-    await renderApp(<SitePanel site={await fixtureSite('site_jdh_1')} userLocation={null} />);
-    await user.click(screen.getByRole('button', { name: 'Letter' }));
+    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1' });
+    await user.click(await screen.findByRole('button', { name: 'Letter' }));
     await signUpThroughSheet(user);
-    expect(await screen.findByText('Letter is coming soon.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Draft letter' })).toBeInTheDocument();
   });
 
   it('resets a forgotten password with the emailed code', async () => {
