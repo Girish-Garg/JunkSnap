@@ -6,7 +6,7 @@ import { ContractValidator } from "./ContractValidator.js";
  */
 export type ReportUpload = {
   /**
-   * From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent.
+   * From POST /uploads/presign for a photo. A no_bin report without a photo has no presign: the app makes it, upl_ plus 26 lowercase base-32 characters (decision 20261010-1630). The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent.
    */
   upload_id: string;
   report_type:
@@ -111,7 +111,7 @@ export const reportUploadSchema = {
     "upload_id": {
       "type": "string",
       "pattern": "^upl_[a-z0-9_]{1,40}$",
-      "description": "From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent."
+      "description": "From POST /uploads/presign for a photo. A no_bin report without a photo has no presign: the app makes it, upl_ plus 26 lowercase base-32 characters (decision 20261010-1630). The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent."
     },
     "report_type": {
       "enum": [

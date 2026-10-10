@@ -6,12 +6,17 @@ import { Report } from "../../src/domain/Report.js";
 import type { MergeEvidence } from "../../src/domain/sites/MergeableReport.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
+import { Site } from "../../src/domain/sites/Site.js";
 import { ConditionalStep } from "../../src/services/ConditionalStep.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, northOf, siteFixture } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FixedClock, RecordingLogger } from "./fakes.js";
+
+function fail(): never {
+  throw new Error("no stored internals");
+}
 
 function setup() {
   const sites = new FakeSiteRepository();
@@ -42,6 +47,17 @@ describe("no-bin zones", () => {
     expect(await merger.merge(noBin(1))).toMatchObject({ siteId: "site_nb_1", outcome: "founded", reportStatus: "unverified" });
     const zone = validateSite(sites.feature("site_nb_1")).properties;
     expect(zone).toMatchObject({ zone_radius_m: 1000, verification: "unverified", backers: { count: 1, needed: 10 }, photo_urls: [] });
+  });
+
+  it("publishes a one-person zone's centre only to about 100 m, and the exact centre once a second person backs it", async () => {
+    const { merger, sites } = setup();
+    await merger.merge(noBin(1, 26.261834, 73.003527));
+    const first = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() });
+    expect(first.toFeature().geometry.coordinates).toEqual([73.004, 26.262]);
+    expect(first.snapshot().feature.geometry.coordinates).toEqual([73.003527, 26.261834]);
+    await merger.merge(noBin(2, 26.261834, 73.003527));
+    const second = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() });
+    expect(second.toFeature().geometry.coordinates).toEqual([73.003527, 26.261834]);
   });
 
   it("joins the nearest zone whose centre is within 500 m, else founds another, and recentres on the mean", async () => {

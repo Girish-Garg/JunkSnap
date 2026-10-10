@@ -1,5 +1,5 @@
 import { GeoPoint } from "./GeoPoint.js";
-import type { MergedReport, ReportType } from "./SiteTypes.js";
+import type { MergedReport, ReportType, SiteProperties } from "./SiteTypes.js";
 
 const SITE_MERGE_RADIUS_M = 40;
 // Decision 20261010-1630: a no-bin report joins the nearest open zone whose centre is within 500 m.
@@ -18,4 +18,12 @@ export function zoneCentre(reports: readonly MergedReport[], current: GeoPoint):
   const lat = points.reduce((total, point) => total + point.lat, 0) / Math.max(points.length, 1);
   const lon = points.reduce((total, point) => total + point.lon, 0) / Math.max(points.length, 1);
   return points.length === 0 ? current : new GeoPoint(lat, lon);
+}
+
+// Privacy: one person's no-bin report shows where they stood, so its zone is published to 3 decimals (about 100 m).
+export function publishedPoint(centre: GeoPoint, site: Pick<SiteProperties, "report_type" | "backers">): GeoPoint {
+  if (site.report_type !== "no_bin" || site.backers.count > 1) {
+    return centre;
+  }
+  return new GeoPoint(Math.round(centre.lat * 1000) / 1000, Math.round(centre.lon * 1000) / 1000);
 }

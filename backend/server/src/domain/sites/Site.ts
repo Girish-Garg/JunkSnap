@@ -1,7 +1,7 @@
 import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
-import { mergeRadiusM, zoneCentre } from "./NoBinZone.js";
+import { mergeRadiusM, publishedPoint, zoneCentre } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import {
   AlreadyCleanedError,
@@ -176,13 +176,16 @@ export class Site {
     return { site_id, votes, backers, verification };
   }
 
+  // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
   toFeature(): SiteFeature {
-    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
-    return { type: "Feature", geometry, properties: this.#props };
+    const shown = publishedPoint(this.#point, this.#props);
+    return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties: this.#props };
   }
 
+  // The stored state keeps the exact centre; zones merge on it.
   snapshot(): SiteState {
-    return { feature: this.toFeature(), internals: this.#internals };
+    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
+    return { feature: { type: "Feature", geometry, properties: this.#props }, internals: this.#internals };
   }
 
   #addReporter(report: MergeableReport): void {
