@@ -9,13 +9,15 @@ import { Icon } from '../../../ui/Icon';
 interface LetterActionsProps {
   readonly draft: LetterBase;
   readonly onReset: () => void;
+  /** The site or area share link, added to the copied or shared text. */
+  readonly link?: string;
 }
 
 /** Print (Save as PDF) and copy or, in the Android app, share the text; JunkSnap never sends the letter. */
-export function LetterActions({ draft, onReset }: LetterActionsProps) {
+export function LetterActions({ draft, onReset, link }: LetterActionsProps) {
   const { t } = useTranslation();
   const native = useMemo(() => new NativeBridge(window), []);
-  const copy = useCopyLetter(draft, native);
+  const copy = useCopyLetter(draft, native, link);
   return (
     <div className="letter-actions">
       <Button onClick={() => native.print()}>

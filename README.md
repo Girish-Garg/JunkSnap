@@ -1,6 +1,31 @@
 # JunkSnap
 
-**Snap the junk. Prove it. Get it cleared.**
+**Snap the junk. Prove it. Get it cleared.** Residents photograph waste; JunkSnap blurs it, checks it with stacked models, maps it to the ward, MLA and MP, and drafts a cited letter for the resident to file.
+
+[![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://demo.d3iec0rb3f75jm.amplifyapp.com)
+[![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/saboot/releases/latest)
+[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+[![Built on AWS](https://img.shields.io/badge/built%20on-AWS-ff9900?logo=amazonwebservices&logoColor=white)](#aws-services-and-why)
+
+<img src="docs/media/junksnap-tour.gif" width="360" alt="The live JunkSnap web app on a phone: the Jodhpur map, a reported site and its blurred photo with its MLA and MP seats, then the Areas map and the Soorsagar area page">
+
+Built on AWS, in `ap-south-1` (full diagram under [Architecture](#architecture)):
+
+```mermaid
+flowchart LR
+  app["Web app (Amplify)<br/>Android app"] -->|sign in| cog["Cognito"]
+  app -->|presigned PUT| s3o[("S3 originals<br/>KMS")]
+  app --> cf["CloudFront"] --> alb["ALB"] --> api
+  cf -->|/media blurred photos| s3b[("S3 blurred")]
+  subgraph eks["EKS Auto Mode"]
+    api["api"] --> sqs["SQS"] --> worker["worker"] --> ml["ml"]
+    scores["scores CronJob"]
+  end
+  worker & ml --> rek["Rekognition<br/>faces, plates, labels"]
+  ml & api --> brk["Bedrock<br/>judge, letters"]
+  worker --> loc["Location<br/>Places v2"]
+  api & worker & scores --> ddb[("DynamoDB")]
+```
 
 Dumps are not only the authorities' failure. People dump on empty plots, often because there is nowhere legal to put waste. JunkSnap measures all three causes: how fast the city clears dumps, how much residents dump, and whether people have anywhere legal to put waste.
 

@@ -658,6 +658,7 @@
     "hash": "SHA-256 of the official text",
     "verified": "{{verified}} of {{total}} quotes verified word for word",
     "templateFallback": "Template letter: the drafted wording did not pass the quote check, so the standard letter with the same verified quotes is used.",
+    "link": "Photos and counts online",
     "residentFiles": "This letter is filed by a resident. JunkSnap does not send or file it.",
     "cc": {
       "councillor": "Ward councillor, {{seat}} (for attention)",
