@@ -18,3 +18,8 @@ configMapGenerator:
       - AWS_DEFAULT_REGION=ap-south-1
       - PRESIGN_TTL_SECONDS=300
       - ML_URL=http://ml
+      # Brand judging runs in the worker, which has no provider keys: Bedrock only. Notes are pinned to Bedrock in code.
+      - >-
+        LLM_TASKS={"brands": {"provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6",
+        "fallback": [{"provider": "bedrock", "model": "in.anthropic.claude-haiku-4-5-20251001-v1:0"},
+        {"provider": "bedrock", "model": "apac.amazon.nova-pro-v1:0"}]}}
