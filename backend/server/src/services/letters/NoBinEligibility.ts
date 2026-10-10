@@ -15,7 +15,7 @@ export class NoBinEligibility {
     if (site.reportType !== "no_bin" || site.verified) {
       return;
     }
-    const count = Math.min(site.evidence.reporters ?? 0, PEOPLE_NEEDED - 1);
+    const count = Math.min(site.backers, PEOPLE_NEEDED - 1);
     throw new NotVerifiedError(`${count} of ${PEOPLE_NEEDED} people have confirmed no dustbin within 1 km here; a no-bin letter needs ${PEOPLE_NEEDED}.`);
   }
 

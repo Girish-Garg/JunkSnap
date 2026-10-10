@@ -30,6 +30,8 @@ export interface LetterSiteProps {
   readonly reportType: ReportType;
   readonly context: SiteContext;
   readonly verified: boolean;
+  // site.backers.count: people who confirmed it by photo or yes vote, each once (decisions 20261010-1530, -1630).
+  readonly backers: number;
   readonly burning: boolean;
   readonly hazards: readonly string[];
   readonly packaging: boolean;
@@ -42,6 +44,7 @@ export class LetterSite {
   readonly reportType: ReportType;
   readonly context: SiteContext;
   readonly verified: boolean;
+  readonly backers: number;
   readonly burning: boolean;
   readonly hazards: readonly string[];
   readonly packaging: boolean;
@@ -53,6 +56,7 @@ export class LetterSite {
     this.reportType = props.reportType;
     this.context = props.context;
     this.verified = props.verified;
+    this.backers = props.backers;
     this.burning = props.burning;
     this.hazards = props.hazards;
     this.packaging = props.packaging;
@@ -68,6 +72,7 @@ export class LetterSite {
       reportType: facts.report_type,
       context: facts.context,
       verified: facts.verification === "verified",
+      backers: facts.backers.count,
       burning: facts.burning,
       hazards: (facts.insights?.hazards ?? []).map((entry) => entry.hazard),
       packaging: facts.brands.length > 0,

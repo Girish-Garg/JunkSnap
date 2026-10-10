@@ -1,10 +1,9 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
-import { coordinates, joinList, kilometres, letterDate } from "./utils.js";
+import { coordinates, joinList, letterDate } from "./utils.js";
 
-// Each no-bin report says no dustbin within this radius (decision 20261010-1630).
-const ZONE_RADIUS_M = 1000;
 const WHAT: Readonly<Record<SiteContext, string>> = {
   vacant_plot: "खाली प्लॉट पर कचरे का ढेर",
   roadside: "सड़क किनारे कचरे का ढेर",
@@ -74,13 +73,7 @@ export class HindiWording implements TemplateWording {
     if (site.reportType !== "no_bin") {
       return REQUEST[site.reportType];
     }
-    const people = `${site.evidence.reporters ?? 10} लोगों ने पुष्टि की है कि इस जगह के 1 किलोमीटर के भीतर कोई कूड़ेदान नहीं है।`;
-    const bin = site.evidence.nearestBin;
-    const mapped =
-      bin !== null && bin.distance_m <= ZONE_RADIUS_M
-        ? `नक्शे पर एक कूड़ेदान ${Math.round(bin.distance_m)} मीटर दूर दर्ज है (OpenStreetMap, वार्ड रिकॉर्ड); वह गायब या टूटा हो सकता है।`
-        : `${kilometres(this.#binRadiusM)} किलोमीटर के भीतर नक्शे पर कोई कूड़ेदान या कचरा संग्रह केंद्र नहीं है (OpenStreetMap, वार्ड रिकॉर्ड)।`;
-    return `${people} ${mapped} ${REQUEST.no_bin}`;
+    return `${new NoBinStatement(this.#binRadiusM).hindi(site)} ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {
