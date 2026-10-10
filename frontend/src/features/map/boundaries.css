@@ -1,4 +1,4 @@
-/* Map areas legend and marker tooltip. Tokens only; the fill colours live in ChoroplethScale. */
+/* Map areas legend, area card and marker tooltip. Tokens only; the map fills mirror them (AreaTints, ChoroplethScale). */
 .map-controls {
   display: flex;
   flex-direction: column;
@@ -130,4 +130,61 @@
   font-family: var(--font-body);
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
+}
+
+/* Area tints in the legend: small chips, each a pale wash of its tint with a ring of it, as on the map. */
+.tint-key {
+  display: inline-grid;
+  flex: none;
+  grid-template-columns: repeat(4, 8px);
+  gap: 2px;
+}
+
+.tint-key__swatch {
+  width: 8px;
+  height: 8px;
+  border: 1px solid color-mix(in srgb, var(--swatch) 55%, var(--surface));
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--swatch) 15%, var(--surface));
+}
+
+.tint-key__swatch--1 { --swatch: var(--area-tint-1); }
+.tint-key__swatch--2 { --swatch: var(--area-tint-2); }
+.tint-key__swatch--3 { --swatch: var(--area-tint-3); }
+.tint-key__swatch--4 { --swatch: var(--area-tint-4); }
+.tint-key__swatch--5 { --swatch: var(--area-tint-5); }
+.tint-key__swatch--6 { --swatch: var(--area-tint-6); }
+.tint-key__swatch--7 { --swatch: var(--area-tint-7); }
+.tint-key__swatch--8 { --swatch: var(--area-tint-8); }
+
+/* The thick outline round the area in focus (FocusLineLayer). */
+.tint-key__focus {
+  flex: none;
+  width: 16px;
+  border-top: 3px solid var(--accent);
+}
+
+/* The card after tapping an area: a swatch of its map tint (TintSwatch) where a pin's card shows the photo.
+   It follows a finger down and a swipe closes it (useMapCard, --card-drag), like the pin card. */
+.preview-card.area-card {
+  touch-action: none;
+  transform: translateY(var(--card-drag, 0px));
+  transition: transform var(--dur-3) var(--spring);
+}
+
+.preview-card.area-card.is-dragging {
+  transition: none;
+}
+
+.area-card__lines {
+  display: grid;
+  margin-top: var(--s-1);
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.area-card__lines strong {
+  color: var(--text);
+  font-weight: 600;
 }

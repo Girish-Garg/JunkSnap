@@ -450,3 +450,26 @@ a {
     transition-duration: 1ms !important;
   }
 }
+
+/* An area's map colour (TintSwatch): the same 15% wash the map draws, with a softened ring of its --area-tint. */
+.tint-swatch {
+  display: inline-block;
+  flex: none;
+  border: 2px solid color-mix(in srgb, var(--swatch) 55%, var(--surface));
+  background: color-mix(in srgb, var(--swatch) 15%, var(--surface));
+}
+
+.tint-swatch--small {
+  width: 14px;
+  height: 14px;
+  margin-right: var(--s-2);
+  border-radius: 4px;
+  vertical-align: -1px;
+}
+
+.tint-swatch--large {
+  align-self: flex-start;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-m);
+}

@@ -1,4 +1,6 @@
 import type { FeatureCollection, Point } from 'geojson';
+import { AreaColouring } from '../domain/AreaColouring';
+import type { AreaPolygons, AreaShapes } from '../domain/AreaShapes';
 import type { Clock } from './Clock';
 import { ExpiringCache, type CachePolicy, type Tagged } from './ExpiringCache';
 import { SystemClock } from './SystemClock';
@@ -38,10 +40,12 @@ interface AreasEntry {
   readonly version: string | null;
 }
 
-/** The copies of index.json and of the marker points. */
+/** The copies of index.json, the marker points, the polygons and their neighbour colouring. */
 export interface BoundaryCaches {
   readonly index: ExpiringCache<AreasEntry>;
   readonly labels: ExpiringCache<LabelPoints>;
+  readonly polygons: ExpiringCache<AreaPolygons>;
+  readonly shapes: ExpiringCache<AreaShapes>;
 }
 
 // Written by scripts/simplify_boundaries.py into public/boundaries/, which ships only the areas
@@ -51,8 +55,8 @@ const NONE: AreasIndex = { available: false, fine: false, attribution: null };
 const NO_ENTRY: AreasEntry = { index: NONE, version: null };
 // A session left open across a deploy reads the new index within 10 minutes.
 const INDEX_POLICY: CachePolicy = { ttlMs: 10 * 60 * 1000, staleWhileRevalidate: true, maxEntries: 1 };
-// The marker points never age; they are fetched again only when the index names another version.
-const LABELS_POLICY: CachePolicy = { ttlMs: Number.POSITIVE_INFINITY, staleWhileRevalidate: false, maxEntries: 1 };
+// Marker points, polygons and their colouring never age; they are read again only when the index names another version.
+const VERSIONED_POLICY: CachePolicy = { ttlMs: Number.POSITIVE_INFINITY, staleWhileRevalidate: false, maxEntries: 1 };
 
 /** The boundary files served with the app; their URLs carry the index's version, so a new build busts old copies. */
 export class BoundaryCatalog {
@@ -72,7 +76,12 @@ export class BoundaryCatalog {
   }
 
   static caches(clock: Clock): BoundaryCaches {
-    return { index: new ExpiringCache(INDEX_POLICY, clock), labels: new ExpiringCache(LABELS_POLICY, clock) };
+    return {
+      index: new ExpiringCache(INDEX_POLICY, clock),
+      labels: new ExpiringCache(VERSIONED_POLICY, clock),
+      polygons: new ExpiringCache(VERSIONED_POLICY, clock),
+      shapes: new ExpiringCache(VERSIONED_POLICY, clock),
+    };
   }
 
   /** The app's own folder, as an absolute URL so MapLibre's workers can fetch it. */
@@ -88,7 +97,26 @@ export class BoundaryCatalog {
   /** The marker points for the map and search, kept until the index names a new version; a failure is tried again. */
   async labels(): Promise<LabelPoints> {
     const { version } = await this.#areas();
-    return this.#caches.labels.get({ key: AREAS, token: version, load: () => this.#fetchLabels(version) });
+    return this.#caches.labels.get({ key: AREAS, token: version, load: () => this.#fetchJson<LabelPoints>(this.labelsUrl(), version, 'area markers') });
+  }
+
+  /**
+   * The area polygons the map draws, read on the main thread (from the same versioned URL MapLibre loads) to tell
+   * neighbours apart and to find the area someone stands in; kept until the index names a new version.
+   */
+  async polygons(): Promise<AreaPolygons> {
+    const { version } = await this.#areas();
+    return this.#caches.polygons.get({ key: AREAS, token: version, load: () => this.#fetchJson<AreaPolygons>(this.polygonsUrl(), version, 'area polygons') });
+  }
+
+  /**
+   * The polygons with each area's neighbour tint slot, coloured once per index version (its content hash) and
+   * number of slots, then shared by the map, its card and the Areas tab. A failure is tried again next time.
+   */
+  async areaShapes(slots: number): Promise<AreaShapes> {
+    const { version } = await this.#areas();
+    const load = async (): Promise<Tagged<AreaShapes>> => ({ value: AreaColouring.shapes(await this.polygons(), slots), token: version });
+    return this.#caches.shapes.get({ key: `${AREAS}|${String(slots)}`, token: version, load });
   }
 
   polygonsUrl(): string {
@@ -126,10 +154,10 @@ export class BoundaryCatalog {
     return { value: { index, version }, token: version };
   }
 
-  async #fetchLabels(version: string | null): Promise<Tagged<LabelPoints>> {
-    const response = await this.#fetch(this.labelsUrl());
-    if (!response.ok) throw new Error(`Could not load the area markers: ${response.status}`);
-    return { value: (await response.json()) as LabelPoints, token: version };
+  async #fetchJson<T>(url: string, version: string | null, what: string): Promise<Tagged<T>> {
+    const response = await this.#fetch(url);
+    if (!response.ok) throw new Error(`Could not load the ${what}: ${response.status}`);
+    return { value: (await response.json()) as T, token: version };
   }
 
   #url(file: string): string {

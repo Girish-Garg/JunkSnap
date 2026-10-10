@@ -399,7 +399,7 @@
     "intro": "Scores for wards, seats and districts. A score shows only after 10 verified reports.",
     "search": "Find an area",
     "none": "Wards and seats show here once someone reports a site in them.",
-    "noMatch": "No reported area matches that name.",
+    "noMatch": "No area matches that name.",
     "all": "All areas",
     "loading": "Loading area",
     "loadFailed": "Could not load this area.",
@@ -414,7 +414,8 @@
       "ward": "Wards",
       "assembly": "Assembly seats",
       "loksabha": "Lok Sabha seats",
-      "district": "Districts"
+      "district": "Districts",
+      "local_body": "Local body"
     },
     "scores": "Scores",
     "score": {
@@ -489,7 +490,17 @@
     "noVerifiedSites": "No verified sites yet",
     "rowCounts": "Sites: {{sites}} · verified reports: {{verified}}",
     "listLoading": "Loading areas",
-    "listFailed": "Could not load the areas."
+    "noReports": "No reports yet",
+    "scoreLine": "Score {{n}} of 100 · from {{reports}} verified reports",
+    "openArea": "Open area",
+    "closeCard": "Close area card",
+    "pilotNote": "Jodhpur is the pilot city: every seat is listed here, reported or not.",
+    "localBodyNote": "Area letters go to its head. Its ward maps are not reviewed yet, so reports are counted by seat and district for now.",
+    "retry": "Try again",
+    "listPartial": "Couldn't load some counts. Areas that say \"Couldn't load counts\" are not zero; their counts are unknown for now.",
+    "countsFailed": "Couldn't load counts",
+    "scoreWithheld": "Score withheld for now",
+    "listPartialOther": "Couldn't load the reported areas of other districts around the map, so some may be missing here. Jodhpur's areas and counts are complete."
   },
   "activity": {
     "title": "Activity",
@@ -758,13 +769,14 @@
     "tooltipNone": "{{name}}: no verified reports yet",
     "keyScore": "Marker: score out of 100, then its verified reports",
     "keyCount": "Marker: number of verified reports",
-    "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
+    "areasLine": "Seats with 10+ verified reports are coloured by score instead.",
     "legendChip": "Legend",
     "caveat": "Scores show after 10 verified reports",
     "outdated": "Dashed outline: seat boundary out of date",
     "tooltipScorePilot": "{{name}}: score {{n}} of 100, from {{reports}} verified reports. Pilot city",
     "keyPilot": "Flag: pilot city data",
-    "countLine": "Seats with verified reports are shaded grey by how many."
+    "tintLine": "Coloured areas are assembly seats (Lok Sabha seats outside Rajasthan); colours only tell neighbours apart.",
+    "focusLine": "Thick outline: the area you tapped, opened or are in"
   },
   "ranking": {
     "open": "City ranking",
