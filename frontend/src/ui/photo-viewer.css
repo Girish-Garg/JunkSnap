@@ -1,4 +1,4 @@
-/* Photo strip, tappable thumbnails and the full-screen viewer. Existing tokens only; restyled later. */
+/* Photo strip, tappable thumbnails and the full-screen viewer. The viewer stays dark in both themes. */
 
 .photo-open {
   display: block;
@@ -32,14 +32,15 @@
 
 .photo-strip__count {
   position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
-  padding: 2px var(--space-1);
+  top: var(--s-2);
+  right: var(--s-2);
+  padding: 2px var(--s-2);
   border-radius: var(--radius-pill);
-  background: var(--text);
-  color: var(--surface);
-  font-size: 12px;
-  line-height: 16px;
+  background: rgb(18 15 12 / 0.72);
+  color: #fffdf8;
+  font-weight: 700;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
   pointer-events: none;
 }
 
@@ -49,27 +50,30 @@
   z-index: 20;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background: var(--text);
-  color: var(--surface);
+  background: #120f0c;
+  color: #fffdf8;
+  animation: fade-in var(--dur-2) var(--ease-out);
 }
 
 .photo-viewer__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-1) var(--space-1) 0 var(--edge);
+  padding: var(--s-2) var(--s-2) 0 var(--edge);
 }
 
 .photo-viewer .icon-button {
-  color: var(--surface);
+  color: #fffdf8;
 }
 
 .photo-viewer .icon-button:hover {
-  background: var(--text-secondary);
+  background: rgb(255 253 248 / 0.14);
 }
 
 .photo-viewer__count {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 700;
 }
 
 .photo-viewer__stage {
@@ -85,7 +89,9 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
 }
 
 .photo-viewer__stage--dragging .photo-viewer__image {
@@ -95,8 +101,8 @@
 .photo-viewer__pager {
   position: absolute;
   top: 50%;
-  right: var(--space-1);
-  left: var(--space-1);
+  right: var(--s-2);
+  left: var(--s-2);
   display: flex;
   justify-content: space-between;
   pointer-events: none;
@@ -107,9 +113,9 @@
 }
 
 .photo-viewer__caption {
-  padding: var(--space-1) var(--edge) var(--space-2);
-  font-size: 12px;
-  line-height: 16px;
+  padding: var(--s-2) var(--edge) var(--s-4);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
 }
 
 .photo-viewer__caption p {

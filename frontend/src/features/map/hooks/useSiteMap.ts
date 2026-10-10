@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../../app/useTheme';
 import type { BoundaryKind } from '../../../domain/AreaListing';
 import type { MapMode } from '../../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
@@ -27,6 +28,8 @@ export interface SiteMapBindings {
 export function useSiteMap(container: RefObject<HTMLDivElement | null>, bindings: SiteMapBindings): void {
   const { t } = useTranslation();
   const mapRef = useMapInstance(container, bindings);
+  const { dark } = useTheme();
+  useEffect(() => mapRef.current?.setDark(dark), [mapRef, dark]);
   useEffect(() => mapRef.current?.showSites(bindings.sites), [mapRef, bindings.sites]);
   useEffect(() => mapRef.current?.select(bindings.selectedId), [mapRef, bindings.selectedId]);
   useEffect(() => mapRef.current?.setMode(bindings.mode), [mapRef, bindings.mode]);

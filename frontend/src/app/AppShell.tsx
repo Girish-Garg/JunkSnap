@@ -1,19 +1,34 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router';
 import { AuthFlowProvider } from '../features/auth/components/AuthFlowProvider';
+import { SplashScreen } from '../features/brand/components/SplashScreen';
 import { AppRoutes } from './AppRoutes';
+import { WELCOME_PATH } from './paths';
+import { SheetHistory } from './SheetHistory';
+import { useServices } from './useServices';
 
 export function AppShell() {
   const { i18n } = useTranslation();
+  const { onboarding } = useServices();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [splash, setSplash] = useState(true);
   useEffect(() => {
     // Screen readers and the :lang(hi) font rule read this.
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
+  // First visit at the map: the "How JunkSnap works" cards open once, above the map, after the splash.
+  const afterSplash = useCallback(() => {
+    setSplash(false);
+    if (!onboarding.seen() && pathname === '/') navigate(WELCOME_PATH, { state: SheetHistory.above(0) });
+  }, [onboarding, pathname, navigate]);
   return (
     <div className="app">
       <AuthFlowProvider>
         <AppRoutes />
       </AuthFlowProvider>
+      {splash && <SplashScreen onDone={afterSplash} />}
     </div>
   );
 }

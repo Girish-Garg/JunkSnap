@@ -1,0 +1,70 @@
+/* Start-up splash, at most 1.2 s: pop, roll, flash (800 ms here), then useSplash flies the mark into the logo. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--page);
+  cursor: pointer;
+}
+
+.logo-art g,
+.logo-art path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.splash .logo-art__body {
+  animation: splash-pop 420ms var(--spring-bouncy) both;
+}
+
+/* The crumpled ball rolls in from the left and squashes into the lens. */
+.splash .logo-art__paper {
+  animation: splash-roll 460ms var(--ease-out) 180ms both;
+}
+
+.splash .logo-art__glint {
+  animation: fade-in 200ms var(--ease-out) 560ms both;
+}
+
+.splash .logo-art__flash {
+  animation: splash-flash 300ms var(--spring-bouncy) 520ms both;
+}
+
+@keyframes splash-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-8deg);
+  }
+}
+
+@keyframes splash-roll {
+  0% {
+    opacity: 0;
+    transform: translateX(-90px) rotate(-300deg) scale(0.7);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateX(4px) rotate(10deg) scale(1.15, 0.85);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes splash-flash {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash .logo-art g,
+  .splash .logo-art path {
+    animation: none;
+  }
+}

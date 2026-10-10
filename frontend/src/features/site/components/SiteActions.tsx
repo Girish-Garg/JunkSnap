@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 import { cleanupPath, letterPath } from '../../../app/paths';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { SiteFeature } from '../../../domain/Site';
 import { ActionRow, type RowAction } from '../../../ui/ActionRow';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
@@ -18,12 +18,12 @@ interface SiteActionsProps {
 /** Confirm opens the vote; Cleaned and Letter open their sheets after sign-in; Me too is not built yet. */
 export function SiteActions({ site, primary, onConfirm }: SiteActionsProps) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const { requireAuth } = useAuthFlow();
   const { share, copied } = useShareSite(site);
   const [tapped, setTapped] = useState(false);
   const siteId = site.properties.site_id;
-  const open = (path: string) => () => requireAuth(() => navigate(path));
+  const open = (path: string) => () => requireAuth(() => sheets.open(path));
   const actions: readonly RowAction[] = [
     { id: 'confirm', icon: 'confirm', label: t('actions.confirm'), onClick: onConfirm },
     { id: 'metoo', icon: 'metoo', label: t('actions.metoo'), onClick: () => setTapped(true) },

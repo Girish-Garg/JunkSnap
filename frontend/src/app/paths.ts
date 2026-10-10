@@ -8,6 +8,7 @@ export const AREA_LETTER_PATH = '/areas/:kind/:areaId/letter';
 export const ACTIVITY_PATH = '/activity';
 export const ACCOUNT_PATH = '/account';
 export const RANKING_PATH = '/ranking';
+export const WELCOME_PATH = '/welcome';
 
 export function sitePath(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;

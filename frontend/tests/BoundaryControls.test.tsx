@@ -20,6 +20,7 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({
 describe('Map boundary controls', () => {
   it('opens on assembly seats filled from the area list, with a legend saying what the fill means', async () => {
     await renderApp(<AppRoutes />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
     const legend = await screen.findByRole('region', { name: 'Map colours' });
     expect(within(legend).getByText('Assembly seats')).toBeInTheDocument();
     expect(within(legend).getByText('Score, darker is worse')).toBeInTheDocument();
@@ -53,6 +54,7 @@ describe('Map layer switcher', () => {
   it('switches layers, marks outdated seats in the legend and turns boundaries off', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />);
+    await user.click(await screen.findByRole('button', { name: 'Legend' }));
     await user.click(await screen.findByRole('button', { name: 'Map areas' }));
     const panel = screen.getByRole('group', { name: 'Areas on the map' });
     expect(within(panel).queryByRole('button', { name: 'Wards' })).not.toBeInTheDocument();

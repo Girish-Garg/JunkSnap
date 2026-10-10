@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { CaptureProblem } from '../../../domain/CaptureError';
 import { Button } from '../../../ui/Button';
+import { Illustration } from '../../../ui/Illustration';
 
 interface CameraHelpProps {
   readonly problem: CaptureProblem;
@@ -13,6 +14,7 @@ export function CameraHelp({ problem, onRetry }: CameraHelpProps) {
   const steps = t(`snap.help.${problem}`, { returnObjects: true }) as unknown;
   return (
     <div className="camera-help">
+      <Illustration name="camera" size={104} />
       <ol className="camera-help__steps">
         {(Array.isArray(steps) ? steps : []).map((step: string) => (
           <li key={step}>{step}</li>

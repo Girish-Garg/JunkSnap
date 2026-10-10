@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Illustration } from '../../../ui/Illustration';
 import { Notice } from '../../../ui/Notice';
 import { Skeleton } from '../../../ui/Skeleton';
 
@@ -11,7 +12,8 @@ export function SitePanelPending({ titleId, failed }: SitePanelPendingProps) {
   const { t } = useTranslation();
   if (failed) {
     return (
-      <div id={titleId} tabIndex={-1}>
+      <div id={titleId} className="pending-failed" tabIndex={-1}>
+        <Illustration name="offline" size={104} />
         <Notice icon="info" text={t('site.loadFailed')} tone="alert" />
       </div>
     );

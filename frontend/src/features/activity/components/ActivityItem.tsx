@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import { useFormatter } from '../../../i18n/useFormatter';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
+import { TypeIcon } from '../../../ui/TypeIcon';
 import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
 import { ActivityActions } from './ActivityActions';
@@ -29,7 +29,7 @@ export function ActivityItem({ report, onOpen }: ActivityItemProps) {
       )}
       <div className="report-row__body">
         <p className="report-row__title">
-          <MarkerGlyph type={draft.report_type} size={16} />
+          <TypeIcon type={draft.report_type} size={16} />
           {t(`reportType.${draft.report_type}`)}
         </p>
         <p className="report-row__meta">
