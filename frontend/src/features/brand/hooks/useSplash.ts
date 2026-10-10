@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { InertOutside } from '../../../ui/InertOutside';
 
 // The parts play for 800 ms (splash.css), then the mark flies into the logo's place in 350 ms.
 const PARTS_MS = 800;
@@ -43,7 +44,10 @@ export function useSplash(screen: RefObject<HTMLElement | null>, mark: RefObject
       fly(mark.current, screen.current).finished.then(finish, finish);
     }, moving() ? PARTS_MS : STATIC_MS);
     window.addEventListener('keydown', finish);
+    // While it plays, the app underneath cannot take focus.
+    const release = screen.current ? InertOutside.mark(screen.current) : undefined;
     return () => {
+      release?.();
       window.clearTimeout(timer);
       window.removeEventListener('keydown', finish);
     };

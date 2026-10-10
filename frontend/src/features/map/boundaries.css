@@ -58,6 +58,25 @@
   gap: var(--s-2);
 }
 
+.legend-toggle__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(100vw - 2 * var(--edge) - 64px);
+}
+
+/* Always visible, open or folded: scores are never shown on thin evidence. */
+.legend-toggle__caveat {
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: 600;
+}
+
 .legend-toggle--open .legend-toggle__chip {
   background: var(--accent);
   color: var(--on-accent);

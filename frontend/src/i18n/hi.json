@@ -595,7 +595,8 @@
     "wardsApproxCounted": "आधिकारिक वार्ड सूचियों से अनुमानित वार्ड क्षेत्र, जाँच बाकी ({{counts}})",
     "wardsOf": "{{wards}} में से {{mapped}} वार्ड",
     "wardsMapped": "{{mapped}} वार्ड",
-    "legendChip": "संकेत"
+    "legendChip": "संकेत",
+    "caveat": "स्कोर 10 सत्यापित रिपोर्टों के बाद दिखते हैं"
   },
   "ranking": {
     "open": "शहर की रैंकिंग",

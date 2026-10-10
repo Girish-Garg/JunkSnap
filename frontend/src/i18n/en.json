@@ -595,7 +595,8 @@
     "wardsApproxCounted": "Approximate ward areas from official ward lists, unreviewed ({{counts}})",
     "wardsOf": "{{mapped}} of {{wards}} wards",
     "wardsMapped": "{{mapped}} wards",
-    "legendChip": "Legend"
+    "legendChip": "Legend",
+    "caveat": "Scores show after 10 verified reports"
   },
   "ranking": {
     "open": "City ranking",
