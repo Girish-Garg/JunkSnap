@@ -3,8 +3,8 @@ import type { MergeableReport } from "../../domain/sites/MergeableReport.js";
 import type { Site } from "../../domain/sites/Site.js";
 import type { EmbeddingStore } from "../../ports/sites/EmbeddingStore.js";
 
-// Not yet measured on real photos (docs/decisions/20261010-0253-hem-verified-count.md).
-export const DEFAULT_MIN_COSINE = 0.75;
+// SigLIP 2 vectors: keeps 95% of second shots of one pile, lets 15% of other piles through (docs/ml/eval.md).
+export const DEFAULT_MIN_COSINE = 0.88;
 const ME_TOO_RANK = -1;
 
 // Picks the site a report merges into: the Me too site when it qualifies, else the nearest that does.
@@ -40,7 +40,7 @@ export class MergeTargetPicker {
     if (own === null || site.embeddingKey === null) {
       return true;
     }
-    const theirs = await this.#embeddings.vectorAt(site.embeddingKey);
-    return own.cosine(theirs) >= this.#minCosine;
+    const similarity = own.cosine(await this.#embeddings.vectorAt(site.embeddingKey));
+    return similarity !== null && similarity >= this.#minCosine;
   }
 }

@@ -76,7 +76,7 @@ describe("EmbeddingVector", () => {
     expect(a.cosine(new EmbeddingVector([2, 0, 0]))).toBeCloseTo(1);
     expect(a.cosine(new EmbeddingVector([0, 1, 0]))).toBeCloseTo(0);
     expect(a.cosine(new EmbeddingVector([0, 0, 0]))).toBe(0);
-    expect(() => a.cosine(new EmbeddingVector([1, 0]))).toThrow(/sizes differ/);
+    expect(a.cosine(new EmbeddingVector([1, 0]))).toBeNull();
   });
 });
 
