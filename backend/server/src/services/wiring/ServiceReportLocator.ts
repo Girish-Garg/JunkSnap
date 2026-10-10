@@ -1,5 +1,5 @@
-import type { LocationLookup, ReportUpload } from "../../contracts/index.gen.js";
-import type { ReportLocator } from "../../ports/ReportLocator.js";
+import type { LocationLookup } from "../../contracts/index.gen.js";
+import type { LatLon, ReportLocator } from "../../ports/ReportLocator.js";
 import type { LocationService } from "../location/LocationService.js";
 
 export class ServiceReportLocator implements ReportLocator {
@@ -9,7 +9,7 @@ export class ServiceReportLocator implements ReportLocator {
     this.#service = service;
   }
 
-  locate(gps: ReportUpload["gps"]): Promise<LocationLookup> {
-    return this.#service.locate(gps.lat, gps.lon);
+  locate(point: LatLon): Promise<LocationLookup> {
+    return this.#service.locate(point.lat, point.lon);
   }
 }

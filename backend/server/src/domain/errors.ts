@@ -15,6 +15,7 @@ const HTTP_STATUS = {
   site_rejected: 409,
   site_verified: 409,
   no_local_body: 422,
+  target_too_far: 422,
   rate_limited: 429,
   server_error: 500,
 } as const;

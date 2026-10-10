@@ -26,7 +26,7 @@ export function VoteBox({ siteId, onVoted, noBin = false }: VoteBoxProps) {
       {vote.result && <Celebrate />}
       {vote.result && (
         <p className="vote-box__note" role="status">
-          {t('vote.thanks', { yes: vote.result.votes.confirm, no: vote.result.votes.reject })}
+          {t(`${words}.thanks`, { yes: vote.result.votes.confirm, no: vote.result.votes.reject, cleared: vote.result.votes.cleaned ?? 0 })}
         </p>
       )}
       {vote.problem && (

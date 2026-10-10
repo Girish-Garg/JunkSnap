@@ -2,6 +2,7 @@ import type { ReportUpload } from "../contracts/index.gen.js";
 import { InternalDataError, ValidationError } from "../domain/errors.js";
 import { Report } from "../domain/Report.js";
 import { ReportId } from "../domain/ReportId.js";
+import { ReportPlacement } from "../domain/ReportPlacement.js";
 import { isoSeconds } from "../domain/timeUtils.js";
 import type { Clock } from "../ports/Clock.js";
 import type { ReportQueue } from "../ports/ReportQueue.js";
@@ -36,6 +37,7 @@ export class ReportIntake {
     if (upload.capture_mode !== "snap") {
       throw new ValidationError("POST /reports takes snap photos only; the worker makes scan frames");
     }
+    ReportPlacement.of(upload).assertWithinCap();
     const reportId = ReportId.fromUpload(upload.upload_id).value;
     const existing = await this.#ports.reports.get(reportId);
     if (existing !== undefined) {

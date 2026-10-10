@@ -18,6 +18,8 @@ export interface RankingRowView {
   readonly meta: string;
   /** Pilot-city data (Jodhpur), flagged beside the score as on the area page. */
   readonly pilot: boolean;
+  /** The area has the 10 verified reports a letter needs. */
+  readonly letterReady: boolean;
 }
 
 /** Row texts for the city ranking: a score always beside its count; a withheld score never shows. */
@@ -45,6 +47,7 @@ export class RankingPresenter {
       reports,
       meta: reports ? `${note} · ${reports}` : note,
       pilot: standing.row.pilot,
+      letterReady: standing.letterReady,
     };
   }
 

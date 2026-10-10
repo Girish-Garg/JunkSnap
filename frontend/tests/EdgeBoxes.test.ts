@@ -5,6 +5,7 @@ import { EDGE_CLASSES, type FrameDetections } from '../src/domain/EdgeModel';
 import { EdgeOutput } from '../src/domain/EdgeOutput';
 import { Letterbox } from '../src/domain/Letterbox';
 import { EdgeOverlayView } from '../src/features/snap/EdgeOverlayView';
+import { SpottedStreak } from '../src/features/snap/SpottedStreak';
 
 describe('model output to frame fractions', () => {
   it('letterboxes a 720x960 portrait frame into 320 with grey bars left and right', () => {
@@ -68,11 +69,20 @@ describe('EdgeOverlayView', () => {
     expect(EdgeOverlayView.from(frame('bin', 0.9), size, size)).toMatchObject({ spotted: false });
   });
 
-  it('does not draw boxes under the overlay score', () => {
+  it('does not draw boxes under the overlay score of 0.5, so a plain wall at 0.35 stays clear', () => {
     expect(EdgeOverlayView.from(frame('bag', 0.3), size, size).boxes).toEqual([]);
+    expect(EdgeOverlayView.from(frame('waste_pile', 0.45), size, size)).toMatchObject({ boxes: [], spotted: false });
+    expect(EdgeOverlayView.from(frame('waste_pile', 0.5), size, size).boxes).toHaveLength(1);
   });
 
   it('labels boxes with whole percent', () => {
     expect(EdgeOverlayView.from(frame('bag', 0.876), size, size).boxes[0]).toMatchObject({ label: 'bag', percent: 88 });
+  });
+});
+
+describe('SpottedStreak', () => {
+  it('says "Waste spotted" only after 2 waste frames in a row, and starts again after a miss', () => {
+    const streak = new SpottedStreak();
+    expect([true, false, true, true, true, false].map((spotted) => streak.next(spotted))).toEqual([false, false, false, true, true, false]);
   });
 });

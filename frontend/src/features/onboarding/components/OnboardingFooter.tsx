@@ -7,15 +7,19 @@ interface OnboardingFooterProps {
   readonly onClose: () => void;
 }
 
-/** Skip, the dots (each jumps to its card), and Next; the last card's button closes the deck. */
+/** Skip, the dots (each jumps to its card), and Next; the last card has no Skip, and its button closes the deck. */
 export function OnboardingFooter({ deck, onClose }: OnboardingFooterProps) {
   const { t } = useTranslation();
   const dots = Array.from({ length: deck.count }, (_, i) => i);
   return (
     <footer className="onboarding__footer">
-      <Button variant="text" onClick={onClose}>
-        {t('onboarding.skip')}
-      </Button>
+      {deck.last ? (
+        <span className="onboarding__skip-space" aria-hidden="true" />
+      ) : (
+        <Button variant="text" onClick={onClose}>
+          {t('onboarding.skip')}
+        </Button>
+      )}
       <div className="onboarding__dots">
         {dots.map((i) => (
           <button

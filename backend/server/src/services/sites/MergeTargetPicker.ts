@@ -28,7 +28,7 @@ export class MergeTargetPicker {
     }
     const own = await this.#reportVector(report, candidates);
     for (const site of candidates) {
-      if (await this.#looksAlike(own, site)) {
+      if (await this.#looksAlike(own, site, report.longRange)) {
         return site;
       }
     }
@@ -40,10 +40,11 @@ export class MergeTargetPicker {
     return report.embeddingKey !== null && anyToCompare ? this.#embeddings.vectorAt(report.embeddingKey) : null;
   }
 
-  // Compared only when both sides have a stored embedding.
-  async #looksAlike(own: EmbeddingVector | null, site: Site): Promise<boolean> {
+  // Compared only when both sides have a stored embedding. A long-range pin can be dropped anywhere within 500 m,
+  // so it joins a site only on a matching photo; without both embeddings it founds its own (decision 20261011-0400).
+  async #looksAlike(own: EmbeddingVector | null, site: Site, longRange: boolean): Promise<boolean> {
     if (own === null || site.embeddingKey === null) {
-      return true;
+      return !longRange;
     }
     const similarity = own.cosine(await this.#embeddings.vectorAt(site.embeddingKey));
     return similarity !== null && similarity >= this.#minCosine;

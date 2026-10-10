@@ -6,6 +6,8 @@ export const AREAS_PATH = '/areas';
 export const AREA_PATH = '/areas/:kind/:areaId';
 export const AREA_LETTER_PATH = '/areas/:kind/:areaId/letter';
 export const ACTIVITY_PATH = '/activity';
+/** "What we checked" for one of the user's own reports (a photo or a scan frame). */
+export const FEEDBACK_PATH = '/activity/reports/:reportId';
 export const ACCOUNT_PATH = '/account';
 export const RANKING_PATH = '/ranking';
 export const WELCOME_PATH = '/welcome';
@@ -28,4 +30,8 @@ export function letterPath(siteId: string): string {
 
 export function areaLetterPath(kind: string, areaId: string): string {
   return `${areaPath(kind, areaId)}/letter`;
+}
+
+export function feedbackPath(reportId: string): string {
+  return `${ACTIVITY_PATH}/reports/${encodeURIComponent(reportId)}`;
 }

@@ -47,7 +47,7 @@ describe('Area page', () => {
     expect(screen.getByText('Pilot city')).toBeInTheDocument();
     expect(screen.getByText('Too few bins')).toBeInTheDocument();
     expect(screen.getByText('48.2%')).toBeInTheDocument();
-    expect(screen.getByText('16.7% · 1 of 6 sites')).toBeInTheDocument();
+    expect(screen.getByText('16.7% · 1 of 6 verified sites')).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: /Waste dump/ })).toHaveAttribute('href', '/sites/site_jdh_1');
   });
 
@@ -62,6 +62,14 @@ describe('Area page', () => {
   it('says so when an area has no reports', async () => {
     await renderApp(<AppRoutes />, { route: '/areas/ward/jodhpur-mc-w99' });
     expect(await screen.findByText('No reports in this area yet.')).toBeInTheDocument();
+  });
+});
+
+describe('Area page letter', () => {
+  it('keeps the letter off below 10 verified reports and says why, instead of a 409 after sign-in', async () => {
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-54' });
+    expect(await screen.findByRole('button', { name: 'Draft a letter about this area' })).toBeDisabled();
+    expect(screen.getByText('Letters open once this area has 10 verified reports.')).toBeInTheDocument();
   });
 });
 
