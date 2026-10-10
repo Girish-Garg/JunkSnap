@@ -5,14 +5,9 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
-import onnxruntime as ort  # type: ignore[import-untyped]
-from onnxruntime.capi.onnxruntime_pybind11_state import (  # type: ignore[import-untyped]
-    Fail,
-    InvalidArgument,
-    RuntimeException,
-)
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from ml.adapters.onnx_session import RUN_ERRORS, OnnxSessionLoader
 from ml.domain.embedding import Embedding
 from ml.domain.errors import ExternalServiceError, InvalidImageError
 from ml.domain.images import BlurredImage
@@ -25,7 +20,7 @@ SIDE = 224
 
 class OnnxSiglipEmbedder(ImageEmbedder):
     def __init__(self, model_path: Path, version: str) -> None:
-        self._session = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        self._session = OnnxSessionLoader.open(model_path)
         self._version = version
 
     def embed(self, image: BlurredImage) -> Embedding:
@@ -33,7 +28,7 @@ class OnnxSiglipEmbedder(ImageEmbedder):
         pixels = self._pixels(image)
         try:
             vector = self._session.run(None, {"pixel_values": pixels})[0][0]
-        except (Fail, InvalidArgument, RuntimeException) as error:
+        except RUN_ERRORS as error:
             raise ExternalServiceError(f"siglip onnx inference: {error}") from error
         latency = round((time.monotonic() - started) * 1000)
         return Embedding(tuple(float(v) for v in vector), MODEL_ID, self._version, latency)
