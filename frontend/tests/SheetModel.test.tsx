@@ -118,7 +118,7 @@ describe('a map tap with a sheet open (phones)', () => {
     act(() => seen.last?.onPick(null));
     await waitFor(() => expect(heading('Sign in')).not.toBeInTheDocument());
     expect(heading('Waste dump')).toBeInTheDocument();
-    act(() => seen.last?.onPickArea({ kind: 'assembly', id: 's20-ac-128' }));
+    act(() => seen.last?.onPickArea({ kind: 'assembly', id: 's20-ac-128', name: 'Jodhpur' }));
     await waitFor(() => expect(heading('Waste dump')).not.toBeInTheDocument());
     expect(TopLayer.covering()).toBe(0);
   });

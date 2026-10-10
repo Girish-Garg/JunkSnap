@@ -1,7 +1,9 @@
 import { createExpression } from '@maplibre/maplibre-gl-style-spec';
 import type { LayerSpecification } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
+import { AREA_TINTS } from '../src/layers/boundaries/AreaTints';
 import { BoundaryFillLayer } from '../src/layers/boundaries/BoundaryFillLayer';
+import { FocusLineLayer } from '../src/layers/boundaries/FocusLineLayer';
 import { AreaMarkerLayer, BADGE_IMAGES, INLINE_IMAGES, markerText as markerTextFor } from '../src/layers/boundaries/AreaMarkerLayer';
 import type { BoundaryContext } from '../src/layers/boundaries/BoundaryLayer';
 import { BoundaryLineLayer } from '../src/layers/boundaries/BoundaryLineLayer';
@@ -26,16 +28,66 @@ function atZoom(expression: unknown, zoom: number): number {
   return parsed.value.evaluate({ zoom }) as number;
 }
 
+// Evaluates a paint expression for one area with the given feature state.
+function withState(expression: unknown, state: Record<string, unknown>, zoom = 12): unknown {
+  const parsed = createExpression(expression, 'layers[0].paint.value');
+  if (parsed.result !== 'success') throw new Error('Invalid expression');
+  return parsed.value.evaluate({ zoom }, { type: 'Polygon', properties: {} } as never, state as never);
+}
+
+// Untyped evaluation returns colours as written in the expression.
+const colour = (value: string): string => value;
+
 describe('BoundaryFillLayer', () => {
-  it('takes its colour from feature state and is transparent without one', () => {
-    const spec = new BoundaryFillLayer().spec(context());
+  const spec = new BoundaryFillLayer().spec(context());
+  const fill = prop(spec, 'paint', 'fill-color');
+
+  it('tints each area by its neighbour slot, and is transparent before the polygons are read', () => {
     expect(spec).toMatchObject({ type: 'fill', source: 'polys' });
-    expect(prop(spec, 'paint', 'fill-color')).toEqual(['coalesce', ['feature-state', 'fill'], 'rgba(0, 0, 0, 0)']);
+    expect(withState(fill, { tint: 0 })).toEqual(colour(AREA_TINTS.light[0]));
+    expect(withState(fill, { tint: 7 })).toEqual(colour(AREA_TINTS.light[7]));
+    expect(withState(fill, {})).toEqual(colour('rgba(0, 0, 0, 0)'));
   });
 
+  it('shows the score colour over the tint once the api shows a score, more strongly', () => {
+    const opacity = prop(spec, 'paint', 'fill-opacity');
+    expect(withState(fill, { tint: 2, fill: '#e2786a', scored: true })).toEqual(colour('#e2786a'));
+    expect(withState(opacity, { scored: true }, 10)).toBe(0.55);
+    // A neighbour tint stays light: about 10 to 15%.
+    for (const zoom of [5, 10, 12, 15, 18]) {
+      expect(withState(opacity, { tint: 2 }, zoom)).toBeGreaterThanOrEqual(0.1);
+      expect(withState(opacity, { tint: 2 }, zoom)).toBeLessThanOrEqual(0.15);
+    }
+  });
+
+});
+
+describe('BoundaryFillLayer zoom and theme', () => {
+  const spec = new BoundaryFillLayer().spec(context());
+
   it('lightens as the map zooms into streets', () => {
-    const opacity = prop(new BoundaryFillLayer().spec(context()), 'paint', 'fill-opacity');
-    expect(atZoom(opacity, 10)).toBeGreaterThan(atZoom(opacity, 15));
+    const opacity = prop(spec, 'paint', 'fill-opacity');
+    expect(withState(opacity, { scored: true }, 10)).toBeGreaterThan(withState(opacity, { scored: true }, 15) as number);
+  });
+
+  it('uses the dark tints in the dark theme, and swaps them in place', () => {
+    const dark = new BoundaryFillLayer().spec({ ...context(), dark: true });
+    expect(withState(prop(dark, 'paint', 'fill-color'), { tint: 0 })).toEqual(colour(AREA_TINTS.dark[0]));
+    expect(new BoundaryFillLayer().themed(true).paint?.[0]?.[0]).toBe('fill-color');
+  });
+});
+
+describe('FocusLineLayer', () => {
+  const spec = new FocusLineLayer().spec(context());
+
+  it('draws a thick accent outline only round the area in focus', () => {
+    const opacity = prop(spec, 'paint', 'line-opacity');
+    expect(withState(opacity, { focus: true })).toBe(1);
+    expect(withState(opacity, { focus: false })).toBe(0);
+    expect(withState(opacity, {})).toBe(0);
+    expect(atZoom(prop(spec, 'paint', 'line-width'), 12)).toBeGreaterThan(atZoom(prop(new BoundaryLineLayer().spec(context()), 'paint', 'line-width'), 12));
+    expect(prop(spec, 'paint', 'line-color')).toBe('#0b7a73');
+    expect(prop(new FocusLineLayer().spec({ ...context(), dark: true }), 'paint', 'line-color')).toBe('#3cc7b8');
   });
 });
 
@@ -131,5 +183,16 @@ describe('AreaMarkerLayer in the dark theme', () => {
     expect(colours(markerTextFor(true))).toEqual(['#f7f0e4', '#c9bdaa', '#c9bdaa', '#f7f0e4', '#c9bdaa', '#c9bdaa', '#f7f0e4', '#c9bdaa', '#f7f0e4']);
     const dark = new AreaMarkerLayer().spec({ polygonSource: 'polys', labelSource: 'labels', dark: true });
     expect(prop(dark, 'layout', 'text-field')).toEqual(markerTextFor(true));
+  });
+});
+
+describe('AreaMarkerLayer for the area in focus', () => {
+  it('always shows the focused area marker, from a state-wide zoom, and none while nothing is in focus', () => {
+    const focus = new AreaMarkerLayer(true).spec(context());
+    expect(focus).toMatchObject({ id: 'boundary-marker-focus', minzoom: 5 });
+    expect(prop(focus, 'layout', 'text-allow-overlap')).toBe(true);
+    expect(prop(focus, 'layout', 'icon-allow-overlap')).toBe(true);
+    expect(filterOf(focus)).toEqual(['==', ['get', 'id'], '']);
+    expect(filterOf(new AreaMarkerLayer().spec(context()))).toEqual(['!=', ['get', 'id'], '']);
   });
 });

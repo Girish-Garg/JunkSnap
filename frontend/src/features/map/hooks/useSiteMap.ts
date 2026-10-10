@@ -19,8 +19,12 @@ export interface SiteMapBindings {
   readonly areas: BoundaryView | null;
   /** Area id to the value its marker shows under its name. */
   readonly areaMarkers: ReadonlyMap<string, AreaMarker>;
-  /** Area id to fill colour. */
+  /** Area id to score colour, for areas that show a score. */
   readonly areaColors: ReadonlyMap<string, string>;
+  /** Area id to neighbour tint slot. */
+  readonly areaTints: ReadonlyMap<string, number>;
+  /** The area outlined and labelled: tapped, open, or where the person stands. */
+  readonly focusArea: string | null;
   readonly onPick: (siteId: string | null) => void;
   /** A tap on one pin standing for several sites at one spot. */
   readonly onPickStack: (siteIds: readonly string[]) => void;
@@ -41,6 +45,8 @@ export function useSiteMap(container: RefObject<HTMLDivElement | null>, bindings
   useEffect(() => mapRef.current?.showBoundaries(bindings.areas), [mapRef, bindings.areas]);
   useEffect(() => mapRef.current?.labelAreas(bindings.areaMarkers), [mapRef, bindings.areaMarkers]);
   useEffect(() => mapRef.current?.paintAreas(bindings.areaColors), [mapRef, bindings.areaColors]);
+  useEffect(() => mapRef.current?.tintAreas(bindings.areaTints), [mapRef, bindings.areaTints]);
+  useEffect(() => mapRef.current?.focusArea(bindings.focusArea), [mapRef, bindings.focusArea]);
   useEffect(() => mapRef.current?.moveTo(bindings.camera?.points ?? [], bindings.camera?.zoom), [mapRef, bindings.camera]);
   useEffect(() => mapRef.current?.setAttributionLabel(t('map.attribution')), [mapRef, t]);
   useEffect(() => {

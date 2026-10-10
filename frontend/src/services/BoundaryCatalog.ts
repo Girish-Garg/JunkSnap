@@ -1,4 +1,5 @@
 import type { FeatureCollection, Point } from 'geojson';
+import type { AreaPolygons } from '../domain/AreaShapes';
 
 type Fetch = typeof fetch;
 
@@ -37,6 +38,7 @@ export class BoundaryCatalog {
   readonly #baseUrl: string;
   readonly #fetch: Fetch;
   #labels: Promise<LabelPoints> | null = null;
+  #polygons: Promise<AreaPolygons> | null = null;
 
   constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init)) {
     this.#baseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
@@ -71,10 +73,26 @@ export class BoundaryCatalog {
     return this.#labels;
   }
 
-  async #fetchLabels(): Promise<LabelPoints> {
-    const response = await this.#fetch(this.labelsUrl());
-    if (!response.ok) throw new Error(`Could not load the area markers: ${response.status}`);
-    return (await response.json()) as LabelPoints;
+  /**
+   * The area polygons the map draws, fetched once on the main thread to tell neighbours apart and to find the
+   * area someone stands in (MapLibre loads the same URL in its worker; the browser revalidates it by ETag).
+   */
+  polygons(): Promise<AreaPolygons> {
+    this.#polygons ??= this.#fetchJson<AreaPolygons>(this.polygonsUrl(), 'area polygons').catch((error: unknown) => {
+      this.#polygons = null;
+      throw error;
+    });
+    return this.#polygons;
+  }
+
+  #fetchLabels(): Promise<LabelPoints> {
+    return this.#fetchJson<LabelPoints>(this.labelsUrl(), 'area markers');
+  }
+
+  async #fetchJson<T>(url: string, what: string): Promise<T> {
+    const response = await this.#fetch(url);
+    if (!response.ok) throw new Error(`Could not load the ${what}: ${response.status}`);
+    return (await response.json()) as T;
   }
 
   polygonsUrl(): string {

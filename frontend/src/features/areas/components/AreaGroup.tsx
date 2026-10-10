@@ -1,32 +1,26 @@
 import { useTranslation } from 'react-i18next';
-import { areaPath } from '../../../app/paths';
-import { SheetLink } from '../../../app/SheetLink';
 import type { AreaKind } from '../../../domain/AreaScores';
-import { Icon } from '../../../ui/Icon';
+import { useAreaShapes } from '../../map/hooks/useAreaShapes';
 import type { AreaEntry } from '../hooks/useAreaDirectory';
-import { DistrictCrawl } from './DistrictCrawl';
+import { AreaRow } from './AreaRow';
 
 interface AreaGroupProps {
   readonly kind: AreaKind;
   readonly entries: readonly AreaEntry[];
 }
 
+/** One kind of area: each row links to its page and always shows its counts, zeros included, and where it stands. */
 export function AreaGroup({ kind, entries }: AreaGroupProps) {
   const { t } = useTranslation();
+  // Each seat the map draws carries its map colour, so a row and its area on the map match.
+  const { tints } = useAreaShapes(true);
   if (entries.length === 0) return null;
   return (
     <section className="area-group">
       <h3 className="area-group__title">{t(`areas.kinds.${kind}`)}</h3>
       <ul className="area-group__list stagger">
-        {entries.map(({ area, sites, verified }) => (
-          <li key={area.key}>
-            <SheetLink className="area-row" to={areaPath(area.kind, area.id)}>
-              <span className="area-row__name">{area.name}</span>
-              <span className="area-row__meta">{t('areas.rowCounts', { sites: String(sites), verified: String(verified) })}</span>
-              <Icon name="chevron" size={20} />
-            </SheetLink>
-            <DistrictCrawl districtId={area.districtId} />
-          </li>
+        {entries.map((entry) => (
+          <AreaRow key={entry.area.key} entry={entry} tint={tints.get(entry.area.id)} />
         ))}
       </ul>
     </section>

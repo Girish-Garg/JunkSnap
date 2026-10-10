@@ -3,6 +3,7 @@ import { useServices } from '../../../app/useServices';
 import { AreaDirectory, type AreaEntry } from '../../../domain/AreaDirectory';
 import { AREA_KINDS } from '../../../domain/AreaKey';
 import { DEFAULT_CITY } from '../../../domain/AreaListing';
+import { PILOT_AREAS } from '../../../domain/PilotAreas';
 import { useMapContext } from '../../map/useMapContext';
 
 export type { AreaEntry } from '../../../domain/AreaDirectory';
@@ -21,8 +22,9 @@ interface Loaded {
 }
 
 /**
- * Every reported ward, seat and district of the pilot city and of the districts around the map (where the
- * person is looking, or standing once located), from the area list route; not only the sites on screen.
+ * Every seat and the district of the pilot city, reported or not, plus every reported ward, seat and district
+ * of the districts around the map (where the person is looking, or standing once located), with the counts
+ * and scores of the area list route; not only the sites on screen.
  */
 export function useAreaDirectory(query: string): AreaDirectoryState {
   const { areas } = useServices();
@@ -37,7 +39,7 @@ export function useAreaDirectory(query: string): AreaDirectoryState {
       const listings = results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
       const failures = results.filter((result) => result.status === 'rejected');
       if (failures.length > 0) console.error('Could not load some areas', failures[0]?.reason);
-      if (current) setLoaded({ entries: listings.length > 0 ? AreaDirectory.of(listings) : null });
+      if (current) setLoaded({ entries: listings.length > 0 ? AreaDirectory.of(listings, PILOT_AREAS) : null });
     });
     return () => {
       current = false;

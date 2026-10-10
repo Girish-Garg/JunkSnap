@@ -5,13 +5,14 @@ import { Notice } from '../../../ui/Notice';
 import { Skeleton } from '../../../ui/Skeleton';
 import type { AreaDirectoryState } from '../hooks/useAreaDirectory';
 import { AreaGroup } from './AreaGroup';
+import { LocalBodyGroup } from './LocalBodyGroup';
 
 interface AreaDirectoryListProps {
   readonly state: AreaDirectoryState;
   readonly query: string;
 }
 
-/** The Areas tab's groups by kind, or why there are none: loading, failed, no match, or no reports anywhere yet. */
+/** The Areas tab's groups by kind and the local body, or why there are none: loading, failed, or no match. */
 export function AreaDirectoryList({ state, query }: AreaDirectoryListProps) {
   const { t } = useTranslation();
   if (state.failed) return <Notice icon="info" text={t('areas.listFailed')} tone="alert" />;
@@ -26,5 +27,12 @@ export function AreaDirectoryList({ state, query }: AreaDirectoryListProps) {
   }
   if (entries.length === 0 && query.trim()) return <p className="sheet-text">{t('areas.noMatch')}</p>;
   if (entries.length === 0) return <EmptyState art="clean" title={t('areas.noneTitle')} text={t('areas.none')} />;
-  return AREA_KINDS.map((kind) => <AreaGroup key={kind} kind={kind} entries={entries.filter((entry) => entry.area.kind === kind)} />);
+  return (
+    <>
+      {AREA_KINDS.map((kind) => (
+        <AreaGroup key={kind} kind={kind} entries={entries.filter((entry) => entry.area.kind === kind)} />
+      ))}
+      <LocalBodyGroup query={query} />
+    </>
+  );
 }

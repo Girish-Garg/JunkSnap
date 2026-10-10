@@ -299,3 +299,86 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+
+/* Areas tab rows: the name, then the counts (zeros included), then where the area stands; chevron on the right. */
+.area-group .area-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--s-3);
+  row-gap: 0;
+}
+
+.area-group .area-row > .icon {
+  grid-row: 1 / span 3;
+  grid-column: 2;
+  align-self: center;
+}
+
+.area-group .area-row__meta {
+  margin-left: 0;
+}
+
+.area-row__status {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 600;
+}
+
+.area-row--none .area-row__status {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.area-row--scored .area-row__status {
+  color: var(--accent-ink);
+}
+
+/* The local body: named for who letters go To, with no page of its own. */
+.area-body {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-3) 0;
+}
+
+.area-body__name {
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.area-pilot-note {
+  margin-top: var(--s-2);
+}
+
+.area-body__note,
+.area-pilot-note {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+/* An area with no reports yet: the cartoon, the plain words, then its zero counts. */
+.area-empty__state {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--radius-l);
+  background: var(--tile);
+  text-align: center;
+}
+
+.area-empty__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.area-empty__text {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
