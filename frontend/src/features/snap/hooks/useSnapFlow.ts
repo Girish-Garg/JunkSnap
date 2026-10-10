@@ -9,7 +9,7 @@ export type SnapPhase =
   | { readonly kind: 'sent'; readonly id: string }
   | { readonly kind: 'scanSent'; readonly id: string };
 
-export type CaptureMode = 'photo' | 'video';
+export type CaptureMode = 'photo' | 'video' | 'nobin';
 
 export type ReportChoice = Pick<ReportDraft, 'report_type' | 'context' | 'note'>;
 

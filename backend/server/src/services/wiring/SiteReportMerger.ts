@@ -25,12 +25,14 @@ export class SiteReportMerger implements ReportMerger {
     return { siteId: result.siteId, verification: result.reportStatus };
   }
 
-  // Moderation, verification and location always exist here: a rejected report settles before merging.
+  // A rejected report settles before merging; a no_bin report may lack moderation (no photo) and verification.
   #evidence(record: ReportRecord): MergeEvidence {
-    const { moderation_result: moderation, verification_result: verification, location } = record;
-    if (moderation === undefined || verification === undefined || location === undefined) {
-      throw new InternalDataError(`report ${record.report_id} reached merge without moderation, verification or location`);
+    const { moderation_result, verification_result, location } = record;
+    if (location === undefined) {
+      throw new InternalDataError(`report ${record.report_id} reached merge without a location`);
     }
+    const moderation = moderation_result ?? null;
+    const verification = verification_result ?? null;
     const upload = Report.fromRecord(record).upload();
     const near = this.#places.near(upload.gps.lat, upload.gps.lon);
     const bin = this.#bins.measure(new GeoPoint(upload.gps.lat, upload.gps.lon), location.town);

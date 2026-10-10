@@ -1,3 +1,4 @@
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { Language, ReportType } from "../../domain/letters/types.js";
 import type { LetterBrief } from "../../ports/letters/LetterWriter.js";
 
@@ -41,8 +42,7 @@ export class LetterPrompt {
     if (site.reportType !== "no_bin") {
       return REQUEST[site.reportType];
     }
-    const km = String(Number((binRadiusM / 1000).toFixed(1)));
-    return `state "No known waste bin or collection point (OpenStreetMap, ward records) within ${km} km of this site.", then ask to ${REQUEST.no_bin}`;
+    return `state "${new NoBinStatement(binRadiusM).english(site)}", then ask to ${REQUEST.no_bin}`;
   }
 
   user(): string {

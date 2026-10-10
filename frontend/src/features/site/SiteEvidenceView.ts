@@ -1,4 +1,4 @@
-import { BinAccess, NO_BIN_MIN_REPORTERS } from '../../domain/BinAccess';
+import { BinAccess } from '../../domain/BinAccess';
 import type { SiteProperties } from '../../domain/Site';
 
 export interface EvidenceLine {
@@ -16,15 +16,15 @@ export class SiteEvidenceView {
     return [...SiteEvidenceView.#reporters(site), ...SiteEvidenceView.#bin(site)];
   }
 
-  static #reporters({ reporters, report_type }: SiteProperties): readonly EvidenceLine[] {
-    if (reporters === undefined) return [];
-    const people = { key: 'reporters', count: reporters };
-    return report_type === 'no_bin' ? [people, { key: 'noBinReporters', count: reporters, min: NO_BIN_MIN_REPORTERS }] : [people];
+  // A no-bin zone's "n of 10" is the backers bar (decision 20261010-1630).
+  static #reporters({ reporters }: SiteProperties): readonly EvidenceLine[] {
+    return reporters === undefined ? [] : [{ key: 'reporters', count: reporters }];
   }
 
   static #bin({ report_type, insights }: SiteProperties): readonly EvidenceLine[] {
-    const line = BinAccess.applies(report_type) ? BinAccess.line(insights?.nearest_bin, insights?.no_bin_within_3km) : null;
+    const measure = report_type === 'no_bin' ? BinAccess.zoneLine : BinAccess.line;
+    const line = BinAccess.applies(report_type) ? measure(insights?.nearest_bin, insights?.no_bin_within_3km) : null;
     if (!line) return [];
-    return [line.key === 'nearest' ? { key: 'bin.nearest', metres: line.metres } : { key: `bin.${line.key}` }];
+    return ['metres' in line ? { key: `bin.${line.key}`, metres: line.metres } : { key: `bin.${line.key}` }];
   }
 }

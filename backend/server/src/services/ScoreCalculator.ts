@@ -33,7 +33,7 @@ export interface ScoreParts {
 type Scored = Pick<WardScores, "scores" | "metrics" | "diagnosis">;
 type Score = WardScores["scores"]["city"];
 
-// scores-v3: docs/decisions/20261010-0238-hem-area-score-formulas.md, bin access from 20261010-1430, bin service from 20261010-1645.
+// scores-v3: docs/decisions/20261010-0238-hem-area-score-formulas.md, bin access from 20261010-1630, bin service from 20261010-1645.
 export class ScoreCalculator {
   readonly #parts: ScoreParts;
 

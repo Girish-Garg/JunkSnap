@@ -1,5 +1,6 @@
 import { BACKERS_NEEDED } from "./Backers.js";
 import { InsightMerge } from "./InsightMerge.js";
+import { ZONE_RADIUS_M } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import type { SiteFeature, SiteInternals, SiteProperties } from "./SiteTypes.js";
 
@@ -39,6 +40,7 @@ export class SiteTemplate {
       pilot: report.pilot,
       reporters: 1,
       insights: new InsightMerge([]).merged([...report.near], report.bin),
+      ...(report.reportType === "no_bin" ? { zone_radius_m: ZONE_RADIUS_M } : {}),
     };
     return { type: "Feature", geometry: { type: "Point", coordinates: report.point.coordinates() }, properties };
   }

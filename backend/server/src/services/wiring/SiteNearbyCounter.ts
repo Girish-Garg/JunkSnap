@@ -1,7 +1,10 @@
 import type { ReportRecord } from "../../domain/ReportRecord.js";
 import { BoundingBox } from "../../domain/sites/BoundingBox.js";
 import { GeoPoint } from "../../domain/sites/GeoPoint.js";
-import { MERGE_RADIUS_M } from "../../domain/sites/Site.js";
+import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
+
+// The photo-site merge radius; the ml nearby feature never counts no-bin zones.
+const MERGE_RADIUS_M = mergeRadiusM("waste_dump");
 import type { NearbyVerifiedCounter } from "../../ports/NearbyVerifiedCounter.js";
 import type { SiteFinder } from "../sites/SiteFinder.js";
 

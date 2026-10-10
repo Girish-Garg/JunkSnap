@@ -20,11 +20,10 @@ async function signedIn(): Promise<ServiceContainer> {
 }
 
 describe('bin access and reporters', () => {
-  it('reads the no-bin threshold and the nearest bin from a v1.4 site', async () => {
+  it('reads the reporters and the nearest bin of a no-bin zone; its n of 10 is the backers bar', async () => {
     const site = (await fixtureSite('site_jdh_2')).properties;
     expect(SiteEvidenceView.lines(site)).toEqual([
       { key: 'reporters', count: 3 },
-      { key: 'noBinReporters', count: 3, min: 5 },
       { key: 'bin.nearest', metres: 4210 },
     ]);
   });
@@ -40,7 +39,6 @@ describe('bin access and reporters', () => {
   it('shows how many people reported a no-bin site and how far the nearest bin is', async () => {
     await renderApp(<AppRoutes />, { route: '/sites/site_jdh_2' });
     expect(await screen.findByText('3 people reported this')).toBeInTheDocument();
-    expect(screen.getByText('3 of 5 people reported no bin here')).toBeInTheDocument();
     expect(screen.getByText('Nearest known bin: 4.2 km (OpenStreetMap)')).toBeInTheDocument();
   });
 });
@@ -60,17 +58,17 @@ describe('letter evidence', () => {
     expect(within(letter).getByText('Nearest known bin: 1.8 km (OpenStreetMap)')).toBeInTheDocument();
   });
 
-  it('shows the reason a no-bin letter is not ready, as the api words it', async () => {
+  it('drafts a letter for a no-bin zone once 10 people verified it', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/sites/site_jdh_2/letter', services: await signedIn() });
     await user.click(screen.getByRole('button', { name: 'Draft letter' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('3 of 5 people reported no bin here; nearest known bin 4.2 km');
+    expect(await screen.findByRole('article')).toBeInTheDocument();
   });
 
-  it('refuses a no-bin letter in mock mode until five people reported and no bin is within 3 km', async () => {
+  it('opens no-bin letters in mock mode for a verified zone, whatever the reporter count (decision 20261010-1630)', async () => {
     const sites = new MockApiClient(siteFixtureLoaders);
     const api = new MockSiteActionsApi({ site: (id) => sites.getSite(id), letter: sampleLetterLoader }, 0);
-    await expect(api.letter('site_jdh_2', { device_token: 'x', channel: 'local_body', language: 'en' })).rejects.toMatchObject({ status: 409, code: 'not_verified' });
-    await expect(api.letter('site_jdh_1', { device_token: 'x', channel: 'local_body', language: 'en' })).resolves.toHaveProperty('evidence.reporters', 5);
+    await expect(api.letter('site_jdh_2', { device_token: 'x', channel: 'local_body', language: 'en' })).resolves.toHaveProperty('site_id', 'site_jdh_2');
+    await expect(api.letter('site_jpr_1', { device_token: 'x', channel: 'local_body', language: 'en' })).rejects.toMatchObject({ status: 409, code: 'not_verified' });
   });
 });

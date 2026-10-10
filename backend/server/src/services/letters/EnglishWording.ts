@@ -1,7 +1,8 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
-import { coordinates, joinList, kilometres, letterDate } from "./utils.js";
+import { coordinates, joinList, letterDate } from "./utils.js";
 
 const WHAT: Readonly<Record<SiteContext, string>> = {
   vacant_plot: "a waste dump on a vacant plot",
@@ -71,8 +72,7 @@ export class EnglishWording implements TemplateWording {
     if (site.reportType !== "no_bin") {
       return REQUEST[site.reportType];
     }
-    const km = kilometres(this.#binRadiusM);
-    return `No known waste bin or collection point (OpenStreetMap, ward records) within ${km} km of this site. ${REQUEST.no_bin}`;
+    return `${new NoBinStatement(this.#binRadiusM).english(site)} ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {

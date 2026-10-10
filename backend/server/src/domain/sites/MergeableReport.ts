@@ -12,8 +12,9 @@ import type { NearPlace, ReportContext, ReportInsights, ReportType, SiteBrand, S
 // What the worker holds for one report after moderation, verification, location (with nearby places) and brands.
 export interface MergeEvidence {
   readonly upload: ReportUpload;
-  readonly moderation: ModerationResult;
-  readonly verification: VerificationResult;
+  // Null for a no_bin report without a photo; verification is also null for any no_bin report (decision 20261010-1630).
+  readonly moderation: ModerationResult | null;
+  readonly verification: VerificationResult | null;
   readonly location: LocationLookup;
   readonly near: readonly NearPlace[];
   readonly bin: BinMeasure;

@@ -40,7 +40,6 @@ export interface AreaLetterParts {
   readonly stamp: LetterStamp;
   readonly logger: Logger;
   // NO_BIN_MIN_REPORTERS: a no-bin site counts only with this many distinct reporters.
-  readonly noBinMinReporters: number;
 }
 
 type NonEmpty<T> = [T, ...T[]];
@@ -94,7 +93,7 @@ export class AreaLetterService {
     if (batch.unreadable > 0) {
       this.#parts.logger.warn({ area: request.area.toString(), unreadable: batch.unreadable }, "skipped sites that break the site contract");
     }
-    const sites = new AreaIssueSites(request.area, request.issue, batch.sites, this.#parts.noBinMinReporters);
+    const sites = new AreaIssueSites(request.area, request.issue, batch.sites);
     if (!sites.hasSites()) {
       throw new AreaNotFoundError(`No reported sites in ${request.area.kind} ${request.area.id} yet`);
     }

@@ -94,6 +94,8 @@ export interface SiteProperties {
   readonly verified_count: number;
   readonly corroborations: number;
   readonly backers: SiteBackers;
+  /** Decision 20261010-1630: present on no_bin sites, which are no-bin zones of this radius. */
+  readonly zone_radius_m?: number;
   readonly votes: SiteVotes;
   readonly photo_urls: readonly string[];
   readonly cleanup_status: CleanupStatus;
