@@ -64,7 +64,7 @@ describe("ScoreCalculator window, pilot and version", () => {
     ]);
     expect(row.data_window).toEqual({ from: "2026-10-08T05:00:00Z", to: "2026-10-20T00:00:00Z" });
     expect(row.computed_at).toBe("2026-10-20T00:00:00Z");
-    expect(row.formula_version).toBe("scores-v2");
+    expect(row.formula_version).toBe("scores-v3");
   });
 
   it("flags the area as pilot when any of its sites is", () => {
@@ -78,7 +78,7 @@ describe("ScoreCalculator window, pilot and version", () => {
   });
 });
 
-describe("ScoreCalculator scores-v2 formulas", () => {
+describe("ScoreCalculator scores-v3 formulas", () => {
   it("computes the city score from clearing speed, 7-day clearing, re-dumping and no-bin response", () => {
     const row = calculate(workedExample());
     expect(row.metrics).toMatchObject({
@@ -89,6 +89,24 @@ describe("ScoreCalculator scores-v2 formulas", () => {
     });
     // mean(100 - 10 x 2, 100, 100 - 50, 0) = 57.5
     expect(row.scores.city).toEqual({ value: 58, reason: null });
+  });
+
+  it("counts overflowing or broken bins under city response as bins serviced", () => {
+    const overflowing = { reportType: "overflowing_bin", context: "overflowing" } as const;
+    const row = calculate([
+      ...workedExample(),
+      site({ ...overflowing, verifiedCount: 2, firstReportedAt: "2026-10-17T00:00:00Z", cleanedAt: "2026-10-18T00:00:00Z", status: "cleaned" }),
+      site({ ...overflowing, context: "damaged", verifiedCount: 1, firstReportedAt: "2026-10-18T00:00:00Z" }),
+      site({ ...overflowing, verifiedCount: 1, firstReportedAt: "2026-10-19T00:00:00Z" }),
+    ]);
+    expect(row.metrics.bin_service_pct).toBe(33.3);
+    expect(row.metrics.no_bin_response_pct).toBe(0);
+    expect(row.diagnosis).toContain("city_response");
+    expect(() => validateWardScores(row)).not.toThrow();
+  });
+
+  it("leaves bin service null without overflowing_bin sites", () => {
+    expect(calculate(workedExample()).metrics.bin_service_pct).toBeNull();
   });
 
   it("measures bin access from the sites' nearest known bins, never from no_bin report counts", () => {
@@ -157,13 +175,14 @@ describe("CitizenScore.adjust", () => {
 
 describe("Diagnoser", () => {
   const diagnoser = new Diagnoser();
-  const calm = { citizenRaw: 80, binAccess: 80, medianDaysToClear: 1, clearedWithin7DaysPct: 90, redumpedPct: 0 };
+  const calm = { citizenRaw: 80, binAccess: 80, medianDaysToClear: 1, clearedWithin7DaysPct: 90, redumpedPct: 0, binServicePct: 100 };
 
   it.each([
     ["infrastructure_gap", { citizenRaw: 40, binAccess: 30 }],
     ["behaviour", { citizenRaw: 40, binAccess: 50 }],
     ["city_response", { medianDaysToClear: 7.5 }],
     ["city_response", { clearedWithin7DaysPct: 49 }],
+    ["city_response", { binServicePct: 40 }],
     ["repeat_spot", { redumpedPct: 20 }],
   ])("finds %s", (diagnosis, change) => {
     expect(diagnoser.diagnose({ ...calm, ...change })).toEqual([diagnosis]);
@@ -171,13 +190,13 @@ describe("Diagnoser", () => {
 
   it("finds nothing in a calm area or from missing inputs", () => {
     expect(diagnoser.diagnose(calm)).toEqual([]);
-    const missing = { citizenRaw: null, binAccess: null, medianDaysToClear: null, clearedWithin7DaysPct: null, redumpedPct: null };
+    const missing = { citizenRaw: null, binAccess: null, medianDaysToClear: null, clearedWithin7DaysPct: null, redumpedPct: null, binServicePct: null };
     expect(diagnoser.diagnose(missing)).toEqual([]);
     expect(diagnoser.diagnose({ ...calm, citizenRaw: 10, binAccess: null })).toEqual([]);
   });
 
   it("can find several at once", () => {
-    const input = { citizenRaw: 30, binAccess: 20, medianDaysToClear: 9, clearedWithin7DaysPct: 10, redumpedPct: 40 };
+    const input = { citizenRaw: 30, binAccess: 20, medianDaysToClear: 9, clearedWithin7DaysPct: 10, redumpedPct: 40, binServicePct: 0 };
     expect(diagnoser.diagnose(input)).toEqual(["infrastructure_gap", "city_response", "repeat_spot"]);
   });
 });

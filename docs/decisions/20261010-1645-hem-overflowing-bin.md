@@ -12,7 +12,7 @@ Context: a bin that is there but overflowing, broken, burnt or missing its lid i
 Decision:
 - `overflowing_bin` ("Overflowing or broken bin") joins every `report_type` enum: `report_upload`, `scan_session`, `site`, the `verification_result` judge, and `area_letter_draft` (issue and worst sites). Contexts: `overflowing` (waste over the brim or spilling around it) and `damaged` (broken, burnt or missing its lid). The schemas enforce the pair.
 - ML: the judge describes and may answer the new type; a YOLO `bin` box with waste items near it supports the claim. The stacker falls back to the judge with a stated reason until it has training rows for the type.
-- Sites merge it like other types (same type, 40 m). Scores count it under city response as bins not serviced (formula doc). Letters ask the local body to empty the bin regularly and repair or replace it, citing only the existing verified SWM clauses on collection and storage containers; no new rule text.
+- Sites merge it like other types (same type, 40 m). Scores count it under city response as bins not serviced: formula `scores-v3` adds bin service % (verified overflowing_bin sites ever cleared / all of them) as a fifth city part, exposed as the optional `ward_scores.metrics.bin_service_pct`, and a value under 50 triggers `city_response` (decision 20261010-0238 updated). Letters ask the local body to empty the bin regularly and repair or replace it, citing only the existing verified SWM clauses on collection and storage containers; no new rule text.
 - No change to `no_bin` and its eligibility rules.
 
 Consequences for other lanes: frontend adds the chip, icon, filter, pin and en/hi strings. Server letter wording and clause picker add the type. Additive only; v1.6 producers stay valid.

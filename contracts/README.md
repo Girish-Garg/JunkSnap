@@ -14,7 +14,7 @@ Contracts v1.5 (decision 20261010-1445-hem-ward-crawler-service, issue 78) adds 
 
 Contracts v1.6 (decision 20261010-1600-hem-area-letters, issue 89) adds `POST /areas/{kind}/{id}/letters` and its response schema `area_letter_draft`: one cited letter about one issue in one area. No existing shape changes.
 
-Contracts v1.7 (decision 20261010-1645-hem-overflowing-bin, issue 100) adds the report type `overflowing_bin` ("Overflowing or broken bin") with contexts `overflowing` and `damaged` to every `report_type` enum (`report_upload`, `scan_session`, `site`, `verification_result` judge, `area_letter_draft` issue and worst sites). Additive only; new fixtures `site.jdh-4` and `report_upload.jdh-4`.
+Contracts v1.7 (decision 20261010-1645-hem-overflowing-bin, issue 100) adds the report type `overflowing_bin` ("Overflowing or broken bin") with contexts `overflowing` and `damaged` to every `report_type` enum (`report_upload`, `scan_session`, `site`, `verification_result` judge, `area_letter_draft` issue and worst sites). It also adds the optional metric `ward_scores.metrics.bin_service_pct` (formula `scores-v3`). Additive only; new fixtures `site.jdh-4` and `report_upload.jdh-4`.
 
 ## Files and CI
 

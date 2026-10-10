@@ -53,6 +53,7 @@
         "cleared_within_7_days_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "redumped_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "no_bin_response_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of no_bin sites cleared or served in the window (city score)." },
+        "bin_service_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid." },
         "new_dumps_per_km2_month": { "type": ["number", "null"], "minimum": 0 },
         "share_vacant_plot_drain_roadside_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score)." },
         "median_distance_to_disposal_m": { "type": ["number", "null"], "minimum": 0, "description": "Median of site.insights.nearest_bin.distance_m over verified sites with a known nearest bin (bin access score)." },

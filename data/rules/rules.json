@@ -88,7 +88,7 @@
       "text_file": "texts/swm_rules_2026_en.txt",
       "source_url": "https://egazette.gov.in/WriteReadData/2026/269620.pdf",
       "source_sha256": "4963ee304d0e6d69097a35036243c27a6cb5548c9d12338d999ab18c63d81591",
-      "situation_tags": ["waste_dump", "no_bin", "no_pickup", "vacant_plot", "roadside", "drain", "other"],
+      "situation_tags": ["waste_dump", "no_bin", "no_pickup", "vacant_plot", "roadside", "drain", "other", "overflowing_bin", "overflowing"],
       "channels": ["district_collector"],
       "review_status": "unreviewed"
     },
@@ -103,7 +103,7 @@
       "text_file": "texts/swm_rules_2026_en.txt",
       "source_url": "https://egazette.gov.in/WriteReadData/2026/269620.pdf",
       "source_sha256": "4963ee304d0e6d69097a35036243c27a6cb5548c9d12338d999ab18c63d81591",
-      "situation_tags": ["waste_dump", "vacant_plot", "roadside", "other"],
+      "situation_tags": ["waste_dump", "vacant_plot", "roadside", "other", "overflowing_bin", "overflowing"],
       "channels": ["local_body", "cpgrams", "swachhata", "rajasthan_sampark"],
       "review_status": "unreviewed"
     },
@@ -133,7 +133,7 @@
       "text_file": "texts/swm_rules_2026_en.txt",
       "source_url": "https://egazette.gov.in/WriteReadData/2026/269620.pdf",
       "source_sha256": "4963ee304d0e6d69097a35036243c27a6cb5548c9d12338d999ab18c63d81591",
-      "situation_tags": ["no_bin", "roadside"],
+      "situation_tags": ["no_bin", "roadside", "overflowing_bin", "overflowing", "damaged"],
       "channels": ["local_body", "cpgrams", "swachhata", "rajasthan_sampark"],
       "review_status": "unreviewed"
     },

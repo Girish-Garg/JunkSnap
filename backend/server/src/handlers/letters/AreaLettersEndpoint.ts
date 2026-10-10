@@ -7,7 +7,7 @@ import type { AreaLetterService } from "../../services/letters/AreaLetterService
 import type { UserGuard } from "./LettersEndpoint.js";
 
 const AreaLetterBody = z.object({
-  issue: z.enum(["waste_dump", "no_bin", "contaminated_water", "open_construction", "all"]),
+  issue: z.enum(["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin", "all"]),
   language: z.enum(["en", "hi"]),
   device_token: z.uuid(),
 });

@@ -17,6 +17,7 @@ const ISSUE: Readonly<Record<AreaIssue, string>> = {
   no_bin: "places with no waste bin",
   contaminated_water: "contaminated water and drains",
   open_construction: "uncovered construction debris and dust",
+  overflowing_bin: "overflowing or broken waste bins",
   all: "waste sites",
 };
 
@@ -25,6 +26,7 @@ const REQUEST: Readonly<Record<AreaIssue, string>> = {
   no_bin: "We request that waste bins be placed and regular collection be arranged at these places.",
   contaminated_water: "We request that the water and drains at these sites be cleaned and the sources of contamination be checked.",
   open_construction: "We request that the debris at these sites be covered or removed and that dust control measures be enforced.",
+  overflowing_bin: "Please empty the bins regularly and repair or replace them.",
   all: "We request that the reported sites be cleared and that the causes behind them be addressed.",
 };
 
