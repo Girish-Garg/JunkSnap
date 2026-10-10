@@ -1,0 +1,280 @@
+/* Snap camera, review and progress, and the Activity rows. Tokens from ui/theme.css. */
+.snap-camera,
+.snap-review,
+.snap-sent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.viewfinder {
+  position: relative;
+  height: min(50vh, 480px);
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: #202124;
+}
+
+.viewfinder__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.viewfinder__message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+  color: #ffffff;
+  text-align: center;
+}
+
+.viewfinder .gps-chip {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+}
+
+.gps-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.gps-chip__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9aa0a6;
+}
+
+.gps-chip--good .gps-chip__dot {
+  background: var(--status-cleaned);
+}
+
+.gps-chip--alert {
+  color: var(--status-reopened);
+}
+
+.gps-chip--alert .gps-chip__dot {
+  background: var(--status-reopened);
+}
+
+.snap-camera__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.shutter {
+  width: 68px;
+  height: 68px;
+  border: 4px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+  cursor: pointer;
+}
+
+.shutter:active {
+  transform: scale(0.94);
+}
+
+.shutter:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.camera-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.camera-help__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 20px;
+}
+
+.snap-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.snap-footer__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-1);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.snap-review__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.snap-review__photo {
+  flex: none;
+  width: 104px;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-s);
+  background: var(--tile);
+  object-fit: cover;
+}
+
+.gps-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.snap-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.steps__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #dadce0;
+  border-radius: 50%;
+}
+
+.steps__item--done {
+  color: var(--text);
+}
+
+.steps__item--done .steps__mark {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.badge--progress-good {
+  background: var(--status-cleaned-tint);
+  color: var(--status-cleaned);
+}
+
+.badge--progress-alert {
+  background: var(--status-open-tint);
+  color: var(--status-open);
+}
+
+.report-list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.report-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.report-thumb {
+  display: block;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-s);
+  background: var(--tile);
+  object-fit: cover;
+}
+
+.report-thumb--large {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+
+.report-thumb--large.report-thumb--missing {
+  width: 64px;
+  height: 64px;
+  aspect-ratio: auto;
+}
+
+.report-thumb--missing {
+  display: grid;
+  place-items: center;
+  color: #9aa0a6;
+}
+
+.report-row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-row__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.report-row__meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.report-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: calc(-1 * var(--space-1));
+}
+
+.report-row__actions:empty {
+  display: none;
+}

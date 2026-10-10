@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
@@ -11,7 +11,7 @@ describe('site routes', () => {
   it('opens the site panel for /sites/:id and focuses its title', async () => {
     await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1' });
     const title = await screen.findByRole('heading', { level: 2, name: 'Waste dump' });
-    expect(title).toHaveFocus();
+    await waitFor(() => expect(title).toHaveFocus());
   });
 
   it('closes the panel and returns to the map', async () => {

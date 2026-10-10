@@ -1,10 +1,16 @@
 import { AuthError } from '../domain/AuthError';
 import type { AuthService, AuthUser } from './AuthService';
 
-/** Live mode until the Cognito adapter lands: nobody is signed in and every call says so. */
+/** Live mode without VITE_COGNITO_* set: nobody is signed in and every call says so. */
 export class UnavailableAuthService implements AuthService {
   available(): boolean {
     return false;
+  }
+
+  async restore(): Promise<void> {}
+
+  async idToken(): Promise<null> {
+    return null;
   }
 
   currentUser(): AuthUser | null {

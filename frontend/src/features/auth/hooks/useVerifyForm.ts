@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useServices } from '../../../app/useServices';
 import { AuthValidator, type FieldErrors } from '../AuthValidator';
 import { useAuthFlow } from './useAuthFlow';
@@ -8,6 +9,7 @@ import { useSubmit } from './useSubmit';
 export const RESEND_SECONDS = 30;
 
 export function useVerifyForm() {
+  const { t } = useTranslation();
   const { auth } = useServices();
   const flow = useAuthFlow();
   const [code, setCode] = useState('');
@@ -20,8 +22,9 @@ export function useVerifyForm() {
     setErrors(found);
     if (!AuthValidator.isValid(found)) return;
     void submit.run(async () => {
-      await auth.confirmSignUp(flow.email, code);
-      flow.finish();
+      const user = await auth.confirmSignUp(flow.email, code);
+      if (user) flow.finish();
+      else flow.go('signIn', flow.email, t('auth.verify.done'));
     });
   };
   const resend = () => {
