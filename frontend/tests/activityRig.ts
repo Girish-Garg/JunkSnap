@@ -18,12 +18,12 @@ export function listed(n: number, status: ReportStatus = 'unverified'): ReportSt
 export const sentRow = (n: number) => QueuedReport.capture(sampleDraft(`${n}`.repeat(64)), new ArrayBuffer(1), MADE).sent(`rpt_${n}`).withStatus(listed(n));
 export const unsentRow = (n: number) => QueuedReport.capture(sampleDraft(`${n}`.repeat(64)), new ArrayBuffer(1), MADE);
 
-export function scanRow(n: number, sent: boolean): QueuedScan {
+export function scanRow(n: number, sent: boolean, at: Date = MADE): QueuedScan {
   const draft = {
     report_type: 'waste_dump', context: 'roadside', started_at: MADE.toISOString(), ended_at: MADE.toISOString(),
     duration_ms: 6000, content_type: 'video/webm', video_sha256: `${n}`.repeat(64), size_bytes: 5, gps_track: [],
   } as const;
-  const recorded = QueuedScan.record(draft, new ArrayBuffer(1), MADE);
+  const recorded = QueuedScan.record(draft, new ArrayBuffer(1), at);
   return sent ? recorded.sent(`scn_${n}`) : recorded;
 }
 

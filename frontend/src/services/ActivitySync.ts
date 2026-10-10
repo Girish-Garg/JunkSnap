@@ -3,19 +3,20 @@ import { ApiError } from '../domain/ApiError';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AccountKey } from './AccountKey';
 import type { ActivityFreshness } from './ActivityFreshness';
+import type { ActivityOwnership } from './ActivityOwnership';
 import type { AuthService } from './AuthService';
 import type { Clock } from './Clock';
 import type { DismissedReports } from './DismissedReports';
 import type { ReportApi } from './ReportApi';
 import type { ReportQueue } from './ReportQueue';
-import type { ScanQueue } from './ScanQueue';
 
 export interface ActivitySyncPorts {
   /** GET /me/reports. */
   readonly api: Pick<ReportApi, 'mine'>;
   readonly queue: Pick<ReportQueue, 'load' | 'snapshot' | 'save' | 'remove'>;
-  readonly scans: Pick<ScanQueue, 'load' | 'snapshot' | 'remove'>;
   readonly freshness: ActivityFreshness;
+  /** Who the phone's sent rows belong to, kept on disk across restarts. */
+  readonly ownership: Pick<ActivityOwnership, 'claim' | 'forget' | 'since' | 'dropSentBefore'>;
   readonly dismissed: Pick<DismissedReports, 'all'>;
   readonly account: Pick<AccountKey, 'current'>;
   readonly clock: Clock;
@@ -28,21 +29,20 @@ const MAX_PAGES = 10;
  * Activity shows this phone's rows at once; this brings them in line with the signed-in user's reports
  * on the server when the list token is missing, stale or another account's. Sent rows are shown only once
  * the token names the signed-in account (`trusted`), so a shared phone never shows one account's rows to
- * another. A missing or foreign token means the phone's sent photos and videos from before this sign-in are
- * not this account's: the sync removes them. Signing out removes sent rows too. Reports still being checked
- * are refreshed by ReportTracker.
+ * another. Sign-in claims the phone for the account on disk (ActivityOwnership), so a restart never mistakes
+ * the account's own rows for another's. If the token is still missing or foreign, sent photos and videos saved
+ * before the claim are removed. Reports still being checked are refreshed by ReportTracker.
  */
 export class ActivitySync {
   readonly #ports: ActivitySyncPorts;
   readonly #listeners = new Set<() => void>();
   #running: Promise<void> | null = null;
   #trusted = false;
-  /** When the current sign-in began on this phone (ms); rows saved since are the current account's. */
-  #ownedSince: number;
+  /** The claim or forget that sign-in or sign-out started; a sync waits for it. */
+  #owning: Promise<void> = Promise.resolve();
 
   constructor(ports: ActivitySyncPorts) {
     this.#ports = ports;
-    this.#ownedSince = ports.clock.now().getTime();
   }
 
   /** True once this phone's sent rows are confirmed to be the signed-in account's. */
@@ -55,17 +55,25 @@ export class ActivitySync {
     return () => this.#listeners.delete(listener);
   }
 
-  /** Follows sign-in changes: another account is untrusted until it syncs, and sign-out removes sent rows. */
+  /**
+   * Follows sign-in changes: a signed-in account claims the phone (also at start, for a restored session),
+   * another account is untrusted until it syncs, and sign-out removes sent rows.
+   */
   watch(auth: Pick<AuthService, 'subscribe' | 'currentUser'>): () => void {
     let email = auth.currentUser()?.email ?? null;
+    if (email !== null) this.#own(() => this.#ports.ownership.claim(false));
     return auth.subscribe(() => {
       const next = auth.currentUser()?.email ?? null;
       if (next === email) return;
       email = next;
-      this.#ownedSince = this.#ports.clock.now().getTime();
       this.#setTrusted(false);
-      if (next === null) void this.forgetSent();
+      this.#own(() => (next === null ? this.#ports.ownership.forget() : this.#ports.ownership.claim(true)));
     });
+  }
+
+  /** Resolves once the claim at sign-in or the clean-up at sign-out has finished. */
+  settled(): Promise<void> {
+    return this.#owning;
   }
 
   /** One sync at a time; offline or refused leaves the phone's copy as it is. */
@@ -76,16 +84,12 @@ export class ActivitySync {
     return this.#running;
   }
 
-  /** Sign-out: sent rows leave this phone (the server keeps them); unsent photos and videos stay. */
-  async forgetSent(): Promise<void> {
-    const { queue, scans, freshness } = this.#ports;
-    await Promise.all([queue.load(), scans.load()]);
-    for (const row of queue.snapshot().filter((each) => each.data.stage === 'sent')) await queue.remove(row.id);
-    for (const scan of scans.snapshot().filter((each) => each.data.stage === 'sent')) await scans.remove(scan.id);
-    await freshness.clear();
+  #own(step: () => Promise<void>): void {
+    this.#owning = this.#owning.then(step).catch(() => undefined);
   }
 
   async #run(): Promise<void> {
+    await this.#owning;
     const owner = await this.#ports.account.current();
     if (owner === null) return this.#setTrusted(false);
     const token = await this.#ports.freshness.read();
@@ -99,21 +103,13 @@ export class ActivitySync {
     const listing = await this.#list();
     if (listing === null) return;
     await queue.load();
-    const context = { now: clock.now(), ownerChanged, ownedSince: this.#ownedSince, dismissed: await dismissed.all() };
+    const ownedSince = await this.#ports.ownership.since();
+    const context = { now: clock.now(), ownerChanged, ownedSince, dismissed: await dismissed.all() };
     const plan = ActivityMerge.plan(queue.snapshot(), listing, context);
     for (const row of plan.save) await queue.save(row);
     for (const id of plan.remove) await queue.remove(id);
-    if (ownerChanged) await this.#dropForeignScans();
+    if (ownerChanged) await this.#ports.ownership.dropSentBefore(ownedSince);
     await freshness.mark(owner, ActivitySync.#newest(listing.views));
-  }
-
-  // Videos cannot be listed from the server yet, so after an owner change every sent one from before this
-  // sign-in goes; unsent ones stay.
-  async #dropForeignScans(): Promise<void> {
-    const { scans } = this.#ports;
-    await scans.load();
-    const foreign = scans.snapshot().filter((scan) => scan.data.stage === 'sent' && Date.parse(scan.data.saved_at) < this.#ownedSince);
-    for (const scan of foreign) await scans.remove(scan.id);
   }
 
   async #list(): Promise<ActivityListing | null> {

@@ -1,5 +1,6 @@
 import { AccountKey } from '../services/AccountKey';
 import { ActivityFreshness } from '../services/ActivityFreshness';
+import { ActivityOwnership } from '../services/ActivityOwnership';
 import { ActivitySync } from '../services/ActivitySync';
 import type { AreaLetterApi } from '../services/AreaLetterApi';
 import { AreaLetterService } from '../services/AreaLetterService';
@@ -156,7 +157,9 @@ export class SnapServiceFactory {
   static #activity(parts: ActivityParts, auth: AuthService, crypto: Crypto): ActivitySync {
     const { apis, queue, scans, clock, identity, dismissed, meta } = parts;
     const account = new AccountKey(identity, crypto.subtle);
-    const activity = new ActivitySync({ api: apis.reports, queue, scans, freshness: new ActivityFreshness(meta, clock), dismissed, account, clock });
+    const freshness = new ActivityFreshness(meta, clock);
+    const ownership = new ActivityOwnership({ queue, scans, freshness, account, meta, clock });
+    const activity = new ActivitySync({ api: apis.reports, queue, freshness, ownership, dismissed, account, clock });
     activity.watch(auth);
     return activity;
   }

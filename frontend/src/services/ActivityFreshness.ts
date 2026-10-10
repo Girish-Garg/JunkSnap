@@ -47,6 +47,12 @@ export class ActivityFreshness {
     await this.#store.set(KEY, '');
   }
 
+  /** Sign-in: the phone's list is now this account's, but has never been synced, so it is stale at once. */
+  async claim(owner: string): Promise<void> {
+    const token: ActivityToken = { owner, synced_at: new Date(0).toISOString(), newest: null };
+    await this.#store.set(KEY, JSON.stringify(token));
+  }
+
   async mark(owner: string, newest: string | null): Promise<void> {
     const token: ActivityToken = { owner, synced_at: this.#clock.now().toISOString(), newest };
     await this.#store.set(KEY, JSON.stringify(token));
