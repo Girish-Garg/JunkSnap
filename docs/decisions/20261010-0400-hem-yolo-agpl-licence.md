@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 superseded_by:
 area: agent
 by: hem
@@ -11,7 +11,7 @@ Context: A2 (issue 50) needs a detector trained on our GPU this weekend. Ultraly
 
 Decision:
 - Train and export with Ultralytics only in `backend/ml/training` (the `gpu` dependency group). The `ml` service runs the exported ONNX through onnxruntime and never imports Ultralytics.
-- The repo stays public, so the training code, configs and the service that serves the model are open, as the AGPL asks. The weights sit in the private bucket (`models/`); publish them with the repo if anyone asks.
+- The repo is licensed AGPL-3.0 (`LICENSE`, the unmodified GNU text) and stays public, so the training code, configs and the service that serves the model are open, as the AGPL asks. The phone model ships under the same licence. The weights sit in the private bucket (`models/`); publish them with the repo if anyone asks.
 - If JunkSnap ever needs closed source or a paid product, switch the detector to RF-DETR (Apache-2.0) or D-FINE (Apache-2.0), which export to ONNX too and fit the same `YoloSignal` port, or buy an Ultralytics Enterprise licence.
 
 Consequences for other lanes: the writeup lists Ultralytics and its AGPL licence. The phone model (edge pre-check) is the same AGPL model.
