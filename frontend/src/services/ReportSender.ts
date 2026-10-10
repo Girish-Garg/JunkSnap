@@ -1,10 +1,10 @@
 import { ApiError } from '../domain/ApiError';
-import { AuthError } from '../domain/AuthError';
 import { JunkSnapError } from '../domain/JunkSnapError';
 import type { QueuedReport } from '../domain/QueuedReport';
 import type { PresignResponse } from '../domain/ReportUpload';
 import type { Clock } from './Clock';
 import type { ReportApi, RequestIdentity } from './ReportApi';
+import { SignedInStep } from './SignedInStep';
 
 // A refused PUT gets this many fresh URLs before the report counts as refused.
 const MAX_PRESIGNS = 3;
@@ -14,24 +14,17 @@ export class ReportSender {
   readonly #api: ReportApi;
   readonly #identity: RequestIdentity;
   readonly #clock: Clock;
+  readonly #signedIn: SignedInStep;
 
   constructor(api: ReportApi, identity: RequestIdentity, clock: Clock) {
     this.#api = api;
     this.#identity = identity;
     this.#clock = clock;
+    this.#signedIn = new SignedInStep(identity);
   }
 
-  /** Creating a report needs a signed-in user (decision 20261010-0227), so nothing leaves the phone without a token. */
-  async step(report: QueuedReport): Promise<QueuedReport> {
-    if (!(await this.#identity.idToken())) throw new AuthError('wrong_credentials', 'Sign in to send reports');
-    try {
-      return await this.#advance(report);
-    } catch (error) {
-      // A token the api refuses may be stale (revoked or clock skew): refresh once and try again.
-      if (!(error instanceof ApiError && error.status === 401)) throw error;
-      if (!(await this.#identity.idToken(true))) throw error;
-      return this.#advance(report);
-    }
+  step(report: QueuedReport): Promise<QueuedReport> {
+    return this.#signedIn.run(() => this.#advance(report));
   }
 
   async #advance(report: QueuedReport): Promise<QueuedReport> {

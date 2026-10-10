@@ -1,15 +1,15 @@
-const LOCK_NAME = 'junksnap-report-queue';
-
-/** One tab sends at a time (Web Locks), so two open tabs never send one photo twice. */
+/** One tab sends a queue at a time (Web Locks), so two open tabs never send one capture twice. */
 export class QueueLock {
   readonly #locks: LockManager | undefined;
+  readonly #name: string;
 
-  constructor(locks: LockManager | undefined) {
+  constructor(locks: LockManager | undefined, name = 'junksnap-report-queue') {
     this.#locks = locks;
+    this.#name = name;
   }
 
   async run(task: () => Promise<void>): Promise<void> {
     if (!this.#locks) return task();
-    await this.#locks.request(LOCK_NAME, task);
+    await this.#locks.request(this.#name, task);
   }
 }

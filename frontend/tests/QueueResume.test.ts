@@ -74,7 +74,7 @@ describe('QueueTriggers', () => {
     auth.idToken = async () => 'id-token';
     const events = new EventTarget();
     const document = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState });
-    new QueueTriggers(queue, { window: events as Window, document: document as unknown as Document, auth }).start();
+    new QueueTriggers([queue], { window: events as Window, document: document as unknown as Document, auth }).start();
     events.dispatchEvent(new Event('online'));
     await expect.poll(() => queue.find(added.id)?.data.stage).toBe('sent');
     expect(api.count('submit')).toBe(1);

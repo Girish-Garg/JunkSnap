@@ -1,6 +1,11 @@
-import type { QueuedReport } from '../domain/QueuedReport';
+import type { QueueItemData } from '../domain/QueueItem';
 import type { AuthService } from './AuthService';
-import type { ReportQueue } from './ReportQueue';
+
+/** What the triggers need from a photo or video queue. */
+export interface SendableQueue {
+  flush(): Promise<void>;
+  retry(matches: (item: { readonly data: QueueItemData }) => boolean): Promise<void>;
+}
 
 export interface TriggerSources {
   readonly window: Pick<Window, 'addEventListener' | 'removeEventListener'>;
@@ -8,13 +13,13 @@ export interface TriggerSources {
   readonly auth: AuthService;
 }
 
-/** Sends the queue at start, when the phone is back online or back in the app, and after sign-in. */
+/** Sends the queues at start, when the phone is back online or back in the app, and after sign-in. */
 export class QueueTriggers {
-  readonly #queue: ReportQueue;
+  readonly #queues: readonly SendableQueue[];
   readonly #sources: TriggerSources;
 
-  constructor(queue: ReportQueue, sources: TriggerSources) {
-    this.#queue = queue;
+  constructor(queues: readonly SendableQueue[], sources: TriggerSources) {
+    this.#queues = queues;
     this.#sources = sources;
   }
 
@@ -26,7 +31,7 @@ export class QueueTriggers {
       if (document.visibilityState === 'visible') flush();
     };
     const onAuth = () => {
-      if (auth.currentUser()) void this.#queue.retry(QueueTriggers.#waitingForSignIn);
+      if (auth.currentUser()) void this.#retrySignIn();
     };
     window.addEventListener('online', flush);
     document.addEventListener('visibilitychange', onVisible);
@@ -39,14 +44,14 @@ export class QueueTriggers {
     };
   }
 
-  /** Reads (and refreshes) the token first, so reports parked for sign-in go as soon as one is valid. */
+  /** Reads (and refreshes) the token first, so items parked for sign-in go as soon as one is valid. */
   async #resume(): Promise<void> {
     const token = await this.#sources.auth.idToken().catch(() => null);
-    if (token) await this.#queue.retry(QueueTriggers.#waitingForSignIn);
-    else await this.#queue.flush();
+    if (token) await this.#retrySignIn();
+    else await Promise.all(this.#queues.map((queue) => queue.flush()));
   }
 
-  static #waitingForSignIn(report: QueuedReport): boolean {
-    return report.data.problem === 'sign_in';
+  async #retrySignIn(): Promise<void> {
+    await Promise.all(this.#queues.map((queue) => queue.retry((item) => item.data.problem === 'sign_in')));
   }
 }

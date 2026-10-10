@@ -1,12 +1,12 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { useServices } from '../../../app/useServices';
 import { CaptureError, type CaptureProblem } from '../../../domain/CaptureError';
-import { CameraCapture } from '../../../services/CameraCapture';
+import { CameraCapture, type CameraUse } from '../../../services/CameraCapture';
 
 export type CameraState = 'starting' | 'live' | CaptureProblem;
 
 /** Streams the rear camera into the video element while mounted; retry asks for the camera again. */
-export function useCamera(video: RefObject<HTMLVideoElement | null>) {
+export function useCamera(video: RefObject<HTMLVideoElement | null>, use: CameraUse = 'photo') {
   const { snap } = useServices();
   const supported = snap.camera.isSupported();
   const [state, setState] = useState<CameraState>(supported ? 'starting' : 'insecure');
@@ -23,12 +23,12 @@ export function useCamera(video: RefObject<HTMLVideoElement | null>) {
       setState('live');
     };
     const fail = (error: unknown) => setState(error instanceof CaptureError ? error.problem : 'camera_unavailable');
-    snap.camera.open().then(attach, fail);
+    snap.camera.open(use).then(attach, fail);
     return () => {
       stopped = true;
       if (stream) CameraCapture.close(stream);
     };
-  }, [snap.camera, supported, video, attempt]);
+  }, [snap.camera, supported, video, attempt, use]);
   const retry = () => {
     setState(supported ? 'starting' : 'insecure');
     setAttempt((count) => count + 1);
