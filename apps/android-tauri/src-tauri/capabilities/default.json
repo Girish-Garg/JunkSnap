@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "default",
+  "description": "Open http(s), mailto and tel links in their default app; share letter text.",
+  "windows": ["main"],
+  "permissions": [
+    "opener:allow-open-url",
+    "opener:allow-default-urls",
+    "sharekit:allow-share-text"
+  ]
+}

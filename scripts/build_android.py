@@ -5,10 +5,11 @@
 """Build the JunkSnap Android app (Tauri 2) against one stage and print the APK path.
 
 Usage: uv run scripts/build_android.py dev [--target aarch64 x86_64] [--skip-web] [--debug]
-Reads VITE_API_URL and the Cognito ids from the junksnap-<stage> stack outputs (as
-deploy_web.py does), builds frontend/dist and marks it with the stage in dist/.stage, then
-runs `tauri android build --apk` in apps/android-tauri. The stage's api origin and originals
-bucket are added to the CSP in tauri.conf.json for that build only. The release APK is signed
+Reads VITE_API_URL and the Cognito ids from the junksnap-<stage> stack outputs and VITE_WEB_URL
+from the stage's Amplify app (as deploy_web.py does), builds frontend/dist and marks it with
+the stage in dist/.stage, then runs `tauri android build --apk` in apps/android-tauri. The
+stage's api origin and originals bucket are added to the CSP in tauri.conf.json for that build
+only. The release APK is signed
 with the Android SDK debug key (no release keystore); --debug builds a debuggable APK whose
 WebView shows in chrome://inspect. Install with `adb install -r <apk>` or copy it to the
 phone. The stage's api CORS_ORIGINS and UploadOrigins must include https://tauri.localhost.
@@ -23,7 +24,7 @@ import sys
 from pathlib import Path
 
 from deploy import REGION, ROOT
-from deploy_web import VITE_FROM_OUTPUTS, stack_outputs
+from deploy_web import VITE_FROM_OUTPUTS, branch_url, find_web_app, stack_outputs, web_app_name
 
 APP = ROOT / "apps" / "android-tauri"
 FRONTEND = ROOT / "frontend"
@@ -91,9 +92,10 @@ class AndroidBuild:
         self._stage = stage
         self._env = env
 
-    def web(self, outputs: dict[str, str]) -> None:
+    def web(self, outputs: dict[str, str], web_url: str) -> None:
         web_env = {key: outputs[name] for key, name in VITE_FROM_OUTPUTS.items()}
         web_env["VITE_API_MODE"] = "live"
+        web_env["VITE_WEB_URL"] = web_url  # share links point at the web app, not tauri.localhost
         print("build env:", web_env, flush=True)
         env = {**self._env, **web_env}
         stream(["npm", "ci", "--no-audit", "--no-fund"], FRONTEND, env)
@@ -125,6 +127,14 @@ class AndroidBuild:
                      f"{self._stage}; run without --skip-web")
 
 
+def stage_web_url(stage: str) -> str:
+    app = find_web_app(stage)
+    if app is None:
+        sys.exit(f"no Amplify app {web_app_name(stage)}; deploy the web app first "
+                 f"(uv run scripts/deploy_web.py {stage}), since share links point at it")
+    return branch_url(stage, app)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the JunkSnap Android APK.")
     parser.add_argument("stage", nargs="?", default="dev", choices=["dev", "demo"])
@@ -142,7 +152,7 @@ def main() -> None:
     outputs = stack_outputs(f"junksnap-{args.stage}")
     build = AndroidBuild(args.stage, Toolchain().env())
     if not args.skip_web:
-        build.web(outputs)
+        build.web(outputs, stage_web_url(args.stage))
     apk = build.apk(args.target, StageCsp(outputs), args.debug)
     size_mb = apk.stat().st_size / 1_000_000
     print(f"\nAPK ({args.stage}, {size_mb:.1f} MB): {apk}")

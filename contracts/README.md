@@ -296,6 +296,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |
 | `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID` | frontend | the same pool and app client as the api |
+| `VITE_WEB_URL` | frontend | the stage's public web app, `https://<stage>.<Amplify default domain>`, no trailing slash; share links point here (the Android app's own origin, `https://tauri.localhost`, is not public). Set by `deploy_web.py` and `build_android.py`; unset, links use the page's origin |
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
 | `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
 | `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |

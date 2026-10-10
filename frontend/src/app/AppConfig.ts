@@ -13,6 +13,7 @@ export interface AppEnv {
   readonly VITE_API_MODE?: string;
   readonly VITE_COGNITO_USER_POOL_ID?: string;
   readonly VITE_COGNITO_CLIENT_ID?: string;
+  readonly VITE_WEB_URL?: string;
 }
 
 const POOL_ID = /^([a-z]{2}-[a-z]+-\d)_[A-Za-z0-9]+$/;
@@ -22,20 +23,24 @@ export class AppConfig {
   readonly apiUrl: string | null;
   /** Null signs in with the mock accounts. */
   readonly cognito: CognitoConfig | null;
+  /** The stage's public web app; share links point here. Null shares the page's own origin. */
+  readonly webUrl: string | null;
 
-  private constructor(apiMode: ApiMode, apiUrl: string | null, cognito: CognitoConfig | null) {
+  private constructor(apiMode: ApiMode, apiUrl: string | null, cognito: CognitoConfig | null, webUrl: string | null) {
     this.apiMode = apiMode;
     this.apiUrl = apiUrl;
     this.cognito = cognito;
+    this.webUrl = webUrl;
   }
 
   static fromEnv(env: AppEnv): AppConfig {
-    const apiUrl = env.VITE_API_URL?.trim().replace(/\/+$/, '') || null;
+    const apiUrl = AppConfig.#baseUrl(env.VITE_API_URL);
     const mode = AppConfig.#readMode(env.VITE_API_MODE?.trim() || (apiUrl ? 'live' : 'mock'));
     if (mode === 'live' && apiUrl === null) {
       throw new ConfigError('VITE_API_MODE=live needs VITE_API_URL');
     }
-    return new AppConfig(mode, apiUrl, AppConfig.#readCognito(env));
+    const webUrl = env.VITE_WEB_URL?.trim().replace(/\/+$/, '') || null;
+    return new AppConfig(mode, apiUrl, AppConfig.#readCognito(env), webUrl);
   }
 
   static #readMode(value: string): ApiMode {
@@ -53,6 +58,11 @@ export class AppConfig {
     const region = POOL_ID.exec(userPoolId)?.[1];
     if (!region || !clientId) throw new ConfigError('Set both VITE_COGNITO_USER_POOL_ID (region_id) and VITE_COGNITO_CLIENT_ID');
     return { region, userPoolId, clientId };
+  }
+
+  // A base URL without its trailing slashes; blank means not set.
+  static #baseUrl(value: string | undefined): string | null {
+    return value?.trim().replace(/\/+$/, '') || null;
   }
 
   static #trimmed(value: string | undefined): string {

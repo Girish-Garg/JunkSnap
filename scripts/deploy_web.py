@@ -6,7 +6,8 @@
 
 Usage: uv run scripts/deploy_web.py dev [--frontend frontend] [--skip-build]
 Creates the Amplify app junksnap-<stage>-web and branch <stage> once, then each run builds
-frontend/ against the stage's CloudFront URL and Cognito pool, zips dist/, uploads it with
+frontend/ against the stage's CloudFront URL, Cognito pool and its own branch URL
+(VITE_WEB_URL, for share links), zips dist/, uploads it with
 create-deployment and start-deployment, and waits for the job. Rerun after every frontend
 change. Then point the api CORS at the printed URL: uv run scripts/deploy.py dev --origins ...
 """
@@ -47,12 +48,28 @@ def stack_outputs(stack: str) -> dict[str, str]:
     return {item["OutputKey"]: item["OutputValue"] for item in raw}
 
 
+def web_app_name(stage: str) -> str:
+    return f"junksnap-{stage}-web"
+
+
+def find_web_app(stage: str) -> dict | None:
+    """The stage's Amplify app, or None before the first deploy_web.py run."""
+    apps = aws_json("amplify", "list-apps", "--max-results", "100")["apps"]
+    return next((a for a in apps if a["name"] == web_app_name(stage)), None)
+
+
+def branch_url(stage: str, app: dict) -> str:
+    """The public web app URL (VITE_WEB_URL): the Amplify branch named after the stage."""
+    return f"https://{stage}.{app['defaultDomain']}"
+
+
 class WebBuild:
     """Builds frontend/ for one stage and zips dist/ with index.html at the root."""
 
-    def __init__(self, frontend: Path, outputs: dict[str, str]) -> None:
+    def __init__(self, frontend: Path, outputs: dict[str, str], web_url: str) -> None:
         self._frontend = frontend
         self._outputs = outputs
+        self._web_url = web_url
 
     def zip(self, skip_build: bool, folder: str) -> Path:
         if not skip_build:
@@ -65,6 +82,7 @@ class WebBuild:
     def _build(self) -> None:
         env = {key: self._outputs[name] for key, name in VITE_FROM_OUTPUTS.items()}
         env["VITE_API_MODE"] = "live"
+        env["VITE_WEB_URL"] = self._web_url
         print("build env:", json.dumps(env))
         os.environ.update(env)
         folder = str(self._frontend)
@@ -77,13 +95,12 @@ class AmplifyHost:
 
     def __init__(self, stage: str) -> None:
         self._stage = stage
-        self._name = f"junksnap-{stage}-web"
+        self._name = web_app_name(stage)
         self._tags = f"project=junksnap,stage={stage}"
 
     def ensure_app(self) -> dict:
         rules = json.dumps([SPA_RULE])
-        apps = aws_json("amplify", "list-apps", "--max-results", "100")["apps"]
-        app = next((a for a in apps if a["name"] == self._name), None)
+        app = find_web_app(self._stage)
         if app is None:
             created = aws_json("amplify", "create-app", "--name", self._name, "--platform", "WEB",
                                "--custom-rules", rules, "--tags", self._tags)
@@ -146,13 +163,14 @@ def main() -> None:
     host = AmplifyHost(args.stage)
     app = host.ensure_app()
     host.ensure_branch(app["appId"])
+    url = branch_url(args.stage, app)
     with tempfile.TemporaryDirectory() as folder:
         frontend = (ROOT / args.frontend).resolve()
-        archive = WebBuild(frontend, outputs).zip(args.skip_build, folder)
+        archive = WebBuild(frontend, outputs, url).zip(args.skip_build, folder)
         host.deploy(app["appId"], archive)
-    url = f"https://{args.stage}.{app['defaultDomain']}"
     print(f"\nWeb app: {url}\nAPI: {outputs['PublicBaseUrl']}")
-    print(f"CORS: uv run scripts/deploy.py {args.stage} --origins {url},http://localhost:5173")
+    print(f"CORS: uv run scripts/deploy.py {args.stage} --origins {url},http://localhost:5173,"
+          "https://tauri.localhost")
 
 
 if __name__ == "__main__":
