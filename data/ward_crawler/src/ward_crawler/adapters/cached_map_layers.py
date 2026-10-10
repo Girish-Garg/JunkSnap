@@ -16,6 +16,11 @@ from ward_crawler.ports.map_layer_finder import MapLayerFinder
 _log = logging.getLogger(__name__)
 
 
+def layer_key(kind: str, bbox: BoundingBox) -> str:
+    box = f"{bbox.south},{bbox.west},{bbox.north},{bbox.east}"
+    return f"layers/{kind}-{hashlib.sha256(box.encode()).hexdigest()[:16]}.json"
+
+
 class CachedMapLayers(MapLayerFinder):
     def __init__(
         self,
@@ -33,7 +38,7 @@ class CachedMapLayers(MapLayerFinder):
         return self._inner.kinds()
 
     def find(self, kind: str, bbox: BoundingBox) -> FeatureLayer:
-        key = self._key(kind, bbox)
+        key = layer_key(kind, bbox)
         cached = self._read(key)
         if cached is not None and self._now() - cached.provenance.fetched_at < self._max_age:
             return cached
@@ -52,10 +57,6 @@ class CachedMapLayers(MapLayerFinder):
 
     def attribution(self) -> str:
         return self._inner.attribution()
-
-    def _key(self, kind: str, bbox: BoundingBox) -> str:
-        box = f"{bbox.south},{bbox.west},{bbox.north},{bbox.east}"
-        return f"layers/{kind}-{hashlib.sha256(box.encode()).hexdigest()[:16]}.json"
 
     def _read(self, key: str) -> FeatureLayer | None:
         saved = self._blobs.get(key)
