@@ -1,6 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { ACTIVITY_PATH } from '../../../app/paths';
-import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { Button } from '../../../ui/Button';
 import { Celebration } from '../../../ui/Celebration';
 import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
@@ -10,6 +8,7 @@ import { RejectionNotice } from './RejectionNotice';
 import { ProgressBadge } from './ProgressBadge';
 import { ProgressSteps } from './ProgressSteps';
 import { ReportThumb } from './ReportThumb';
+import { SentStageActions } from './SentStageActions';
 
 interface SentStageProps {
   readonly id: string;
@@ -19,7 +18,6 @@ interface SentStageProps {
 /** The saved report's journey, live, with the blurred copy once the server has made it. */
 export function SentStage({ id, onAgain }: SentStageProps) {
   const { t } = useTranslation();
-  const sheets = useSheetNavigation();
   const auth = useAuthFlow();
   const report = useReportProgress(id);
   if (!report) return null;
@@ -38,12 +36,7 @@ export function SentStage({ id, onAgain }: SentStageProps) {
         </Button>
       )}
       {blurred && <ReportThumb key={blurred} url={blurred} size="large" />}
-      <div className="snap-actions">
-        <Button onClick={onAgain}>{t('snap.again')}</Button>
-        <Button variant="text" onClick={() => sheets.swap(ACTIVITY_PATH)}>
-          {t('snap.seeActivity')}
-        </Button>
-      </div>
+      <SentStageActions report={report} onAgain={onAgain} />
     </div>
   );
 }

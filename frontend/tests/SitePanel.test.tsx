@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
@@ -47,11 +47,11 @@ describe('SitePanel photos, location and brands', () => {
     expect(factValue('Lok Sabha seat (MP)')).toHaveTextContent('Boundary out of date');
   });
 
-  it('says in visible text that Me too is not built yet', async () => {
+  it('makes Letter the main action of a verified site, with no "coming soon" stub', async () => {
     await renderApp(<SitePanel site={testSite()} userLocation={null} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Me too' }));
-    expect(screen.getByText('Me too is coming soon.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Letter' })).toHaveClass('action-row__button--primary');
+    expect(screen.getByRole('button', { name: 'Letter' })).toBeEnabled();
+    expect(screen.queryByText(/coming soon/)).not.toBeInTheDocument();
   });
 });
 

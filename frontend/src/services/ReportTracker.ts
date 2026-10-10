@@ -1,6 +1,6 @@
 import { ApiError } from '../domain/ApiError';
 import type { QueuedReport } from '../domain/QueuedReport';
-import { ReportStatuses } from '../domain/ReportStatus';
+import { ReportStatuses, type ReportStatusView } from '../domain/ReportStatus';
 import type { ReportApi } from './ReportApi';
 import type { ReportQueue } from './ReportQueue';
 
@@ -32,6 +32,17 @@ export class ReportTracker {
     } catch (error) {
       if (!(error instanceof ApiError)) throw error;
     }
+  }
+
+  /**
+   * Reads one of this user's reports by its server id, for the "What we checked" view; a photo row
+   * on this phone keeps the fresh status too. GET /reports/{id} answers only the report's owner.
+   */
+  async read(reportId: string): Promise<ReportStatusView> {
+    const status = await this.#api.status(reportId);
+    const mine = this.#queue.snapshot().find((report) => report.data.report_id === reportId);
+    if (mine) await this.#queue.update(mine.id, (latest) => latest.withStatus(status));
+    return status;
   }
 
   /** The api withdrew these reports; Activity shows them as withdrawn at once, without another read. */

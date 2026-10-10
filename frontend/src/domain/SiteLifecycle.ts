@@ -27,7 +27,8 @@ export class SiteLifecycle {
     return Math.max(0, Math.ceil((Date.parse(expiresAt) - nowMs) / DAY_MS));
   }
 
-  isExpired(): boolean {
-    return this.#site.status === 'expired';
+  /** Still on the active map: takes votes, cleanups and letters, and can be cleared or expire. */
+  isActive(): boolean {
+    return ACTIVE.has(this.#site.status);
   }
 }

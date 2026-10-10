@@ -7,18 +7,23 @@ import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 interface AreaLetterButtonProps {
   readonly kind: string;
   readonly areaId: string;
+  /** The area has the 10 verified reports the api needs; otherwise the button is off and says why. */
+  readonly ready: boolean;
   /** The ranking list uses the short label. */
   readonly short?: boolean;
 }
 
-/** "Draft a letter about this area": sign in first, then the area letter sheet. */
-export function AreaLetterButton({ kind, areaId, short = false }: AreaLetterButtonProps) {
+/** "Draft a letter about this area": sign in first, then the area letter sheet. Off below 10 verified reports. */
+export function AreaLetterButton({ kind, areaId, ready, short = false }: AreaLetterButtonProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { requireAuth } = useAuthFlow();
   return (
-    <Button variant={short ? 'text' : 'primary'} onClick={() => requireAuth(() => navigate(areaLetterPath(kind, areaId)))}>
-      {t(short ? 'areaLetter.short' : 'areaLetter.button')}
-    </Button>
+    <div className={short ? 'area-letter area-letter--short' : 'area-letter'}>
+      <Button variant={short ? 'text' : 'primary'} disabled={!ready} onClick={() => requireAuth(() => navigate(areaLetterPath(kind, areaId)))}>
+        {t(short ? 'areaLetter.short' : 'areaLetter.button')}
+      </Button>
+      {!ready && <p className="area-letter__locked">{t(short ? 'areaLetter.lockedShort' : 'areaLetter.locked')}</p>}
+    </div>
   );
 }

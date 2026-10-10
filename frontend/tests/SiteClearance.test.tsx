@@ -82,10 +82,13 @@ describe('SitePanel expiry line', () => {
     expect(screen.getByText('Expires in 30 days unless someone confirms it')).toBeInTheDocument();
   });
 
-  it('says an expired site expired after 90 days without activity', async () => {
-    await renderApp(<SitePanel site={testSite({ status: 'expired' })} userLocation={null} />);
-    expect(screen.getByText('Expired after 90 days without a new report, vote or cleanup photo')).toBeInTheDocument();
+  it('says an expired site left the map, with no countdown or clearing progress', async () => {
+    const site = testSite({ status: 'expired', expires_at: '2026-01-01T00:00:00Z', ...PENDING });
+    await renderApp(<SitePanel site={site} userLocation={null} />);
+    expect(screen.getByText(/This site expired and left the map/)).toBeInTheDocument();
     expect(screen.getByText('Expired')).toHaveClass('badge--expired');
+    expect(screen.queryByText(/^Expires/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: "It's cleared now" })).not.toBeInTheDocument();
   });
 
   it('hides the action row and the vote on an expired site', async () => {

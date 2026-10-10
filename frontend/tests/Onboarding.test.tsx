@@ -13,15 +13,32 @@ describe('How JunkSnap works', () => {
     const store = new MemoryStore();
     await renderApp(<AppRoutes />, { route: '/welcome', services: testServices(store) });
     expect(screen.getByRole('dialog', { name: 'How JunkSnap works' })).toBeInTheDocument();
-    expect(new OnboardingPreference(store).seen()).toBe(true);
+    expect(new OnboardingPreference(store).seen()).toBe(false);
     expect(screen.getByRole('heading', { name: 'Waste piles up for three reasons' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByText('Local body (Municipal Corporation)')).toBeInTheDocument();
     expect(screen.getByText('Ward councillor')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
+    // The last card keeps only the close button (also named Skip); the footer offers Explore alone.
+    expect(screen.getAllByRole('button', { name: 'Skip' })).toHaveLength(1);
+    expect(new OnboardingPreference(store).seen()).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Explore' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(new OnboardingPreference(store).seen()).toBe(true);
+  });
+});
+
+describe('How JunkSnap works: seen', () => {
+  it('counts as seen when skipped, not when merely opened', async () => {
+    const user = userEvent.setup();
+    const store = new MemoryStore();
+    await renderApp(<AppRoutes />, { route: '/welcome', services: testServices(store) });
+    expect(new OnboardingPreference(store).seen()).toBe(false);
+    const skips = screen.getAllByRole('button', { name: 'Skip' });
+    expect(skips).toHaveLength(2);
+    await user.click(skips[1]!);
+    expect(new OnboardingPreference(store).seen()).toBe(true);
   });
 
   it('opens again from Account', async () => {
