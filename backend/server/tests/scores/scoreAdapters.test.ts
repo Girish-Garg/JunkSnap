@@ -157,7 +157,7 @@ describe("DynamoScoreRepository", () => {
     const row = computed();
     await repository.save(row, ["jodhpur-mc", "rajasthan-jodhpur"]);
     const stored = fake.stored.get(AreaKey.of(WARD).toString());
-    expect(stored).toMatchObject({ area_kind: WARD.kind, area_id: WARD.id, within: ["jodhpur-mc", "rajasthan-jodhpur"], formula_version: "scores-v1" });
+    expect(stored).toMatchObject({ area_kind: WARD.kind, area_id: WARD.id, within: ["jodhpur-mc", "rajasthan-jodhpur"], formula_version: "scores-v2" });
     expect(await repository.find(AreaKey.of(WARD))).toEqual(row);
   });
 

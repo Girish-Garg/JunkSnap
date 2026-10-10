@@ -108,7 +108,7 @@ describe("ScoresJob", () => {
     const { job, scores } = setup([site({ areas: [OTHER_WARD], verification: "rejected", verifiedCount: 0 })]);
     await job.run(NOW);
     const row = scores.rows.get("ward:jodhpur-mc-w38");
-    expect(row?.counts).toEqual({ verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0 });
+    expect(row?.counts).toEqual({ verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0, sites_without_bin_within_3km: 0 });
     expect(row?.scores.city).toEqual({ value: null, reason: "too_few_reports" });
     expect(row?.data_window).toEqual({ from: "2026-10-20T00:00:00Z", to: "2026-10-20T00:00:00Z" });
   });

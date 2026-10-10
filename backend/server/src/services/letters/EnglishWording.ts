@@ -1,7 +1,7 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
 import type { TemplateWording } from "./TemplateLetter.js";
-import { coordinates, joinList, letterDate } from "./utils.js";
+import { coordinates, joinList, kilometres, letterDate } from "./utils.js";
 
 const WHAT: Readonly<Record<SiteContext, string>> = {
   vacant_plot: "a waste dump on a vacant plot",
@@ -33,6 +33,11 @@ const OFFICE: Readonly<Record<CcLine["office"], string>> = {
 
 export class EnglishWording implements TemplateWording {
   readonly language = "en";
+  readonly #binRadiusM: number;
+
+  constructor(binRadiusM = 3000) {
+    this.#binRadiusM = binRadiusM;
+  }
 
   subject(site: LetterSite): string {
     return `Request for action on ${WHAT[site.context]} in ${site.place.name()} (JunkSnap site ${site.siteId})`;
@@ -60,7 +65,11 @@ export class EnglishWording implements TemplateWording {
   }
 
   request(site: LetterSite): string {
-    return REQUEST[site.reportType];
+    if (site.reportType !== "no_bin") {
+      return REQUEST[site.reportType];
+    }
+    const km = kilometres(this.#binRadiusM);
+    return `No known waste bin or collection point (OpenStreetMap, ward records) within ${km} km of this site. ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {

@@ -1,3 +1,4 @@
+import { UNMEASURED, type BinMeasure } from "../bins/KnownBin.js";
 import type { ReportInsights, SiteInsights } from "./SiteTypes.js";
 
 type Source = SiteInsights["hazards"][number]["sources"][number];
@@ -28,13 +29,15 @@ export class InsightMerge {
     this.#reports = reports;
   }
 
-  merged(near: SiteInsights["near"]): SiteInsights {
+  // Places and the nearest bin are measured from the site's point, not from reports, so they are carried over.
+  merged(near: SiteInsights["near"], bin: BinMeasure = UNMEASURED): SiteInsights {
     return {
       reports: this.#reports.length,
       composition: this.#composition(),
       size_class: this.#sizeClass(),
       hazards: this.#hazards(),
       near,
+      ...bin,
     };
   }
 

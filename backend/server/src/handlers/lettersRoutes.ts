@@ -4,6 +4,7 @@ import { DynamoLetterCounter } from "../adapters/letters/DynamoLetterCounter.js"
 import { DynamoSiteReader } from "../adapters/letters/DynamoSiteReader.js";
 import { ModelLetterWriter } from "../adapters/letters/ModelLetterWriter.js";
 import { SystemLetterStamp } from "../adapters/letters/SystemLetterStamp.js";
+import { BinSettings } from "../settings/BinSettings.js";
 import { LettersSettings } from "../settings/LettersSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { LettersAssembly } from "./letters/LettersAssembly.js";
@@ -17,7 +18,7 @@ export const buildLettersRoutes: RouteBuilder = (context) => async (app) => {
   const guard = RouteGuard.fromEnv(context.env);
   const { sites, devices, users } = settings.tables;
   const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
-  const service = await new LettersAssembly(settings.rulesDir, app.log).service({
+  const service = await new LettersAssembly(settings.rulesDir, app.log, BinSettings.fromEnv(context.env)).service({
     sites: new DynamoSiteReader(client, sites),
     counters: {
       devices: new DynamoLetterCounter(client, { name: devices, keyName: "device_token" }),

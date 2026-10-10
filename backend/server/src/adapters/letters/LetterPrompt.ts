@@ -35,6 +35,15 @@ export class LetterPrompt {
     return [...RULES, `Write the subject and the prose in ${LANGUAGES[this.#brief.language]}.`].join("\n");
   }
 
+  #request(): string {
+    const { site, binRadiusM } = this.#brief;
+    if (site.reportType !== "no_bin") {
+      return REQUEST[site.reportType];
+    }
+    const km = String(Number((binRadiusM / 1000).toFixed(1)));
+    return `state "No known waste bin or collection point (OpenStreetMap, ward records) within ${km} km of this site.", then ask to ${REQUEST.no_bin}`;
+  }
+
   user(): string {
     const { site, addressees, citations } = this.#brief;
     const facts = {
@@ -47,7 +56,7 @@ export class LetterPrompt {
       to: addressees.to,
       cc: addressees.cc.map((line) => ({ office: line.office, seat: line.seat.name, marking: line.marking })),
       citations: citations.map(({ document, clause, quote }) => ({ document, clause, quote })),
-      request: REQUEST[site.reportType],
+      request: this.#request(),
     };
     return JSON.stringify(facts, null, 2);
   }

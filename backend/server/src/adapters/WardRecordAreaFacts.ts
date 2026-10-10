@@ -5,7 +5,6 @@ import { validateWardRecord, type WardRecord } from "../contracts/index.gen.js";
 import type { AreaFactSheet } from "../domain/AreaFactSheet.js";
 import type { AreaKey } from "../domain/AreaKey.js";
 import { InternalDataError, ValidationError } from "../domain/errors.js";
-import { GeoPoint } from "../domain/GeoPoint.js";
 import type { AreaFacts, SkippedRecord } from "../ports/AreaFacts.js";
 
 // The city file and its map layers have no schema yet (contracts README); each reviewed record must pass ward_record.
@@ -24,7 +23,7 @@ interface CityWards {
 
 type Checked = { readonly record: WardRecord } | { readonly skipped: SkippedRecord };
 
-// <ASSETS_DIR>/wards/<city>.json and representatives/local_bodies.json; v1 has km² and disposal points for wards only.
+// <ASSETS_DIR>/wards/<city>.json and representatives/local_bodies.json; km² for wards only (bins come from BinLocator).
 export class WardRecordAreaFacts implements AreaFacts {
   readonly #cities: ReadonlyMap<string, CityWards>;
   readonly #bodyCities: ReadonlyMap<string, readonly string[]>;
@@ -49,7 +48,6 @@ export class WardRecordAreaFacts implements AreaFacts {
     const cities = localBodyIds.flatMap((id) => this.#bodyCities.get(id) ?? []);
     return {
       areaKm2: ward?.area_km2?.value ?? null,
-      disposalPoints: (ward?.disposal_points ?? []).map((point) => new GeoPoint(point.lat, point.lon)),
       placesMapped: cities.some((city) => this.#cities.get(city)?.placesMapped === true),
     };
   }

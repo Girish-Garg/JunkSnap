@@ -1,22 +1,29 @@
+import type { AreaSite } from "../domain/AreaSite.js";
 import type { AreaSites } from "../domain/AreaSites.js";
-import type { GeoPoint } from "../domain/GeoPoint.js";
 import { complement, mean, median, percent } from "../domain/scoreUtils.js";
 
+// 3 km, the no-bin radius, scores 0.
+const METRES_PER_POINT = 30;
+
 export interface BinAccessMeasure {
-  readonly medianDistanceToDisposalM: number | null;
+  readonly medianDistanceToBinM: number | null;
+  readonly noBinWithin3kmPct: number | null;
   readonly value: number | null;
 }
 
-// scores-v1 bin access: confirmed no-bin reports and distance to the nearest legal disposal point.
+// scores-v2 bin access: measured from known bins, never from no_bin report counts (decision 20261010-1430).
 export class BinAccessScore {
-  measure(sites: AreaSites, disposalPoints: readonly GeoPoint[]): BinAccessMeasure {
-    if (disposalPoints.length === 0) {
-      return { medianDistanceToDisposalM: null, value: null };
-    }
-    const distances = sites.verified().map((site) => Math.min(...disposalPoints.map((point) => site.distanceTo(point))));
-    const medianDistance = median(distances);
-    const noBinShare = percent(sites.noBinReports(), sites.verifiedReports());
-    const distancePart = medianDistance === null ? null : Math.max(0, 100 - medianDistance / 10);
-    return { medianDistanceToDisposalM: medianDistance, value: mean([complement(noBinShare), distancePart]) };
+  measure(sites: AreaSites): BinAccessMeasure {
+    const verified = sites.verified();
+    const measured = verified.filter((site) => site.binMeasured());
+    const noBinWithin3kmPct = percent(measured.filter((site) => site.noBinNearby()).length, measured.length);
+    const medianDistanceToBinM = median(verified.flatMap(BinAccessScore.#distance));
+    const distancePart = medianDistanceToBinM === null ? null : Math.max(0, 100 - medianDistanceToBinM / METRES_PER_POINT);
+    return { medianDistanceToBinM, noBinWithin3kmPct, value: mean([complement(noBinWithin3kmPct), distancePart]) };
+  }
+
+  static #distance(site: AreaSite): number[] {
+    const distance = site.nearestBinM();
+    return distance === null ? [] : [distance];
   }
 }

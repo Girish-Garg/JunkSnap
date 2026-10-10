@@ -8,6 +8,8 @@ Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema shape. It li
 
 Contracts v1.3 (decision 20261010-1422, issue 76) adds `GET /areas/{kind}?within=&limit=` and its wrapper schema `area_list`, and a table-only `within` attribute on `scores` rows. No existing schema changes.
 
+Contracts v1.4 (decision 20261010-1430, issue 79) measures bin access: `site.reporters`, `site.insights.nearest_bin` and `no_bin_within_3km`, `ward_scores` `counts.sites_without_bin_within_3km` and `metrics.no_bin_within_3km_pct` (formula scores-v2), and `letter_draft.evidence`.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -92,7 +94,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
 | `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
-| `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`; 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
+| `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`, and for a `no_bin` site unless `reporters` is at least `NO_BIN_MIN_REPORTERS` and `insights.no_bin_within_3km` is true (the message gives the reason, for example "3 of 5 people reported no bin here; nearest known bin 4.2 km"); 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
 
 Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never routes it; the worker calls it at `ML_URL`. Brand labels have no route: they run inside the worker.
@@ -272,6 +274,8 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `ML_URL` | worker | `http://ml` (the Service in the same namespace); replaces `AGENT_URL` |
 | `OPENAI_SECRET_ID` | api (letters), ml (judge) | `junksnap/<stage>/openai-api-key` (Secrets Manager, decision 0133) |
 | `OPENROUTER_SECRET_ID` | planned (decision 0133); no provider yet | `junksnap/<stage>/openrouter-api-key` (Secrets Manager); neither `api` nor `ml` has an OpenRouter provider |
+| `BIN_RADIUS_M` | worker, api | `3000`: no known bin within this many metres sets `site.insights.no_bin_within_3km` |
+| `NO_BIN_MIN_REPORTERS` | api | `5`: distinct reporters (user id, else device) a `no_bin` site needs before a letter |
 | `ASSETS_DIR` | api, worker, scores | directory holding the repo's `data/` files (`rules/`, `brands/`, `boundaries/`, `wards/`, `representatives/`); `/app/data` in the image |
 | `LLM_TASKS` | api, worker, ml | optional JSON `{"<task>": {"provider", "model", "fallback": []}}`; each service reads only its own tasks (api: letters; worker: note moderation, Bedrock only; ml: judge); defaults live in code |
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
@@ -295,7 +299,7 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 | Sample | City | Site | What it shows |
 |---|---|---|---|
 | `jdh-1` | Jodhpur | `site_jdh_1`: waste_dump, vacant_plot, open, verified, cleanup checking | the full chain: report by a signed-in user, moderation, auto-verified with fixed weights, insights, brand label, location in seat `s20-ac-128` with no ward map, area scores and insights for that seat, letter Cc MLA and MP; a ward record from the crawler |
-| `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin marker in seat `s20-ac-127` |
+| `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin marker in seat `s20-ac-127`: 3 of 5 reporters, nearest known bin 4.2 km, so no letter yet |
 | `jdh-3` | Jodhpur | `site_jdh_3`: contaminated_water, choked_drain, reopened | an accepted cleanup (`cln_jdh_3c` moderation and verification, insights null), then reopened; a hazard and nearby places |
 | `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, community check | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
 

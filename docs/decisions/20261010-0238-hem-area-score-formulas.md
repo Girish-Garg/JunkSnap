@@ -1,6 +1,6 @@
 ---
 status: proposed
-superseded_by:
+superseded_by: 20261010-1430-hem-measured-bin-access.md (bin access only)
 area: data
 by: hem
 date: 2026-10-10T02:38+05:30

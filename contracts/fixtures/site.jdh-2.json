@@ -33,6 +33,7 @@
     "last_reported_at": "2026-10-10T03:20:00Z",
     "cleaned_at": null,
     "pilot": true,
+    "reporters": 3,
     "insights": {
       "reports": 3,
       "composition": [
@@ -47,7 +48,9 @@
         { "signal": "vision_judge", "provider": "bedrock", "model": "global.anthropic.claude-sonnet-4-6", "version": "4.6" }
       ] },
       "hazards": [],
-      "near": []
+      "near": [],
+      "nearest_bin": { "distance_m": 4210, "ref": "osm:node/100000007", "source": { "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnwr%5B%22amenity%22%3D%22waste_basket%22%5D%3Bout%20skel%20center%3B", "fetched_at": "2026-10-10T01:00:00Z", "page_sha256": "5d2f0b8c1e7a4f3b9c6d1e2a8b7c4d5e6f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c" } },
+      "no_bin_within_3km": true
     }
   }
 }

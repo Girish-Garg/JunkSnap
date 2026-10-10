@@ -87,6 +87,7 @@ describe("site fixtures round-trip", () => {
 
 describe("merging the jpr-1 report fixtures", () => {
   it("rebuilds site.jpr-1 after one confirm vote", () => {
+    const fixtureBin = siteFixture("jpr-1").properties.insights;
     const factory = new MergeableReportFactory(new PublicMedia(BASE_URL));
     const site = Site.found(
       factory.create({
@@ -95,6 +96,7 @@ describe("merging the jpr-1 report fixtures", () => {
         verification: fixture<VerificationResult>("verification_result.jpr-1.json"),
         location: fixture<LocationLookup>("location_lookup.jpr-1.json"),
         near: [],
+        bin: { nearest_bin: fixtureBin?.nearest_bin ?? null, no_bin_within_3km: fixtureBin?.no_bin_within_3km ?? null },
         brands: [],
       }),
     );
