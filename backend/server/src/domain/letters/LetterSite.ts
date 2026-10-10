@@ -1,4 +1,5 @@
 import type { Site } from "../../contracts/index.gen.js";
+import type { CommunitySignals } from "../notes/Community.js";
 import { SitePlace } from "./SitePlace.js";
 import { Situation } from "./Situation.js";
 import type { ReportType, SeatRef, SiteContext } from "./types.js";
@@ -23,6 +24,8 @@ export interface SiteEvidence {
   readonly nearestBin: NearestBin | null;
   // Null when bins were never measured for this site.
   readonly noBinWithin3km: boolean | null;
+  // What residents' moderated notes say; null before the first accepted note.
+  readonly residents: { readonly people: number; readonly signals: CommunitySignals } | null;
 }
 
 export interface LetterSiteProps {
@@ -113,11 +116,18 @@ export class LetterSite {
       insights,
       nearestBin: insights?.nearest_bin ?? null,
       noBinWithin3km: insights?.no_bin_within_3km ?? null,
+      residents: LetterSite.#residents(facts.community),
     };
   }
 
   // Never Cc the MP of a seat whose loaded boundary predates a re-delimitation.
   static #currentSeat(seat: LoksabhaSeat): SeatRef | null {
     return seat.status === "outdated" ? null : { id: seat.id, name: seat.name };
+  }
+
+  static #residents(community: Facts["community"]): SiteEvidence["residents"] {
+    return community === undefined || community === null || community.people < 1
+      ? null
+      : { people: community.people, signals: community.signals };
   }
 }

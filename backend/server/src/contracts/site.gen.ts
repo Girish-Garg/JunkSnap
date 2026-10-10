@@ -169,6 +169,32 @@ export interface Site {
      */
     pilot: boolean;
     /**
+     * What residents' moderated notes on this site say, read by the note_analysis task (Bedrock only). Never quotes a note and never names its author. Absent until the first note is accepted; not in required so older rows stay valid.
+     */
+    community?: null | {
+      /**
+       * Moderated notes shown: site notes plus report notes.
+       */
+      notes_count: number;
+      /**
+       * Distinct people behind those notes; one person's several notes count once.
+       */
+      people: number;
+      signals: CommunitySignals;
+      /**
+       * One or two neutral sentences, for example: Residents say the dump has been here about 3 months and is burnt most weeks.
+       */
+      summary_en: string;
+      summary_hi: string;
+      /**
+       * junksnap with model community-template when the model's answer failed the checks and the summary was written from the signals.
+       */
+      provider: "bedrock" | "junksnap";
+      model: string;
+      version: string;
+      updated_at: string;
+    };
+    /**
      * Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it.
      */
     reporters?: number;
@@ -935,6 +961,44 @@ export interface LoksabhaRef {
    */
   status?: "current" | "outdated" | null;
 }
+/**
+ * What residents' notes say, as structured and neutral signals. Each is true only when at least one moderated note says so.
+ */
+export interface CommunitySignals {
+  /**
+   * How long residents say the problem has existed, in days (about 90 for about 3 months); null when no note says.
+   */
+  duration_days: number | null;
+  /**
+   * Cleared before and comes back; null when no note says either way.
+   */
+  recurring: boolean | null;
+  /**
+   * Burning or smoke.
+   */
+  burning: boolean;
+  smell: boolean;
+  /**
+   * A blocked drain or standing water.
+   */
+  blocked_drain: boolean;
+  /**
+   * Stray animals, rats, flies or mosquitoes.
+   */
+  animals: boolean;
+  /**
+   * A nearby school is mentioned.
+   */
+  near_school: boolean;
+  /**
+   * A nearby hospital or clinic is mentioned.
+   */
+  near_hospital: boolean;
+  /**
+   * The waste blocks a road, lane, footpath or entrance.
+   */
+  access_issue: boolean;
+}
 export interface InsightSource {
   signal: "rekognition_labels" | "yolo" | "embedding_classifier" | "vision_judge";
   provider: "bedrock" | "openai" | "openrouter" | "rekognition" | "comprehend" | "junksnap";
@@ -1338,6 +1402,70 @@ export const siteSchema = {
           "type": "boolean",
           "description": "True inside the Jodhpur pilot area."
         },
+        "community": {
+          "description": "What residents' moderated notes on this site say, read by the note_analysis task (Bedrock only). Never quotes a note and never names its author. Absent until the first note is accepted; not in required so older rows stay valid.",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "notes_count",
+                "people",
+                "signals",
+                "summary_en",
+                "summary_hi",
+                "provider",
+                "model",
+                "version",
+                "updated_at"
+              ],
+              "properties": {
+                "notes_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Moderated notes shown: site notes plus report notes."
+                },
+                "people": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Distinct people behind those notes; one person's several notes count once."
+                },
+                "signals": {
+                  "$ref": "#/$defs/community_signals"
+                },
+                "summary_en": {
+                  "type": "string",
+                  "maxLength": 300,
+                  "description": "One or two neutral sentences, for example: Residents say the dump has been here about 3 months and is burnt most weeks."
+                },
+                "summary_hi": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "provider": {
+                  "enum": [
+                    "bedrock",
+                    "junksnap"
+                  ],
+                  "description": "junksnap with model community-template when the model's answer failed the checks and the summary was written from the signals."
+                },
+                "model": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        },
         "reporters": {
           "type": "integer",
           "minimum": 1,
@@ -1673,6 +1801,66 @@ export const siteSchema = {
     }
   },
   "$defs": {
+    "community_signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duration_days",
+        "recurring",
+        "burning",
+        "smell",
+        "blocked_drain",
+        "animals",
+        "near_school",
+        "near_hospital",
+        "access_issue"
+      ],
+      "description": "What residents' notes say, as structured and neutral signals. Each is true only when at least one moderated note says so.",
+      "properties": {
+        "duration_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "How long residents say the problem has existed, in days (about 90 for about 3 months); null when no note says."
+        },
+        "recurring": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Cleared before and comes back; null when no note says either way."
+        },
+        "burning": {
+          "type": "boolean",
+          "description": "Burning or smoke."
+        },
+        "smell": {
+          "type": "boolean"
+        },
+        "blocked_drain": {
+          "type": "boolean",
+          "description": "A blocked drain or standing water."
+        },
+        "animals": {
+          "type": "boolean",
+          "description": "Stray animals, rats, flies or mosquitoes."
+        },
+        "near_school": {
+          "type": "boolean",
+          "description": "A nearby school is mentioned."
+        },
+        "near_hospital": {
+          "type": "boolean",
+          "description": "A nearby hospital or clinic is mentioned."
+        },
+        "access_issue": {
+          "type": "boolean",
+          "description": "The waste blocks a road, lane, footpath or entrance."
+        }
+      }
+    },
     "area_ref": {
       "type": "object",
       "additionalProperties": false,

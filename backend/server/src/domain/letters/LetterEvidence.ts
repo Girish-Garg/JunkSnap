@@ -28,6 +28,7 @@ export class LetterEvidence {
       insights: facts.insights === null ? null : LetterEvidence.insights(facts.insights),
       nearest_bin: bin === null ? null : { distance_m: bin.distance_m, ref: bin.ref, source_url: bin.source.source_url },
       no_bin_within_3km: withBin ? facts.noBinWithin3km : null,
+      residents: facts.residents === null ? null : { people: facts.residents.people, signals: { ...facts.residents.signals } },
     };
   }
 

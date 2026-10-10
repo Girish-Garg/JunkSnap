@@ -58,6 +58,7 @@
       { "name": "citizen", "value": 58, "verified_reports": 14 },
       { "name": "bin_access", "value": 32, "verified_reports": 14 }
     ],
+    "residents": { "sites": 1, "people": 4, "mentions": [{ "signal": "recurring", "sites": 1 }, { "signal": "burning", "sites": 1 }, { "signal": "smell", "sites": 1 }, { "signal": "near_school", "sites": 1 }] },
     "bin_access": { "sites_measured": 3, "sites_without_bin_within_3km": 1 }
   }
 }

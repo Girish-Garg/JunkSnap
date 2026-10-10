@@ -178,6 +178,33 @@
             }
           }
         },
+        "residents": {
+          "description": "The \"Residents report\" line for the area: how many of the issue's verified sites have residents' notes, the people behind them (summed per site) and how many sites mention each signal. Never quotes a note. Null when no such site has notes; not in required so older drafts stay valid.",
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["sites", "people", "mentions"],
+              "properties": {
+                "sites": { "type": "integer", "minimum": 1 },
+                "people": { "type": "integer", "minimum": 1 },
+                "mentions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["signal", "sites"],
+                    "properties": {
+                      "signal": { "enum": ["recurring", "burning", "smell", "blocked_drain", "animals", "near_school", "near_hospital", "access_issue"] },
+                      "sites": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
         "bin_access": {
           "description": "For waste_dump, no_bin and all: of the issue's verified sites, how many had bin access measured and how many have no known bin within 3 km. Null for other issues.",
           "anyOf": [

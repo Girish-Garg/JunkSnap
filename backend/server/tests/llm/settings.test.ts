@@ -23,7 +23,7 @@ function order(settings: LlmSettings, task: (typeof LLM_TASKS)[number]): string[
 describe("LlmSettings", () => {
   it("gives every task the default order and a stage secret id", () => {
     const settings = LlmSettings.fromEnv({}, "demo");
-    expect([...settings.tasks.keys()]).toEqual(["letters", "brands", "note_moderation", "crawler"]);
+    expect([...settings.tasks.keys()]).toEqual(["letters", "brands", "note_moderation", "note_analysis", "crawler"]);
     for (const task of LLM_TASKS) {
       expect(order(settings, task)).toEqual(DEFAULT_ORDER);
     }

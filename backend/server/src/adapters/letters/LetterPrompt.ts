@@ -1,5 +1,6 @@
 import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { Language, ReportType } from "../../domain/letters/types.js";
+import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import type { LetterBrief } from "../../ports/letters/LetterWriter.js";
 
 const LANGUAGES: Readonly<Record<Language, string>> = { en: "English", hi: "Hindi in Devanagari script" };
@@ -20,6 +21,7 @@ const RULES = [
   "Quote every rule in `citations` exactly as given, character for character, inside straight double quotes.",
   "Give each citation its own short paragraph: its document and clause, then the quote.",
   "Do not add a signature, a name or a placeholder for one; the resident signs.",
+  "If residents_report is given, add it as one sentence in your own words with its count of people; never quote residents.",
   "Keep the quotes in English even when the letter is in another language.",
   "Use quotation marks for nothing else: not around document names, clauses, ids, places or the subject.",
   "Ask for the action in `request` and keep the body under 300 words. Keep the subject under 150 characters.",
@@ -58,6 +60,10 @@ export class LetterPrompt {
       cc: addressees.cc.map((line) => ({ office: line.office, seat: line.seat.name, marking: line.marking })),
       citations: citations.map(({ document, clause, quote }) => ({ document, clause, quote })),
       request: this.#request(),
+      residents_report:
+        site.evidence.residents === null
+          ? null
+          : new CommunityPhrases("en").report(site.evidence.residents.people, site.evidence.residents.signals),
     };
     return JSON.stringify(facts, null, 2);
   }

@@ -9,7 +9,8 @@ const keys = (value: object) => Object.keys(value).sort();
 describe('area_letter_draft matches the frontend type', () => {
   it('has exactly the schema top-level and evidence fields', () => {
     expect(keys(draft)).toEqual([...schema.required].sort());
-    expect(keys(draft.evidence)).toEqual([...schema.properties.evidence.required].sort());
+    // residents is optional (v1.8) and present in the fixture.
+    expect(keys(draft.evidence)).toEqual([...schema.properties.evidence.required, 'residents'].sort());
   });
 
   it('has the worst-site fields, the measured-score fields and the bin access fields', () => {

@@ -1,4 +1,5 @@
 import { ApiError } from '../domain/ApiError';
+import type { NoteRequest, SiteNote } from '../domain/Community';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult } from '../domain/SiteActions';
 import type { SiteFeature } from '../domain/Site';
 import type { SiteActionsApi } from './SiteActionsApi';
@@ -26,6 +27,13 @@ export class MockSiteActionsApi implements SiteActionsApi {
     const counted = yes ? { ...votes, confirm: votes.confirm + 1 } : { ...votes, reject: votes.reject + 1 };
     const backed = yes ? { ...backers, count: backers.count + 1, vote_people: backers.vote_people + 1 } : backers;
     return { site_id: siteId, votes: counted, backers: backed, verification };
+  }
+
+  /** Mock mode shows the note at once; the real api moderates it first. */
+  async note(siteId: string, request: NoteRequest): Promise<SiteNote> {
+    await this.#wait();
+    const created = new Date().toISOString();
+    return { note_id: `note_mock${Date.now()}`, site_id: siteId, status: 'shown', text: request.text, language: request.language, created_at: created };
   }
 
   async cleanup(siteId: string, request: CleanupRequest): Promise<CleanupAccepted> {

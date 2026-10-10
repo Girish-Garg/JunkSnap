@@ -3,6 +3,7 @@ import type { AreaIssue } from "../../domain/letters/AreaIssueSites.js";
 import type { CcLine, Recipient } from "../../domain/letters/types.js";
 import type { AreaLetterBrief } from "../../ports/letters/AreaLetterWriter.js";
 import type { AreaEvidence, AreaWording, WorstSite } from "./AreaTemplateLetter.js";
+import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import { joinList, kilometres, letterDate } from "./utils.js";
 
 const KIND: Readonly<Record<AreaKind, (name: string) => string>> = {
@@ -85,6 +86,10 @@ export class AreaEnglishWording implements AreaWording {
     if (bins !== null && bins.sites_measured > 0) {
       const km = kilometres(this.#binRadiusM);
       lines.push(`${bins.sites_without_bin_within_3km} of ${bins.sites_measured} measured sites have no known bin or collection point within ${km} km.`);
+    }
+    const residents = evidence.residents;
+    if (residents !== null && residents !== undefined) {
+      lines.push(new CommunityPhrases("en").areaReport(residents.sites, residents.people, residents.mentions));
     }
     return lines.length === 0 ? null : lines.join("\n");
   }

@@ -40,6 +40,17 @@
     "cleaned_at": null,
     "pilot": true,
     "reporters": 5,
+    "community": {
+      "notes_count": 5,
+      "people": 4,
+      "signals": { "duration_days": 90, "recurring": true, "burning": true, "smell": true, "blocked_drain": false, "animals": false, "near_school": true, "near_hospital": false, "access_issue": false },
+      "summary_en": "Residents say the dump has been here about 3 months, comes back after clearing and is burnt most weeks; smoke reaches a nearby school.",
+      "summary_hi": "निवासियों के अनुसार यह ढेर लगभग 3 महीने से है, सफ़ाई के बाद फिर लौट आता है और लगभग हर हफ़्ते जलाया जाता है; धुआँ पास के स्कूल तक पहुँचता है।",
+      "provider": "bedrock",
+      "model": "apac.amazon.nova-pro-v1:0",
+      "version": "v1:0",
+      "updated_at": "2026-10-10T09:20:00Z"
+    },
     "insights": {
       "reports": 7,
       "composition": [

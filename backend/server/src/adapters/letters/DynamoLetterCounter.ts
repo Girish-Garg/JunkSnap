@@ -19,6 +19,8 @@ export interface CounterTable {
   readonly name: string;
   // devices rows use device_token, users rows use user_id.
   readonly keyName: string;
+  // Attribute prefix: letter (letter_window_start, letter_count) or note.
+  readonly prefix?: "letter" | "note";
 }
 
 interface Window {
@@ -31,10 +33,14 @@ interface Window {
 export class DynamoLetterCounter implements LetterCounter {
   readonly #client: CounterClient;
   readonly #table: CounterTable;
+  readonly #start: string;
+  readonly #count: string;
 
   constructor(client: CounterClient, table: CounterTable) {
     this.#client = client;
     this.#table = table;
+    this.#start = `${table.prefix ?? "letter"}_window_start`;
+    this.#count = `${table.prefix ?? "letter"}_count`;
   }
 
   async fits(request: CountRequest): Promise<boolean> {
@@ -61,20 +67,20 @@ export class DynamoLetterCounter implements LetterCounter {
     const command = new GetCommand({
       TableName: this.#table.name,
       Key: { [this.#table.keyName]: key },
-      ProjectionExpression: "letter_window_start, letter_count",
+      ProjectionExpression: `${this.#start}, ${this.#count}`,
       ConsistentRead: true,
     });
     const item = (await this.#call(() => this.#client.send(command))).Item ?? {};
-    const start = typeof item.letter_window_start === "string" ? item.letter_window_start : null;
-    return { start, count: typeof item.letter_count === "number" ? item.letter_count : 0 };
+    const [start, count] = [item[this.#start], item[this.#count]];
+    return { start: typeof start === "string" ? start : null, count: typeof count === "number" ? count : 0 };
   }
 
   #restart(request: CountRequest, window: Window): UpdateCommand {
     return new UpdateCommand({
       TableName: this.#table.name,
       Key: { [this.#table.keyName]: request.key },
-      UpdateExpression: "SET letter_window_start = :now, letter_count = :one",
-      ConditionExpression: "attribute_not_exists(letter_window_start) OR letter_window_start = :seen",
+      UpdateExpression: `SET ${this.#start} = :now, ${this.#count} = :one`,
+      ConditionExpression: `attribute_not_exists(${this.#start}) OR ${this.#start} = :seen`,
       ExpressionAttributeValues: { ":now": request.now.toISOString(), ":one": 1, ":seen": window.start ?? "" },
     });
   }
@@ -83,8 +89,8 @@ export class DynamoLetterCounter implements LetterCounter {
     return new UpdateCommand({
       TableName: this.#table.name,
       Key: { [this.#table.keyName]: request.key },
-      UpdateExpression: "SET letter_count = letter_count + :one",
-      ConditionExpression: "letter_window_start = :seen AND letter_count < :limit",
+      UpdateExpression: `SET ${this.#count} = ${this.#count} + :one`,
+      ConditionExpression: `${this.#start} = :seen AND ${this.#count} < :limit`,
       ExpressionAttributeValues: { ":one": 1, ":seen": window.start, ":limit": request.limit },
     });
   }

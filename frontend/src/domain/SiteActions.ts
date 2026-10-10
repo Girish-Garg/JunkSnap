@@ -1,3 +1,4 @@
+import type { CommunitySignals } from './Community';
 // The site action bodies in contracts/README.md (votes, cleanup, letters) and letter_draft.schema.json.
 import type { GpsFix } from './ReportUpload';
 import type { SiteBackers, SiteVerification, SiteVotes } from './Site';
@@ -96,6 +97,8 @@ export interface LetterEvidence {
   } | null;
   readonly nearest_bin: { readonly distance_m: number; readonly ref: string; readonly source_url: string } | null;
   readonly no_bin_within_3km: boolean | null;
+  /** v1.8: what residents' notes say, as signals; never a note's own words. */
+  readonly residents?: { readonly people: number; readonly signals: CommunitySignals } | null;
 }
 
 /** An office the letter is addressed to, never a person. */

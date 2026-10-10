@@ -14,7 +14,7 @@ export const NOTE_TASK = new TaskConfig("bedrock", "in.anthropic.claude-haiku-4-
 const CALL_TIMEOUT_MS = 15_000;
 const BUDGET_MS = 30_000;
 
-// A router that knows only the note_moderation task and only the Bedrock provider.
+// A router that knows only the note tasks (moderation, analysis) and only the Bedrock provider.
 export class NoteRouterBuilder {
   readonly #client: ConverseClient;
 
@@ -24,7 +24,7 @@ export class NoteRouterBuilder {
 
   build(logger: Logger): ProviderRouter {
     const bedrock = new BedrockProviderBuilder(this.#client, new PriceTable(), CALL_TIMEOUT_MS);
-    const tasks = new Map([["note_moderation", NOTE_TASK] as const]);
+    const tasks = new Map([["note_moderation", NOTE_TASK] as const, ["note_analysis", NOTE_TASK] as const]);
     return new ProviderRouter(tasks, new ProviderFactory([bedrock]), logger, { budgetMs: BUDGET_MS });
   }
 }

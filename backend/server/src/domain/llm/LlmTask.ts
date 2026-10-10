@@ -1,4 +1,4 @@
-export const LLM_TASKS = ["letters", "brands", "note_moderation", "crawler"] as const;
+export const LLM_TASKS = ["letters", "brands", "note_moderation", "note_analysis", "crawler"] as const;
 
 export type LlmTask = (typeof LLM_TASKS)[number];
 
