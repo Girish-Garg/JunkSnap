@@ -39,8 +39,9 @@ class StackedVerifier:
             results.append(reading.signal)
         combiner = self._combiner.for_claim(case.claim, results)
         verdict = None if reading is None else reading.verdict
-        evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds)
-        outcome = case.purpose.review(combiner.combine(results, case.purpose), evidence)
+        combined = combiner.combine(results, case.purpose)
+        evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds, combined)
+        outcome = case.purpose.review(combined, evidence)
         result = VerificationResult(
             case=case,
             outcome=outcome,
