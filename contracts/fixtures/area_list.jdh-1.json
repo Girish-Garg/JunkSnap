@@ -1,0 +1,250 @@
+{
+  "kind": "assembly",
+  "within": "rajasthan-jodhpur",
+  "total": 2,
+  "limit": 50,
+  "areas": [
+    {
+      "area": {
+        "kind": "assembly",
+        "id": "s20-ac-128",
+        "name": "Jodhpur"
+      },
+      "counts": {
+        "verified_reports": 14,
+        "no_bin_reports": 3,
+        "sites": 6,
+        "open_sites": 5,
+        "cleaned_sites": 1,
+        "reopened_sites": 0
+      },
+      "min_verified_reports": 10,
+      "scores": {
+        "city": {
+          "value": 41,
+          "reason": null
+        },
+        "citizen": {
+          "value": 58,
+          "reason": null
+        },
+        "bin_access": {
+          "value": 32,
+          "reason": null
+        }
+      },
+      "metrics": {
+        "median_days_to_clear": 1.5,
+        "cleared_within_7_days_pct": null,
+        "redumped_pct": 0,
+        "no_bin_response_pct": 0,
+        "new_dumps_per_km2_month": 9.4,
+        "share_vacant_plot_drain_roadside_pct": 72.7,
+        "median_distance_to_disposal_m": 640
+      },
+      "diagnosis": [
+        "infrastructure_gap"
+      ],
+      "formula_version": "scores-v1",
+      "pilot": true,
+      "data_window": {
+        "from": "2026-10-08T02:30:00Z",
+        "to": "2026-10-10T02:30:00Z"
+      },
+      "computed_at": "2026-10-10T02:45:00Z",
+      "insights": {
+        "composition": {
+          "value": [
+            {
+              "material": "plastic",
+              "share_pct": 48.2
+            },
+            {
+              "material": "organic",
+              "share_pct": 21.5
+            },
+            {
+              "material": "construction_debris",
+              "share_pct": 12
+            },
+            {
+              "material": "paper",
+              "share_pct": 8.3
+            },
+            {
+              "material": "textile",
+              "share_pct": 3.1
+            }
+          ],
+          "reports": 11,
+          "sources": [
+            {
+              "signal": "rekognition_labels",
+              "provider": "rekognition",
+              "model": "DetectLabels",
+              "version": "3.0"
+            },
+            {
+              "signal": "vision_judge",
+              "provider": "bedrock",
+              "model": "global.anthropic.claude-sonnet-4-6",
+              "version": "4.6"
+            }
+          ],
+          "reason": null
+        },
+        "hazardous_share_pct": {
+          "value": 16.7,
+          "hazardous_sites": 1,
+          "sites": 6,
+          "reason": null
+        },
+        "top_brands": {
+          "value": [
+            {
+              "brand": "Sample Namkeen",
+              "parent_company": "Sample Foods Pvt Ltd",
+              "sites": 2,
+              "labels": 3
+            }
+          ],
+          "labels": 3,
+          "reason": null
+        },
+        "repeat_spots": {
+          "value": [
+            "site_jdh_1"
+          ],
+          "count": 1,
+          "reason": null
+        },
+        "hour_of_day": {
+          "value": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            2,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "reports": 14,
+          "reason": null
+        },
+        "day_of_week": {
+          "value": null,
+          "reports": 14,
+          "reason": "no_data"
+        },
+        "near_school_or_water_count": {
+          "value": 2,
+          "sites": 6,
+          "reason": null
+        }
+      }
+    },
+    {
+      "area": {
+        "kind": "assembly",
+        "id": "s20-ac-127",
+        "name": "Sardarpura"
+      },
+      "counts": {
+        "verified_reports": 4,
+        "no_bin_reports": 1,
+        "sites": 3,
+        "open_sites": 3,
+        "cleaned_sites": 0,
+        "reopened_sites": 0
+      },
+      "min_verified_reports": 10,
+      "scores": {
+        "city": {
+          "value": null,
+          "reason": "too_few_reports"
+        },
+        "citizen": {
+          "value": null,
+          "reason": "too_few_reports"
+        },
+        "bin_access": {
+          "value": null,
+          "reason": "too_few_reports"
+        }
+      },
+      "metrics": {
+        "median_days_to_clear": null,
+        "cleared_within_7_days_pct": null,
+        "redumped_pct": null,
+        "no_bin_response_pct": null,
+        "new_dumps_per_km2_month": null,
+        "share_vacant_plot_drain_roadside_pct": null,
+        "median_distance_to_disposal_m": null
+      },
+      "diagnosis": [],
+      "formula_version": "scores-v1",
+      "pilot": true,
+      "data_window": {
+        "from": "2026-10-09T05:10:00Z",
+        "to": "2026-10-10T02:30:00Z"
+      },
+      "computed_at": "2026-10-10T02:45:00Z",
+      "insights": {
+        "composition": {
+          "value": null,
+          "reports": 4,
+          "sources": [],
+          "reason": "too_few_reports"
+        },
+        "hazardous_share_pct": {
+          "value": null,
+          "hazardous_sites": 0,
+          "sites": 2,
+          "reason": "too_few_reports"
+        },
+        "top_brands": {
+          "value": [],
+          "labels": 0,
+          "reason": null
+        },
+        "repeat_spots": {
+          "value": [],
+          "count": 0,
+          "reason": null
+        },
+        "hour_of_day": {
+          "value": null,
+          "reports": 4,
+          "reason": "too_few_reports"
+        },
+        "day_of_week": {
+          "value": null,
+          "reports": 4,
+          "reason": "too_few_reports"
+        },
+        "near_school_or_water_count": {
+          "value": null,
+          "sites": 2,
+          "reason": "no_data"
+        }
+      }
+    }
+  ]
+}

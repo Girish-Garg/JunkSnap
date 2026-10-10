@@ -6,6 +6,8 @@ Contracts v1.1 (decisions 20261010-0159 to -0203 and -0227) adds `insights` to `
 
 Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema shape. It lists the worker's fields on the `reports` and `sites` rows, states that every GSI projects all attributes, adds `ASSETS_DIR`, marks `OPENROUTER_SECRET_ID` as planned, and rewords the description of `letter_draft` `source_sha256` (decision 20261010-0330).
 
+Contracts v1.3 (decision 20261010-1422, issue 76) adds `GET /areas/{kind}?within=&limit=` and its wrapper schema `area_list`, and a table-only `within` attribute on `scores` rows. No existing schema changes.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -24,6 +26,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `location_lookup` | worker | worker, which copies it into `site.location` |
 | `site` | worker (merge, cleanup, `insights`), api (votes) | frontend map and site panel, api letters |
 | `ward_scores` | `scores` CronJob, with area `insights`; worker creates the first zero-count row | api, frontend area page |
+| `area_list` | api (`GET /areas/{kind}`): ranked `ward_scores` rows within a district or local body | frontend city ranking |
 | `letter_draft` | api | frontend letter preview |
 | `ward_record` | ward crawler (offline Python, `data/ward_crawler`): the `records` array of `data/wards/<city>.json` | worker (location), scores (area, population, disposal points) |
 
@@ -49,7 +52,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 ## Auth
 
 - One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
-- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /healthz`.
+- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /healthz`.
 - Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
 - `user_id` is the token's `sub`, opaque. The api writes it on reports, scans, votes and cleanups, and ignores any `user_id` in a request body. These routes still send `device_token`.
@@ -88,6 +91,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and settles the community check; see below |
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
+| `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
 | `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`; 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
 
@@ -221,11 +225,11 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 | `votes` | `site_id` | `device_token` | none | `vote`, `weight`, `user_id`, `voted_at` |
 | `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
 | `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
-| `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`; the CronJob overwrites it |
+| `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`, top-level, plus `within`: the sorted district and local body ids of the area's sites (from `site.location.district.id` and `site.location.local_body.id`); the CronJob overwrites both, the api strips `within` and the keys before validating the body |
 
 Every GSI (`by-site`, `by-device`, `by-user`, `by-geohash`) projects ALL attributes, so a query returns whole items and needs no second read.
 
-For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the report's cell and its neighbours and keep sites within 40 m. The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source.
+For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the report's cell and its neighbours and keep sites within 40 m. The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source. The seeded row's `within` holds the founding site's district id and local body id; the next CronJob run rewrites it from every site in the area. A row without `within` (seeded before contracts v1.3) is left out of `GET /areas/{kind}` until the CronJob rewrites it.
 
 ## S3 key layout
 
