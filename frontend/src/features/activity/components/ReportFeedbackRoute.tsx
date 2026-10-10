@@ -19,13 +19,13 @@ export function ReportFeedbackRoute() {
   const { reportId = '' } = useParams();
   const sheets = useSheetNavigation();
   const close = useCallback(() => sheets.close(ACTIVITY_PATH), [sheets]);
-  const { view, failed } = useReportFeedback(reportId);
+  const { view, failed, replace } = useReportFeedback(reportId);
   return (
     <BottomSheet labelledBy={TITLE_ID} closeLabel={t('feedback.close')} resizeLabel={t('sheet.resize')} onClose={close} initial="full">
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('feedback.title')}
       </h2>
-      {view ? <FeedbackContent view={view} /> : <FeedbackPending failed={failed} />}
+      {view ? <FeedbackContent view={view} onAnswered={replace} /> : <FeedbackPending failed={failed} />}
     </BottomSheet>
   );
 }

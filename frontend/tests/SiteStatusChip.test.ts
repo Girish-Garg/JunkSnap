@@ -21,6 +21,14 @@ describe('SiteStatusChip', () => {
     expect(chip('open', 'rejected')).toMatchObject({ key: 'chip.rejected', tone: 'closed' });
   });
 
+  it('says cleared with the count while people confirm a clearing, on an active site only', () => {
+    const clearance = { count: 1, needed: 3, still_there: 0 };
+    const of = (status: string) => SiteStatusChip.of({ status, verification: 'verified', backers: BACKERS, clearance } as Parameters<typeof SiteStatusChip.of>[0]);
+    expect(of('open')).toEqual({ key: 'chip.clearing', params: { count: 1, needed: 3 }, tone: 'cleared' });
+    expect(of('reopened')).toMatchObject({ key: 'chip.clearing' });
+    expect(of('cleaned')).toMatchObject({ key: 'chip.cleared' });
+  });
+
   it('has no numbers, never NaN, for an older row without backers', () => {
     expect(chip('open', 'unverified', null)).toEqual({ key: 'chip.waitingPlain', tone: 'waiting' });
   });

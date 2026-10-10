@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import override
 
 from ml.domain.errors import InvalidClaimError
+from ml.domain.judge_attributes import JudgeAttributes, TriState
 from ml.domain.verification import REPORT_CONTEXTS, Claim
 
 AUTO = "auto"
@@ -28,10 +29,14 @@ class AutoContextClaim(Claim):
     def judge_required(self) -> bool:
         return True
 
+    @override
+    def describe(self) -> str:
+        return f"{self.report_type} (any context; name the context you see)"
+
 
 @dataclass(frozen=True)
 class ScoutClaim(Claim):
-    """Area scout: any waste the models can find supports it; not_waste and no_bin deny it."""
+    """Area scout: any waste the models can find supports it; a photo showing none denies it."""
 
     @override
     def __post_init__(self) -> None:
@@ -44,12 +49,12 @@ class ScoutClaim(Claim):
         return True
 
     @override
-    def matches(self, report_type: str) -> bool:
-        return report_type in SCOUT_TYPES
+    def describe(self) -> str:
+        return f"any of {', '.join(sorted(SCOUT_TYPES))} (name the type and context you see)"
 
     @override
-    def denies(self, report_type: str) -> bool:
-        return report_type not in SCOUT_TYPES
+    def evidence(self, attributes: JudgeAttributes) -> TriState:
+        return TriState.any_of(attributes.shows(kind) for kind in SCOUT_TYPES)
 
 
 def claim_for(report_type: str, context: str) -> Claim:

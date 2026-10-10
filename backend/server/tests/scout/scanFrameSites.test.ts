@@ -27,6 +27,7 @@ import { VerifyStep } from "../../src/services/VerifyStep.js";
 import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js";
 import { LogSink } from "../LogSink.js";
 import {
+  confirmWindow,
   FakeLocator,
   FakeModerator,
   FakeNearbyCounter,
@@ -99,7 +100,7 @@ function pipeline(verifier: MlVerifyClient): ReportPipeline {
   const bins = new BinLocator({ bins: [], mappedTowns: [] }, 3000);
   const steps = [
     new ModerateStep(new FakeModerator(journal)),
-    new VerifyStep(verifier, new ReporterReputation(new FakeReputationReader()), new FakeNearbyCounter()),
+    new VerifyStep(verifier, new ReporterReputation(new FakeReputationReader()), new FakeNearbyCounter(), confirmWindow()),
     new LocateStep(new FakeLocator(journal)),
     new MergeStep(new SiteReportMerger(merger, new NearPlacesFinder([]), bins)),
   ];

@@ -18,6 +18,7 @@ import { ReportPipeline } from "../src/services/ReportPipeline.js";
 import { VerifyStep } from "../src/services/VerifyStep.js";
 import { LogSink } from "./LogSink.js";
 import {
+  confirmWindow,
   FakeBrandReader,
   FakeLocator,
   FakeMerger,
@@ -63,7 +64,7 @@ function wire({ verified = verification(), merge = null, moderated = moderation(
   const merger = merge === null ? undefined : new FakeMerger(journal, merge);
   const steps: PipelineStep[] = [
     new ModerateStep(moderator),
-    new VerifyStep(verifier, new ReporterReputation(reputations), new FakeNearbyCounter()),
+    new VerifyStep(verifier, new ReporterReputation(reputations), new FakeNearbyCounter(), confirmWindow()),
     new BrandsStep(new FakeBrandReader(journal)),
     new LocateStep(new FakeLocator(journal)),
     merger === undefined ? new SkippedStep("merge") : new MergeStep(merger),

@@ -1,10 +1,11 @@
 import { ApiError } from '../src/domain/ApiError';
+import type { ConfirmRequest } from '../src/domain/ReportConfirmation';
 import type { ReportListPage } from '../src/domain/ReportList';
 import type { ReportStatusView } from '../src/domain/ReportStatus';
 import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../src/domain/ReportUpload';
 import type { ReportApi } from '../src/services/ReportApi';
 
-type Call = 'presign' | 'put' | 'submit' | 'status' | 'mine';
+type Call = 'presign' | 'put' | 'submit' | 'status' | 'confirm' | 'mine';
 
 /** Records every call; queue a failure for the next call of a kind with failNext. */
 export class FakeReportApi implements ReportApi {
@@ -50,6 +51,13 @@ export class FakeReportApi implements ReportApi {
     const blurred = this.status_ === 'verified' ? `https://cdn.test/media/reports/${reportId}.jpg` : null;
     const view = { report_id: reportId, status: this.status_, site_id: blurred ? 'site_test' : null, blurred_url: blurred, updated_at: '2026-10-10T04:01:00Z' };
     return this.verification_ === undefined ? view : { ...view, verification: this.verification_ };
+  }
+
+  /** sure goes back to processing, not sure is withdrawn, as POST /reports/{id}/confirm answers. */
+  async confirm(reportId: string, request: ConfirmRequest): Promise<ReportStatusView> {
+    this.#record('confirm', { reportId, ...request });
+    this.status_ = request.sure ? 'processing' : 'withdrawn';
+    return { report_id: reportId, status: this.status_, site_id: null, blurred_url: null, updated_at: '2026-10-10T04:02:00Z' };
   }
 
   async mine(cursor: string | null): Promise<ReportListPage> {

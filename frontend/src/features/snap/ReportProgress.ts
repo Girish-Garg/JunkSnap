@@ -29,7 +29,11 @@ const TONES: Readonly<Record<string, ProgressTone>> = {
   unconfirmed: 'alert',
   refused: 'alert',
   sign_in: 'alert',
+  not_confirmed: 'alert',
 };
+
+// The check was unsure, so the reporter is asked; nothing to celebrate until they answer (contracts v1.16).
+const UNSURE: ReadonlySet<string> = new Set(['needs_confirmation', 'not_confirmed']);
 
 /** Steps shown after Send: saved, uploaded, sent, checked. */
 export const PROGRESS_STEPS = ['saved', 'uploaded', 'sent', 'checked'] as const;
@@ -48,10 +52,10 @@ export class ReportProgress {
     return status && !ReportStatuses.inPipeline(status.status) ? 4 : 3;
   }
 
-  /** Sent without a problem, and not turned down by the models. */
+  /** Sent without a problem, not turned down by the models, and not waiting for the reporter's answer. */
   static celebrates(report: QueuedReport): boolean {
     const { problem, stage, status } = report.data;
-    return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null;
+    return problem === null && stage !== 'failed' && ReportRejection.reasonOf(status) === null && !UNSURE.has(status?.status ?? '');
   }
 
   /** Sent, and the server has not finished its checks yet. */

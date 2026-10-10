@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.
+ * Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. needs_confirmation (contracts v1.16, report only): the judge was unsure, so the reporter is asked whether they are sure before the report joins a site; the judge's rules can also override the probability (see contracts/README.md). Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.
  */
 export type VerificationResult = {
   /**
@@ -14,7 +14,7 @@ export type VerificationResult = {
    * Calibrated probability that the claim is true.
    */
   probability: number;
-  decision: "auto_verified" | "community_check" | "rejected";
+  decision: "auto_verified" | "community_check" | "rejected" | "needs_confirmation";
   /**
    * Cleanup judgement: true when the after-photo shows the site clean. Null for purpose report.
    */
@@ -95,7 +95,40 @@ export type VerificationResult = {
      * Brand text the judge could read. A hint for the brand step only.
      */
     readable_brands: string[];
+    /**
+     * The judge's short, neutral reasoning; it names no person.
+     */
     rationale: string;
+    /**
+     * Contracts v1.16: the judge's structured answer, each attribute yes, no or uncertain. report_type, context and burning above are derived from it. Optional, so older producers stay valid.
+     */
+    attributes?: {
+      /**
+       * Waste is visible.
+       */
+      garbage: "yes" | "no" | "uncertain";
+      /**
+       * A dustbin or waste container is visible.
+       */
+      bin: "yes" | "no" | "uncertain";
+      bin_overflowing_or_broken: TriState;
+      water_contamination: TriState;
+      construction_debris: TriState;
+      burning: TriState;
+      /**
+       * The scene can be judged; a dark or night photo whose scene is visible is usable.
+       */
+      photo_usable: "yes" | "no" | "uncertain";
+      /**
+       * Does the photo support the reporter's claim (for a cleanup: the site is clean)?
+       */
+      user_verdict: "yes" | "no" | "uncertain";
+      user_verdict_confidence: number;
+      /**
+       * Version of the judge prompt, for example judge_v1.
+       */
+      prompt: string;
+    };
   };
   /**
    * True when signals strongly disagree; forces community_check.
@@ -465,6 +498,7 @@ export type VerificationResult = {
         ];
   };
 };
+export type TriState = "yes" | "no" | "uncertain";
 export type Material =
   | "plastic"
   | "organic"
@@ -498,7 +532,7 @@ export const verificationResultSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/verification_result.schema.json",
   "title": "verification_result",
-  "description": "Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
+  "description": "Returned by the ml service's POST /internal/verify. The claim is 'this photo shows the reported waste' for purpose report and 'this site is now clean' for purpose cleanup. Report: p >= auto_verify_min is auto_verified, p >= community_check_min is community_check, lower is rejected, and strong disagreement always gives community_check. needs_confirmation (contracts v1.16, report only): the judge was unsure, so the reporter is asked whether they are sure before the report joins a site; the judge's rules can also override the probability (see contracts/README.md). Cleanup: auto_verified (is_clean true) only when p >= auto_verify_min and no disagreement, otherwise rejected; cleanups never go to community check.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -538,7 +572,8 @@ export const verificationResultSchema = {
       "enum": [
         "auto_verified",
         "community_check",
-        "rejected"
+        "rejected",
+        "needs_confirmation"
       ]
     },
     "is_clean": {
@@ -706,7 +741,64 @@ export const verificationResultSchema = {
             },
             "rationale": {
               "type": "string",
-              "maxLength": 500
+              "maxLength": 500,
+              "description": "The judge's short, neutral reasoning; it names no person."
+            },
+            "attributes": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "garbage",
+                "bin",
+                "bin_overflowing_or_broken",
+                "water_contamination",
+                "construction_debris",
+                "burning",
+                "photo_usable",
+                "user_verdict",
+                "user_verdict_confidence",
+                "prompt"
+              ],
+              "description": "Contracts v1.16: the judge's structured answer, each attribute yes, no or uncertain. report_type, context and burning above are derived from it. Optional, so older producers stay valid.",
+              "properties": {
+                "garbage": {
+                  "$ref": "#/$defs/tri_state",
+                  "description": "Waste is visible."
+                },
+                "bin": {
+                  "$ref": "#/$defs/tri_state",
+                  "description": "A dustbin or waste container is visible."
+                },
+                "bin_overflowing_or_broken": {
+                  "$ref": "#/$defs/tri_state"
+                },
+                "water_contamination": {
+                  "$ref": "#/$defs/tri_state"
+                },
+                "construction_debris": {
+                  "$ref": "#/$defs/tri_state"
+                },
+                "burning": {
+                  "$ref": "#/$defs/tri_state"
+                },
+                "photo_usable": {
+                  "$ref": "#/$defs/tri_state",
+                  "description": "The scene can be judged; a dark or night photo whose scene is visible is usable."
+                },
+                "user_verdict": {
+                  "$ref": "#/$defs/tri_state",
+                  "description": "Does the photo support the reporter's claim (for a cleanup: the site is clean)?"
+                },
+                "user_verdict_confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "prompt": {
+                  "type": "string",
+                  "description": "Version of the judge prompt, for example judge_v1."
+                }
+              }
             }
           }
         }
@@ -919,6 +1011,13 @@ export const verificationResultSchema = {
     }
   ],
   "$defs": {
+    "tri_state": {
+      "enum": [
+        "yes",
+        "no",
+        "uncertain"
+      ]
+    },
     "material": {
       "enum": [
         "plastic",

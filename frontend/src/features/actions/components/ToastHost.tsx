@@ -5,7 +5,8 @@ import { useToast } from '../hooks/useToast';
 import '../actions.css';
 
 /**
- * App-wide: one short line at a time, e.g. why a tapped action is off or that the connection is back. The live
+ * App-wide, at the top of the screen (the rejection and confirm toasts keep the bottom, so they never stack): one
+ * short line at a time, e.g. why a tapped action is off or that the connection is back. The live
  * region stays mounted so screen readers announce each new line.
  */
 export function ToastHost() {

@@ -27,6 +27,10 @@ class RecordingReportApi implements ReportApi {
     throw new Error('not used');
   }
 
+  confirm(): Promise<ReportStatusView> {
+    throw new Error('a no-bin report is never asked to confirm');
+  }
+
   mine(): Promise<ReportListPage> {
     throw new Error('not used');
   }

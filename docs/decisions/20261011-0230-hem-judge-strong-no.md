@@ -1,6 +1,6 @@
 ---
-status: accepted
-superseded_by:
+status: superseded
+superseded_by: 20261011-0305-hem-structured-judge.md
 area: agent
 by: hem
 date: 2026-10-11T02:30+05:30

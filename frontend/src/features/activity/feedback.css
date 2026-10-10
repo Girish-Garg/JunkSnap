@@ -228,3 +228,44 @@
   margin: 0;
   padding-left: var(--s-5);
 }
+
+/* Reporter confirmation (contracts v1.16): the question card, built like the AI check card, with the two answers below. */
+.confirm-ask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
+  padding: var(--s-3) var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+}
+
+.confirm-ask__question {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: 700;
+}
+
+.confirm-ask__reason {
+  margin: 0;
+}
+
+.confirm-ask__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.confirm-ask__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.confirm-closed {
+  margin: var(--s-2) 0 0;
+}

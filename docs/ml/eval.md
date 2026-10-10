@@ -131,6 +131,57 @@ Claude Sonnet 4.6 and Haiku 4.5 were not run: Bedrock refuses them for this acco
 
 The `judge_v0` prompt text changed after this eval: it added the `overflowing_bin` type and dropped "a full or overflowing bin that was not emptied" from `no_bin` (decision 20261010-1645). The judge numbers above, and the meta-learner fitted on the judge's answers, describe the earlier prompt; they have not been re-run.
 
+## Judge veto replay (11 Oct, after #123)
+
+Measured on 11 Oct 2026, after PR #123 (decision 20261011-0230). The same 224 test photos as the judge eval (184 QR4Change, claim `waste_dump`/`roadside`; 40 D-Fire, which carry no waste label) went once through the pinned models: Rekognition labels, YOLO26s (`yolo26s-640-v1`), SigLIP 2 with `clf-1` heads, and the judge with the current `judge_v0` prompt (with `photo_unclear`), Nova Lite first and Nova Pro next, as in the service; OpenAI was not called. The cached signals were then replayed through each commit's own `StackedVerifier`, `meta-v2` and report vetoes: `b273968` (before #123) and `d797ade` (#123). Both rule sets read the same judge answers, so the "before" row is the old rules on answers given to the new prompt. Every case was decided by meta-v2. One photo (`garbage_img__15`) got no valid answer from either Nova model; it took the outage path (detectors only, capped at community check).
+
+On the 184 QR4Change photos (65 garbage, 119 not), with accepted meaning auto-verified or community check:
+
+| rules | waste: auto-verified / community check / rejected | not waste: auto-verified / community check / rejected | accuracy | precision | recall | genuine waste rejected |
+|---|---|---|---|---|---|---|
+| before #123 | 41 / 22 / 2 | 1 / 59 / 59 | 0.663 | 0.512 | 0.969 | 2 (3.1%) |
+| #123 | 40 / 22 / 3 | 1 / 58 / 60 | 0.663 | 0.512 | 0.954 | 3 (4.6%) |
+| #123, `photo_unclear` ignored when a detector is at 0.5 or more | 41 / 22 / 2 | 1 / 58 / 60 | 0.668 | 0.516 | 0.969 | 2 (3.1%) |
+
+Which veto rejected each photo under #123: garbage photos, `judge_veto:not_waste` 1 and `judge_veto:unclear` 2; clean photos, `judge_veto:not_waste` 57, `judge_veto:unclear` 2, and 1 by the combiner (probability under 0.5, no veto). `low_support`, `combined_no` and `detectors_veto:no_waste` fired on no QR4Change photo. #123 changed two decisions: one garbage photo moved from auto-verified to rejected, and one clean photo from community check to rejected.
+
+The three garbage photos rejected under #123:
+
+| photo | veto | judge answer | detectors (Rekognition, YOLO, embeddings) | judge rationale | before #123 |
+|---|---|---|---|---|---|
+| `garbage_img__77_646c2a39.jpg` | `judge_veto:unclear` | `overflowing_bin` 0.8, unclear | 1.00, 0.87, 1.00 (meta-v2 0.9998) | "A bin is overflowing with various waste materials." | auto-verified |
+| `garbage_img__54_2d348730.jpg` | `judge_veto:unclear` | `not_waste` 0.9, unclear | 0.00, 0.00, 0.06 | "The photo is too blurry to identify any waste or context." | rejected |
+| `garbage_img__2_76d9e958.jpg` | `judge_veto:not_waste` | `not_waste` 0.95 | 0.00, 0.00, 0.45 | "The photo shows food items and utensils, not waste." | rejected |
+
+Only `garbage_img__77` is a new false rejection. The judge marked it unclear while naming the waste in its rationale, and all three detectors were sure. Because an unclear answer also sets the judge's support to 0, `judge_veto:low_support` would reject it too, so lowering the 0.2 bar changes nothing here. A 0.1 bar gives exactly the #123 numbers, since the rejected photos have supports of 0.05 and 0. Dropping `combined_no` also changes nothing on this split.
+
+Unclear and dark photos: the judge set `photo_unclear` on 5 of 224 photos (2 garbage, 2 clean, 1 D-Fire landscape at mean brightness 147). None of the 17 dark photos (mean luma under 70: 5 QR4Change, 12 D-Fire, mostly night fires) was marked unclear. D-Fire decisions were the same under both rule sets: 28 rejected (27 `judge_veto:not_waste`, 1 `judge_veto:unclear`) and 12 community check.
+
+The precision of about 0.51 is not caused by #123. 58 of the 119 clean photos go to community check under #123, and 59 before it. Under #123, 57 of the 58 are photos the judge calls `no_bin` (33) or `overflowing_bin` (24), mostly bins going by its rationales, and another waste type counts as support 0.5. Against detectors at about 0 that is a disagreement, and `combined_no` needs a judge support under 0.5, so it does not fire. Auto-verification stays precise: 40 of 41 are garbage under #123, and 41 of 42 before it.
+
+Cost of the run: 235 Bedrock judge calls (230 Nova Lite, 5 Nova Pro; schema retries included) for 583k input and 34k output tokens, about $0.058 at list prices; 224 Rekognition DetectLabels calls. Median judge latency was 1.7 s. YOLO and SigLIP ran locally. Scores and the one-off replay scripts are kept outside the repo, like the other scored files.
+
+## Structured judge re-test (11 Oct, judge_v1)
+
+Measured on 11 Oct 2026 for decision 20261011-0305 (issue 135). The same 224 test photos and the same cached detector signals as the #123 replay above (claim `waste_dump`/`roadside`), with fresh judge calls on the new `judge_v1` prompt (per-attribute yes, no or uncertain, and a user verdict on the stated claim), Nova Lite first and Nova Pro next; OpenAI was not called. Each case then went through this branch's own `StackedVerifier`, `meta-v2` and report rules. Every case was decided by meta-v2. One photo (`garbage_img__90`) got no valid answer from either Nova model and took the outage path (community check).
+
+On the 184 QR4Change photos (65 garbage, 119 not), accepted meaning auto-verified or community check:
+
+| rules | waste: auto-verified / community check / needs confirmation / rejected | not waste: auto-verified / community check / needs confirmation / rejected | accuracy | precision | recall | genuine waste rejected | clean photos accepted |
+|---|---|---|---|---|---|---|---|
+| #123 (`judge_v0`) | 40 / 22 / 0 / 3 | 1 / 58 / 0 / 60 | 0.663 | 0.512 | 0.954 | 3 (4.6%) | 59 (49.6%) |
+| `judge_v1` (this change) | 41 / 21 / 0 / 3 | 1 / 6 / 0 / 112 | 0.946 | 0.899 | 0.954 | 3 (4.6%) | 7 (5.9%) |
+
+Clean photos accepted fell from 59 to 7, and community checks of clean photos from 58 to 6. The target of at most 2 genuine waste photos rejected was not met: it stays at 3 of 65, which is accepted as the outcome. Two of the three were rejected under #123 too, arguably correctly (a photo too blurry to show anything, and a tray of food).
+
+- The three garbage photos rejected: `garbage_img__54` (`judge_veto:unclear`, "too blurry", every detector under 0.1; rejected under #123 too), `garbage_img__2` (`judge_veto:not_waste`, "a person holding a tray with food", detectors 0, 0, 0.45; rejected under #123 too) and `garbage_img__210` (`judge_veto:low_support`, "a dirty puddle on the roadside, not a waste dump", YOLO 0.36, embeddings 0.13; new). `garbage_img__77`, the false rejection of #123, is now judged usable and auto-verified.
+- The detector exception fired three times: `garbage_img__80` (judge: photo unusable; YOLO 0.72, embeddings 0.97) went to community check instead of a rejection, and two clean photos where YOLO alone was sure (0.93 on a snowy owl, 0.6 on a clean roadside bin) went to community check after a judge "no". The shipped rule counts YOLO only; counting the embedding head too gives the same numbers on this split, but the head gave 0.77 to the prod indoor-cupboard photo the judge rightly rejected. Rekognition labels are at 0.5 or more on 31 clean photos, so counting them would lift far more.
+- Of the 7 clean photos accepted, 5 are judge "yes" answers on photos with a bin and some litter, one of them auto-verified (a bucket of waste indoors, every detector at 0.6 or more).
+- No photo reached `needs_confirmation`: the judge said uncertain in 5 user verdicts, and every one of them also had a "no" attribute or an unusable photo, which take precedence. The reporter-confirmation path is therefore not exercised by this split.
+- `photo_usable` was "no" on 7 of 224 photos (2 garbage, 4 clean, 1 D-Fire). None of the 17 dark photos (mean luma under 70) was marked unusable or uncertain. All 40 D-Fire photos were rejected (38 `not_waste`, 1 `low_support`, 1 `unclear`), against 28 under #123.
+
+Cost of the run: 237 Bedrock judge calls (234 Nova Lite, 3 Nova Pro; schema retries included) for 743k input and 41k output tokens, about $0.064 at list prices. The longer prompt costs about 3,100 input tokens a call, against 2,500 for `judge_v0`. Median judge latency was 1.7 s. No detector was re-run. The re-test scripts and answers are kept outside the repo, like the other scored files. The meta-learner was fitted on `judge_v0` supports and has not been refitted.
+
 ## Gaps and what would change these numbers
 
 - Public data only: no Jodhpur photo is trained on or evaluated, and QR4Change's clean photos include street scenes from outside India, so real-world accuracy in Jodhpur is not measured here.

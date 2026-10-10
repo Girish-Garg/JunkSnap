@@ -22,6 +22,7 @@ import type { ReportQueue } from "../src/ports/ReportQueue.js";
 import type { ReportRepository } from "../src/ports/ReportRepository.js";
 import type { ReputationReader } from "../src/ports/ReputationReader.js";
 import type { SnapCounter } from "../src/ports/SnapCounter.js";
+import { ConfirmationWindow } from "../src/services/ConfirmationWindow.js";
 
 const CONTRACTS = new URL("../../../contracts/", import.meta.url);
 
@@ -222,6 +223,11 @@ export class FakeNearbyCounter implements NearbyVerifiedCounter {
     this.asked.push(report);
     return this.value;
   }
+}
+
+// The worker's default 24 h window to answer an unsure judge, asked at the given time.
+export function confirmWindow(at = "2026-10-10T02:15:10Z", hours = 24): ConfirmationWindow {
+  return new ConfirmationWindow(new FixedClock(at), hours);
 }
 
 // A step that records nothing, for wiring without a merge result.

@@ -3,7 +3,8 @@ import type { ReportStatus, ReportStatusView } from './ReportStatus';
 
 /**
  * What became of one report, in the reporter's words. stopped: the photo checks (moderation)
- * turned it away; review: the pipeline gave up on it (needs_review); removed: neighbours hid its site.
+ * turned it away; review: the pipeline gave up on it (needs_review); removed: neighbours hid its site;
+ * asking: the check was unsure and waits for the reporter's answer; not_confirmed: no answer came in time.
  */
 export type OutcomeKind =
   | 'checking'
@@ -15,7 +16,9 @@ export type OutcomeKind =
   | 'withdrawn'
   | 'removed'
   | 'stopped'
-  | 'review';
+  | 'review'
+  | 'asking'
+  | 'not_confirmed';
 
 export type OutcomeTone = 'plain' | 'good' | 'alert';
 
@@ -26,6 +29,8 @@ const BY_STATUS: Readonly<Record<Exclude<ReportStatus, 'rejected'>, OutcomeKind>
   verified: 'verified',
   needs_review: 'review',
   withdrawn: 'withdrawn',
+  needs_confirmation: 'asking',
+  not_confirmed: 'not_confirmed',
 };
 
 const TONES: Readonly<Partial<Record<OutcomeKind, OutcomeTone>>> = {
@@ -35,6 +40,7 @@ const TONES: Readonly<Partial<Record<OutcomeKind, OutcomeTone>>> = {
   unconfirmed: 'alert',
   removed: 'alert',
   stopped: 'alert',
+  not_confirmed: 'alert',
 };
 
 // Outcomes where the reporter can do better with a new photo, so the view offers retake tips.

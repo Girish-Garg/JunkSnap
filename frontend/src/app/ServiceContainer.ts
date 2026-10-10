@@ -9,7 +9,7 @@ import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
 import { BoundaryCatalog } from '../services/BoundaryCatalog';
 import type { AuthService } from '../services/AuthService';
 import { crawlFixtureLoaders } from '../services/crawlFixtures';
-import { GeoLocator } from '../services/GeoLocator';
+import { GeoLocator, type PermissionQuery } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
 import { ExpiringCache } from '../services/ExpiringCache';
@@ -57,6 +57,8 @@ export interface BrowserApis extends SnapBrowserApis {
   readonly share: ShareApi;
   /** The element that carries data-theme; absent in tests. */
   readonly root?: HTMLElement;
+  /** Lets the map read a location fix on open only when location is already allowed. */
+  readonly permissions?: PermissionQuery;
   /** What the startup probe reads and how to build the detector; absent means cloud mode. */
   readonly edge?: EdgeEnvironment;
 }
@@ -141,7 +143,7 @@ export class ServiceContainer implements Services {
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),
       boundaries: new BoundaryCatalog(BoundaryCatalog.defaultBaseUrl()),
-      locator: new GeoLocator(browser.geolocation),
+      locator: new GeoLocator(browser.geolocation, browser.permissions),
       sharer: new Sharer(browser.share),
       snap: SnapServiceFactory.build(config, browser, auth, siteCaches),
       onboarding: new OnboardingPreference(browser.store),

@@ -1,4 +1,5 @@
 import type { SiteProperties } from './Site';
+import { SiteLifecycle } from './SiteLifecycle';
 
 /**
  * waiting: on the map, still gathering its 10 people. verified: on the map and verified. cleared: cleaned.
@@ -14,7 +15,8 @@ export interface ChipView {
   readonly tone: ChipTone;
 }
 
-type ChipFields = Pick<SiteProperties, 'status' | 'verification' | 'backers'>;
+// clearance and expires_at are optional in the contract, so callers without them still fit.
+export type ChipFields = Pick<SiteProperties, 'status' | 'verification' | 'backers' | 'clearance' | 'expires_at'>;
 
 const BY_STATUS: Readonly<Record<string, ChipView>> = {
   cleaned: { key: 'chip.cleared', tone: 'cleared' },
@@ -23,9 +25,15 @@ const BY_STATUS: Readonly<Record<string, ChipView>> = {
   expired: { key: 'chip.expired', tone: 'closed' },
 };
 
-/** The one status chip of a site, on the pin card, the site sheet and the lists: "Waiting · 1 of 10", "Verified", "Cleared". */
+/**
+ * The one status chip of a site, on the pin card, the site sheet and the lists: "Waiting · 1 of 10", "Verified",
+ * "1 of 3 say cleared" while people confirm a clearing, "Cleared".
+ */
 export class SiteStatusChip {
   static of(site: ChipFields): ChipView {
+    // People say it is cleared and it waits for enough of them (decision 20261010-1855): "1 of 3 say cleared".
+    const clearing = new SiteLifecycle(site).pendingClearance();
+    if (clearing) return { key: 'chip.clearing', params: { count: clearing.count, needed: clearing.needed }, tone: 'cleared' };
     const byStatus = BY_STATUS[site.status];
     if (byStatus) return byStatus;
     if (site.verification === 'rejected') return { key: 'chip.rejected', tone: 'closed' };

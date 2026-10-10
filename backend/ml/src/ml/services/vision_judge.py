@@ -12,7 +12,7 @@ from ml.domain.errors import NoProviderAnsweredError
 from ml.domain.insights import InsightSource
 from ml.domain.llm import LlmRequest
 from ml.domain.verification import JudgeVerdict, SignalResult
-from ml.services.judge_answer import ANSWER_SCHEMAS
+from ml.services.judge_answer import ANSWER_SCHEMAS, PROMPT_VERSION
 from ml.services.provider_router import JsonJob, ProviderRouter
 
 logger = logging.getLogger(__name__)
@@ -31,9 +31,12 @@ class VisionJudge:
     TASK = "judge"
     MAX_TOKENS = 700
 
-    def __init__(self, router: ProviderRouter, system_prompt: str) -> None:
+    def __init__(
+        self, router: ProviderRouter, system_prompt: str, prompt_version: str = PROMPT_VERSION
+    ) -> None:
         self._router = router
         self._system_prompt = system_prompt
+        self._prompt_version = prompt_version  # recorded in judge.attributes.prompt
 
     def judge(self, case: VerificationCase) -> JudgeReading | None:
         """None (and a warning log) when no provider gave a valid answer."""
@@ -47,7 +50,7 @@ class VisionJudge:
         except NoProviderAnsweredError as error:
             logger.warning("judge_unavailable", extra={"fields": {"reason": str(error)}})
             return None
-        verdict = answer.value.to_verdict()
+        verdict = answer.value.to_verdict(self._prompt_version)
         response = answer.response
         source = InsightSource(self.NAME, response.provider, response.model, response.version)
         signal = SignalResult(
@@ -57,7 +60,7 @@ class VisionJudge:
             model=response.model,
             version=response.version,
             latency_ms=response.latency_ms,
-            notes=(f"{verdict.report_type} {verdict.confidence:.2f}",),
+            notes=(f"{verdict.answer_for(case.claim)} {verdict.report_type}",),
             insights=answer.value.to_insights(source),
         )
         return JudgeReading(verdict, signal)

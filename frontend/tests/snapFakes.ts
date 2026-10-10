@@ -24,6 +24,7 @@ import { NoBinReporter } from '../src/services/NoBinReporter';
 import { PhotoHasher } from '../src/services/PhotoHasher';
 import { QueueLock } from '../src/services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
+import { ReportConfirmer } from '../src/services/ReportConfirmer';
 import { ReportQueue } from '../src/services/ReportQueue';
 import { ReportSender } from '../src/services/ReportSender';
 import type { ItemStore, MetaStore, ReportStore } from '../src/services/ReportStore';
@@ -202,7 +203,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   const { activity, dismissed } = testActivity(options, identity, { api, queue, scans, clock });
   return {
     queue,
-    tracker: new ReportTracker(api, queue),
+    ...testReportStatus(api, identity, queue),
     activity,
     scans,
     scanTracker: new ScanTracker(scanApi, scans),
@@ -216,6 +217,10 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
+}
+
+function testReportStatus(api: ReportApi, identity: RequestIdentity, queue: ReportQueue): Pick<SnapServices, 'tracker' | 'confirmer'> {
+  return { tracker: new ReportTracker(api, queue), confirmer: new ReportConfirmer({ api, identity, queue }) };
 }
 
 function testScanQueue(store: ItemStore<QueuedScanData> | undefined, sender: ScanSender, clock: Clock): ScanQueue {

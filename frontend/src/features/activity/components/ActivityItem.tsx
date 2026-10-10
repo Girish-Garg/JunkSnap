@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import { TypeIcon } from '../../../ui/TypeIcon';
-import { RejectionNotice } from '../../snap/components/RejectionNotice';
 import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
 import { ActivityActions } from './ActivityActions';
 import { ActivityMeta } from './ActivityMeta';
+import { ReportNotices } from './ReportNotices';
 
 interface ActivityItemProps {
   readonly report: QueuedReport;
@@ -38,7 +38,7 @@ export function ActivityItem({ report, onOpen }: ActivityItemProps) {
           <ProgressBadge report={report} />
         </div>
       </div>
-      <RejectionNotice report={report} />
+      <ReportNotices report={report} />
       <ActivityActions report={report} />
     </li>
   );

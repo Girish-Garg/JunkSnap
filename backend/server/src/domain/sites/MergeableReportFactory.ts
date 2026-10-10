@@ -71,15 +71,20 @@ export class MergeableReportFactory {
   }
 
   // The models only gate a photo (decision 20261010-1530); a no_bin report needs no waste check, nor a photo (-1630).
-  static #assertPassed({ upload, moderation, verification }: MergeEvidence, reportId: string): void {
+  static #assertPassed(evidence: MergeEvidence, reportId: string): void {
+    const { upload, moderation } = evidence;
     const photoFailed = moderation !== null && moderation.outcome !== "passed";
-    const wasteFailed = upload.report_type !== "no_bin" && !MergeableReportFactory.#passedWasteCheck(verification);
+    const wasteFailed = upload.report_type !== "no_bin" && !MergeableReportFactory.#passedWasteCheck(evidence);
     if (photoFailed || wasteFailed || MergeableReportFactory.#photoMissing(upload, moderation === null)) {
       throw new InternalDataError(`${reportId} did not pass the models and is never merged`);
     }
   }
 
-  static #passedWasteCheck(verification: MergeEvidence["verification"]): boolean {
+  // An unsure judge passes only on the reporter's sure answer, and then as an unverified backer photo (contracts v1.16).
+  static #passedWasteCheck({ verification, reporterConfirmed }: MergeEvidence): boolean {
+    if (verification?.decision === "needs_confirmation") {
+      return reporterConfirmed === true;
+    }
     return verification !== null && verification.decision !== "rejected";
   }
 

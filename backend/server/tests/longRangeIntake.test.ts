@@ -92,8 +92,9 @@ describe("POST /reports with a long-range target", () => {
     const snapLimit = new SnapLimit(new FakeSnapCounter(reports));
     const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock });
-    const statuses = new ReportStatusReader(reports, "https://cdn.example");
-    const plugin = new ReportEndpoints({ presigner, intake, statuses, mine: fakeMine(reports, "https://cdn.example") }, new RouteGuard(new AnyUser())).plugin();
+    const statuses = new ReportStatusReader(reports, "https://cdn.example", clock);
+    const mine = fakeMine(reports, "https://cdn.example", clock);
+    const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new AnyUser())).plugin();
     const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
     app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
   });

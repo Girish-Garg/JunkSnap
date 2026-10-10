@@ -6,6 +6,7 @@ from types import MappingProxyType
 
 from ml.domain.errors import InvalidClaimError
 from ml.domain.insights import Insights
+from ml.domain.judge_attributes import TYPE_EVIDENCE, ClaimAnswer, JudgeAttributes, TriState
 
 REPORT_CONTEXTS: Mapping[str, frozenset[str]] = MappingProxyType(
     {
@@ -33,13 +34,15 @@ class Claim:
         """True when the judge must name part of the claim, so it runs on every case."""
         return False
 
-    def matches(self, report_type: str) -> bool:
-        """The judge's type supports this claim."""
-        return report_type == self.report_type
+    def describe(self) -> str:
+        """The claim as the judge's user prompt states it."""
+        return f"{self.report_type} ({self.context})"
 
-    def denies(self, report_type: str) -> bool:
-        """The judge's type says the claim is false."""
-        return report_type == NOT_WASTE
+    def evidence(self, attributes: JudgeAttributes) -> TriState | None:
+        """Whether the photo shows the claimed type; None for a type never judged from a photo."""
+        if self.report_type not in TYPE_EVIDENCE:
+            return None
+        return attributes.shows(self.report_type)
 
 
 @dataclass(frozen=True)
@@ -90,8 +93,16 @@ class JudgeVerdict:
     readable_brands: tuple[str, ...]
     rationale: str
     confidence: float
-    scene_fits_site: bool | None = None  # cleanups only: an outdoor place fit for the site
-    unclear: bool = False  # too blurry, dark or close to tell; not in the contract (decision 0230)
+    scene_fits_site: bool | None  # cleanups only: an outdoor place fit for the site
+    attributes: JudgeAttributes  # the structured answer the fields above derive from
+
+    @property
+    def unclear(self) -> bool:
+        """The photo cannot be judged (too blurry, dark or close): a retake."""
+        return self.attributes.photo_usable is TriState.NO
+
+    def answer_for(self, claim: Claim) -> ClaimAnswer:
+        return self.attributes.answer(claim.evidence(self.attributes))
 
     def to_contract(self) -> dict[str, object]:
         return {
@@ -100,6 +111,7 @@ class JudgeVerdict:
             "burning": self.burning,
             "readable_brands": list(self.readable_brands),
             "rationale": self.rationale,
+            "attributes": self.attributes.to_contract(),
         }
 
 
@@ -120,10 +132,15 @@ class Thresholds:
 
 @dataclass(frozen=True)
 class Veto:
-    """A strong "no" that rejected the photo whatever the combiner said, and its models."""
+    """A judge rule that set the decision whatever the combiner said, and its models.
 
-    reason: str  # for example judge_veto:not_waste or judge_veto:unclear
+    Most reject the photo; since decision 0305 a rule can also send it to community check or
+    ask the reporter to confirm.
+    """
+
+    reason: str  # for example judge_veto:not_waste or judge_unsure:ask_reporter
     sources: tuple[SignalResult, ...]
+    decision: str = "rejected"  # or community_check, or needs_confirmation (decision 0305)
 
     def label(self) -> str:
         """The reason with each model's provider, model and version, for the evidence."""
@@ -140,4 +157,4 @@ class Outcome:
     veto: Veto | None = None
 
     def vetoed(self, veto: Veto) -> "Outcome":
-        return Outcome(self.probability, "rejected", self.disagreement, self.is_clean, veto)
+        return Outcome(self.probability, veto.decision, self.disagreement, self.is_clean, veto)

@@ -47,7 +47,8 @@ export interface JudgeEvidence {
 }
 
 export interface VerificationEvidence {
-  readonly decision: 'auto_verified' | 'community_check' | 'rejected';
+  /** needs_confirmation: the judge was unsure, so the reporter is asked (contracts v1.16). */
+  readonly decision: 'auto_verified' | 'community_check' | 'rejected' | 'needs_confirmation';
   readonly judge: JudgeEvidence | null;
   readonly signals?: readonly SignalEvidence[];
   readonly features?: { readonly gps_accuracy_m: number };

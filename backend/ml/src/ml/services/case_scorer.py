@@ -73,6 +73,8 @@ class CaseScorer:
         return {
             "model": signal.model, "report_type": verdict.report_type,
             "confidence": verdict.confidence, "burning": verdict.burning,
+            "answer": verdict.answer_for(case.claim).value,
+            "attributes": verdict.attributes.to_contract(),
             "score": signal.score, "latency_ms": signal.latency_ms,
         }
 

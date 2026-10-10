@@ -39,8 +39,9 @@ class StackedVerifier:
             results.append(reading.signal)
         combiner = self._combiner.for_claim(case.claim, results)
         verdict = None if reading is None else reading.verdict
+        answer = None if verdict is None else verdict.answer_for(case.claim)
         combined = combiner.combine(results, case.purpose)
-        evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds, combined)
+        evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds, combined, answer)
         outcome = case.purpose.review(combined, evidence)
         result = VerificationResult(
             case=case,
@@ -81,6 +82,9 @@ class StackedVerifier:
             "probability": round(result.outcome.probability, 4),
             "decision": result.outcome.decision,
             "judge_ran": result.judge is not None,
+            "judge_answer": None if result.judge is None else result.judge.answer_for(
+                result.case.claim
+            ).value,
             "combiner": result.combiner.kind,
             "combiner_reason": result.combiner.reason,
             "veto": None if result.outcome.veto is None else result.outcome.veto.label(),
