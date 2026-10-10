@@ -42,7 +42,7 @@ function setup() {
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
     retry: new ConflictRetry(),
   });
-  return { sites, merger, finder: new SiteFinder(sites, new NgeohashCells()) };
+  return { sites, merger, finder: new SiteFinder(sites, new NgeohashCells(), new FixedClock()) };
 }
 
 describe("site placement from a long-range target", () => {

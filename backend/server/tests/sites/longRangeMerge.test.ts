@@ -99,7 +99,7 @@ describe("long-range reports and the people rules", () => {
     expect(sites.feature(first.siteId).properties.backers).toMatchObject({ count: 1, photo_people: 1 });
     const site = await sites.get(first.siteId);
     const voter = { deviceToken: DEVICE_B, userId: userOf(DEVICE_B) };
-    expect(() => site?.admitVoter(voter, new GeoPoint(BASE_LAT, BASE_LON))).toThrow(OwnSiteError);
+    expect(() => site?.admitVoter(voter, new GeoPoint(BASE_LAT, BASE_LON), "confirm", new FixedClock().now())).toThrow(OwnSiteError);
     await merger.merge(shot({ id: "far_3", device: DEVICE_C, standNorth: 200, targetNorth: 5, vector: SAME_PILE }));
     expect(sites.feature(first.siteId).properties.backers).toMatchObject({ count: 2, photo_people: 2 });
   });
