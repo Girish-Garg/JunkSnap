@@ -2,7 +2,10 @@
 export class MapSupport {
   static hasWebGl2(doc: Document = document): boolean {
     try {
-      return Boolean(doc.createElement('canvas').getContext('webgl2'));
+      const gl = doc.createElement('canvas').getContext('webgl2');
+      // Browsers cap live WebGL contexts, so release the probe at once.
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      return Boolean(gl);
     } catch {
       return false;
     }

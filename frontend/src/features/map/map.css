@@ -213,13 +213,19 @@
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  padding: 120px var(--edge) var(--space-3);
+  /* Clears the Filters pill; search and locate are hidden in list mode. */
+  padding: 72px var(--edge) var(--space-3);
   background: var(--page);
 }
 
 .site-list__notice,
-.site-list__items {
+.site-list__items,
+.site-list .map-status {
   max-width: 640px;
+}
+
+.site-list .map-status {
+  margin-top: var(--space-2);
 }
 
 .site-list__notice {
@@ -231,13 +237,8 @@
   box-shadow: var(--shadow-float);
 }
 
-.site-list__hint,
-.site-list__empty {
+.site-list__hint {
   color: var(--text-secondary);
-}
-
-.site-list__empty {
-  margin-top: var(--space-3);
 }
 
 .site-list__items {
