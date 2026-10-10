@@ -33,7 +33,8 @@ export interface Site {
     /**
      * no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430).
      */
-    report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+    report_type:
+      "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
     context:
       | "vacant_plot"
       | "roadside"
@@ -46,7 +47,9 @@ export interface Site {
       | "foam"
       | "choked_drain"
       | "uncovered_debris"
-      | "dusty_site";
+      | "dusty_site"
+      | "overflowing"
+      | "damaged";
     /**
      * open -> cleaned (only with an after-photo the pipeline confirms) -> reopened.
      */
@@ -1027,7 +1030,8 @@ export const siteSchema = {
             "waste_dump",
             "no_bin",
             "contaminated_water",
-            "open_construction"
+            "open_construction",
+            "overflowing_bin"
           ],
           "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)."
         },
@@ -1044,7 +1048,9 @@ export const siteSchema = {
             "foam",
             "choked_drain",
             "uncovered_debris",
-            "dusty_site"
+            "dusty_site",
+            "overflowing",
+            "damaged"
           ]
         },
         "status": {
@@ -1610,6 +1616,25 @@ export const siteSchema = {
                 "enum": [
                   "uncovered_debris",
                   "dusty_site"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
+                "const": "overflowing_bin"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "context": {
+                "enum": [
+                  "overflowing",
+                  "damaged"
                 ]
               }
             }

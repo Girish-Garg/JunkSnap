@@ -67,7 +67,13 @@ export type VerificationResult = {
    * Vision judge verdict; null when the judge did not run. Never used for counts or boxes.
    */
   judge: null | {
-    report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "not_waste";
+    report_type:
+      | "waste_dump"
+      | "no_bin"
+      | "contaminated_water"
+      | "open_construction"
+      | "overflowing_bin"
+      | "not_waste";
     context:
       | "vacant_plot"
       | "roadside"
@@ -81,6 +87,8 @@ export type VerificationResult = {
       | "choked_drain"
       | "uncovered_debris"
       | "dusty_site"
+      | "overflowing"
+      | "damaged"
       | null;
     burning: boolean;
     /**
@@ -663,6 +671,7 @@ export const verificationResultSchema = {
                 "no_bin",
                 "contaminated_water",
                 "open_construction",
+                "overflowing_bin",
                 "not_waste"
               ]
             },
@@ -680,6 +689,8 @@ export const verificationResultSchema = {
                 "choked_drain",
                 "uncovered_debris",
                 "dusty_site",
+                "overflowing",
+                "damaged",
                 null
               ]
             },

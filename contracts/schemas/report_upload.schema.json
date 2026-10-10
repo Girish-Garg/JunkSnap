@@ -12,9 +12,9 @@
       "pattern": "^upl_[a-z0-9_]{1,40}$",
       "description": "From POST /uploads/presign. The report id reuses its suffix: upl_x becomes rpt_x, so a retried POST is idempotent."
     },
-    "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction"] },
+    "report_type": { "enum": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] },
     "context": {
-      "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site"],
+      "enum": ["vacant_plot", "roadside", "drain", "other", "no_bin", "no_pickup", "stagnant", "sewage", "foam", "choked_drain", "uncovered_debris", "dusty_site", "overflowing", "damaged"],
       "description": "Allowed values depend on report_type; see allOf."
     },
     "capture_mode": { "enum": ["snap", "scan"], "description": "snap: one photo, sent by the phone. scan: a frame the worker cut from a scan video (decision 20261010-0203)." },
@@ -77,6 +77,7 @@
     { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
     { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
     { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
-    { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } }
+    { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } },
+    { "if": { "properties": { "report_type": { "const": "overflowing_bin" } } }, "then": { "properties": { "context": { "enum": ["overflowing", "damaged"] } } } }
   ]
 }
