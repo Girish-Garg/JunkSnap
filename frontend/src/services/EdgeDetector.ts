@@ -74,7 +74,12 @@ export class EdgeDetector {
   #send(id: number, message: EdgeRequest, transfer: Transferable[]): Promise<EdgeReply> {
     return new Promise((resolve) => {
       this.#pending.set(id, { resolve });
-      this.#ports.worker.postMessage(message, transfer);
+      try {
+        this.#ports.worker.postMessage(message, transfer);
+      } catch (error) {
+        this.#pending.delete(id);
+        resolve({ kind: 'failed', reason: String(error) });
+      }
     });
   }
 

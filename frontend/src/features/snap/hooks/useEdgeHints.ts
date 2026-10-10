@@ -65,7 +65,11 @@ export function useEdgeHints(video: RefObject<HTMLVideoElement | null>, live: bo
       if (video.current) setView(overlayFor(frame, video.current));
       listener.current?.(frame);
     };
-    return runHints({ edge, video, onReady: setReady, onFrame: show });
+    const stop = runHints({ edge, video, onReady: setReady, onFrame: show });
+    return () => {
+      stop();
+      setView(EMPTY_OVERLAY); // no stale boxes when the camera comes back
+    };
   }, [active, edge, video]);
   const state = edgeState(active, ready);
   return { state, view: state === 'live' ? view : EMPTY_OVERLAY, warmMs: ready?.warmMs ?? null };

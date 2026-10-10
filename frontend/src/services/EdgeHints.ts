@@ -54,15 +54,17 @@ export class EdgeHints {
   }
 
   async #load(): Promise<EdgeReady | null> {
-    const detector = this.#factory(this.#probe.threads());
+    let detector: EdgeDetector | null = null;
     try {
+      // Building the worker can throw too (no module workers, CSP): that is cloud mode, not a hang.
+      detector = this.#factory(this.#probe.threads());
       const { warmMs, backend } = await detector.load();
       this.#verdict = this.#probe.afterWarmup(warmMs);
       if (this.#verdict.ok) return { detector, warmMs, backend };
     } catch {
       this.#verdict = { ok: false, reason: 'load_failed' };
     }
-    detector.dispose();
+    detector?.dispose();
     return null;
   }
 }

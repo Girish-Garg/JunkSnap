@@ -30,7 +30,12 @@ export class OrtModelRunner implements ModelRunner {
   }
 
   async detect(bitmap: ImageBitmap): Promise<readonly number[]> {
-    const pixels = this.#pixels(bitmap);
+    let pixels: Float32Array;
+    try {
+      pixels = this.#pixels(bitmap);
+    } finally {
+      bitmap.close();
+    }
     return EdgeOutput.keep(await this.#run(pixels), EDGE_MODEL.minScore);
   }
 
@@ -50,7 +55,6 @@ export class OrtModelRunner implements ModelRunner {
     context.fillStyle = PAD_GREY;
     context.fillRect(0, 0, SIZE, SIZE);
     context.drawImage(bitmap, box.padX, box.padY, box.scaledWidth, box.scaledHeight);
-    bitmap.close();
     const rgba = context.getImageData(0, 0, SIZE, SIZE).data;
     const plane = SIZE * SIZE;
     const chw = new Float32Array(3 * plane);

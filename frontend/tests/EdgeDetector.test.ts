@@ -104,7 +104,18 @@ describe('EdgeHints decides edge or cloud mode', () => {
     expect(factory).toHaveBeenCalledTimes(1);
   });
 
-  it('drops to cloud mode for the session when the warm-up is too slow', async () => {
+});
+
+describe('EdgeHints falls back to cloud mode', () => {
+  it('when the worker cannot even be built', async () => {
+    const edge = new EdgeHints(new CapabilityProbe(PHONE), new EdgeHintsPreference(new MemoryStore()), () => {
+      throw new Error('module workers unsupported');
+    });
+    await expect(edge.open()).resolves.toBeNull();
+    expect(edge.verdict()).toEqual({ ok: false, reason: 'load_failed' });
+  });
+
+  it('for the session when the warm-up is too slow', async () => {
     const { edge } = hints(PHONE, fakeRunner([400, 220]));
     await expect(edge.open()).resolves.toBeNull();
     expect(edge.verdict()).toEqual({ ok: false, reason: 'too_slow' });
