@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { ActivityRoute } from '../features/activity/components/ActivityRoute';
 import { ReportFeedbackRoute } from '../features/activity/components/ReportFeedbackRoute';
@@ -27,6 +28,10 @@ import {
   SNAP_PATH,
   WELCOME_PATH,
 } from './paths';
+import { SheetBoundary } from './SheetBoundary';
+
+// A crash inside one sheet stays in that sheet.
+const sheet = (element: ReactElement) => <SheetBoundary>{element}</SheetBoundary>;
 
 // The map stays mounted; every other screen is a sheet over it.
 export function AppRoutes() {
@@ -34,18 +39,18 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<MapPage />}>
         <Route index element={<PanelHome />} />
-        <Route path={SITE_PATH} element={<SitePanelRoute />} />
-        <Route path={SITE_CLEANUP_PATH} element={<CleanupRoute />} />
-        <Route path={SITE_LETTER_PATH} element={<LetterRoute />} />
-        <Route path={SNAP_PATH} element={<SnapRoute />} />
-        <Route path={AREAS_PATH} element={<AreasRoute />} />
-        <Route path={AREA_PATH} element={<AreaRoute />} />
-        <Route path={AREA_LETTER_PATH} element={<AreaLetterRoute />} />
-        <Route path={RANKING_PATH} element={<RankingRoute />} />
-        <Route path={ACTIVITY_PATH} element={<ActivityRoute />} />
-        <Route path={FEEDBACK_PATH} element={<ReportFeedbackRoute />} />
-        <Route path={ACCOUNT_PATH} element={<AccountRoute />} />
-        <Route path={WELCOME_PATH} element={<OnboardingRoute />} />
+        <Route path={SITE_PATH} element={sheet(<SitePanelRoute />)} />
+        <Route path={SITE_CLEANUP_PATH} element={sheet(<CleanupRoute />)} />
+        <Route path={SITE_LETTER_PATH} element={sheet(<LetterRoute />)} />
+        <Route path={SNAP_PATH} element={sheet(<SnapRoute />)} />
+        <Route path={AREAS_PATH} element={sheet(<AreasRoute />)} />
+        <Route path={AREA_PATH} element={sheet(<AreaRoute />)} />
+        <Route path={AREA_LETTER_PATH} element={sheet(<AreaLetterRoute />)} />
+        <Route path={RANKING_PATH} element={sheet(<RankingRoute />)} />
+        <Route path={ACTIVITY_PATH} element={sheet(<ActivityRoute />)} />
+        <Route path={FEEDBACK_PATH} element={sheet(<ReportFeedbackRoute />)} />
+        <Route path={ACCOUNT_PATH} element={sheet(<AccountRoute />)} />
+        <Route path={WELCOME_PATH} element={sheet(<OnboardingRoute />)} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

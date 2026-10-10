@@ -1,5 +1,6 @@
 import type { Tagged } from './ExpiringCache';
 import { HttpErrors } from './HttpErrors';
+import { REQUEST_TIMEOUT_MS } from './HttpTransport';
 
 type Fetch = typeof fetch;
 
@@ -28,7 +29,8 @@ export class ConditionalFetch {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (token) headers['If-None-Match'] = token;
     try {
-      return await this.#fetch(`${this.#baseUrl}${path}`, { headers });
+      // The same timeout as every other api call, so a hung read ends as a timeout (ErrorClassifier), not a spinner.
+      return await this.#fetch(`${this.#baseUrl}${path}`, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
     } catch (cause) {
       throw HttpErrors.network(`Request to ${path}`, cause);
     }

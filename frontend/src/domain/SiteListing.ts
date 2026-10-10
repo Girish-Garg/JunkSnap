@@ -20,6 +20,11 @@ export class SiteListing {
     });
   }
 
+  /** Every report of this phone's that the api merged into the site and that still stands, whatever its check said. */
+  static reportedHere(reports: readonly QueuedReport[], siteId: string): readonly QueuedReport[] {
+    return reports.filter((report) => report.data.status?.site_id === siteId && report.data.status.status !== 'withdrawn');
+  }
+
   /** Only an unverified site that is still standing takes reports back. */
   static canWithdraw(site: Pick<SiteProperties, 'verification' | 'status'>, mine: readonly QueuedReport[]): boolean {
     return mine.length > 0 && site.verification !== 'verified' && site.status !== 'removed';

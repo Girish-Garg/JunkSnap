@@ -1,4 +1,5 @@
 import type { LonLat, SiteFeature } from '../../../domain/Site';
+import { useSiteGates } from '../../actions/hooks/useSiteGates';
 import { SiteNotes } from '../../community/components/SiteNotes';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import '../site.css';
@@ -32,18 +33,19 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
   const details = site.properties;
   const presenter = useSitePresenter(details);
   const closed = presenter.closedReason();
+  const gates = useSiteGates(site, userLocation);
   const changed = () => onChanged?.();
   return (
     <article className="site-panel">
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
-      {closed ? <SiteClosedNote reason={closed} /> : <SiteOpenActions site={site} presenter={presenter} onChanged={changed} />}
+      {closed ? <SiteClosedNote reason={closed} /> : <SiteOpenActions site={site} presenter={presenter} gates={gates} onChanged={changed} />}
       {presenter.showsBackers() && <SiteBackersBar backers={details.backers} />}
-      {!closed && <SiteClearance site={details} onChanged={changed} />}
+      {!closed && <SiteClearance site={details} vote={gates.vote} onChanged={changed} />}
       {!closed && <SiteExpiryNote site={details} />}
-      <SitePhotos site={site} photos={presenter.photos()} userLocation={userLocation} reportable={!closed} onChanged={changed} />
+      <SitePhotos siteId={details.site_id} photos={presenter.photos()} gates={gates} reportable={!closed} onChanged={changed} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />
       <SiteReporters site={details} />
-      {!closed && <SiteNotes siteId={details.site_id} community={details.community} onChanged={changed} />}
+      {!closed && <SiteNotes siteId={details.site_id} community={details.community} add={gates.note} onChanged={changed} />}
       <SiteLocationFacts location={details.location} />
       <SiteBrands brands={details.brands} />
       <SiteHistoryFacts site={details} />

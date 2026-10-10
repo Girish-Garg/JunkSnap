@@ -24,7 +24,7 @@ const NOT_LOADED: SitesState = { sites: [], truncated: false, loaded: false, pla
 
 /** One GET /sites per tile of the view, merged. Keeps the last list on screen while the next one loads. */
 export function useSites(plan: SiteTiles | null): SitesLoad {
-  const { api } = useServices();
+  const { api, errors } = useServices();
   const [state, setState] = useState<SitesState>(NOT_LOADED);
   const [version, setVersion] = useState(0);
   useEffect(() => {
@@ -35,14 +35,14 @@ export function useSites(plan: SiteTiles | null): SitesLoad {
         if (current) setState({ ...plan.merge(results), loaded: true, plan, failedPlan: null });
       },
       (error: unknown) => {
-        console.error('Could not load sites', error);
+        errors.report('sites', error);
         if (current) setState((previous) => ({ ...previous, failedPlan: plan }));
       },
     );
     return () => {
       current = false;
     };
-  }, [api, plan, version]);
+  }, [api, errors, plan, version]);
   const refresh = useCallback(() => setVersion((count) => count + 1), []);
   const { sites, truncated, loaded } = state;
   const failed = plan !== null && state.failedPlan === plan;

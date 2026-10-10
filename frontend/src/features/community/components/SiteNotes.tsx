@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import type { SiteCommunity } from '../../../domain/Community';
 import { Button } from '../../../ui/Button';
+import type { GatedAction } from '../../actions/GatedAction';
 import { CommunityPresenter } from '../CommunityPresenter';
 import { SiteNoteForm } from './SiteNoteForm';
 import '../community.css';
@@ -9,13 +11,15 @@ import '../community.css';
 interface SiteNotesProps {
   readonly siteId: string;
   readonly community: SiteCommunity | null | undefined;
+  /** Add a note: open unless the hourly limit was reached (useSiteGates). */
+  readonly add: GatedAction;
   readonly onChanged: () => void;
 }
 
 const TITLE_ID = 'site-notes-title';
 
 /** Notes from residents: a neutral summary and signal chips from moderated notes; never a note's author. */
-export function SiteNotes({ siteId, community, onChanged }: SiteNotesProps) {
+export function SiteNotes({ siteId, community, add, onChanged }: SiteNotesProps) {
   const { t, i18n } = useTranslation();
   const [adding, setAdding] = useState(false);
   const presenter = community ? new CommunityPresenter(community) : null;
@@ -38,7 +42,7 @@ export function SiteNotes({ siteId, community, onChanged }: SiteNotesProps) {
       {adding ? (
         <SiteNoteForm siteId={siteId} onAdded={onChanged} />
       ) : (
-        <Button variant="text" onClick={() => setAdding(true)}>{t('notes.add')}</Button>
+        <Button variant="text" onClick={add.tap(() => setAdding(true))} blocked={lookOf(add.availability).blocked}>{t('notes.add')}</Button>
       )}
     </section>
   );

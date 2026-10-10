@@ -32,7 +32,7 @@ export function ScanStage({ flow, gps }: ScanStageProps) {
       {stage.failed ? (
         <CameraHelp problem={stage.failed} onRetry={stage.camera.retry} />
       ) : (
-        <RecordControls phase={recorder.phase} elapsedMs={recorder.elapsedMs} canStart={stage.canStart} onStart={stage.start} onStop={recorder.stop} />
+        <RecordControls phase={recorder.phase} elapsedMs={recorder.elapsedMs} start={stage.canStart} onStart={stage.start} onStop={recorder.stop} />
       )}
       {stage.problem && (
         <p className="form__error" role="alert">

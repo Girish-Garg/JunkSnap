@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import { Icon } from '../../../ui/Icon';
 import type { AddPhoto } from '../hooks/useAddPhoto';
 
@@ -11,7 +12,8 @@ interface AddPhotoButtonProps {
 export function AddPhotoButton({ addPhoto }: AddPhotoButtonProps) {
   const { t } = useTranslation();
   const reasonId = useId();
-  const { availability, blocked } = addPhoto;
+  const { availability } = addPhoto.action;
+  const { blocked } = lookOf(availability);
   const reason = availability.enabled ? null : t(availability.reason, availability.params);
   return (
     <div className="add-photo">

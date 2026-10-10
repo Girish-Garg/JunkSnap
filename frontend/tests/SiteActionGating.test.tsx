@@ -75,7 +75,7 @@ describe('closed reasons for older rows, no-bin zones and the coming expired sta
 describe('Letter waits for 10 people', () => {
   it('is off on an unverified site and says why', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
-    expect(screen.getByRole('button', { name: 'Letter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Letter' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('Letters open once 10 people confirm this site.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
   });

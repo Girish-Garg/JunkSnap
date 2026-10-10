@@ -31,12 +31,14 @@ describe('map fallback', () => {
   });
 
   it('falls back to the list when the map constructor throws', async () => {
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logged = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     withWebGl2(true);
     await renderApp(<AppRoutes />);
     expect(await screen.findByText(/This browser can't draw the map/)).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Contaminated water/ })).toBeInTheDocument();
-    expect(logged).toHaveBeenCalledWith(expect.stringMatching(/could not start/), expect.any(Error));
+    // Logged once with the app's structured error tag (issue 124).
+    expect(logged).toHaveBeenCalledWith('[junksnap:error]', expect.objectContaining({ where: 'map' }));
   });
 });
 

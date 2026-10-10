@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AddPhotoGate } from '../src/domain/AddPhotoGate';
+import { SITE_GATES, type SiteActionFacts } from '../src/domain/SiteActionGates';
 import { SitePhotoPreset } from '../src/domain/SitePhotoPreset';
 import { testSite } from './siteBuilder';
 
@@ -48,22 +48,36 @@ describe('SitePhotoPreset limits', () => {
   });
 });
 
-describe('AddPhotoGate', () => {
-  const facts = { signedIn: true, closed: false, distanceM: 100, limitM: 500 };
+// #132's AddPhotoGate now lives in SITE_GATES.addPhoto (decision 20261011-0303), with the same rules and order.
+const FACTS: SiteActionFacts = {
+  signedIn: true,
+  online: true,
+  cooling: new Set(),
+  site: { verification: 'unverified', status: 'open', cleanup_status: 'none' },
+  ownSite: false,
+  distanceM: 100,
+  locationDenied: false,
+  addPhotoLimitM: 500,
+};
+const decide = (patch: Partial<SiteActionFacts>) => SITE_GATES.addPhoto.decide({ ...FACTS, ...patch });
+
+describe('SITE_GATES.addPhoto', () => {
 
   it('lets a signed-in person near an open site add a photo', () => {
-    expect(AddPhotoGate.decide(facts)).toEqual({ enabled: true });
-    expect(AddPhotoGate.decide({ ...facts, distanceM: null })).toEqual({ enabled: true });
+    expect(decide({})).toEqual({ enabled: true });
+    expect(decide({ distanceM: null })).toEqual({ enabled: true });
   });
 
-  it('says closed first, then too far, then sign in (which a tap can fix)', () => {
-    expect(AddPhotoGate.decide({ ...facts, closed: true, distanceM: 5000, signedIn: false })).toMatchObject({ enabled: false, reason: 'addPhoto.closed' });
-    expect(AddPhotoGate.decide({ ...facts, distanceM: 5000, signedIn: false })).toMatchObject({ enabled: false, reason: 'addPhoto.tooFar', params: { limit: 500 } });
-    expect(AddPhotoGate.decide({ ...facts, signedIn: false })).toEqual({ enabled: false, reason: 'addPhoto.signIn', remedy: 'signIn' });
+  it('says closed first, then too far (a tap takes a fresh fix), then sign in; offline is fine, as Snap queues', () => {
+    const closed = { site: { verification: 'unverified', status: 'removed', cleanup_status: 'none' } } as const;
+    expect(decide({ ...closed, distanceM: 5000, signedIn: false })).toEqual({ enabled: false, reason: 'addPhoto.closed' });
+    expect(decide({ distanceM: 5000, signedIn: false })).toEqual({ enabled: false, reason: 'addPhoto.tooFar', params: { limit: 500 }, remedy: 'relocate' });
+    expect(decide({ online: false })).toEqual({ enabled: true });
+    expect(decide({ signedIn: false })).toEqual({ enabled: false, reason: 'addPhoto.signIn', remedy: 'signIn' });
   });
 
   it('allows the map fix a 100 m margin, since Send checks the photo fix', () => {
-    expect(AddPhotoGate.decide({ ...facts, distanceM: 590 }).enabled).toBe(true);
-    expect(AddPhotoGate.decide({ ...facts, distanceM: 610 }).enabled).toBe(false);
+    expect(decide({ distanceM: 590 }).enabled).toBe(true);
+    expect(decide({ distanceM: 610 }).enabled).toBe(false);
   });
 });

@@ -137,13 +137,6 @@
   cursor: not-allowed;
 }
 
-.pin-card__why {
-  margin-top: calc(-1 * var(--s-1));
-  color: var(--text-secondary);
-  font-size: var(--text-small);
-  line-height: var(--leading-small);
-}
-
 .preview-card.pin-card > .icon-button {
   top: var(--s-2);
   right: var(--s-2);

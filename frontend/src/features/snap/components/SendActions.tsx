@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { lookOf } from '../../../domain/ActionAvailability';
 import { Button } from '../../../ui/Button';
+import type { GatedAction } from '../../actions/GatedAction';
 
 interface SendActionsProps {
-  readonly canSend: boolean;
+  /** Whether the report can be saved now; when not, a tap on Send says why. */
+  readonly send: GatedAction;
   readonly saveFailed: boolean;
   /** Why Send is off although the form is filled, e.g. a no-bin photo with a vague location. */
   readonly notice?: string | null;
@@ -10,7 +13,7 @@ interface SendActionsProps {
   readonly onRetake: () => void;
 }
 
-export function SendActions({ canSend, saveFailed, notice = null, onSend, onRetake }: SendActionsProps) {
+export function SendActions({ send, saveFailed, notice = null, onSend, onRetake }: SendActionsProps) {
   const { t } = useTranslation();
   return (
     <div className="snap-actions">
@@ -24,7 +27,7 @@ export function SendActions({ canSend, saveFailed, notice = null, onSend, onReta
           {notice}
         </p>
       )}
-      <Button onClick={onSend} disabled={!canSend}>
+      <Button onClick={send.tap(onSend)} {...lookOf(send.availability)}>
         {t('snap.send')}
       </Button>
       <Button variant="text" onClick={onRetake}>

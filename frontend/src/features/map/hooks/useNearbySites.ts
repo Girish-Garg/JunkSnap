@@ -36,7 +36,7 @@ function aroundOf(box: BBox, mine: Found | null): AroundSites {
  * null while still looking, so "No reports here yet" never shows before the search around it is done.
  */
 export function useNearbySites(view: MapView | null, empty: boolean): NearbySites {
-  const { api } = useServices();
+  const { api, errors } = useServices();
   const [found, setFound] = useState<Found | null>(null);
   const reach = useMemo(() => (view && empty ? NearestSites.reach(view.bbox) : null), [view, empty]);
   useEffect(() => {
@@ -45,14 +45,14 @@ export function useNearbySites(view: MapView | null, empty: boolean): NearbySite
     api.listSites(reach).then(
       (sites) => current && setFound({ view, sites, failed: false }),
       (error: unknown) => {
-        console.error('Could not look for sites near the view', error);
+        errors.report('nearby', error);
         if (current) setFound({ view, sites: NONE, failed: true });
       },
     );
     return () => {
       current = false;
     };
-  }, [api, view, reach]);
+  }, [api, errors, view, reach]);
   const mine = found && found.view === view ? found : null;
   const nearest = useMemo(() => (mine ? NearestSites.of(mine.sites, mine.view.bbox.center()) : null), [mine]);
   return reach ? { nearest, around: aroundOf(reach, mine) } : NOTHING_TO_SEARCH;

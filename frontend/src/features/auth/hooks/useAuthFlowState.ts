@@ -23,18 +23,18 @@ export function useAuthFlowState(auth: AuthService): AuthFlow {
     pending.current = null;
     dismiss();
   }, [dismiss]);
+  const reauth = useCallback((action: () => void, notice?: string) => {
+    pending.current = action;
+    setState({ ...CLOSED, step: 'signIn', notice: notice ?? null });
+  }, []);
   const requireAuth = useCallback(
-    (action: () => void) => {
-      if (auth.currentUser()) return action();
-      pending.current = action;
-      setState({ ...CLOSED, step: 'signIn' });
-    },
-    [auth],
+    (action: () => void, notice?: string) => (auth.currentUser() ? action() : reauth(action, notice)),
+    [auth, reauth],
   );
   const finish = useCallback(() => {
     const action = pending.current;
     pending.current = null;
     dismiss(action ?? undefined);
   }, [dismiss]);
-  return useMemo(() => ({ ...state, go, close, requireAuth, finish }), [state, go, close, requireAuth, finish]);
+  return useMemo(() => ({ ...state, go, close, requireAuth, reauth, finish }), [state, go, close, requireAuth, reauth, finish]);
 }

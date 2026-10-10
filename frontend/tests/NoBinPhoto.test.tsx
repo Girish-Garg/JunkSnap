@@ -52,7 +52,7 @@ describe('No bin with a photo: location and mode', () => {
     await renderApp(<AppRoutes />, { route: '/snap', services: await signedIn({ geolocation: fixedGeolocation(85) }) });
     await noBinPhoto(user);
     await user.click(await screen.findByRole('radio', { name: 'No bin nearby' }));
-    expect(screen.getByRole('button', { name: 'Send report' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send report' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('alert')).toHaveTextContent('A no-bin report needs your location to 50 m or better; this photo\'s is ±85 m.');
     await user.click(screen.getByRole('button', { name: 'Retake' }));
     expect(await screen.findByText(PHOTO_FOR)).toBeInTheDocument();

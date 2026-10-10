@@ -7,6 +7,8 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { AreaKey } from '../../../domain/AreaKey';
 import type { AreaKind } from '../../../domain/AreaScores';
 import { BottomSheet } from '../../../ui/BottomSheet';
+import { RouteLocked } from '../../actions/components/RouteLocked';
+import { useAreaLetterRouteGate } from '../../actions/hooks/useRouteGates';
 import '../../../ui/form.css';
 import { useAreaLetter } from '../hooks/useAreaLetter';
 import '../letters.css';
@@ -31,6 +33,7 @@ function AreaLetterSheet({ kind, areaId }: { readonly kind: AreaKind; readonly a
   // Back to the area page under it; a shared link straight to the letter falls back to the area page.
   const close = useCallback(() => sheets.close(areaPath(kind, areaId)), [sheets, kind, areaId]);
   const flow = useAreaLetter(kind, areaId);
+  const { locked } = useAreaLetterRouteGate(kind, areaId);
   const { draft } = flow;
   const title = draft ? t('areaLetter.titleFor', { name: draft.area.name }) : t('areaLetter.title');
   return (
@@ -40,9 +43,9 @@ function AreaLetterSheet({ kind, areaId }: { readonly kind: AreaKind; readonly a
       </h2>
       <p className="letter-banner">{t('letter.noAutoSend')}</p>
       {config.isSampleData() && <p className="form__note">{t('letter.sample')}</p>}
-      {draft ? (
-        <AreaLetterDraftView draft={draft} onReset={flow.reset} />
-      ) : (
+      {locked && <RouteLocked reason={locked} backLabel={t('gate.back')} onBack={close} />}
+      {draft && <AreaLetterDraftView draft={draft} onReset={flow.reset} />}
+      {!draft && !locked && (
         <>
           <AreaIssuePicker value={flow.issue} onChange={flow.setIssue} />
           <LetterChooser flow={flow} />

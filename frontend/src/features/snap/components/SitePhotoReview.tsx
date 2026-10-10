@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NOTE_MAX_LENGTH } from '../../../domain/ReportUpload';
 import { HIGH_LIMIT_M, type SitePhotoPreset } from '../../../domain/SitePhotoPreset';
@@ -6,6 +5,7 @@ import { Checkbox } from '../../../ui/Checkbox';
 import { TextArea } from '../../../ui/TextArea';
 import type { CapturedPhoto } from '../hooks/usePhotoCapture';
 import { usePhotoPreview } from '../hooks/usePhotoPreview';
+import { useReviewSend } from '../hooks/useReviewSend';
 import { useSitePhotoChoice } from '../hooks/useSitePhotoChoice';
 import type { SnapFlow } from '../hooks/useSnapFlow';
 import { GpsPanel } from './GpsPanel';
@@ -22,12 +22,7 @@ export function SitePhotoReview({ photo, flow, preset }: SitePhotoReviewProps) {
   const { t } = useTranslation();
   const report = useSitePhotoChoice(preset, photo.gps);
   const preview = usePhotoPreview(photo.bytes);
-  const [sending, setSending] = useState(false);
-  const send = () => {
-    if (!report.choice) return;
-    setSending(true);
-    void flow.send(photo, report.choice).finally(() => setSending(false));
-  };
+  const { sendable, send } = useReviewSend(photo, flow, report);
   return (
     <div className="snap-review">
       <div className="snap-review__top">
@@ -42,7 +37,7 @@ export function SitePhotoReview({ photo, flow, preset }: SitePhotoReviewProps) {
         <Checkbox id="site-photo-high" label={t('longRange.high', { metres: HIGH_LIMIT_M })} checked={report.high} onChange={report.setHigh} />
       )}
       <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={t('snap.noteHint', { left: report.noteLeft })} />
-      <SendActions canSend={report.choice !== null && !sending} saveFailed={flow.saveFailed} notice={report.notice} onSend={send} onRetake={flow.retake} />
+      <SendActions send={sendable} saveFailed={flow.saveFailed} notice={report.notice} onSend={send} onRetake={flow.retake} />
     </div>
   );
 }
