@@ -17,10 +17,16 @@ export interface ScanCaptureDeps {
   readonly clock: Clock;
 }
 
+/** The fix that unlocked Start; without takenAtMs it counts as taken at the start. */
+export interface FirstFix {
+  readonly fix: GpsFix;
+  readonly takenAtMs?: number;
+}
+
 export interface ScanStart {
   readonly stream: MediaStream;
   /** Recording waits for a fix, so t_ms 0 always has one. */
-  readonly firstFix: GpsFix;
+  readonly firstFix: FirstFix;
   readonly choice: Pick<ScanDraft, 'report_type' | 'context'>;
   readonly onTick: (elapsedMs: number) => void;
 }
@@ -42,8 +48,8 @@ export class ScanCapture {
   start({ stream, firstFix, choice, onTick }: ScanStart): ActiveScan {
     const now = () => this.#deps.clock.now().getTime();
     const session = this.#deps.recorder.start(stream);
-    const track = new GpsTrack(session.startedAtMs, firstFix);
-    const unwatch = this.#deps.gps.watch({ onFix: (fix) => track.add(fix, now()), onProblem: () => undefined });
+    const track = new GpsTrack(session.startedAtMs, { fix: firstFix.fix, takenAtMs: firstFix.takenAtMs ?? session.startedAtMs });
+    const unwatch = this.#deps.gps.watch({ onFix: (fix, takenAtMs) => track.add({ fix, takenAtMs }), onProblem: () => undefined });
     const ticker = setInterval(() => {
       track.pad(now());
       onTick(now() - session.startedAtMs);

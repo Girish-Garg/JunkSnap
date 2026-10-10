@@ -18,7 +18,8 @@ export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: Sn
   const choice = report.choice;
   const canStart = camera.state === 'live' && recorder.supported && gps.fix !== null && choice !== null;
   const start = () => {
-    if (choice && gps.fix) recorder.start({ report_type: choice.report_type, context: choice.context }, gps.fix);
+    if (!choice || !gps.fix) return;
+    recorder.start({ report_type: choice.report_type, context: choice.context }, { fix: gps.fix, takenAtMs: gps.takenAtMs });
   };
   const problem: CaptureProblem | null = recorder.problem ?? (recorder.supported ? null : 'recorder_unsupported');
   return { camera, report, recorder, failed: cameraProblem(camera.state), canStart, start, problem };

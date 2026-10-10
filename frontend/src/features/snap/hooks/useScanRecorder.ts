@@ -1,7 +1,7 @@
 import { useState, type RefObject } from 'react';
 import { useServices } from '../../../app/useServices';
 import { CaptureError, type CaptureProblem } from '../../../domain/CaptureError';
-import type { GpsFix } from '../../../domain/ReportUpload';
+import type { FirstFix } from '../../../services/ScanCapture';
 import type { ScanDraft } from '../../../domain/ScanUpload';
 import type { ActiveScan } from '../../../services/ScanCapture';
 
@@ -15,7 +15,7 @@ export function useScanRecorder(video: RefObject<HTMLVideoElement | null>, onSav
   const [elapsedMs, setElapsedMs] = useState(0);
   const [problem, setProblem] = useState<CaptureProblem | null>(null);
   const fail = (error: unknown) => setProblem(error instanceof CaptureError ? error.problem : 'encode_failed');
-  const start = (choice: Pick<ScanDraft, 'report_type' | 'context'>, firstFix: GpsFix) => {
+  const start = (choice: Pick<ScanDraft, 'report_type' | 'context'>, firstFix: FirstFix) => {
     const stream = video.current?.srcObject as MediaStream | null | undefined;
     if (!stream) return;
     setProblem(null);
