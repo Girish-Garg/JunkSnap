@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('map error boundary', () => {
   it('catches a crash in the map view and shows the list', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as never);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ getExtension: () => null } as never);
     await renderApp(<AppRoutes />);
     expect(await screen.findByText(/This browser can't draw the map/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Areas' })).toBeInTheDocument();

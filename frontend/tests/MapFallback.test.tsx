@@ -1,7 +1,8 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
+import { MockApiClient } from '../src/services/MockApiClient';
 import { renderApp } from './helpers';
 
 // The real MapLibre map cannot run in jsdom; this stand-in throws like a browser without WebGL2.
@@ -14,7 +15,7 @@ vi.mock('../src/features/map/SiteMap', () => ({
 }));
 
 const withWebGl2 = (available: boolean) =>
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue((available ? {} : null) as never);
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue((available ? { getExtension: () => null } : null) as never);
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -30,11 +31,33 @@ describe('map fallback', () => {
   });
 
   it('falls back to the list when the map constructor throws', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     withWebGl2(true);
     await renderApp(<AppRoutes />);
     expect(await screen.findByText(/This browser can't draw the map/)).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /Contaminated water/ })).toBeInTheDocument();
+    expect(logged).toHaveBeenCalledWith(expect.stringMatching(/could not start/), expect.any(Error));
+  });
+});
+
+describe('map list mode', () => {
+  it('hides search and locate, which only move the map', async () => {
+    withWebGl2(false);
+    await renderApp(<AppRoutes />);
+    await screen.findByRole('button', { name: /Waste dump/ });
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show my location' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Filters/ })).toBeInTheDocument();
+  });
+
+  it('says there are no reports only after loading finishes', async () => {
+    let finish: (sites: never[]) => void = () => undefined;
+    vi.spyOn(MockApiClient.prototype, 'listSites').mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    withWebGl2(false);
+    await renderApp(<AppRoutes />);
+    expect(screen.queryByText('No reports here yet.')).not.toBeInTheDocument();
+    await act(async () => finish([]));
+    expect(await screen.findByText('No reports here yet.')).toBeInTheDocument();
   });
 
   it('shows the notice in Hindi', async () => {

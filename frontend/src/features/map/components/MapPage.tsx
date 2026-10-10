@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router';
 import { NavBar } from '../../nav/NavBar';
+import { useMapFallback } from '../hooks/useMapFallback';
 import { useMapPage } from '../hooks/useMapPage';
 import '../map.css';
 import type { MapContext } from '../useMapContext';
@@ -9,6 +10,7 @@ import { MapSurface } from './MapSurface';
 
 export function MapPage() {
   const page = useMapPage();
+  const { listMode, fail } = useMapFallback();
   const { selection, filters } = page;
   const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite };
   const classes = ['map-page', page.sheetOpen && 'map-page--sheet', selection.preview && 'map-page--card'];
@@ -23,9 +25,12 @@ export function MapPage() {
           camera={selection.camera}
           onPick={selection.pick}
           onViewChange={page.setView}
+          onFail={fail}
+          listMode={listMode}
+          notice={page.notice}
           onOpen={selection.openDetails}
         />
-        <MapOverlay page={page} />
+        <MapOverlay page={page} listMode={listMode} />
         {filters.open && <FiltersSheet filters={filters} sites={page.loaded} onClose={() => filters.setOpen(false)} />}
         <Outlet context={context} />
       </div>
