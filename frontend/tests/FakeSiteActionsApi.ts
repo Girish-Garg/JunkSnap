@@ -5,13 +5,13 @@ import type { SiteActionsApi } from '../src/services/SiteActionsApi';
 
 type Call = 'vote' | 'cleanup' | 'letter';
 
-/** Records every call with its site id and body; failNext makes the next call of a kind fail. */
+/** Records every call with its site id and body; each failNext makes one more call of a kind fail. */
 export class FakeSiteActionsApi implements SiteActionsApi {
   readonly calls: { readonly kind: Call; readonly siteId: string; readonly body: unknown }[] = [];
-  readonly #failures = new Map<Call, ApiError>();
+  readonly #failures = new Map<Call, ApiError[]>();
 
   failNext(kind: Call, status: number, code: string): void {
-    this.#failures.set(kind, new ApiError(status, code, `${kind} failed`));
+    this.#failures.set(kind, [...(this.#failures.get(kind) ?? []), new ApiError(status, code, `${kind} failed`)]);
   }
 
   async vote(siteId: string, request: VoteRequest): Promise<VoteResult> {
@@ -31,8 +31,7 @@ export class FakeSiteActionsApi implements SiteActionsApi {
 
   #record(kind: Call, siteId: string, body: unknown): void {
     this.calls.push({ kind, siteId, body });
-    const failure = this.#failures.get(kind);
-    this.#failures.delete(kind);
+    const failure = this.#failures.get(kind)?.shift();
     if (failure) throw failure;
   }
 }
