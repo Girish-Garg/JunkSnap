@@ -43,7 +43,7 @@ export type ReportUpload = {
   /**
    * SHA-256 of the original image bytes, computed on the phone, lowercase hex.
    */
-  sha256: string;
+  sha256?: string;
   gps: {
     lat: number;
     lon: number;
@@ -100,7 +100,6 @@ export const reportUploadSchema = {
     "report_type",
     "context",
     "capture_mode",
-    "sha256",
     "gps",
     "device_token",
     "captured_at"
@@ -304,8 +303,32 @@ export const reportUploadSchema = {
               "no_bin",
               "no_pickup"
             ]
+          },
+          "gps": {
+            "properties": {
+              "accuracy_m": {
+                "maximum": 50
+              }
+            }
           }
         }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "report_type": {
+            "const": "no_bin"
+          }
+        }
+      },
+      "then": {
+        "description": "Decision 20261010-1630: a no_bin report says there is no dustbin within 1 km of where the reporter stands. The photo is optional: without sha256 there is no photo; upload_id is then made by the app (upl_ plus a lowercase ULID)."
+      },
+      "else": {
+        "required": [
+          "sha256"
+        ]
       }
     },
     {

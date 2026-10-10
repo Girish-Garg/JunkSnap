@@ -64,7 +64,7 @@ describe("ScoreCalculator window, pilot and version", () => {
     ]);
     expect(row.data_window).toEqual({ from: "2026-10-08T05:00:00Z", to: "2026-10-20T00:00:00Z" });
     expect(row.computed_at).toBe("2026-10-20T00:00:00Z");
-    expect(row.formula_version).toBe("scores-v2");
+    expect(row.formula_version).toBe("scores-v3");
   });
 
   it("flags the area as pilot when any of its sites is", () => {
@@ -78,7 +78,7 @@ describe("ScoreCalculator window, pilot and version", () => {
   });
 });
 
-describe("ScoreCalculator scores-v2 formulas", () => {
+describe("ScoreCalculator scores-v3 formulas", () => {
   it("computes the city score from clearing speed, 7-day clearing, re-dumping and no-bin response", () => {
     const row = calculate(workedExample());
     expect(row.metrics).toMatchObject({
@@ -107,18 +107,18 @@ describe("ScoreCalculator scores-v2 formulas", () => {
     expect(row.diagnosis).toEqual(["repeat_spot"]);
   });
 
-  it("gives no_data for citizen without km² and for bin access when no site was measured", () => {
+  it("gives no_data for citizen without km², while bin access still rests on the verified no-bin zone share (scores-v3)", () => {
     const row = calculate(workedExample(false));
     expect(row.scores.citizen).toEqual({ value: null, reason: "no_data" });
-    expect(row.scores.bin_access).toEqual({ value: null, reason: "no_data" });
+    expect(row.scores.bin_access).toEqual({ value: 75, reason: null });
     expect(row.metrics.new_dumps_per_km2_month).toBeNull();
     expect(row.metrics.median_distance_to_disposal_m).toBeNull();
     expect(row.metrics.share_vacant_plot_drain_roadside_pct).toBe(62.5);
   });
 
-  it("leaves citizen unadjusted when only bin access is missing", () => {
+  it("adjusts citizen by the zone-share bin access when no bin distance was measured", () => {
     const row = calculate(workedExample(false), FULL_FACTS);
-    expect(row.scores.citizen).toEqual({ value: 59, reason: null });
+    expect(row.scores.citizen).toEqual({ value: 64, reason: null });
   });
 
   it("only judges 7-day clearing on sites reported 7 or more days before the run", () => {

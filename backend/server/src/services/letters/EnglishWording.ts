@@ -3,6 +3,8 @@ import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/le
 import type { TemplateWording } from "./TemplateLetter.js";
 import { coordinates, joinList, kilometres, letterDate } from "./utils.js";
 
+// Each no-bin report says no dustbin within this radius (decision 20261010-1630).
+const ZONE_RADIUS_M = 1000;
 const WHAT: Readonly<Record<SiteContext, string>> = {
   vacant_plot: "a waste dump on a vacant plot",
   roadside: "a waste dump by the roadside",
@@ -68,8 +70,13 @@ export class EnglishWording implements TemplateWording {
     if (site.reportType !== "no_bin") {
       return REQUEST[site.reportType];
     }
-    const km = kilometres(this.#binRadiusM);
-    return `No known waste bin or collection point (OpenStreetMap, ward records) within ${km} km of this site. ${REQUEST.no_bin}`;
+    const people = `${site.evidence.reporters ?? 10} people confirmed there is no dustbin within 1 km of this spot.`;
+    const bin = site.evidence.nearestBin;
+    const mapped =
+      bin !== null && bin.distance_m <= ZONE_RADIUS_M
+        ? `A mapped bin is ${Math.round(bin.distance_m)} m away (OpenStreetMap, ward records); it may be missing or broken.`
+        : `No mapped bin or collection point within ${kilometres(this.#binRadiusM)} km (OpenStreetMap, ward records).`;
+    return `${people} ${mapped} ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {

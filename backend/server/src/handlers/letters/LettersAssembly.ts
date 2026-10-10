@@ -66,7 +66,7 @@ export class LettersAssembly {
       limiter: new LetterRateLimiter(adapters.counters),
       drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
-      noBin: new NoBinEligibility(this.#bins.minReporters, this.#bins.radiusM),
+      noBin: new NoBinEligibility(this.#bins.radiusM),
     });
   }
 
@@ -85,7 +85,6 @@ export class LettersAssembly {
       drafter: new ProseDrafter<AreaLetterBrief>(adapters.writer, verifier, template, this.#logger),
       stamp: adapters.stamp,
       logger: this.#logger,
-      noBinMinReporters: this.#bins.minReporters,
     });
   }
 

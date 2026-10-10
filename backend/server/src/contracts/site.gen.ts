@@ -65,6 +65,10 @@ export interface Site {
      */
     corroborations: number;
     /**
+     * Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites.
+     */
+    zone_radius_m?: 1000;
+    /**
      * Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).
      */
     backers: {
@@ -1077,6 +1081,10 @@ export const siteSchema = {
           "minimum": 0,
           "description": "Confirm votes plus Me too reports from other devices."
         },
+        "zone_radius_m": {
+          "const": 1000,
+          "description": "Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites."
+        },
         "backers": {
           "type": "object",
           "additionalProperties": false,
@@ -1572,6 +1580,27 @@ export const siteSchema = {
                   "no_pickup"
                 ]
               }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
+                "const": "no_bin"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "zone_radius_m"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "zone_radius_m"
+              ]
             }
           }
         },

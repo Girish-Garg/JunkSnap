@@ -41,6 +41,7 @@
         "report_count": { "type": "integer", "minimum": 1 },
         "verified_count": { "type": "integer", "minimum": 0, "description": "Reports that count as verified: every report of a verified site, 0 otherwise." },
         "corroborations": { "type": "integer", "minimum": 0, "description": "Confirm votes plus Me too reports from other devices." },
+        "zone_radius_m": { "const": 1000, "description": "Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites." },
         "backers": {
           "type": "object",
           "additionalProperties": false,
@@ -234,6 +235,7 @@
       "allOf": [
         { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
         { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
+        { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "required": ["zone_radius_m"] }, "else": { "not": { "required": ["zone_radius_m"] } } },
         { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
         { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } }
       ]

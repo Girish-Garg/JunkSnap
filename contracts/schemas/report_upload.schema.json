@@ -5,7 +5,7 @@
   "description": "Body of POST /reports, sent after the photo was PUT to the presigned URL. The worker also writes one for each frame it cuts from a scan video. The server re-checks everything; hints from the phone are never trusted.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["upload_id", "report_type", "context", "capture_mode", "sha256", "gps", "device_token", "captured_at"],
+  "required": ["upload_id", "report_type", "context", "capture_mode", "gps", "device_token", "captured_at"],
   "properties": {
     "upload_id": {
       "type": "string",
@@ -75,7 +75,8 @@
   "allOf": [
     { "if": { "properties": { "capture_mode": { "const": "scan" } } }, "then": { "required": ["scan"] }, "else": { "not": { "required": ["scan"] } } },
     { "if": { "properties": { "report_type": { "const": "waste_dump" } } }, "then": { "properties": { "context": { "enum": ["vacant_plot", "roadside", "drain", "other"] } } } },
-    { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] } } } },
+    { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "properties": { "context": { "enum": ["no_bin", "no_pickup"] }, "gps": { "properties": { "accuracy_m": { "maximum": 50 } } } } } },
+    { "if": { "properties": { "report_type": { "const": "no_bin" } } }, "then": { "description": "Decision 20261010-1630: a no_bin report says there is no dustbin within 1 km of where the reporter stands. The photo is optional: without sha256 there is no photo; upload_id is then made by the app (upl_ plus a lowercase ULID)." }, "else": { "required": ["sha256"] } },
     { "if": { "properties": { "report_type": { "const": "contaminated_water" } } }, "then": { "properties": { "context": { "enum": ["stagnant", "sewage", "foam", "choked_drain"] } } } },
     { "if": { "properties": { "report_type": { "const": "open_construction" } } }, "then": { "properties": { "context": { "enum": ["uncovered_debris", "dusty_site"] } } } }
   ]

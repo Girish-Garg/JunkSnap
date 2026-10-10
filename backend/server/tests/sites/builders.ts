@@ -91,7 +91,10 @@ const DEFAULTS = {
 } as const;
 
 // A jdh-1 report from the fixtures, with the fields a test changes.
-export function evidence(options: EvidenceOptions = {}): MergeEvidence {
+// A photo report always has both results; no-bin reports without them are built by the zone tests.
+export type PhotoEvidence = MergeEvidence & { readonly moderation: ModerationResult; readonly verification: VerificationResult };
+
+export function evidence(options: EvidenceOptions = {}): PhotoEvidence {
   const o = { ...DEFAULTS, ...options };
   const upload = fixture<ReportUpload>("report_upload.jdh-1.json");
   const moderation = fixture<ModerationResult>("moderation_result.jdh-1.json");

@@ -156,29 +156,26 @@ describe("AreaLetterService: when no letter can be drafted", () => {
     await expect(service.draft({ ...request, issue: "open_construction" })).rejects.toThrow("(0 of 10)");
   });
 
-  it("counts only no-bin sites with 5 reporters and no bin measured within 3 km, and says why", async () => {
-    const sites = [noBinSite("n1", 6, 6, true), noBinSite("n2", 5, 3, true), noBinSite("n3", 5, 7, false)];
+  it("counts only no-bin zones 10 people confirmed, and says why the others are left out", async () => {
+    const sites = [noBinSite("n1", 6, 10, { confirmed: true }), noBinSite("n2", 5, 3, { confirmed: false }), noBinSite("n3", 5, 7, { confirmed: false })];
     const service = await areaLetterService({ sites });
     await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow(
-      "Not enough verified reports yet (6 of 10) for this issue in this area. No-bin sites left out: fewer than 5 people reported no bin (1 site); a known bin or collection point is within 3 km (1 site).",
+      "Not enough verified reports yet (6 of 10) for this issue in this area. No-bin sites left out: Fewer than 10 people have confirmed no dustbin within 1 km (2 sites).",
     );
   });
 
-  it("blocks a no-bin letter where bins are not mapped, however many reports there are", async () => {
-    const sites = [noBinSite("m1", 8, 9, null), noBinSite("m2", 7, 6, null)];
-    const service = await areaLetterService({ sites });
-    await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow(NotVerifiedError);
-    await expect(service.draft({ ...request, issue: "no_bin" })).rejects.toThrow("Bins not mapped here yet (2 sites)");
-  });
-
-  it("drafts a no-bin letter once enough eligible sites hold 10 verified reports", async () => {
-    const sites = [noBinSite("e1", 6, 6, true), noBinSite("e2", 5, 5, true), noBinSite("e3", 9, 2, null)];
+  it("drafts a no-bin letter from verified zones, even where a bin is mapped nearby or bins are not mapped", async () => {
+    const sites = [
+      noBinSite("e1", 6, 10, { confirmed: true, within: false }),
+      noBinSite("e2", 5, 10, { confirmed: true, within: null }),
+      noBinSite("e3", 9, 2, { confirmed: false }),
+    ];
     const letter = await (await areaLetterService({ sites })).draft({ ...request, issue: "no_bin" });
-    expect(letter.evidence).toMatchObject({ verified_reports: 11, sites: 2, bin_access: { sites_measured: 2, sites_without_bin_within_3km: 2 } });
+    expect(letter.evidence).toMatchObject({ verified_reports: 11, sites: 2, bin_access: { sites_measured: 1, sites_without_bin_within_3km: 0 } });
   });
 
-  it("leaves ineligible no-bin sites out of an all letter", async () => {
-    const sites = [...assemblySites(), noBinSite("u9", 9, 1, null)];
+  it("leaves unconfirmed no-bin zones out of an all letter", async () => {
+    const sites = [...assemblySites(), noBinSite("u9", 9, 1, { confirmed: false })];
     const letter = await (await areaLetterService({ sites })).draft({ ...request, issue: "all" });
     expect(letter.evidence.worst_sites.map((site) => site.site_id)).not.toContain("site_u9");
     expect(letter.evidence.verified_reports).toBe(15);

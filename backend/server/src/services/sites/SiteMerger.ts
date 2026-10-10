@@ -3,7 +3,8 @@ import { BoundingBox } from "../../domain/sites/BoundingBox.js";
 import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import type { MergeableReport, MergeEvidence } from "../../domain/sites/MergeableReport.js";
 import type { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
-import { MERGE_RADIUS_M, Site } from "../../domain/sites/Site.js";
+import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
+import { Site } from "../../domain/sites/Site.js";
 import { StaleSiteError } from "../../domain/sites/SiteErrors.js";
 import type { Verification } from "../../domain/sites/SiteTypes.js";
 import { ZeroScoreRows } from "../../domain/sites/ZeroScoreRows.js";
@@ -57,7 +58,7 @@ export class SiteMerger {
   }
 
   async #attempt(report: MergeableReport): Promise<Merged> {
-    const nearby = await this.#nearby(report.point);
+    const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType));
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
       return { site: holder, outcome: "unchanged" };
@@ -66,8 +67,8 @@ export class SiteMerger {
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
   }
 
-  async #nearby(point: GeoPoint): Promise<Site[]> {
-    const cells = this.#deps.cells.covering(BoundingBox.around(point, MERGE_RADIUS_M));
+  async #nearby(point: GeoPoint, radius: number): Promise<Site[]> {
+    const cells = this.#deps.cells.covering(BoundingBox.around(point, radius));
     const perCell = await Promise.all(cells.map((cell) => this.#deps.sites.inCell(cell)));
     return perCell.flat();
   }

@@ -11,7 +11,7 @@ const AREA_FIELDS: readonly (readonly [AreaKind, AreaField])[] = [
   ["district", "district"],
 ];
 const MIN_VERIFIED_REPORTS = 10;
-const FORMULA_VERSION = "scores-v2";
+const FORMULA_VERSION = "scores-v3";
 
 // First scores row for each area of a new site: zero counts, every score withheld (contracts/README.md).
 export class ZeroScoreRows {

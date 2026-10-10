@@ -12,7 +12,7 @@ import { CitizenScore, type CitizenMeasure } from "./CitizenScore.js";
 import { CityScore, type CityMeasure } from "./CityScore.js";
 import { Diagnoser } from "./Diagnoser.js";
 
-export const FORMULA_VERSION = "scores-v2";
+export const FORMULA_VERSION = "scores-v3";
 export const MIN_VERIFIED_REPORTS = 10;
 
 export interface AreaInput {
@@ -33,7 +33,7 @@ export interface ScoreParts {
 type Scored = Pick<WardScores, "scores" | "metrics" | "diagnosis">;
 type Score = WardScores["scores"]["city"];
 
-// scores-v2: docs/decisions/20261010-0238-hem-area-score-formulas.md with bin access from 20261010-1430.
+// scores-v3: docs/decisions/20261010-0238-hem-area-score-formulas.md with bin access from 20261010-1630.
 export class ScoreCalculator {
   readonly #parts: ScoreParts;
 
