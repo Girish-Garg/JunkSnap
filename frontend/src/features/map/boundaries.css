@@ -68,6 +68,10 @@
   font-weight: 500;
 }
 
+.boundary-legend__caveat {
+  color: var(--text);
+}
+
 .boundary-legend__ramp {
   display: flex;
   align-items: center;

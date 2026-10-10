@@ -112,6 +112,22 @@ def test_ward_files_are_picked_up_on_rerun_and_dropped_when_gone(dirs: tuple[Pat
     assert "wards" not in json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]
 
 
+def test_index_counts_mapped_wards_against_each_body(dirs: tuple[Path, Path]) -> None:
+    source, out = dirs
+    wards(source)
+    bodies = source / "local_bodies.json"
+    bodies.write_text(json.dumps([
+        {"id": "jodhpur-mc", "name": "Jodhpur MC", "towns": ["Jodhpur"], "wards": 100},
+        {"id": "jaipur-mc", "name": "Jaipur MC", "towns": ["Jaipur"], "wards": 150},
+    ]), encoding="utf-8")
+    sb.run(source, out, sb.LAYERS, bodies)
+    layers = json.loads((out / "index.json").read_text(encoding="utf-8"))["layers"]
+    assert layers["wards"]["coverage"] == [
+        {"body": "jodhpur-mc", "town": "Jodhpur", "mapped": 1, "wards": 100},
+    ]
+    assert "coverage" not in layers["assembly"]
+
+
 def test_rounds_coordinates_to_four_places(dirs: tuple[Path, Path]) -> None:
     source, out = dirs
     sb.run(source, out)

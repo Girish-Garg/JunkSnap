@@ -80,14 +80,22 @@ describe('HttpAreaApi.list', () => {
 describe('BoundaryCatalog', () => {
   it('offers only the kinds the boundary index lists, wards once their file exists', async () => {
     const index = (layers: object) => async () => Response.json({ layers });
-    expect(await new BoundaryCatalog('/b', index({ assembly: {}, loksabha: {} })).available()).toEqual(['assembly', 'loksabha']);
-    expect(await new BoundaryCatalog('/b', index({ wards: {}, assembly: {} })).available()).toEqual(['ward', 'assembly']);
+    expect(await new BoundaryCatalog('/b', index({ assembly: {}, loksabha: {} })).index()).toEqual({
+      kinds: ['assembly', 'loksabha'],
+      wardCoverage: [],
+    });
+    const coverage = [{ body: 'jodhpur-mc', town: 'Jodhpur', mapped: 34, wards: 100 }];
+    expect(await new BoundaryCatalog('/b', index({ wards: { coverage }, assembly: {} })).index()).toEqual({
+      kinds: ['ward', 'assembly'],
+      wardCoverage: coverage,
+    });
   });
 
   it('offers nothing when the index cannot be read', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).available()).toEqual([]);
-    expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).available()).toEqual([]);
+    const empty = { kinds: [], wardCoverage: [] };
+    expect(await new BoundaryCatalog('/b', async () => new Response('', { status: 404 })).index()).toEqual(empty);
+    expect(await new BoundaryCatalog('/b', () => Promise.reject(new Error('offline'))).index()).toEqual(empty);
   });
 
   it('names the simplified files', () => {
