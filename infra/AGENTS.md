@@ -23,12 +23,14 @@ Decision 20261010-0159. CloudFront sits in front of the ALB for HTTPS. Amplify h
 ## Commands (dev only)
 
 ```
-uv run scripts/deploy.py dev
+uv run scripts/deploy.py dev --origins https://dev.<amplify-app-id>.amplifyapp.com,http://localhost:5173
+uv run scripts/deploy_web.py dev     # Amplify app built from frontend/, no Git connection
+uv run scripts/smoke_report.py <cloudfront-url>
 aws cloudformation validate-template --template-body file://infra/aws/stage.yaml --profile junksnap --region ap-south-1
 kubectl kustomize infra/k8s/overlays/dev
 ```
 
-`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA and `stage-<stage>` (never expired by ECR), writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS; demo requires it. The ALB accepts traffic only from CloudFront's origin-facing prefix list.
+`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA and `stage-<stage>` (never expired by ECR; the server image gets `data/` at `/app/data` through the named build context `data`), writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS; demo requires it. The ALB accepts traffic only from CloudFront's origin-facing prefix list.
 
 Render with `kubectl kustomize` and read the output before every apply.
 
