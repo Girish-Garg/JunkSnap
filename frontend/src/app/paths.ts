@@ -3,11 +3,16 @@ export const SITE_CLEANUP_PATH = '/sites/:siteId/cleanup';
 export const SITE_LETTER_PATH = '/sites/:siteId/letter';
 export const SNAP_PATH = '/snap';
 export const AREAS_PATH = '/areas';
+export const AREA_PATH = '/areas/:kind/:areaId';
 export const ACTIVITY_PATH = '/activity';
 export const ACCOUNT_PATH = '/account';
 
 export function sitePath(siteId: string): string {
   return `/sites/${encodeURIComponent(siteId)}`;
+}
+
+export function areaPath(kind: string, areaId: string): string {
+  return `/areas/${kind}/${encodeURIComponent(areaId)}`;
 }
 
 export function cleanupPath(siteId: string): string {

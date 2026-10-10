@@ -12,7 +12,7 @@ export function MapPage() {
   const page = useMapPage();
   const { listMode, fail } = useMapFallback();
   const { selection, filters } = page;
-  const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite };
+  const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite, sites: page.loaded };
   const classes = ['map-page', page.sheetOpen && 'map-page--sheet', selection.preview && 'map-page--card'];
   return (
     <main className={classes.filter(Boolean).join(' ')}>

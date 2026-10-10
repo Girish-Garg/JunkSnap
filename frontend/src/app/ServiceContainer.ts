@@ -2,11 +2,15 @@ import { LanguagePreference, type KeyValueStore } from '../i18n/LanguagePreferen
 import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
+import type { AreaApi } from '../services/AreaApi';
+import { areaFixtureLoaders } from '../services/areaFixtures';
 import { AmplifyAuthFactory } from '../services/AmplifyAuthFactory';
 import type { AuthService } from '../services/AuthService';
 import { GeoLocator } from '../services/GeoLocator';
 import { HttpApiClient } from '../services/HttpApiClient';
+import { HttpAreaApi } from '../services/HttpAreaApi';
 import { MockApiClient } from '../services/MockApiClient';
+import { MockAreaApi } from '../services/MockAreaApi';
 import { MockAuthService } from '../services/MockAuthService';
 import { Sharer, type ShareApi } from '../services/Sharer';
 import { UnavailableAuthService } from '../services/UnavailableAuthService';
@@ -19,6 +23,11 @@ import type { SnapServices } from './SnapServices';
 const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => ApiClient>> = {
   mock: () => new MockApiClient(siteFixtureLoaders),
   live: (config) => new HttpApiClient(config.requireApiUrl()),
+};
+
+const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => AreaApi>> = {
+  mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders),
+  live: (config) => new HttpAreaApi(config.requireApiUrl()),
 };
 
 // The mock signs anyone in, so it only runs with sample data; live mode signs in with Cognito.
@@ -35,6 +44,7 @@ export interface BrowserApis extends SnapBrowserApis {
 export interface Services {
   readonly config: AppConfig;
   readonly api: ApiClient;
+  readonly areas: AreaApi;
   readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
@@ -47,6 +57,7 @@ export interface Services {
 export class ServiceContainer implements Services {
   readonly config: AppConfig;
   readonly api: ApiClient;
+  readonly areas: AreaApi;
   readonly auth: AuthService;
   readonly localization: Localization;
   readonly layers: LayerRegistry;
@@ -57,6 +68,7 @@ export class ServiceContainer implements Services {
   constructor(services: Services) {
     this.config = services.config;
     this.api = services.api;
+    this.areas = services.areas;
     this.auth = services.auth;
     this.localization = services.localization;
     this.layers = services.layers;
@@ -70,6 +82,7 @@ export class ServiceContainer implements Services {
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config),
+      areas: AREA_BUILDERS[config.apiMode](config),
       auth,
       localization: new Localization(new LanguagePreference(browser.store)),
       layers: new LayerRegistry(),

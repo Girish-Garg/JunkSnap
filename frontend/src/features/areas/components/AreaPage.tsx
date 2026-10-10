@@ -1,0 +1,41 @@
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
+import { AREAS_PATH } from '../../../app/paths';
+import type { AreaScores } from '../../../domain/AreaScores';
+import { FactList } from '../../../ui/FactList';
+import { useAreaPresenters } from '../hooks/useAreaPresenters';
+import { AREA_TITLE_ID } from './areaIds';
+import { AreaDiagnosis } from './AreaDiagnosis';
+import { AreaInsights } from './AreaInsights';
+import { AreaScoreList } from './AreaScoreList';
+import { AreaSites } from './AreaSites';
+
+interface AreaPageProps {
+  readonly scores: AreaScores;
+}
+
+// Area level only: counts beside every score, the pilot flag, and nothing the api did not measure.
+export function AreaPage({ scores }: AreaPageProps) {
+  const { t } = useTranslation();
+  const { area, insights } = useAreaPresenters(scores);
+  return (
+    <article className="area-page">
+      <Link className="area-back" to={AREAS_PATH}>
+        {t('areas.all')}
+      </Link>
+      <h2 id={AREA_TITLE_ID} className="sheet-title" tabIndex={-1}>
+        {scores.area.name}
+      </h2>
+      <p className="area-page__meta">
+        <span>{area.kind()}</span>
+        {scores.pilot && <span className="badge">{t('site.pilot')}</span>}
+      </p>
+      <AreaScoreList scores={area.scores()} />
+      <AreaDiagnosis items={area.diagnosis()} />
+      <FactList title={t('areas.counts')} facts={area.counts()} />
+      <AreaInsights insights={insights} />
+      <AreaSites area={scores.area} />
+      <p className="area-page__footnote">{area.footnote()}</p>
+    </article>
+  );
+}
