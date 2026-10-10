@@ -133,3 +133,15 @@ def test_rounds_coordinates_to_four_places(dirs: tuple[Path, Path]) -> None:
     sb.run(source, out)
     ring = read(out / "assembly.geojson")[0]["geometry"]["coordinates"][0]
     assert all(round(value, 4) == value for point in ring for value in point)
+
+
+def test_clipped_layers_have_no_overlaps_after_rounding() -> None:
+    discs = [Point(73.0, 26.3).buffer(0.01), Point(73.015, 26.3).buffer(0.01)]
+    features = [
+        {"type": "Feature", "properties": {"id": f"w{i}"}, "geometry": disc.__geo_interface__}
+        for i, disc in enumerate(discs)
+    ]
+
+    first, second = (shape(f["geometry"]) for f in sb.without_overlaps(features))
+
+    assert first.intersection(second).area == 0
