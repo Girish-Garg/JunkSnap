@@ -35,9 +35,74 @@ Fixes against DataMeet: names of seats 38, 52, 68, 126, 147 and 195 follow the o
 - Assembly seats exist only for Rajasthan. Elsewhere the lookup has a Lok Sabha seat but no assembly polygon yet.
 - A point within about 100 m of a seat edge can land in the neighbouring seat.
 
-## Wards: none yet
+## Wards: jodhpur_wards.geojson and jaipur_wards.geojson (approximate, unreviewed)
 
-Jodhpur's two corporations (North and South, 80 wards each) became one Jodhpur Municipal Corporation with newly delimited wards in November 2025 (100 per a news report, unverified until the gazette notification is found; see `../representatives/SOURCES.md`); Jaipur's became one corporation with 150 wards. No open map of the new wards was found: OpenStreetMap has no `admin_level=10` boundaries in Jodhpur (checked 2026-10-10), and the open ward maps that exist (DataMeet Municipal_Spatial_Data for Jaipur, Swachh Bharat Mission wards in indian_admin_boundaries) predate the 2025 merger, so their ward numbers are wrong now. `ward` stays null until a current map is published or the ward records task (W1) provides one.
+**Display only until reviewed:** the map shows these wards (labelled unreviewed), but location lookups, scores and letters must not use them until each ward is `reviewed`, because a wrong ward would send a letter to the wrong councillor.
+
+Built 2026-10-10 by `data/ward_boundaries`. Run it with `uv run python -m ward_boundaries.handlers.cli --city <city> --profile junksnap`. Nobody has published an open map of the 2025 wards, so these polygons are **approximations**. Each one is built from the places that the official ward-formation text lists for the ward. Every ward is `review_status: unreviewed` and carries a `confidence` from 0 to 1. Wards that could not be placed are left out (listed below), never guessed.
+
+Each feature is a GeoJSON Polygon or MultiPolygon in WGS 84, with these properties:
+- `id`: `<local-body-id>-w<n>`, the same rule as `ward_record`.
+- `ward_no`, `name` (null), `zone` (null).
+- `offices`: titles only, no personal names.
+- `confidence`, `review_status`, `population`, `localities_listed`, `localities_found`, `area_km2`.
+- `source_url`, `page_sha256`, `fetched_at`: the ward-formation text.
+- `sources`: every page used.
+- `notes`.
+
+### How a ward is built
+
+1. **Read the ward-formation text.**
+   - **Jodhpur:** the gazette's ward table (ward number and population) is read from the Scribd copies. The readable locality list per ward comes from a Patrika copy of the same list, which matches the gazette's "क्षेत्र" lists. The gazette text is preferred for ward numbers and population.
+   - **Jaipur:** a Bedrock model (Amazon Nova Pro; the account's Claude models are not enabled) reads the official gazette and lists the places each ward is said to include. Boundary roads are excluded.
+2. **Spell the localities in Latin script.** A Bedrock model transliterates them (cached in `.cache/`).
+3. **Find each locality on a map.** Two sources are searched:
+   - named OpenStreetMap places (Overpass API, ODbL);
+   - ECI polling stations (2017 locations, CC0, via ramSeraph/indian_facilities), whose names carry the colony or village they serve.
+
+   A locality counts only if all of these hold:
+   - Its distinctive words match. Generic words like "Nagar", "Colony", "School" or "Balaji" alone do not count, and only small spelling slips are allowed.
+   - All its spots lie within 1.5 km of each other.
+   - No other ward claims the same spot.
+4. **Draw the polygon.** Each ward's places that lie close together (within 1.75 km of its middle place) become seeds. The polygon is the union of the seeds' Voronoi cells, cut to 700 m around them. The wards therefore never overlap, but they leave gaps where nothing was found.
+5. **Score confidence.** It is `0.5 × min(1, localities found / 4) + 0.4 × share of listed localities found + 0.1` when the ward's row was read from the gazette.
+
+### Sources
+
+**Jodhpur Municipal Corporation (`jodhpur-mc`, 100 wards):**
+- The order: Rajasthan Gazette Extraordinary, 15 September 2025, Part 6(A), Local Self Government Department, F.10(N.P.)(Gathan)(Chunav)DLB/25/17621.
+- No copy is on an official host. The LSG, SEC and old corporation sites were checked on 2026-10-10.
+- Secondary copies used:
+  - https://www.scribd.com/document/1059031983/ (gazette text);
+  - https://www.scribd.com/document/854168221/;
+  - the Patrika ward list of 18 September 2025, https://www.patrika.com/jodhpur-news/jodhpur-nagar-nigam-has-100-wards-see-the-full-list-of-which-ward-will-your-house-be-located-in-19956535.
+
+**Jaipur Municipal Corporation (`jaipur-mc`, 150 wards):** the official gazette of 20 September 2025, https://jaipurmc.org/PDF/Others/FinalParisimanGazette2025.pdf.
+
+**Not used as geometry:**
+- The 2020 Jodhpur North and South ward maps exist only as images.
+- The 2008 delimitation order and the Census 2011 ward tables describe older ward sets.
+
+### Coverage on 2026-10-10
+
+**Jodhpur:** 34 of 100 wards were built. Confidence ranges from 0.00 to 0.43, with a median of 0.26.
+- There are no overlaps and no invalid geometries; 3 wards are MultiPolygons. The wards cover 44.2 km².
+- Jodhpur has no official ward-to-seat list, so the only cross-check is that ward numbers run in walking order. Most built wards lie within 0.3 to 2.5 km of a ward numbered next to them. Wards 1 and 100 lie 10 and 5 km away, and their confidence is lowered.
+- Left out: 0 listed localities found on the map, 0 of them close together: 2, 3, 5, 6, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 26, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45, 47, 50, 52, 53, 54, 56, 57, 60, 62, 65, 67, 68, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 82, 83, 84, 88, 89, 91, 94, 95.
+
+**Jaipur:** 12 of 150 wards were built. Confidence ranges from 0.15 to 0.94, with a median of 0.44.
+- There are no overlaps and no invalid geometries. The wards cover 23.7 km².
+- The corporation's ward list gives each ward's assembly seat by range. Each ward is checked against those seats in `rajasthan_assembly.geojson`: 12 wards were dropped because they lay mostly outside their seat (a wrong place match).
+- Left out: 0 listed localities found on the map, 0 of them close together: 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 18, 19, 20, 21, 22, 23, 24, 27, 29, 30, 32, 33, 34, 35, 37, 38, 39, 40, 42, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 59, 61, 62, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 125, 126, 129, 131, 132, 133, 134, 135, 136, 137, 138, 139, 142, 143, 144, 145, 146, 147, 148, 149, 150; conflict with the official assembly seat: 10, 14, 25, 26, 28, 31, 41, 43, 83, 95, 98, 128.
+
+### Known limits
+
+- These are not surveyed boundaries.
+  - A ward's polygon covers the places found for it, not its legal limits.
+  - Edges between wards are Voronoi lines, not the roads the gazette names.
+  - Areas where nothing was found are gaps.
+- A wrong place match moves a ward. Generic and repeated names are filtered out, but check every ward against the gazette text before marking it `reviewed`.
+- The Jodhpur text comes from secondary copies of the official order.
 
 ## Web copies: frontend/public/boundaries
 

@@ -17,6 +17,16 @@
       "sources": [
         "india_loksabha.geojson"
       ]
+    },
+    "wards": {
+      "features": 46,
+      "bytes": 18325,
+      "label_bytes": 5911,
+      "tolerance_deg": 0.0005,
+      "sources": [
+        "jaipur_wards.geojson",
+        "jodhpur_wards.geojson"
+      ]
     }
   }
 }
