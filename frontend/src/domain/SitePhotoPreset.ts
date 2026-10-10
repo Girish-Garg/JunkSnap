@@ -1,13 +1,16 @@
 import type { ReportType } from './ReportType';
 import type { LatLon, ReportDraft } from './ReportUpload';
 import type { LonLat, SiteContext, SiteFeature } from './Site';
-import { HIGH_CAP_M } from './TargetPlacement';
+import { GROUND_CAP_M, HIGH_CAP_M } from './TargetPlacement';
 import { metresBetween } from './utils';
 
 /** The api merges a report into a site within this distance of its point (backend NoBinZone, SITE_MERGE_RADIUS_M). */
 export const SITE_MERGE_RADIUS_M = 40;
-/** Farther than the merge radius, the photo is marked long range on the site's point, up to the long-range cap. */
-export const LONG_RANGE_CAP_M = HIGH_CAP_M;
+/** The api refuses a target farther than HIGH_CAP_M from gps (422 target_too_far); this keeps a photo clear of that edge. */
+export const SERVER_CAP_MARGIN_M = 10;
+/** Decision 20261011-0400: 300 m from the ground; up high (rooftop or upper floor), up to the server cap less the margin. */
+export const GROUND_LIMIT_M = GROUND_CAP_M;
+export const HIGH_LIMIT_M = HIGH_CAP_M - SERVER_CAP_MARGIN_M;
 
 /** Where a photo for the site stands: close enough as it is, marked on the site from afar, or too far. */
 export type PhotoReach =
@@ -19,8 +22,9 @@ export type SitePhotoChoice = Pick<ReportDraft, 'report_type' | 'context' | 'not
 
 /**
  * "Add a photo" on a site: Snap opens preset to the site's type and context and sends me_too_site_id, so the
- * api ranks the merge toward this site (it still checks distance and the image embedding). A no-bin zone is
- * where the reporter stands, so its photos never take a long-range target.
+ * api ranks the merge toward this site (it still checks distance and the image embedding). Farther than the merge
+ * radius the photo is marked on the site's point as a long-range target. A no-bin zone is where the reporter
+ * stands, so its photos never take a target.
  */
 export class SitePhotoPreset {
   readonly siteId: string;
@@ -40,22 +44,29 @@ export class SitePhotoPreset {
     return new SitePhotoPreset(siteId, type, context, site.geometry.coordinates);
   }
 
-  /** The farthest a photo can be taken from the site and still be sent to it. */
-  get limitM(): number {
-    return this.reportType === 'no_bin' ? SITE_MERGE_RADIUS_M : LONG_RANGE_CAP_M;
+  /** A no-bin zone has no long range, so "I'm up high" means nothing there. */
+  get takesTarget(): boolean {
+    return this.reportType !== 'no_bin';
   }
 
-  reach(gps: LatLon): PhotoReach {
+  /** The farthest a photo can be taken from the site and still be sent to it; up high reaches farther. */
+  limitM(high = false): number {
+    if (!this.takesTarget) return SITE_MERGE_RADIUS_M;
+    return high ? HIGH_LIMIT_M : GROUND_LIMIT_M;
+  }
+
+  reach(gps: LatLon, high = false): PhotoReach {
     const metres = metresBetween([gps.lon, gps.lat], this.point);
     if (metres <= SITE_MERGE_RADIUS_M) return { kind: 'here', metres };
-    if (metres > this.limitM) return { kind: 'tooFar', metres, limit: this.limitM };
+    const limit = this.limitM(high);
+    if (metres > limit) return { kind: 'tooFar', metres, limit };
     const [lon, lat] = this.point;
     return { kind: 'longRange', metres, target: { lat, lon } };
   }
 
   /** The report choice for a photo taken at gps; null when it is too far to join the site. */
-  choice(gps: LatLon, note: string): SitePhotoChoice | null {
-    const reach = this.reach(gps);
+  choice(gps: LatLon, note: string, high = false): SitePhotoChoice | null {
+    const reach = this.reach(gps, high);
     if (reach.kind === 'tooFar') return null;
     const trimmed = note.trim();
     return {

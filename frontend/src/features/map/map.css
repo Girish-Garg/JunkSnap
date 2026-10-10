@@ -269,8 +269,9 @@
   filter: invert(1);
 }
 
+/* A floating card publishes its measured height (useCardHeight); the fallback is the pin card's usual height. */
 .map-page--card .map-controls {
-  bottom: calc(112px + var(--s-6) + var(--s-2));
+  bottom: calc(var(--card-height, 176px) + var(--s-6) + var(--s-2));
 }
 
 /* The sign-in sheet covers everything but the search field. */

@@ -4,7 +4,6 @@ import { TypeIcon } from '../../../ui/TypeIcon';
 import { useSiteDistance } from '../hooks/useSiteDistance';
 import type { SitePresenter } from '../SitePresenter';
 import { SiteBadges } from './SiteBadges';
-import { SiteHeaderPhotos } from './SiteHeaderPhotos';
 import { SiteLocationLine } from './SiteLocationLine';
 import { StatusChip } from './StatusChip';
 
@@ -16,8 +15,8 @@ interface SitePanelHeaderProps {
 }
 
 /**
- * Like a map app's place sheet: the title, the status chip with the distance and where it is (ward, MLA seat, MP seat)
- * and badges come first, so the half-open sheet shows them; then the photo carousel with its count and Add a photo.
+ * Like a map app's place sheet: the title, the status chip with the distance, where it is (ward, MLA seat, MP seat)
+ * and badges, compact enough that the half-open sheet also shows the actions under them (SitePanel).
  */
 export function SitePanelHeader({ site, titleId, userLocation, presenter }: SitePanelHeaderProps) {
   const { t } = useTranslation();
@@ -42,7 +41,6 @@ export function SitePanelHeader({ site, titleId, userLocation, presenter }: Site
         {t(`context.${details.context}`)} · {place}
       </p>
       <SiteBadges badges={presenter.badges()} />
-      <SiteHeaderPhotos site={site} photos={presenter.photos()} userLocation={userLocation} />
     </header>
   );
 }

@@ -102,11 +102,29 @@ def test_without_the_veto_the_same_photo_went_to_community_check() -> None:
     assert stacked.verify(case).outcome.decision == "community_check"
 
 
-def test_a_weak_answer_of_the_claimed_type_falls_through_to_the_combiner() -> None:
+def test_a_weak_answer_of_the_claimed_type_is_a_strong_no() -> None:
+    """Decision 20261011-0230 reverses 1900 here: support under 0.2 vetoes whatever the type."""
     result = verify(prod_signals(), [judged("waste_dump", "vacant_plot", 0.1)])
+
+    assert result.outcome.veto is not None
+    assert result.outcome.veto.reason == "judge_veto:low_support"
+    assert result.outcome.decision == "rejected"
+
+
+def test_a_middling_answer_against_strong_detectors_falls_through_to_the_combiner() -> None:
+    signals: list[Signal] = [FakeSignal("yolo", 0.9), FakeSignal("embedding_classifier", 0.9)]
+    result = verify(signals, [judged("waste_dump", "vacant_plot", 0.3)])
 
     assert result.outcome.veto is None
     assert result.outcome.decision == "community_check"
+
+
+def test_a_middling_no_does_not_reach_community_check_by_disagreement() -> None:
+    result = verify(prod_signals(), [judged("waste_dump", "vacant_plot", 0.3)])
+
+    assert result.outcome.probability < 0.5 and result.outcome.disagreement
+    assert result.outcome.veto is not None
+    assert result.outcome.veto.reason == "judge_veto:combined_no"
 
 
 def test_an_unsure_not_waste_against_strong_detectors_is_not_vetoed() -> None:

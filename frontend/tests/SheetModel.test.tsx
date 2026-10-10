@@ -80,6 +80,18 @@ describe('the preview card', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Waste dump' })).toBeInTheDocument();
     expect(layers()).toBe(0);
   });
+
+  it('publishes its height on the map page while it is up, so the map buttons clear it', async () => {
+    await loadMap();
+    const page = document.querySelector<HTMLElement>('.map-page');
+    expect(page?.style.getPropertyValue('--card-height')).toBe('');
+    act(() => seen.last?.onPick('site_jdh_1'));
+    await screen.findByRole('button', { name: 'View site' });
+    // jsdom lays nothing out, so the measured height is 0; a browser gives the card's real height.
+    await waitFor(() => expect(page?.style.getPropertyValue('--card-height')).toBe('0px'));
+    act(() => window.history.back());
+    await waitFor(() => expect(page?.style.getPropertyValue('--card-height')).toBe(''));
+  });
 });
 
 describe('close and back pop exactly one level', () => {

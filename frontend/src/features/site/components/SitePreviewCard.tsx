@@ -1,10 +1,10 @@
-import { useRef, type MouseEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { IconButton } from '../../../ui/IconButton';
 import { MAP_CARD_ATTRIBUTE } from '../../../ui/TopLayer';
-import { ESCAPE_LAYER, useEscapeKey } from '../../../ui/useEscapeKey';
-import { useSwipeDismiss } from '../../../ui/useSwipeDismiss';
+import { ESCAPE_LAYER } from '../../../ui/useEscapeKey';
+import { useMapCard } from '../../../ui/useMapCard';
 import '../pin-card.css';
 import '../site.css';
 import { PinCardActions } from './PinCardActions';
@@ -27,9 +27,7 @@ const LAYER = { [ESCAPE_LAYER]: '', [MAP_CARD_ATTRIBUTE]: '' };
  */
 export function SitePreviewCard({ site, userLocation, onDetails, onClose }: SitePreviewCardProps) {
   const { t } = useTranslation();
-  const card = useRef<HTMLElement>(null);
-  useEscapeKey(onClose, card);
-  const swipe = useSwipeDismiss(onClose);
+  const { card, swipe } = useMapCard(onClose);
   const title = t(`reportType.${site.properties.report_type}`);
   // Buttons inside the card do their own thing; a tap anywhere else opens the site, unless it ended a swipe.
   const tap = (event: MouseEvent<HTMLElement>) => {

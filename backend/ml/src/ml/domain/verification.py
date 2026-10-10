@@ -91,6 +91,7 @@ class JudgeVerdict:
     rationale: str
     confidence: float
     scene_fits_site: bool | None = None  # cleanups only: an outdoor place fit for the site
+    unclear: bool = False  # too blurry, dark or close to tell; not in the contract (decision 0230)
 
     def to_contract(self) -> dict[str, object]:
         return {
@@ -121,7 +122,7 @@ class Thresholds:
 class Veto:
     """A strong "no" that rejected the photo whatever the combiner said, and its models."""
 
-    reason: str  # for example judge_veto:not_waste
+    reason: str  # for example judge_veto:not_waste or judge_veto:unclear
     sources: tuple[SignalResult, ...]
 
     def label(self) -> str:

@@ -27,7 +27,7 @@ export function useAddPhoto(site: SiteFeature, userLocation: LonLat | null): Add
     signedIn: user !== null,
     closed: SiteClosure.reasonOf(site.properties) !== null,
     distanceM: SiteDistance.metres(site, userLocation),
-    limitM: preset.limitM,
+    limitM: preset.limitM(true),
   });
   const blocked = !availability.enabled && availability.remedy !== 'signIn';
   const open = () => {

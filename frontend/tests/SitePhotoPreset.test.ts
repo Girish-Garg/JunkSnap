@@ -19,21 +19,31 @@ describe('SitePhotoPreset', () => {
     });
   });
 
-  it('marks a photo from 40 to 500 m on the site point as a long-range target', () => {
+  it('marks a photo from 40 to 300 m on the site point as a long-range target (decision 20261011-0400)', () => {
     expect(preset.choice(at(200), '')).toEqual({
       report_type: 'waste_dump',
       context: 'vacant_plot',
       me_too_site_id: 'site_test_1',
       target: { lat: 26.2618, lon: 73.0035 },
     });
+    expect(preset.reach(at(290)).kind).toBe('longRange');
+  });
+});
+
+describe('SitePhotoPreset limits', () => {
+  it('refuses a ground photo past 300 m; up high reaches 490 m, 10 m inside the 500 m server cap', () => {
+    expect(preset.reach(at(350))).toMatchObject({ kind: 'tooFar', limit: 300 });
+    expect(preset.choice(at(350), '')).toBeNull();
+    expect(preset.choice(at(350), '', true)).toMatchObject({ target: { lat: 26.2618, lon: 73.0035 }, me_too_site_id: 'site_test_1' });
+    expect(preset.reach(at(485), true).kind).toBe('longRange');
+    expect(preset.reach(at(495), true)).toMatchObject({ kind: 'tooFar', limit: 490 });
   });
 
-  it('refuses a photo past 500 m, and a no-bin zone past 40 m', () => {
-    expect(preset.reach(at(600))).toMatchObject({ kind: 'tooFar', limit: 500 });
-    expect(preset.choice(at(600), '')).toBeNull();
+  it('keeps a no-bin zone to 40 m with no target, up high or not', () => {
     const zone = SitePhotoPreset.of(testSite({ report_type: 'no_bin', context: 'no_bin', coordinates: [73.0035, 26.2618] }));
-    expect(zone.limitM).toBe(40);
-    expect(zone.choice(at(100), '')).toBeNull();
+    expect(zone.takesTarget).toBe(false);
+    expect(zone.limitM(true)).toBe(40);
+    expect(zone.choice(at(100), '', true)).toBeNull();
     expect(zone.choice(at(20), '')).not.toHaveProperty('target');
   });
 });

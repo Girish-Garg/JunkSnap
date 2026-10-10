@@ -12,7 +12,7 @@ export interface AddPhotoFacts {
   readonly closed: boolean;
   /** Metres between the person's last known location and the site; null when the app does not know. */
   readonly distanceM: number | null;
-  /** How far from the site a photo can still join it (SitePhotoPreset.limitM). */
+  /** The farthest a photo can still join the site from (SitePhotoPreset.limitM, up high); Send checks the photo's own fix. */
   readonly limitM: number;
 }
 

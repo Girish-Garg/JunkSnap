@@ -6,14 +6,14 @@ import type { PhotoView } from '../SitePresenter';
 import { AddPhotoButton } from './AddPhotoButton';
 import { SitePhotoStrip } from './SitePhotoStrip';
 
-interface SiteHeaderPhotosProps {
+interface SitePhotosProps {
   readonly site: SiteFeature;
   readonly photos: readonly PhotoView[];
   readonly userLocation: LonLat | null;
 }
 
-/** The sheet's photo carousel, how many photos the site has, and "Add a photo" for one more. */
-export function SiteHeaderPhotos({ site, photos, userLocation }: SiteHeaderPhotosProps) {
+/** The site's photo carousel, how many photos it has ("3 photos"), and "Add a photo" for one more. */
+export function SitePhotos({ site, photos, userLocation }: SitePhotosProps) {
   const { t } = useTranslation();
   const addPhoto = useAddPhoto(site, userLocation);
   const count = photos.length;

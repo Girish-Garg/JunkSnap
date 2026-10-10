@@ -48,7 +48,7 @@ describe('Add a photo says why it cannot work yet', () => {
   it('is muted when the person is clearly too far from the site', async () => {
     await renderApp(<SitePanel site={testSite()} userLocation={[73.1, 26.4]} />);
     expect(addPhoto()).toHaveAttribute('aria-disabled', 'true');
-    expect(addPhoto()).toHaveAccessibleDescription('Go within 500 m of the site to add a photo.');
+    expect(addPhoto()).toHaveAccessibleDescription('Go within 490 m of the site to add a photo.');
   });
 
   it('asks a signed-out person to sign in, and the tap opens sign-in', async () => {
@@ -80,7 +80,7 @@ describe('Add a photo opens Snap preset to the site', () => {
     const upload = api.bodies('submit')[0] as ReportUpload;
     expect(upload).toMatchObject({ report_type: 'waste_dump', context: 'vacant_plot', me_too_site_id: 'site_jdh_1', capture_mode: 'snap' });
     expect(upload.target).toBeUndefined();
-    expect(await screen.findByText('Once it passes the checks, it joins this site’s photos.')).toBeInTheDocument();
+    expect(await screen.findByText('Once it passes the checks, it may join this site’s photos.')).toBeInTheDocument();
   });
 });
 
