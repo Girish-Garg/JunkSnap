@@ -1,6 +1,6 @@
 // The site action bodies in contracts/README.md (votes, cleanup, letters) and letter_draft.schema.json.
 import type { GpsFix } from './ReportUpload';
-import type { SiteVerification, SiteVotes } from './Site';
+import type { SiteBackers, SiteVerification, SiteVotes } from './Site';
 
 export type VoteChoice = 'confirm' | 'reject';
 
@@ -13,6 +13,7 @@ export interface VoteRequest {
 export interface VoteResult {
   readonly site_id: string;
   readonly votes: SiteVotes;
+  readonly backers: SiteBackers;
   readonly verification: SiteVerification;
 }
 

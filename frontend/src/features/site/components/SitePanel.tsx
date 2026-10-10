@@ -4,6 +4,7 @@ import { VoteBox } from '../../community/components/VoteBox';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import '../site.css';
 import { SiteActions } from './SiteActions';
+import { SiteBackersBar } from './SiteBackersBar';
 import { SiteBrands } from './SiteBrands';
 import { SiteCounts } from './SiteCounts';
 import { SiteReporters } from './SiteReporters';
@@ -26,11 +27,12 @@ interface SitePanelProps {
 export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
   const details = site.properties;
   const presenter = useSitePresenter(details);
-  // A site waiting for neighbours shows the vote straight away; others after Confirm.
-  const [voting, setVoting] = useState(details.verification === 'community_check');
+  // An unverified site shows the vote straight away; others after Confirm. The server refuses its own reporters.
+  const [voting, setVoting] = useState(details.verification === 'unverified');
   return (
     <article className="site-panel">
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
+      <SiteBackersBar backers={details.backers} />
       <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />
       {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} />}
       <SitePhotoStrip photos={presenter.photos()} />

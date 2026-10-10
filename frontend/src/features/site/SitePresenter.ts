@@ -45,8 +45,8 @@ export class SitePresenter {
     return this.#site.photo_urls[0] ?? null;
   }
 
-  /** A site waiting for neighbours needs confirmations; a verified one is ready for a letter. */
+  /** An unverified site needs people to back it; a verified one is ready for a letter. */
   primaryAction(): PrimaryAction {
-    return this.#site.verification === 'community_check' ? 'confirm' : 'letter';
+    return this.#site.verification === 'unverified' ? 'confirm' : 'letter';
   }
 }

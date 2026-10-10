@@ -1,14 +1,18 @@
 import { REPORT_TYPES, type ReportType } from './ReportType';
 import type { SiteFeature } from './Site';
 
-/** Every type is shown until switched off; "verified only" narrows further. */
+/** The listed verification states; rejected sites never reach the map. */
+export const SITE_STATES = ['verified', 'unverified'] as const;
+export type SiteState = (typeof SITE_STATES)[number];
+
+/** Every type and state is shown until switched off. */
 export class SiteFilter {
   readonly #hidden: ReadonlySet<ReportType>;
-  readonly verifiedOnly: boolean;
+  readonly #hiddenStates: ReadonlySet<SiteState>;
 
-  constructor(hidden: Iterable<ReportType> = [], verifiedOnly = false) {
+  constructor(hidden: Iterable<ReportType> = [], hiddenStates: Iterable<SiteState> = []) {
     this.#hidden = new Set(hidden);
-    this.verifiedOnly = verifiedOnly;
+    this.#hiddenStates = new Set(hiddenStates);
   }
 
   static countByType(sites: readonly SiteFeature[]): Readonly<Record<ReportType, number>> {
@@ -21,23 +25,30 @@ export class SiteFilter {
     return !this.#hidden.has(type);
   }
 
+  showsState(state: SiteState): boolean {
+    return !this.#hiddenStates.has(state);
+  }
+
   /** How many switches differ from the default, for the Filters pill. */
   activeCount(): number {
-    return this.#hidden.size + (this.verifiedOnly ? 1 : 0);
+    return this.#hidden.size + this.#hiddenStates.size;
   }
 
   toggleType(type: ReportType): SiteFilter {
     const hidden = new Set(this.#hidden);
     if (!hidden.delete(type)) hidden.add(type);
-    return new SiteFilter(hidden, this.verifiedOnly);
+    return new SiteFilter(hidden, this.#hiddenStates);
   }
 
-  toggleVerifiedOnly(): SiteFilter {
-    return new SiteFilter(this.#hidden, !this.verifiedOnly);
+  toggleState(state: SiteState): SiteFilter {
+    const hidden = new Set(this.#hiddenStates);
+    if (!hidden.delete(state)) hidden.add(state);
+    return new SiteFilter(this.#hidden, hidden);
   }
 
   matches({ properties }: SiteFeature): boolean {
-    return this.shows(properties.report_type) && (!this.verifiedOnly || properties.verification === 'verified');
+    const state = properties.verification;
+    return this.shows(properties.report_type) && (state === 'rejected' || this.showsState(state));
   }
 
   apply(sites: readonly SiteFeature[]): readonly SiteFeature[] {

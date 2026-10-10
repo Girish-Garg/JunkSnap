@@ -36,13 +36,14 @@
     "close": "Close filters",
     "mapView": "Map view",
     "types": "Report types",
-    "verifiedOnly": "Verified only",
     "mode": {
       "auto": "Auto",
       "pins": "Pins",
       "heat": "Heat"
     },
-    "sampleNote": "Sample data: these are test sites, not live reports."
+    "sampleNote": "Sample data: these are test sites, not live reports.",
+    "verified": "Verified",
+    "unverified": "Unverified"
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -97,8 +98,8 @@
   },
   "verification": {
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
-    "rejected": "Rejected after a neighbour check"
+    "rejected": "Rejected after a neighbour check",
+    "unverified": "Unverified"
   },
   "actions": {
     "label": "Site actions",
@@ -411,9 +412,9 @@
     "queued": "In line for checking",
     "processing": "Checking the photo",
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
     "rejected": "Not accepted after checking",
-    "needs_review": "Needs a manual check"
+    "needs_review": "Needs a manual check",
+    "unverified": "Waiting for 10 people to confirm"
   },
   "scan": {
     "record": "Start recording",
@@ -608,5 +609,11 @@
     "loadFailed": "Could not load the ranking.",
     "empty": "No areas of this type have reports in this city yet.",
     "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
+  },
+  "backers": {
+    "label": "{{count}} of {{needed}} people confirmed",
+    "detail": "{{photos}} by photo, {{votes}} by vote",
+    "done": "Verified by {{count}} people",
+    "badge": "{{count}}/{{needed}}"
   }
 }

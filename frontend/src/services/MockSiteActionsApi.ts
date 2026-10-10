@@ -22,9 +22,11 @@ export class MockSiteActionsApi implements SiteActionsApi {
 
   async vote(siteId: string, request: VoteRequest): Promise<VoteResult> {
     await this.#wait();
-    const { votes, verification } = (await this.#sources.site(siteId)).properties;
-    const counted = request.vote === 'confirm' ? { ...votes, confirm: votes.confirm + 1 } : { ...votes, reject: votes.reject + 1 };
-    return { site_id: siteId, votes: counted, verification };
+    const { votes, backers, verification } = (await this.#sources.site(siteId)).properties;
+    const yes = request.vote === 'confirm';
+    const counted = yes ? { ...votes, confirm: votes.confirm + 1 } : { ...votes, reject: votes.reject + 1 };
+    const backed = yes ? { ...backers, count: backers.count + 1, vote_people: backers.vote_people + 1 } : backers;
+    return { site_id: siteId, votes: counted, backers: backed, verification };
   }
 
   async cleanup(siteId: string, request: CleanupRequest): Promise<CleanupAccepted> {

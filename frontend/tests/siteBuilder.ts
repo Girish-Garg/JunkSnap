@@ -21,6 +21,7 @@ const PROPERTIES: SiteProperties = {
   report_count: 7,
   verified_count: 6,
   corroborations: 4,
+  backers: { count: 10, needed: 10, photo_people: 8, vote_people: 2 },
   votes: { confirm: 2, reject: 0 },
   photo_urls: ['https://example.test/media/reports/rpt_test_1.jpg'],
   cleanup_status: 'none',

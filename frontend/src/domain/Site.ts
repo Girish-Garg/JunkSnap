@@ -18,8 +18,16 @@ export type SiteContext =
 
 export type SiteStatus = 'open' | 'cleaned' | 'reopened';
 
-/** GET /sites?bbox leaves out rejected sites. */
-export type SiteVerification = 'verified' | 'community_check' | 'rejected';
+/** Decision 20261010-1530: unverified until 10 people back it. GET /sites?bbox leaves out rejected sites. */
+export type SiteVerification = 'unverified' | 'verified' | 'rejected';
+
+/** People backing a site by photo or yes vote, each counted once. */
+export interface SiteBackers {
+  readonly count: number;
+  readonly needed: number;
+  readonly photo_people: number;
+  readonly vote_people: number;
+}
 
 /** Resets to none when the site reopens. */
 export type CleanupStatus = 'none' | 'checking' | 'accepted' | 'rejected';
@@ -83,6 +91,7 @@ export interface SiteProperties {
   readonly report_count: number;
   readonly verified_count: number;
   readonly corroborations: number;
+  readonly backers: SiteBackers;
   readonly votes: SiteVotes;
   readonly photo_urls: readonly string[];
   readonly cleanup_status: CleanupStatus;
