@@ -1,12 +1,12 @@
 import type { TFunction } from 'i18next';
-import type { LetterCc, LetterDraft } from '../../domain/SiteActions';
+import type { LetterAddressee, LetterBase, LetterCc } from '../../domain/SiteActions';
 
 /** The letter's own labels, in the letter's language rather than the app's. */
 export class LetterText {
   readonly #t: TFunction;
-  readonly #draft: LetterDraft;
+  readonly #draft: LetterBase;
 
-  constructor(t: TFunction, draft: LetterDraft) {
+  constructor(t: TFunction, draft: LetterBase) {
     this.#t = t;
     this.#draft = draft;
   }
@@ -20,8 +20,10 @@ export class LetterText {
     return this.#t(key, { ...params, lng: this.#draft.language });
   }
 
-  to(): string {
-    return `${this.#draft.to.office}, ${this.#draft.to.body}`;
+  /** One line per office addressed. */
+  to(): readonly string[] {
+    const to = this.#draft.to;
+    return (Array.isArray(to) ? to : [to]).map((addressee: LetterAddressee) => `${addressee.office}, ${addressee.body}`);
   }
 
   /** Offices and seats only, each "for attention". */
@@ -38,7 +40,7 @@ export class LetterText {
     const d = this.#draft;
     const citations = d.citations.map((c, i) => `${i + 1}. ${c.document}, ${c.clause}\n"${c.quote}"\n${this.label('hash')}: ${c.source_sha256}`);
     return [
-      `${this.label('to')}: ${this.to()}`,
+      `${this.label('to')}: ${this.to().join('; ')}`,
       ...d.cc.map((cc) => `${this.label('ccLabel')}: ${this.cc(cc)}`),
       `${this.label('subject')}: ${d.subject}`,
       '',

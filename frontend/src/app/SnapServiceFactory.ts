@@ -1,4 +1,11 @@
+import type { AreaLetterApi } from '../services/AreaLetterApi';
+import { AreaLetterService } from '../services/AreaLetterService';
+import { areaFixtureLoaders } from '../services/areaFixtures';
 import type { AuthService } from '../services/AuthService';
+import { crawlFixtureLoaders } from '../services/crawlFixtures';
+import { HttpAreaLetterApi } from '../services/HttpAreaLetterApi';
+import { MockAreaApi } from '../services/MockAreaApi';
+import { MockAreaLetterApi } from '../services/MockAreaLetterApi';
 import { CameraCapture } from '../services/CameraCapture';
 import type { Clock } from '../services/Clock';
 import { DeviceIdentity } from '../services/DeviceIdentity';
@@ -23,7 +30,7 @@ import { ScanCapture } from '../services/ScanCapture';
 import { ScanQueue } from '../services/ScanQueue';
 import { ScanSender } from '../services/ScanSender';
 import { ScanTracker } from '../services/ScanTracker';
-import { sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../services/siteFixtures';
+import { sampleAreaLetterLoader, sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../services/siteFixtures';
 import { HttpSiteActionsApi } from '../services/HttpSiteActionsApi';
 import { MockApiClient } from '../services/MockApiClient';
 import { MockSiteActionsApi } from '../services/MockSiteActionsApi';
@@ -46,20 +53,29 @@ interface Apis {
   readonly reports: ReportApi;
   readonly scans: ScanApi;
   readonly sites: SiteActionsApi;
+  readonly areaLetters: AreaLetterApi;
 }
 
 const mockSites = new MockApiClient(siteFixtureLoaders);
+const mockAreas = new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders);
+const mockAreaLetters = () =>
+  new MockAreaLetterApi({
+    scores: (kind, id) => mockAreas.scores(kind, id),
+    letter: sampleAreaLetterLoader,
+  });
 
 const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: RequestIdentity) => Apis>> = {
   mock: () => ({
     reports: new MockReportApi(sampleSiteLoader),
     scans: new MockScanApi(),
     sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
+    areaLetters: mockAreaLetters(),
   }),
   live: (config, identity) => ({
     reports: new HttpReportApi(config.requireApiUrl(), identity),
     scans: new HttpScanApi(config.requireApiUrl(), identity),
     sites: new HttpSiteActionsApi(config.requireApiUrl(), identity),
+    areaLetters: new HttpAreaLetterApi(config.requireApiUrl(), identity),
   }),
 };
 
@@ -91,7 +107,15 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
+      ...SnapServiceFactory.#actions(apis, identity, gps),
+    };
+  }
+
+  // Site actions and area letters share the sign-in gate and the device token.
+  static #actions(apis: Apis, identity: RequestIdentity, gps: GpsWatcher): Pick<SnapServices, 'siteActions' | 'areaLetters'> {
+    return {
       siteActions: new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps }),
+      areaLetters: new AreaLetterService(apis.areaLetters, identity),
     };
   }
 

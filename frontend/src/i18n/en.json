@@ -564,6 +564,13 @@
         "water": "Near a water body, {{distance}} (OpenStreetMap)",
         "drain": "Near an open drain, {{distance}} (OpenStreetMap)"
       }
+    },
+    "areaEvidence": {
+      "score": "{{name}}: {{value}}/100 (from {{n}} verified reports)",
+      "sitesTitle": "Worst sites",
+      "site": "{{type}}, {{context}} · {{status}}: {{reports}} reports, {{verified}} verified",
+      "siteDates": "Reported from {{first}} to {{last}}",
+      "bins": "{{n}} of {{m}} measured sites have no known bin within 3 km (OpenStreetMap, ward records)"
     }
   },
   "boundaries": {
@@ -608,6 +615,20 @@
     "loadFailed": "Could not load the ranking.",
     "empty": "No areas of this type have reports in this city yet.",
     "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
+  },
+  "areaLetter": {
+    "button": "Draft a letter about this area",
+    "short": "Letter",
+    "title": "Letter about this area",
+    "titleFor": "Letter about {{name}}",
+    "issue": "What the letter is about",
+    "issues": {
+      "waste_dump": "Waste dumps",
+      "no_bin": "No bin",
+      "contaminated_water": "Contaminated water",
+      "open_construction": "Open construction",
+      "all": "All issues"
+    }
   },
   "viewer": {
     "label": "Photo {{n}} of {{total}}",

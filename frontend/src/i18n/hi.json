@@ -564,6 +564,13 @@
         "water": "जल स्रोत के पास, {{distance}} (OpenStreetMap)",
         "drain": "खुली नाली के पास, {{distance}} (OpenStreetMap)"
       }
+    },
+    "areaEvidence": {
+      "score": "{{name}}: {{value}}/100 ({{n}} सत्यापित रिपोर्ट से)",
+      "sitesTitle": "सबसे ख़राब स्थल",
+      "site": "{{type}}, {{context}} · {{status}}: {{reports}} रिपोर्ट, {{verified}} सत्यापित",
+      "siteDates": "{{first}} से {{last}} तक रिपोर्ट",
+      "bins": "मापे गए {{m}} में से {{n}} स्थलों के 3 किमी के अंदर कोई ज्ञात कूड़ेदान नहीं (OpenStreetMap, वार्ड रिकॉर्ड)"
     }
   },
   "boundaries": {
@@ -608,6 +615,20 @@
     "loadFailed": "रैंकिंग लोड नहीं हो सकी।",
     "empty": "इस शहर में इस प्रकार के किसी क्षेत्र की रिपोर्ट अभी नहीं है।",
     "footnote": "{{total}} में से {{shown}} क्षेत्र दिखाए गए। केवल आज के स्कोर; कोई पुराना इतिहास नहीं।"
+  },
+  "areaLetter": {
+    "button": "इस इलाके के बारे में पत्र का मसौदा बनाएँ",
+    "short": "पत्र",
+    "title": "इस इलाके के बारे में पत्र",
+    "titleFor": "{{name}} के बारे में पत्र",
+    "issue": "पत्र किस बारे में है",
+    "issues": {
+      "waste_dump": "कचरे के ढेर",
+      "no_bin": "कूड़ेदान नहीं",
+      "contaminated_water": "दूषित पानी",
+      "open_construction": "खुला निर्माण",
+      "all": "सभी समस्याएँ"
+    }
   },
   "viewer": {
     "label": "फ़ोटो {{total}} में से {{n}}",

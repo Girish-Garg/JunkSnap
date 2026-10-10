@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { ActivityRoute } from '../features/activity/components/ActivityRoute';
+import { AreaLetterRoute } from '../features/letters/components/AreaLetterRoute';
 import { AreaRoute } from '../features/areas/components/AreaRoute';
 import { AreasRoute } from '../features/areas/components/AreasRoute';
 import { AccountRoute } from '../features/auth/components/AccountRoute';
@@ -12,6 +13,7 @@ import { SnapRoute } from '../features/snap/components/SnapRoute';
 import {
   ACCOUNT_PATH,
   ACTIVITY_PATH,
+  AREA_LETTER_PATH,
   AREA_PATH,
   AREAS_PATH,
   RANKING_PATH,
@@ -33,6 +35,7 @@ export function AppRoutes() {
         <Route path={SNAP_PATH} element={<SnapRoute />} />
         <Route path={AREAS_PATH} element={<AreasRoute />} />
         <Route path={AREA_PATH} element={<AreaRoute />} />
+        <Route path={AREA_LETTER_PATH} element={<AreaLetterRoute />} />
         <Route path={RANKING_PATH} element={<RankingRoute />} />
         <Route path={ACTIVITY_PATH} element={<ActivityRoute />} />
         <Route path={ACCOUNT_PATH} element={<AccountRoute />} />

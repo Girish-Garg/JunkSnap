@@ -1,3 +1,4 @@
+import type { AreaLetterDraft } from '../domain/AreaLetter';
 import type { LetterDraft } from '../domain/SiteActions';
 import type { SiteFeature } from '../domain/Site';
 
@@ -16,4 +17,9 @@ export const sampleSiteLoader = (): Promise<SiteFeature> => import('../../../con
 /** Mock mode's letter draft (contracts/fixtures/letter_draft.jdh-1.json). */
 export const sampleLetterLoader = (): Promise<LetterDraft> => import('../../../contracts/fixtures/letter_draft.jdh-1.json').then(
   (module) => module.default as unknown as LetterDraft,
+);
+
+/** Mock mode's area letter (contracts/fixtures/area_letter_draft.jdh-1.json). */
+export const sampleAreaLetterLoader = (): Promise<AreaLetterDraft> => import('../../../contracts/fixtures/area_letter_draft.jdh-1.json').then(
+  (module) => module.default as unknown as AreaLetterDraft,
 );
