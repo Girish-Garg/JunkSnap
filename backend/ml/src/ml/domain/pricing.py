@@ -26,6 +26,7 @@ LIST_PRICES: Mapping[str, TokenPrice] = MappingProxyType(
         "claude-haiku-4-5": TokenPrice(1.0, 5.0),
         "nova-pro": TokenPrice(0.8, 3.2),
         "nova-lite": TokenPrice(0.06, 0.24),
+        "nova-2-lite": TokenPrice(0.30, 2.50),
         "gpt-4.1-mini": TokenPrice(0.4, 1.6),
     }
 )
