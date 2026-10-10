@@ -12,7 +12,12 @@ export class LetterText {
   }
 
   label(key: string, params: Record<string, unknown> = {}): string {
-    return this.#t(`letter.${key}`, { ...params, lng: this.#draft.language });
+    return this.term(`letter.${key}`, params);
+  }
+
+  /** Any app string, in the letter's language. */
+  term(key: string, params: Record<string, unknown> = {}): string {
+    return this.#t(key, { ...params, lng: this.#draft.language });
   }
 
   to(): string {

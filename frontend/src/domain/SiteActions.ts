@@ -73,4 +73,26 @@ export interface LetterDraft {
   readonly model: string;
   readonly version: string;
   readonly created_at: string;
+  /** v1.4: what the letter rests on, shown and printed with it; absent from older servers. */
+  readonly evidence?: LetterEvidence;
+}
+
+/** letter_draft.evidence: counts, dates, blurred photos and the measured insights. */
+export interface LetterEvidence {
+  readonly report_count: number;
+  readonly reporters: number | null;
+  readonly verified_count: number;
+  readonly first_reported_at: string;
+  readonly last_reported_at: string;
+  /** Blurred public copies only. */
+  readonly photo_urls: readonly string[];
+  readonly insights: {
+    readonly reports: number;
+    readonly composition: readonly { readonly material: string; readonly share_pct: number; readonly reports: number }[];
+    readonly size_class: 'small' | 'medium' | 'large' | null;
+    readonly hazards: readonly string[];
+    readonly near: readonly { readonly kind: 'school' | 'hospital' | 'water' | 'drain'; readonly distance_m: number }[];
+  } | null;
+  readonly nearest_bin: { readonly distance_m: number; readonly ref: string; readonly source_url: string } | null;
+  readonly no_bin_within_3km: boolean | null;
 }

@@ -141,7 +141,16 @@
     "brands": "Packaging seen at this site",
     "noAssembly": "No assembly map here yet",
     "seatOutdated": "Boundary out of date",
-    "district": "District"
+    "district": "District",
+    "evidence": "Who reported it",
+    "reporters_one": "{{count}} person reported this",
+    "reporters_other": "{{count}} people reported this",
+    "noBinReporters": "{{count}} of {{min}} people reported no bin here",
+    "bin": {
+      "nearest": "Nearest known bin: {{distance}} (OpenStreetMap)",
+      "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
+      "notMapped": "Bins not mapped here yet"
+    }
   },
   "snap": {
     "title": "Report a waste site",
@@ -521,6 +530,36 @@
       "failed": "The letter could not be drafted. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     },
-    "copyFailed": "Could not copy. Select the letter text and copy it yourself."
+    "copyFailed": "Could not copy. Select the letter text and copy it yourself.",
+    "evidence": {
+      "title": "Evidence",
+      "reports": "Reports",
+      "reporters": "People who reported",
+      "notCounted": "Not counted",
+      "verified": "Verified reports",
+      "first": "First reported",
+      "last": "Last reported",
+      "photoAlt": "Blurred photo {{n}}",
+      "material": "{{material}} about {{pct}}% ({{count}} reports)",
+      "size": {
+        "small": "Small pile",
+        "medium": "Medium pile",
+        "large": "Large pile"
+      },
+      "hazard": "Hazard seen: {{hazard}}",
+      "hazards": {
+        "burning": "burning",
+        "medical_waste": "medical waste",
+        "e_waste": "e-waste",
+        "dead_animal": "dead animal",
+        "chemicals": "chemicals"
+      },
+      "near": {
+        "school": "Near a school, {{distance}} (OpenStreetMap)",
+        "hospital": "Near a hospital, {{distance}} (OpenStreetMap)",
+        "water": "Near a water body, {{distance}} (OpenStreetMap)",
+        "drain": "Near an open drain, {{distance}} (OpenStreetMap)"
+      }
+    }
   }
 }

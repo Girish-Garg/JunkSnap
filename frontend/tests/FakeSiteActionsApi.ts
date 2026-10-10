@@ -10,8 +10,9 @@ export class FakeSiteActionsApi implements SiteActionsApi {
   readonly calls: { readonly kind: Call; readonly siteId: string; readonly body: unknown }[] = [];
   readonly #failures = new Map<Call, ApiError[]>();
 
-  failNext(kind: Call, status: number, code: string): void {
-    this.#failures.set(kind, [...(this.#failures.get(kind) ?? []), new ApiError(status, code, `${kind} failed`)]);
+  /** message is the api's plain-text message; empty means the app's own wording is shown. */
+  failNext(kind: Call, status: number, code: string, message = ''): void {
+    this.#failures.set(kind, [...(this.#failures.get(kind) ?? []), new ApiError(status, code, message)]);
   }
 
   async vote(siteId: string, request: VoteRequest): Promise<VoteResult> {
