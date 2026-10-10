@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from typing import Any
 
-SPLITS = ("train", "val", "test", "holdout")
+SPLITS = ("train", "val", "test")
 TRAINABLE_SPLITS = ("train", "val")
 
 
@@ -37,6 +37,13 @@ class Box:
         if x1 <= x0 or y1 <= y0:
             return None
         return Box(self.label, x0, y0, x1 - x0, y1 - y0)
+
+    def share_inside(self, other: Box) -> float:
+        """Share of this box's area that lies inside `other`."""
+        w = min(self.x + self.w, other.x + other.w) - max(self.x, other.x)
+        h = min(self.y + self.h, other.y + other.h) - max(self.y, other.y)
+        area = self.w * self.h
+        return max(w, 0.0) * max(h, 0.0) / area if area > 0 else 0.0
 
     def yolo_line(self, class_index: int) -> str:
         cx, cy = self.x + self.w / 2, self.y + self.h / 2
@@ -75,7 +82,6 @@ class ImageRecord:
     labels: tuple[str, ...] = ()
     boxes: tuple[Box, ...] = ()
     attributes: Attributes | None = None
-    group: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -90,7 +96,6 @@ class ImageRecord:
             labels=tuple(raw.get("labels", ())),
             boxes=tuple(Box(**box) for box in raw.get("boxes", ())),
             attributes=Attributes.from_json(attrs) if attrs else None,
-            group=raw.get("group"),
         )
 
 
@@ -111,8 +116,6 @@ class ManifestRow:
     brands: tuple[str, ...] = ()
     has_boxes: bool = False
     split: str | None = None
-    # Rows sharing a group (one scan or one site) always land in the same split.
-    group: str | None = None
 
     def with_split(self, split: str) -> ManifestRow:
         if split not in SPLITS:
@@ -135,5 +138,5 @@ class ManifestRow:
 
 MANIFEST_FIELDS = (
     "id", "source", "licence", "s3_key", "local_path", "report_type", "context",
-    "materials", "hazards", "size_class", "brands", "has_boxes", "split", "group",
+    "materials", "hazards", "size_class", "brands", "has_boxes", "split",
 )

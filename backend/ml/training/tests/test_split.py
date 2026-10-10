@@ -2,28 +2,27 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from training.domain import Attributes, Box, ConfigError, ImageRecord, ManifestRow
+from training.domain import Box, ConfigError, ImageRecord, ManifestRow
 from training.fetch import RecordFile
 from training.manifest import ManifestFile
 from training.split import Splitter
 from training.utils import safe_stem
 from training.yolo import YoloExporter
 
-PILE = (Box("waste_pile", 0.1, 0.2, 0.3, 0.4),)
+ITEM = (Box("Drink can", 0.1, 0.2, 0.3, 0.4),)
 
 
 def row(source: str, name: str, boxes: bool = False) -> ManifestRow:
-    path = f"field/{name}.jpg" if source == "field" else f"{source}/images/{name}.jpg"
+    path = f"{source}/images/{name}.jpg"
     return ManifestRow(
         f"{source}/{name}", source, "CC-BY-4.0", f"datasets/{path}", path, "waste_dump",
         has_boxes=boxes,
     )
 
 
-def field_cache(cache: Path, rows: list[ManifestRow], write_images: bool = True) -> None:
-    attrs = Attributes(report_type="waste_dump", context="roadside")
-    records = [ImageRecord(r.id, "field", str(r.local_path), (), PILE, attrs) for r in rows]
-    RecordFile(cache, "field").write(records)
+def taco_cache(cache: Path, rows: list[ManifestRow], write_images: bool = True) -> None:
+    records = [ImageRecord(r.id, "taco", str(r.local_path), (), ITEM) for r in rows]
+    RecordFile(cache, "taco").write(records)
     for r in rows if write_images else ():
         (cache / str(r.local_path)).parent.mkdir(parents=True, exist_ok=True)
         (cache / str(r.local_path)).write_bytes(b"jpg")
@@ -42,22 +41,17 @@ def test_same_seed_gives_the_same_splits_in_any_order() -> None:
 
 
 def test_adding_images_never_moves_earlier_ones() -> None:
-    old = [row("field", f"p{i}") for i in range(100)]
-    new = old + [row("field", f"q{i}") for i in range(100)]
+    old = [row("taco", f"p{i}") for i in range(100)]
+    new = old + [row("taco", f"q{i}") for i in range(100)]
     before = splits(Splitter().assign(old))
     after = splits(Splitter().assign(new))
     assert all(after[k] == v for k, v in before.items())
 
 
-def test_about_thirty_percent_of_field_photos_are_held_out() -> None:
-    assigned = Splitter().assign([row("field", f"p{i}") for i in range(2000)])
-    share = sum(r.split == "holdout" for r in assigned) / len(assigned)
-    assert 0.27 < share < 0.33
-    assert {r.split for r in assigned} == {"holdout", "val", "train"}
-
-
-def test_public_images_never_get_the_field_holdout() -> None:
-    assigned = Splitter().assign([row("taco", f"img{i}") for i in range(500)])
+def test_public_images_split_about_80_10_10() -> None:
+    assigned = Splitter().assign([row("taco", f"img{i}") for i in range(2000)])
+    share = sum(r.split == "test" for r in assigned) / len(assigned)
+    assert 0.08 < share < 0.12
     assert {r.split for r in assigned} == {"train", "val", "test"}
 
 
@@ -69,43 +63,32 @@ def test_roboflow_augmented_copies_share_one_split() -> None:
     assert Splitter().split_of(copies[0]) == Splitter().split_of(original)
 
 
-def test_frames_of_one_scan_or_site_never_straddle_splits() -> None:
-    frames = [replace(row("field", f"f{i}"), group="scan:scn_1") for i in range(40)]
-    site = [replace(row("field", f"s{i}"), group="site:site_9") for i in range(40)]
-    assert len({r.split for r in Splitter().assign(frames)}) == 1
-    assert len({r.split for r in Splitter().assign(site)}) == 1
-    many = [replace(row("field", f"g{i}"), group=f"site:site_{i}") for i in range(300)]
-    assert {r.split for r in Splitter().assign(many)} == {"holdout", "val", "train"}
-
-
-def test_trainable_rows_exclude_test_and_holdout(tmp_path: Path, store) -> None:
-    rows = Splitter().assign([row("field", f"p{i}") for i in range(200)])
+def test_trainable_rows_exclude_the_test_split(tmp_path: Path, store) -> None:
+    rows = Splitter().assign([row("taco", f"p{i}") for i in range(200)])
     ManifestFile(tmp_path, tmp_path, store).write(rows, 26)
     trainable = ManifestFile(tmp_path, tmp_path, store).trainable()
     assert trainable and {r.split for r in trainable} == {"train", "val"}
 
 
-def test_yolo_export_never_writes_held_out_field_photos(tmp_path: Path, class_map, store) -> None:
+def test_yolo_export_writes_every_public_split(tmp_path: Path, class_map, store) -> None:
     cache, out = tmp_path / "cache", tmp_path / "yolo"
-    rows = Splitter().assign([row("field", f"p{i}", boxes=True) for i in range(60)])
-    field_cache(cache, rows)
+    rows = Splitter().assign([row("taco", f"p{i}", boxes=True) for i in range(60)])
+    taco_cache(cache, rows)
     counts = YoloExporter(cache, class_map, store).export(rows, out)
-    held_out = {r.id.replace("/", "__") for r in rows if r.split == "holdout"}
-    written = {p.stem for p in out.rglob("*.jpg")}
-    assert held_out and written and not held_out & written
-    assert counts["box:waste_pile"] == len(written) == 60 - len(held_out)
-    assert not any("holdout" in line for line in (out / "data.yaml").read_text().splitlines())
+    assert counts["train"] + counts["val"] + counts["test"] == 60
+    assert counts["box:waste_item"] == 60
+    assert "test: test.txt" in (out / "data.yaml").read_text().splitlines()
     label = next((out / "labels").rglob("*.txt")).read_text().split()
-    assert label == ["0", "0.250000", "0.400000", "0.300000", "0.400000"]
+    assert label == ["4", "0.250000", "0.400000", "0.300000", "0.400000"]
 
 
 def test_yolo_export_downloads_missing_images_or_fails(tmp_path: Path, class_map, store) -> None:
     cache = tmp_path / "cache"
-    rows = [replace(r, split="train") for r in (row("field", "a", True), row("field", "b", True))]
-    field_cache(cache, rows, write_images=False)
-    store.uploaded["datasets/field/a.jpg"] = b"from-s3"
-    with pytest.raises(ConfigError, match="field/b"):
+    rows = [replace(r, split="train") for r in (row("taco", "a", True), row("taco", "b", True))]
+    taco_cache(cache, rows, write_images=False)
+    store.uploaded["datasets/taco/images/a.jpg"] = b"from-s3"
+    with pytest.raises(ConfigError, match="taco/b"):
         YoloExporter(cache, class_map, store).export(rows, tmp_path / "yolo")
-    assert (cache / "field/a.jpg").read_bytes() == b"from-s3"
+    assert (cache / "taco/images/a.jpg").read_bytes() == b"from-s3"
 
 

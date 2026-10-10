@@ -1,29 +1,14 @@
-import io
 import json
 import shutil
 from pathlib import Path
 
 import pytest
-from PIL import Image
-from training.adapters import HttpDownloader
 from training.cli import main
 from training.domain import ConfigError, ImageRecord, ManifestRow
 from training.fetch import RecordFile
 from training.settings import Settings
 
 REPO = Path(__file__).resolve().parents[4]
-CDN = "https://d111111abcdef8.cloudfront.net"
-
-
-def jpeg() -> bytes:
-    out = io.BytesIO()
-    Image.new("RGB", (640, 480), "grey").save(out, "JPEG")
-    return out.getvalue()
-
-
-def task(image: str) -> dict:
-    result = {"from_name": "report_type", "type": "choices", "value": {"choices": ["waste_dump"]}}
-    return {"data": {"image": image}, "annotations": [{"result": [result]}]}
 
 
 @pytest.fixture
@@ -61,9 +46,7 @@ def test_yolo_export_refuses_a_folder_inside_the_repo(workspace: tuple[Path, Pat
     assert not (repo / "yolo").exists()
 
 
-def test_no_upload_builds_and_imports_from_the_local_cache(
-    workspace: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_no_upload_builds_from_the_local_cache(workspace: tuple[Path, Path]) -> None:
     repo, cache = workspace
     for source, labels in (("qr4change", ["garbage"]), ("taco", []), ("garbage_od", ["glass"]),
                            ("dfire", ["none"])):
@@ -71,16 +54,7 @@ def test_no_upload_builds_and_imports_from_the_local_cache(
         RecordFile(cache, source).write([record])
     assert main(["build-manifest", "--no-upload"]) == 0
     assert summary(repo)["images"] == 4
-    monkeypatch.setattr(HttpDownloader, "fetch", lambda self, url: jpeg())
-    export = repo.parent / "export.json"
-    export.write_text(json.dumps([task(f"{CDN}/media/reports/rpt_jdh_9.jpg")]))
-    assert main(["import-field", "--no-upload", str(export)]) == 0
-    assert summary(repo)["by_source"]["field"] == 1
-    assert (cache / "field" / "rpt_jdh_9.jpg").exists()
-    tasks = [task(f"{CDN}/media/reports/rpt_jdh_9.jpg"), task("s3://b/media/reports/rpt_jdh_11.jpg")]
-    export.write_text(json.dumps(tasks))
-    assert main(["import-field", "--no-upload", str(export)]) == 1
-    assert not (cache / "field" / "rpt_jdh_11.jpg").exists()
+    assert "field" not in summary(repo)["by_source"]
 
 
 def test_the_cache_must_be_outside_the_repo(tmp_path: Path) -> None:

@@ -14,7 +14,6 @@ from training.ports import ObjectStore
 from training.utils import count_values, s3_key
 
 MAX_REPO_BYTES = 5_000_000
-OPTIONAL_SOURCES = ("field",)
 # The account id stays out of committed files.
 PRIVATE_BUCKET = "s3://junksnap-<stage>-originals-<account_id>"
 
@@ -32,7 +31,7 @@ class ManifestBuilder:
         rows: list[ManifestRow] = []
         for source in sorted(self._licences):
             records = RecordFile(self._cache, source)
-            if not records.pull(store) and source not in OPTIONAL_SOURCES:
+            if not records.pull(store):
                 raise ConfigError(f"no records for {source} here or in S3: run fetch first")
             uploaded = records.uploaded()
             rows += [self._row(r, uploaded) for r in records.read()]
@@ -53,7 +52,6 @@ class ManifestBuilder:
             size_class=attrs.size_class,
             brands=attrs.brands,
             has_boxes=bool(record.boxes),
-            group=record.group,
         )
 
 
@@ -71,7 +69,7 @@ class ManifestFile:
         return [ManifestRow.from_json(json.loads(line)) for line in lines if line]
 
     def trainable(self) -> list[ManifestRow]:
-        """The only rows training code may read: never test or the field holdout."""
+        """The only rows training code may read: never the test split."""
         return [row for row in self.read() if row.split in TRAINABLE_SPLITS]
 
     def recorded_seed(self) -> int | None:

@@ -14,7 +14,7 @@ def record(source: str, *labels: str, boxes: tuple[Box, ...] = ()) -> ImageRecor
 
 def test_every_source_class_uses_known_values(class_map: ClassMap) -> None:
     vocab = class_map.vocabulary
-    assert vocab.yolo_classes == ("waste_pile", "bag", "bin", "burning")
+    assert vocab.yolo_classes == ("waste_pile", "bag", "bin", "burning", "waste_item")
     assert "e_waste" in vocab.materials and "medical" in vocab.materials
     assert set(vocab.contexts) == set(vocab.report_types) - {"not_waste"}
 
@@ -26,7 +26,7 @@ def test_taco_classes_map_to_materials_hazards_and_detector(class_map: ClassMap)
     assert attrs.materials == ("plastic", "organic", "e_waste")
     assert attrs.hazards == ("e_waste",)
     assert class_map.yolo_class("taco", "Garbage bag") == "bag"
-    assert class_map.yolo_class("taco", "Drink can") is None
+    assert class_map.yolo_class("taco", "Drink can") == "waste_item"
 
 
 def test_vocabulary_matches_the_verification_contract(class_map: ClassMap) -> None:
@@ -55,6 +55,14 @@ def test_fire_and_smoke_are_the_burning_hazard(class_map: ClassMap) -> None:
 def test_product_photos_give_materials_but_no_report_type(class_map: ClassMap) -> None:
     attrs = class_map.attributes_for(record("garbage_od", "biodegradable", "cardboard"))
     assert attrs == Attributes(materials=("organic", "paper"))
+    assert class_map.yolo_class("garbage_od", "glass") == "waste_item"
+
+
+def test_teacher_boxes_on_india_photos_are_piles_and_bins(class_map: ClassMap) -> None:
+    assert class_map.yolo_class("qr4change", "waste_pile") == "waste_pile"
+    assert class_map.yolo_class("qr4change", "bin") == "bin"
+    assert class_map.yolo_class("qr4change", "garbage") is None
+    assert class_map.yolo_class("dfire", "none") is None
 
 
 def test_unknown_class_or_source_is_an_error(class_map: ClassMap) -> None:
@@ -76,18 +84,10 @@ def test_report_type_priority_prefers_waste_over_not_waste(class_map: ClassMap) 
     assert small.attributes_for(record("s", "a", "b")).report_type == "waste_dump"
 
 
-def test_field_attributes_pass_through_and_are_checked(class_map: ClassMap) -> None:
-    good = Attributes(report_type="waste_dump", context="vacant_plot", hazards=("burning",))
-    field = ImageRecord("field/a", "field", "field/a.jpg", attributes=good)
-    assert class_map.attributes_for(field) == good
-    wrong_pair = Attributes(report_type="no_bin", context="vacant_plot")
-    with pytest.raises(ConfigError):
-        class_map.attributes_for(ImageRecord("field/b", "field", "p", attributes=wrong_pair))
-
-
 def test_taco_map_covers_all_categories(class_map: ClassMap) -> None:
-    covered = [name for name in TACO_NAMES if class_map.yolo_class("taco", name) in (None, "bag")]
-    assert len(covered) == TACO_CATEGORIES
+    classes = {name: class_map.yolo_class("taco", name) for name in TACO_NAMES}
+    assert len(classes) == TACO_CATEGORIES
+    assert {name for name, c in classes.items() if c != "waste_item"} == {"Garbage bag"}
 
 
 TACO_NAMES = (

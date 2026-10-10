@@ -1,6 +1,6 @@
 ---
-status: proposed
-superseded_by:
+status: superseded
+superseded_by: 20261010-1245-hem-ml-public-data-only.md
 area: data
 by: hem
 date: 2026-10-10T03:03+05:30

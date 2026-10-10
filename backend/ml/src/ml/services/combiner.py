@@ -7,6 +7,7 @@ from ml.domain.case import CombinerInfo
 from ml.domain.errors import ConfigError
 from ml.domain.purposes import Purpose
 from ml.domain.verification import Outcome, SignalResult, Thresholds
+from ml.services.combiner_base import Combiner
 
 # Hand-set, not fitted. The judge only runs on unsure or split cases, so it breaks ties.
 FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
@@ -17,7 +18,7 @@ DISAGREEMENT_GAP = 0.5
 JUDGE_SIGNAL = "vision_judge"
 
 
-class FixedWeightCombiner:
+class FixedWeightCombiner(Combiner):
     KIND = "fixed_weights"
     VERSION = "fw-v0"
 
@@ -46,7 +47,7 @@ class FixedWeightCombiner:
         return total / sum(weights)
 
     def disagree(self, signals: Sequence[SignalResult]) -> bool:
-        scores = [signal.score for signal in signals]
+        scores = [signal.score for signal in signals if not signal.neutral]
         return len(scores) > 1 and max(scores) - min(scores) >= self._gap
 
     def needs_judge(self, signals: Sequence[SignalResult], purpose: Purpose) -> bool:

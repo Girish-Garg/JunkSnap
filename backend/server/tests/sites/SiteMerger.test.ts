@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { validateWardScores, type WardScores } from "../../src/contracts/index.gen.js";
 import { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
+import { DEFAULT_MIN_COSINE } from "../../src/services/sites/MergeTargetPicker.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
@@ -155,6 +156,17 @@ describe("SiteMerger embeddings", () => {
   it("merges when the cosine similarity reaches the threshold", async () => {
     const { result } = await withVectors([1, 0, 0], [0.9, 0.3, 0]);
     expect(result).toMatchObject({ siteId: "site_jdh_1", outcome: "merged" });
+  });
+
+  it("keeps two piles apart below the SigLIP threshold of 0.88", async () => {
+    expect(DEFAULT_MIN_COSINE).toBe(0.88);
+    const { result } = await withVectors([1, 0, 0], [0.85, Math.sqrt(1 - 0.85 ** 2), 0]);
+    expect(result).toMatchObject({ siteId: "site_jdh_2", outcome: "founded" });
+  });
+
+  it("never merges on vectors from different embedding models", async () => {
+    const { result } = await withVectors([1, 0, 0], [1, 0]);
+    expect(result).toMatchObject({ siteId: "site_jdh_2", outcome: "founded" });
   });
 
   it("founds a new site when the photos look different", async () => {

@@ -15,6 +15,8 @@ DEFAULT_TASK_CONFIG = TaskConfig(
     model="global.anthropic.claude-sonnet-4-6",
     fallback=(
         ModelChoice("bedrock", "in.anthropic.claude-haiku-4-5-20251001-v1:0"),
+        # Nova Lite before Nova Pro: more accurate and cheaper as judge (docs/ml/eval.md).
+        ModelChoice("bedrock", "apac.amazon.nova-lite-v1:0"),
         ModelChoice("bedrock", "apac.amazon.nova-pro-v1:0"),
         ModelChoice("openai", "gpt-4.1-mini"),
     ),

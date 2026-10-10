@@ -1,0 +1,41 @@
+{
+  "note": "Written by `learn publish`; the ml service downloads and checks these.",
+  "models": {
+    "edge_fp16": {
+      "key": "models/edge_fp16/36ba77c4cffc-best-320-fp16.onnx",
+      "sha256": "36ba77c4cffc0add9660d00535fab948ee313cb422a03fbbe213f5f16bc194c7",
+      "size_bytes": 4940511,
+      "version": "yolo26n-320-fp16-v1"
+    },
+    "edge_int8": {
+      "key": "models/edge_int8/fa07920d9552-best-320-int8.onnx",
+      "sha256": "fa07920d9552faf7e8498499b048e8d5c7ed9c650ea93c4f5d07e72f156b0312",
+      "size_bytes": 2827592,
+      "version": "yolo26n-320-int8-v1"
+    },
+    "embedder": {
+      "key": "models/embedder/f9e04b9c8c74-siglip2-base-224.onnx",
+      "sha256": "f9e04b9c8c74ac16937147c78d26234fffcb1c0a2b5823f1c87a8ed054795e5d",
+      "size_bytes": 371774964,
+      "version": "siglip2-base-224-fp32"
+    },
+    "heads": {
+      "key": "models/heads/1a517322c2da-heads-siglip.json",
+      "sha256": "1a517322c2da3a99ec54d60c3fca0a61ae965f00554ced1342b6209bc3f27fcc",
+      "size_bytes": 143766,
+      "version": "clf-1"
+    },
+    "meta": {
+      "key": "models/meta/883f416b1cb7-meta-v2.json",
+      "sha256": "883f416b1cb709a345c47e44ceb55800bf8c4a4ac1b9178c6032962eddaa794a",
+      "size_bytes": 920,
+      "version": "meta-v2"
+    },
+    "yolo": {
+      "key": "models/yolo/e6d1e36abb41-best-640-fp32.onnx",
+      "sha256": "e6d1e36abb41ac10bafcf0500ab16e5b56f0cd2ec3959370cac94043148cb241",
+      "size_bytes": 38174034,
+      "version": "yolo26s-640-v1"
+    }
+  }
+}

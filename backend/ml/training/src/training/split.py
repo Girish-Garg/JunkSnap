@@ -1,4 +1,4 @@
-"""The `split` step: a fixed train / val / test / holdout assignment from a seed."""
+"""The `split` step: a fixed train / val / test assignment of public images from a seed."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from dataclasses import dataclass
 
 from training.domain import ManifestRow
 
-FIELD_SOURCE = "field"
 DEFAULT_SEED = 26
 ROBOFLOW_COPY = re.compile(r"_(jpg|jpeg|png)_rf_[0-9a-f]+$")
 
@@ -23,7 +22,6 @@ class SplitRatios:
 
 
 PUBLIC = SplitRatios(("test", 0.10), ("val", 0.20), "train")
-FIELD = SplitRatios(("holdout", 0.30), ("val", 0.40), "train")
 
 
 class Splitter:
@@ -40,7 +38,7 @@ class Splitter:
         return [row.with_split(self.split_of(row)) for row in rows]
 
     def split_of(self, row: ManifestRow) -> str:
-        ratios = FIELD if row.source == FIELD_SOURCE else PUBLIC
+        ratios = PUBLIC
         point = self._point(self._group(row))
         for name, bound in (ratios.first, ratios.second):
             if point < bound:
@@ -53,5 +51,5 @@ class Splitter:
 
     @staticmethod
     def _group(row: ManifestRow) -> str:
-        """One scan, one site or one photo's Roboflow copies always share a split."""
-        return row.group or ROBOFLOW_COPY.sub("", row.id)
+        """One photo's Roboflow copies always share a split."""
+        return ROBOFLOW_COPY.sub("", row.id)

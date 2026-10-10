@@ -42,6 +42,7 @@ npm run build
 - Letters: render the draft as HTML with a print stylesheet and use the browser's Save as PDF. No server-side PDF library (they mangle Devanagari). Nothing is filed automatically; the resident files.
 - Area pages show counts next to every score, the pilot flag, and "not enough reports" below 10 verified reports.
 - Neutral design: no party colours, no names of individuals anywhere on screen.
+- The on-phone detector in `public/models/` (from S3 `models/edge_int8/` or `models/edge_fp16/`) is an Ultralytics-trained YOLO model and ships under the repo's AGPL-3.0 licence.
 
 ## Never
 

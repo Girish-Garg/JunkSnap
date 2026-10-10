@@ -10,7 +10,6 @@ Images never go in git. `uv run training fetch` (in `backend/ml/training/`) down
 | `taco` | TACO: Trash Annotations in Context. https://zenodo.org/records/3587843, annotations from https://github.com/pedropro/TACO | CC BY 4.0 | 1,034 of 1,500, as the 640 px copies the TACO download script uses | 60 litter classes in 28 groups, with boxes | materials, hazards (battery: e-waste; aerosol: chemicals), item and `bag` boxes for the detector. No report type: its Flickr close-ups would teach the type classifier photo style instead of waste vs not waste |
 | `garbage_od` | GARBAGE CLASSIFICATION 3, Roboflow Universe (https://universe.roboflow.com/material-identification/garbage-classification-3/dataset/2), mirrored at https://huggingface.co/datasets/keremberke/garbage-object-detection | CC BY 4.0 | 10,464 at 416 px | `biodegradable`, `cardboard`, `glass`, `metal`, `paper`, `plastic`, with boxes | material boxes and crops for the material classifier. Mostly product-style photos on plain backgrounds, so no report type |
 | `dfire` | D-Fire fire and smoke dataset, https://github.com/gaiasd/DFireDataset, files read from the public mirror https://huggingface.co/datasets/badsaarow/d-fire | CC0 1.0 | a fixed, evenly spaced 1,500 of the mirror's 3,013 train image/label pairs (the other train files have no matching partner) | `smoke`, `fire` (YOLO boxes); unlabelled images are `none` | the `burning` hazard and the detector's `burning` class. This is general fire and smoke (wildfires, buildings, vehicles), not specifically burning waste, so field photos of burning heaps must confirm it |
-| `field` | JunkSnap field audit, Jodhpur and other cities | private, never redistributed | added by `import-field` from a Label Studio export; only the pipeline's blurred copies (`media/reports/…`), never originals | see `data/labels/label_studio.xml` | the only source of real JunkSnap photos; about 30% held out for evaluation |
 
 Excluded inside TACO: 466 images from OpenLitterMap batches carry "ODbL (c) OpenLitterMap & Contributors" per image (share-alike database licence, no 640 px copy), so `fetch` skips them.
 
@@ -33,7 +32,9 @@ CC BY credit: the four public sources above are credited here and must be credit
 
 Tools: Ultralytics YOLO is AGPL-3.0. Training with it is fine in a public repo, but code that imports it, and a service that serves a model through it over a network, falls under the AGPL. This package does not depend on it: `yolo-export` writes the plain YOLO format, so A2 can choose the trainer.
 
-Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, construction debris and Indian dump piles with boxes. The field audit has to label these.
+Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, construction debris and Indian dump piles with boxes. Models are trained and evaluated on public data only (decision 20261010-1245-hem-ml-public-data-only); field photos are never imported, labelled for training or held out.
+
+Teacher boxes (A2, issue 50): `learn teacher` in `backend/ml/training` runs OWLv2 (`google/owlv2-large-patch14-ensemble`, Apache-2.0) on the QR4Change photos and writes machine-made `waste_pile` boxes (garbage photos only) and `bin` boxes to `datasets/qr4change/teacher_boxes.jsonl` in the private bucket, never into `records.jsonl`. `yolo-export` adds them as extra boxes; `docs/ml/eval.md` names them as teacher-made. TACO and garbage_od litter boxes map to the detector class `waste_item`.
 
 ## Class map and manifest
 
@@ -43,14 +44,13 @@ Gaps no open dataset covers: bins, medical waste, dead animals, chemicals, const
 
 ## Splits
 
-Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26, recorded in `manifest_summary.json`; `build-manifest`, `split` and `import-field` refuse another seed unless given `--force`. Field rows hash on a group key instead of their id: `scan:<scan_id>` or else `site:<site_id>`, read from the Label Studio task data. So frames of one scan and repeat reports of one site never straddle holdout and train. Put `scan_id` and `site_id` in each task's data when they are known.
+Splits are hash based: `sha256("<seed>:<id>")` gives each image a fixed point in 0..1, so the same seed always gives the same split and adding images never moves earlier ones. Seed 26, recorded in `manifest_summary.json`; `build-manifest` and `split` refuse another seed unless given `--force`.
 
-| Source | test | val | train | holdout |
-|---|---|---|---|---|
-| public sources | first 10% | next 10% | rest | never |
-| `field` | never | next 10% | rest | first 30% |
+| Source | test | val | train |
+|---|---|---|---|
+| every source | first 10% | next 10% | rest |
 
-As a safeguard, Roboflow-style copies of one photo (`<name>_jpg.rf.<hash>`) hash on the photo's name, so augmentation copies would always share a split; the current `garbage_od` export has none. The field `holdout` split is the evaluation set for A2: `yolo-export` never writes it, and training code reads rows through `ManifestFile.trainable()`, which returns only `train` and `val`.
+As a safeguard, Roboflow-style copies of one photo (`<name>_jpg.rf.<hash>`) hash on the photo's name, so augmentation copies would always share a split; the current `garbage_od` export has none. `test` is the evaluation set (`docs/ml/eval.md`); training code reads rows through `ManifestFile.trainable()`, which returns only `train` and `val`.
 
 ## Commands
 
@@ -61,23 +61,8 @@ uv run training fetch taco qr4change garbage_od
 uv run training fetch dfire --limit 1500
 uv run training build-manifest                # builds rows and assigns splits with the recorded seed
 uv run training split                         # re-assigns splits; --seed N --force to change the seed
-uv run training labelstudio-config            # writes data/labels/label_studio.xml
-uv run training import-field export.json      # --keep-missing or --replace for a partial export
 uv run training yolo-export --out /path/outside/repo/yolo
 ```
-
-Field photos are labelled and stored only as the blurred copies the app pipeline produces, never originals. Point the Label Studio tasks at either:
-- `s3://junksnap-<stage>-public-<account_id>/media/reports/<report_id>.jpg`, by connecting Label Studio's S3 source storage to the public bucket with prefix `media/reports/`; or
-- the CloudFront URL `<PUBLIC_BASE_URL>/media/reports/<report_id>.jpg`.
-
-`import-field` refuses every other reference: originals (`reports/…` in the private bucket), cleanup after-photos (`media/cleanups/`), local files and uploads.
-
-For each blurred copy, `import-field`:
-1. re-encodes it, which also drops any EXIF;
-2. uploads it to `datasets/field/{report_id}.jpg` in the private bucket (the contract layout), with its labels in `datasets/field/records.jsonl`;
-3. rebuilds the manifest.
-
-A missing or unreadable copy stops the import. The export is merged with the recorded field photos by image id. An export that lacks photos already recorded is refused: `--keep-missing` keeps them, and `--replace` drops them.
 
 One machine (the lead's) writes the shared manifest. Before uploading `datasets/manifest.jsonl`, every write checks the S3 copy, and it refuses to drop ids the S3 copy has unless given `--force`.
 

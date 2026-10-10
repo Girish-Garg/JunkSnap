@@ -84,13 +84,10 @@ class Fetcher:
             try:
                 self._images.write(item.read(), dest)
             except ExternalServiceError as error:
-                if not source.skips_unreadable:
-                    raise
                 LOG.warning("skipped %s: %s", item.stem, error)
                 return None
         return ImageRecord(
-            f"{name}/{item.stem}", name, relative, item.labels, item.boxes, item.attributes,
-            item.group,
+            f"{name}/{item.stem}", name, relative, item.labels, item.boxes, item.attributes
         )
 
     def _upload(self, name: str, records: list[ImageRecord]) -> None:

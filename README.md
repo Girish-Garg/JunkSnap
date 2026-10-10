@@ -27,3 +27,7 @@ In progress. See [docs/handover.md](docs/handover.md) for the plan and task list
 
 - Satellite and street photos show that waste exists, not who put it there. JunkSnap never names a person.
 - Letters are drafts, not legal advice. The resident files them; nothing is sent automatically.
+
+## Licence
+
+AGPL-3.0 (see [LICENSE](LICENSE)). The detector is trained with Ultralytics YOLO (AGPL-3.0); the server and phone models ship under the same licence (decision 20261010-0400).

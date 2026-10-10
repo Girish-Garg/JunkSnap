@@ -15,6 +15,7 @@ from ml.handlers.verify_graph import VerifierBuilder
 from ml.logging_setup import JsonLogging
 from ml.settings.core import CoreSettings
 from ml.settings.llm import LlmSettings
+from ml.settings.models import ModelSettings
 
 # Neutral non-model inputs: a new device, a typical phone GPS fix, no verified neighbours.
 CLI_FEATURES = CaseFeatures(gps_accuracy_m=10.0, reputation=0.5, nearby_verified_reports=0)
@@ -111,7 +112,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("models may only see blurred photos; pass --photos-are-blurred to vouch")
     level = logging.INFO if args.verbose else logging.ERROR
     JsonLogging({"service": "ml-verify-cli"}, level=level).install()
-    builder = VerifierBuilder(CoreSettings.load(), LlmSettings.load())
+    builder = VerifierBuilder(CoreSettings.load(), LlmSettings.load(), ModelSettings.load())
     return VerifyCli(builder, Purpose.named(args.purpose)).run(args.photos, args.claim)
 
 

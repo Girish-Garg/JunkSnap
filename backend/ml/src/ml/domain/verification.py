@@ -54,6 +54,8 @@ class SignalResult:
     latency_ms: int
     notes: tuple[str, ...] = ()
     insights: Insights = field(default_factory=Insights)
+    artifact_key: str | None = None  # the stored embedding, for SiteMerger
+    neutral: bool = False  # the model cannot see this claim, so its score carries no evidence
 
     def to_contract(self) -> dict[str, object]:
         return {

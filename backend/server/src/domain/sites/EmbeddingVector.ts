@@ -1,5 +1,3 @@
-import { InternalDataError } from "../errors.js";
-
 export class EmbeddingVector {
   readonly #values: readonly number[];
 
@@ -7,11 +5,12 @@ export class EmbeddingVector {
     this.#values = [...values];
   }
 
-  cosine(other: EmbeddingVector): number {
+  // Null when the sizes differ: vectors from two embedding models cannot be compared.
+  cosine(other: EmbeddingVector): number | null {
     const a = this.#values;
     const b = other.#values;
     if (a.length !== b.length) {
-      throw new InternalDataError(`embedding sizes differ: ${a.length} and ${b.length}`);
+      return null;
     }
     let dot = 0;
     let normA = 0;

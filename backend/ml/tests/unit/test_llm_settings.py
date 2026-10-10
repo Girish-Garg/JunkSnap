@@ -19,6 +19,7 @@ def test_judge_order_is_bedrock_then_openai() -> None:
     assert [choice.label() for choice in judge.choices()] == [
         "bedrock:global.anthropic.claude-sonnet-4-6",
         "bedrock:in.anthropic.claude-haiku-4-5-20251001-v1:0",
+        "bedrock:apac.amazon.nova-lite-v1:0",
         "bedrock:apac.amazon.nova-pro-v1:0",
         "openai:gpt-4.1-mini",
     ]

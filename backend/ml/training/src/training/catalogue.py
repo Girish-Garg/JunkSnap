@@ -10,7 +10,6 @@ from training.sources.folders import FolderZipSource
 from training.sources.taco import TacoSource
 
 HF = "https://huggingface.co/datasets/keremberke/garbage-object-detection/resolve/main/data"
-FIELD_LICENCE = "private: JunkSnap field audit, never redistributed"
 
 QR4CHANGE = SourceInfo("qr4change", "CC-BY-4.0", "https://doi.org/10.17632/zndzygc3p3.2")
 TACO = SourceInfo("taco", "CC-BY-4.0", "https://zenodo.org/records/3587843")
@@ -51,5 +50,4 @@ class SourceCatalogue:
         return self._sources[name]
 
     def licences(self) -> dict[str, str]:
-        found = {name: s.info.licence for name, s in self._sources.items()}
-        return {**found, "field": FIELD_LICENCE}
+        return {name: s.info.licence for name, s in self._sources.items()}

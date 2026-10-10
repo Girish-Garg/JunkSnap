@@ -12,17 +12,14 @@ import boto3
 from botocore.config import Config
 
 from training.adapters import HttpDownloader, LocalOnlyStore, S3ObjectStore, StackBucketLocator
-from training.catalogue import FIELD_LICENCE, SourceCatalogue
+from training.catalogue import SourceCatalogue
 from training.class_map import ClassMap
 from training.domain import ConfigError, JunkSnapError
-from training.fetch import UPLOAD_WORKERS, Fetcher, RecordFile
+from training.fetch import UPLOAD_WORKERS, Fetcher
 from training.images import ImageNormaliser
-from training.labelstudio import FIELD_SOURCE, FieldExportReader, LabelStudioConfig
 from training.manifest import ManifestBuilder, ManifestFile
 from training.ports import ObjectStore
 from training.settings import Settings
-from training.sources.base import SourceInfo
-from training.sources.field import FieldExportSource, FieldPhotos, FieldRecordMerge
 from training.split import DEFAULT_SEED, Splitter
 from training.yolo import YoloExporter
 
@@ -71,34 +68,6 @@ class Commands:
         splitter = Splitter(self._seed(args, manifest))
         self._print(manifest.write(splitter.assign(manifest.read()), splitter.seed, args.force))
 
-    def labelstudio_config(self, args: argparse.Namespace) -> None:
-        out = Path(args.out) if args.out else self._settings.label_studio_path
-        out.parent.mkdir(parents=True, exist_ok=True)
-        xml = LabelStudioConfig(self._class_map().vocabulary).xml()
-        out.write_text(xml, encoding="utf-8", newline="\n")
-        print(f"wrote {out}")
-
-    def import_field(self, args: argparse.Namespace) -> None:
-        cache, store = self._settings.require_cache(), self._stores.create(args.no_upload)
-        manifest = self._manifest(store)
-        splitter = Splitter(self._seed(args, manifest))
-        source = self._field_source(args, cache, store)
-        records = Fetcher(cache, store, ImageNormaliser()).fetch(source, None)
-        print(f"field: {len(records)} labelled photos")
-        rows = splitter.assign(self._builder().build(store))
-        self._print(manifest.write(rows, splitter.seed, args.force))
-
-    def _field_source(
-        self, args: argparse.Namespace, cache: Path, store: ObjectStore
-    ) -> FieldExportSource:
-        tasks = json.loads(Path(args.export).read_text(encoding="utf-8"))
-        labelled = FieldExportReader(self._class_map().vocabulary).records(tasks)
-        recorded = RecordFile(cache, FIELD_SOURCE)
-        recorded.pull(store)
-        kept = FieldRecordMerge(args.merge).kept(recorded.read(), labelled)
-        info = SourceInfo(FIELD_SOURCE, FIELD_LICENCE, "Label Studio export")
-        return FieldExportSource(info, labelled, kept, FieldPhotos(store, HttpDownloader()))
-
     def yolo_export(self, args: argparse.Namespace) -> None:
         cache, store = self._settings.require_cache(), self._stores.create(args.no_upload)
         out = self._settings.outside_repo(Path(args.out))
@@ -142,8 +111,6 @@ class CliParser:
     def build(self) -> argparse.ArgumentParser:
         self._fetch()
         self._manifest_steps()
-        self._import_field()
-        self._sub.add_parser("labelstudio-config").add_argument("--out", default=None)
         self._sub.add_parser("yolo-export", parents=[self._common]).add_argument(
             "--out", required=True
         )
@@ -155,22 +122,12 @@ class CliParser:
         fetch.add_argument("--limit", type=int, default=None, help="images per source")
 
     def _manifest_steps(self) -> None:
-        for name in ("build-manifest", "split", "import-field"):
+        for name in ("build-manifest", "split"):
             command = self._sub.add_parser(name, parents=[self._common])
             command.add_argument("--seed", type=int, default=None)
             command.add_argument(
                 "--force", action="store_true", help="allow a new seed or dropping S3 manifest ids"
             )
-
-    def _import_field(self) -> None:
-        command = self._sub.choices["import-field"]
-        command.add_argument("export", help="Label Studio JSON export of blurred copies")
-        mode = command.add_mutually_exclusive_group()
-        mode.add_argument("--keep-missing", dest="merge", action="store_const",
-                          const="keep-missing", help="keep recorded photos the export lacks")
-        mode.add_argument("--replace", dest="merge", action="store_const", const="replace",
-                          help="drop recorded photos the export lacks")
-        command.set_defaults(merge="strict")
 
 
 def main(argv: list[str] | None = None) -> int:

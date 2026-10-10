@@ -116,7 +116,7 @@ class ClassMap:
         )
 
     def yolo_class(self, source: str, label: str) -> str | None:
-        return self._rule(source, label).yolo
+        return self._rule(source, label).yolo or self._source(source).default.yolo
 
     def _rule(self, source: str, label: str) -> ClassRule:
         rules = self._source(source)
