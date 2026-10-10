@@ -1,12 +1,13 @@
 """Verification purposes: does the photo show the reported waste, or is the site now clean."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 from typing import override
 
 from ml.domain.errors import InvalidClaimError
 from ml.domain.verification import NOT_WASTE, Claim, JudgeVerdict, Outcome, Thresholds
+from ml.domain.vetoes import REPORT_VETOES, VetoEvidence, VetoRule
 
 # The judge saw waste of another type than reported: neither support nor denial.
 OTHER_TYPE_SUPPORT = 0.5
@@ -39,6 +40,10 @@ class Purpose(ABC):
     ) -> Outcome:
         """Decision per the verification_result contract."""
 
+    @abstractmethod
+    def review(self, outcome: Outcome, evidence: VetoEvidence) -> Outcome:
+        """The combiner's outcome, or a rejection when a veto rule fires."""
+
     @staticmethod
     def named(name: str) -> "Purpose":
         purpose = PURPOSES.get(name)
@@ -53,6 +58,9 @@ class ReportPurpose(Purpose):
     media_folder = "media/reports/"
     requires_judge = False
     reports_insights = True
+
+    def __init__(self, vetoes: Sequence[VetoRule] = REPORT_VETOES) -> None:
+        self._vetoes = tuple(vetoes)
 
     def support(self, waste_score: float) -> float:
         return waste_score
@@ -79,6 +87,15 @@ class ReportPurpose(Purpose):
         else:
             decision = "rejected"
         return Outcome(probability, decision, disagreement, is_clean=None)
+
+    @override
+    def review(self, outcome: Outcome, evidence: VetoEvidence) -> Outcome:
+        """A strong "no" wins over disagreement: the photo never reaches the map (issue 103)."""
+        for rule in self._vetoes:
+            veto = rule.check(evidence)
+            if veto is not None:
+                return outcome.vetoed(veto)
+        return outcome
 
 
 class CleanupPurpose(Purpose):
@@ -111,6 +128,11 @@ class CleanupPurpose(Purpose):
         clean = judged and probability >= thresholds.auto_verify_min and not disagreement
         decision = "auto_verified" if clean else "rejected"
         return Outcome(probability, decision, disagreement, is_clean=clean)
+
+    @override
+    def review(self, outcome: Outcome, evidence: VetoEvidence) -> Outcome:
+        """The judge must already confirm a cleanup, and its not_waste means clean."""
+        return outcome
 
 
 PURPOSES: Mapping[str, Purpose] = MappingProxyType(

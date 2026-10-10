@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import { useFormatter } from '../../../i18n/useFormatter';
 import { TypeIcon } from '../../../ui/TypeIcon';
+import { NotWasteNotice } from '../../snap/components/NotWasteNotice';
 import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
 import { ActivityActions } from './ActivityActions';
@@ -36,6 +37,7 @@ export function ActivityItem({ report, onOpen }: ActivityItemProps) {
           {t(`context.${draft.context}`)} · {format.dateTime(draft.captured_at)}
         </p>
         <ProgressBadge report={report} />
+        <NotWasteNotice report={report} />
         <ActivityActions report={report} />
       </div>
     </li>

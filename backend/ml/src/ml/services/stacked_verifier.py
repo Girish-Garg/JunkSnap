@@ -8,6 +8,7 @@ from ml.domain.case import VerificationCase, VerificationResult
 from ml.domain.errors import ExternalServiceError
 from ml.domain.insights import Insights
 from ml.domain.verification import SignalResult
+from ml.domain.vetoes import VetoEvidence
 from ml.ports.clock import Clock
 from ml.ports.signal import Signal
 from ml.services.combiner_base import Combiner
@@ -38,12 +39,15 @@ class StackedVerifier:
         reading = self._judge.judge(case) if needed else None
         if reading is not None:
             results.append(reading.signal)
+        verdict = None if reading is None else reading.verdict
+        evidence = VetoEvidence(tuple(results), verdict, combiner.thresholds)
+        outcome = case.purpose.review(combiner.combine(results, case.purpose), evidence)
         result = VerificationResult(
             case=case,
-            outcome=combiner.combine(results, case.purpose),
+            outcome=outcome,
             thresholds=combiner.thresholds,
             signals=tuple(results),
-            judge=None if reading is None else reading.verdict,
+            judge=verdict,
             combiner=combiner.info(),
             decided_at=self._clock.now(),
             embedding_key=next((r.artifact_key for r in results if r.artifact_key), None),
@@ -79,6 +83,7 @@ class StackedVerifier:
             "judge_ran": result.judge is not None,
             "combiner": result.combiner.kind,
             "combiner_reason": result.combiner.reason,
+            "veto": None if result.outcome.veto is None else result.outcome.veto.label(),
             "signals": [f"{s.name}={s.score:.2f}" for s in result.signals],
         }
         logger.info("verified", extra={"fields": fields})
