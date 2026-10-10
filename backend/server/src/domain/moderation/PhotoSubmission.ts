@@ -1,4 +1,5 @@
 import type { ReportUpload } from "../../contracts/index.gen.js";
+import { InternalDataError } from "../errors.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { PhotoId } from "./PhotoId.js";
 
@@ -52,7 +53,7 @@ export class PhotoSubmission {
   static fromReport(upload: ReportUpload, receivedAt: string): PhotoSubmission {
     return new PhotoSubmission({
       photoId: PhotoId.fromUpload("report", upload.upload_id),
-      sha256: upload.sha256,
+      sha256: PhotoSubmission.#sha256(upload),
       location: new GeoPoint(upload.gps.lat, upload.gps.lon),
       deviceToken: upload.device_token,
       userId: upload.user_id ?? null,
@@ -62,6 +63,14 @@ export class PhotoSubmission {
       note: upload.note ?? null,
       site: null,
     });
+  }
+
+  // The pipeline moderates only reports with a photo, so a missing hash here is our bug.
+  static #sha256(upload: ReportUpload): string {
+    if (upload.sha256 === undefined) {
+      throw new InternalDataError(`${upload.upload_id} has no photo to moderate`);
+    }
+    return upload.sha256;
   }
 
   static fromCleanup(cleanup: CleanupPhoto, sitePoint: GeoPoint): PhotoSubmission {

@@ -11,7 +11,7 @@ const AREA_FIELDS: readonly (readonly [AreaKind, AreaField])[] = [
   ["district", "district"],
 ];
 const MIN_VERIFIED_REPORTS = 10;
-const FORMULA_VERSION = "scores-v1";
+const FORMULA_VERSION = "scores-v3";
 
 // First scores row for each area of a new site: zero counts, every score withheld (contracts/README.md).
 export class ZeroScoreRows {
@@ -29,12 +29,18 @@ export class ZeroScoreRows {
     });
   }
 
+  // The scores rows' within ids: the site's district and, when it has one, its local body.
+  within(): string[] {
+    const { district, local_body } = this.#feature.properties.location;
+    return local_body === null ? [district.id] : [district.id, local_body.id];
+  }
+
   #row(area: WardScores["area"], computedAt: string): WardScores {
     const withheld = { value: null, reason: "too_few_reports" } as const;
     const { pilot, first_reported_at } = this.#feature.properties;
     return {
       area,
-      counts: { verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0 },
+      counts: { verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0, sites_without_bin_within_3km: 0 },
       min_verified_reports: MIN_VERIFIED_REPORTS,
       scores: { city: withheld, citizen: withheld, bin_access: withheld },
       metrics: {
@@ -42,9 +48,11 @@ export class ZeroScoreRows {
         cleared_within_7_days_pct: null,
         redumped_pct: null,
         no_bin_response_pct: null,
+        bin_service_pct: null,
         new_dumps_per_km2_month: null,
         share_vacant_plot_drain_roadside_pct: null,
         median_distance_to_disposal_m: null,
+        no_bin_within_3km_pct: null,
       },
       diagnosis: [],
       formula_version: FORMULA_VERSION,

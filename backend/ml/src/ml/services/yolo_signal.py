@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from ml.domain.case import VerificationCase
+from ml.domain.detection_evidence import AnyClassEvidence, BinWithWasteEvidence, DetectionEvidence
 from ml.domain.detections import DetectionSet
 from ml.domain.insights import HazardSighting, Insights, InsightSource, SizeEstimate
 from ml.domain.verification import SignalResult
@@ -11,12 +12,13 @@ from ml.ports.object_detector import ObjectDetector
 from ml.ports.signal import Signal
 
 WASTE_CLASSES = frozenset({"waste_pile", "bag", "waste_item"})
-# Detector classes that show each claimed report type; no class sees contaminated water.
-CLAIM_CLASSES: Mapping[str, frozenset[str]] = MappingProxyType(
+# How detector boxes show each claimed report type; no class sees contaminated water.
+CLAIM_EVIDENCE: Mapping[str, DetectionEvidence] = MappingProxyType(
     {
-        "waste_dump": WASTE_CLASSES,
-        "no_bin": WASTE_CLASSES,
-        "open_construction": frozenset({"waste_pile"}),
+        "waste_dump": AnyClassEvidence(WASTE_CLASSES),
+        "no_bin": AnyClassEvidence(WASTE_CLASSES),
+        "open_construction": AnyClassEvidence(frozenset({"waste_pile"})),
+        "overflowing_bin": BinWithWasteEvidence(WASTE_CLASSES),
     }
 )
 # A claim the detector cannot see gets this score, flagged neutral so combiners skip it.
@@ -36,8 +38,8 @@ class YoloSignal(Signal):
 
     def measure(self, case: VerificationCase) -> SignalResult:
         found = self._detector.detect(case.image)
-        classes = CLAIM_CLASSES.get(case.claim.report_type)
-        waste_score = found.best(classes) if classes else NEUTRAL
+        evidence = CLAIM_EVIDENCE.get(case.claim.report_type)
+        waste_score = NEUTRAL if evidence is None else evidence.score(found)
         source = InsightSource(self.NAME, self.PROVIDER, found.model, found.version)
         return SignalResult(
             name=self.NAME,
@@ -46,11 +48,11 @@ class YoloSignal(Signal):
             model=found.model,
             version=found.version,
             latency_ms=found.latency_ms,
-            notes=found.notes() if classes else (f"no class for {case.claim.report_type}",),
+            notes=found.notes() if evidence else (f"no class for {case.claim.report_type}",),
             insights=Insights(
                 size_class=self._size(found, source), hazards=self._fire(found, source)
             ),
-            neutral=classes is None,
+            neutral=evidence is None,
         )
 
     @staticmethod

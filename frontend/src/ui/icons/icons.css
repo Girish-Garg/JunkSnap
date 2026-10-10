@@ -1,0 +1,94 @@
+/*
+  Hand-drawn icons. Outline only when resting; when active (the current tab, a pressed pill, a primary action)
+  the two tones fill in from the palette and the icon hops.
+*/
+.cicon .duo,
+.cicon .duo2 {
+  fill: transparent;
+  transition: fill var(--dur-2) var(--ease-out);
+}
+
+.cicon .dot {
+  fill: currentColor;
+  stroke: none;
+}
+
+[aria-current='page'] > * > .cicon,
+[aria-pressed='true'] > .cicon,
+.cicon--active {
+  animation: chip-hop var(--dur-spring) var(--spring-bouncy);
+}
+
+[aria-current='page'] .cicon .duo,
+[aria-pressed='true'] .cicon .duo,
+.cicon--active .duo {
+  fill: var(--sun);
+}
+
+[aria-current='page'] .cicon .duo2,
+[aria-pressed='true'] .cicon .duo2,
+.cicon--active .duo2 {
+  fill: var(--accent-tint);
+}
+
+/* Report-type icons: always filled with the type colour, ink outline, light inner details. */
+.type-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--ink);
+}
+
+.type-icon .tone {
+  fill: var(--type-colour);
+}
+
+.type-icon .paper {
+  fill: #fffdf8;
+}
+
+.type-icon .hi {
+  stroke: #fffdf8;
+}
+
+.type-icon--waste_dump {
+  --type-colour: var(--type-dump);
+}
+
+.type-icon--no_bin {
+  --type-colour: var(--type-nobin);
+}
+
+.type-icon--contaminated_water {
+  --type-colour: var(--type-water);
+}
+
+.type-icon--open_construction {
+  --type-colour: var(--type-construction);
+}
+
+.type-icon--overflowing_bin {
+  --type-colour: var(--type-overflowing);
+}
+
+/* In dark mode the outline lightens so the icon still reads on charcoal. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .type-icon {
+    color: var(--text);
+  }
+}
+
+:root[data-theme='dark'] .type-icon {
+  color: var(--text);
+}
+
+/* On a filled sticker (Report, the primary site action) both tones are always on. */
+.nav-bar__item--report .cicon .duo,
+.action-row__button--primary .cicon .duo {
+  fill: #fffdf8;
+}
+
+.nav-bar__item--report .cicon .duo2,
+.action-row__button--primary .cicon .duo2 {
+  fill: var(--accent);
+}

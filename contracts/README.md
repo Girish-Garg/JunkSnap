@@ -6,6 +6,16 @@ Contracts v1.1 (decisions 20261010-0159 to -0203 and -0227) adds `insights` to `
 
 Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema shape. It lists the worker's fields on the `reports` and `sites` rows, states that every GSI projects all attributes, adds `ASSETS_DIR`, marks `OPENROUTER_SECRET_ID` as planned, and rewords the description of `letter_draft` `source_sha256` (decision 20261010-0330).
 
+Contracts v1.3 (decision 20261010-1422, issue 76) adds `GET /areas/{kind}?within=&limit=` and its wrapper schema `area_list`, and a table-only `within` attribute on `scores` rows. No existing schema changes.
+
+Contracts v1.4 (decision 20261010-1430, issue 79) measures bin access: `site.reporters`, `site.insights.nearest_bin` and `no_bin_within_3km`, `ward_scores` `counts.sites_without_bin_within_3km` and `metrics.no_bin_within_3km_pct` (formula scores-v2), and `letter_draft.evidence`.
+
+Contracts v1.5 (decision 20261010-1445-hem-ward-crawler-service, issue 78) adds the `crawls` table, the `crawl/` prefix in the originals bucket, the public route `GET /areas/district/{id}/crawl` with the new `area_crawl` shape, the `crawler` CronJob and image, and the `CRAWL_*` and `CRAWLS_TABLE` variables. No existing shape changes.
+
+Contracts v1.6 (decision 20261010-1600-hem-area-letters, issue 89) adds `POST /areas/{kind}/{id}/letters` and its response schema `area_letter_draft`: one cited letter about one issue in one area. No existing shape changes.
+
+Contracts v1.7 (decision 20261010-1645-hem-overflowing-bin, issue 100) adds the report type `overflowing_bin` ("Overflowing or broken bin") with contexts `overflowing` and `damaged` to every `report_type` enum (`report_upload`, `scan_session`, `site`, `verification_result` judge, `area_letter_draft` issue and worst sites). It also adds the optional metric `ward_scores.metrics.bin_service_pct` (formula `scores-v3`). Additive only; new fixtures `site.jdh-4` and `report_upload.jdh-4`.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -16,7 +26,7 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 | Schema | Produced by | Read by |
 |---|---|---|
-| `report_upload` | frontend (`snap`); worker for each scan frame (`scan`) | api (body of `POST /reports`), worker |
+| `report_upload` | frontend (`snap`, and `no_bin` without a photo: fixture `report_upload.jdh-2`); worker for each scan frame (`scan`) | api (body of `POST /reports`), worker |
 | `scan_session` | frontend | api (body of `POST /scans`), worker |
 | `moderation_result` | worker, for report (`rpt_`) and cleanup (`cln_`) photos | api (`GET /reports/{id}`) |
 | `verification_result` | ml (`POST /internal/verify`), `purpose` report or cleanup, with `insights` | worker, api |
@@ -24,8 +34,11 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | `location_lookup` | worker | worker, which copies it into `site.location` |
 | `site` | worker (merge, cleanup, `insights`), api (votes) | frontend map and site panel, api letters |
 | `ward_scores` | `scores` CronJob, with area `insights`; worker creates the first zero-count row | api, frontend area page |
+| `area_list` | api (`GET /areas/{kind}`): ranked `ward_scores` rows within a district or local body | frontend city ranking |
 | `letter_draft` | api | frontend letter preview |
-| `ward_record` | ward crawler (offline Python, `data/ward_crawler`): the `records` array of `data/wards/<city>.json` | worker (location), scores (area, population, disposal points) |
+| `area_letter_draft` | api | frontend area page letter preview |
+| `ward_record` | ward crawler (`data/ward_crawler`): the `records` array of `data/wards/<city>.json` (in the image) and of `crawl/wards/<city>.json` (the `crawler` CronJob, originals bucket) | worker (location; read at worker start), scores (area, population, disposal points; read every run); per city each keeps the file with more `reviewed` records, then one with `map_layers` over one without, then the newer `generated_at` |
+| `area_crawl` | api, from the `crawls` row (`not_started` without one) | frontend area pages and Areas list (the crawl banner) |
 
 `data/wards/<city>.json` also holds `map_layers`: city-wide OpenStreetMap layers (`disposal`, `school`, `hospital`, `water`, `drain`), each `{kind, count, source_url, fetched_at, page_sha256, features: [{ref, coords}]}`, where `ref` is `osm:<type>/<id>` and `coords` are `[lat, lon]` pairs (one for a place, the vertices for a line or area). The worker finds `site.insights.near` in these layers, so it works where a site has no ward. The city file and its layers have no schema yet (W1, issue 9).
 
@@ -37,20 +50,20 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 - Ids are opaque strings: a type prefix plus a lowercase ULID (`upl_`, `rpt_`, `cln_`, `scn_`, `site_`, `ltr_`). A report or cleanup reuses its upload's suffix (`upl_x` becomes `rpt_x` or `cln_x`), so retries are idempotent. A scan frame's upload id is `upl_` plus the first 26 hex characters of SHA-256 of `<scan_id>:<t_ms>`, so a retried scan makes the same ids.
 - Area ids use `[a-z0-9-]`. Assembly seat: `<eci-state>-ac-<n>` (`s20-ac-127`). Lok Sabha seat: `<eci-state>-pc-<n>` (`s20-pc-16`). District: `<state>-<district>` (`rajasthan-jodhpur`). Ward: `<local-body-id>-w<n>` (`jodhpur-mc-w37`). Local bodies: `jodhpur-mc` and `jaipur-mc` (each city merged into one corporation in November 2025).
 - Coverage: assembly boundaries and MLA rows exist only for Rajasthan, so `assembly_seat` is null elsewhere and there is no `mla` row. Wards are null where no open ward map exists (all fixtures), and then there is no `councillor` row. A Lok Sabha seat whose loaded boundary predates re-delimitation (Assam, Jammu and Kashmir, Ladakh) has `status: outdated`.
-- Report types and their contexts: `waste_dump` (`vacant_plot`, `roadside`, `drain`, `other`); `no_bin` (`no_bin`, `no_pickup`); `contaminated_water` (`stagnant`, `sewage`, `foam`, `choked_drain`); `open_construction` (`uncovered_debris`, `dusty_site`). The schemas enforce the pairs.
+- Report types and their contexts: `waste_dump` (`vacant_plot`, `roadside`, `drain`, `other`); `no_bin` (`no_bin`, `no_pickup`); `contaminated_water` (`stagnant`, `sewage`, `foam`, `choked_drain`); `open_construction` (`uncovered_debris`, `dusty_site`); `overflowing_bin` (`overflowing`, `damaged`): a public bin or container that is overflowing, broken, burnt or missing its lid, with waste spilling around it. The schemas enforce the pairs.
 - Every model decision records `provider` (`bedrock`, `openai`, `openrouter`, `rekognition`, `comprehend`, `junksnap`), `model` and `version`. `junksnap` means our own model or template. Originals go only to Rekognition; only blurred images go to any other model.
 - Note moderation (toxicity and personal data in `report_upload.note`) runs on Bedrock, Claude Haiku 4.5 India profile. Amazon Comprehend is not enabled on this account, so no workload calls it; `comprehend` stays in the provider enum only for later.
 - Insights (decision 20261010-0202) carry only measured numbers. Each per-report estimate names its model (`insight_source`); merged site values carry their models and report counts; area values carry their counts, and area composition its models; nearby places carry their OpenStreetMap layer source. Size is a class, never tonnage.
 - Representatives are offices and seats only (decision 0137): no names, no party.
 - Accounts (decision 20261010-0227): see Auth below. The app's `device_token` (a random UUID v4 kept in IndexedDB) stays for per-device rate limits and reputation.
-- Errors return an HTTP status and `{"error": "<code>", "message": "<plain text>"}`. Codes: `bad_request` (400), `bbox_too_large` (400), `scan_too_large` (400), `unauthorized` (401), `forbidden` (403), `own_site` (403), `too_far` (403), `not_found` (404), `area_not_found` (404), `cleanup_pending` (409), `already_cleaned` (409), `not_verified` (409), `no_local_body` (422), `rate_limited` (429), `server_error` (500).
+- Errors return an HTTP status and `{"error": "<code>", "message": "<plain text>"}`. Codes: `bad_request` (400), `bbox_too_large` (400), `scan_too_large` (400), `unauthorized` (401), `forbidden` (403), `own_site` (403), `too_far` (403), `not_found` (404), `area_not_found` (404), `cleanup_pending` (409), `already_cleaned` (409), `not_verified` (409), `site_rejected` (409), `no_local_body` (422), `rate_limited` (429), `server_error` (500).
 - CORS: `api` allows the origins listed in `CORS_ORIGINS` and the `Authorization` and `X-Device-Token` headers. `ml` is cluster-internal and has no CORS.
 
 ## Auth
 
 - One Amazon Cognito user pool per stage (`junksnap-<stage>-users`): email and password, an emailed verification code, forgot-password by code. The email lives only in Cognito; no shape, table or log holds a user's name or email. (Ward records may hold official office contacts; those are offices, not users.)
-- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /healthz`.
-- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
+- Open, no token: `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}/{id}/scores`, `GET /areas/{kind}?within`, `GET /areas/district/{id}/crawl`, `GET /healthz`.
+- Signed in, `Authorization: Bearer <Cognito ID token>`: `POST /uploads/presign`, `POST /reports`, `POST /scans/presign`, `POST /scans`, `POST /sites/{id}/votes`, `POST /sites/{id}/cleanup`, `POST /sites/{id}/letters`, `POST /areas/{kind}/{id}/letters`, `GET /reports/{id}` (or `X-Device-Token` alone, only for a guest report made before accounts), `GET /scans/{id}`. The api verifies the token's signature against the pool's JWKS, its issuer, its `token_use: id`, its audience (`COGNITO_CLIENT_ID`) and its expiry.
 - 401 `unauthorized`: the token is missing, invalid or expired. 403 `forbidden`: the token is valid but the user is blocked in the `users` table.
 - `user_id` is the token's `sub`, opaque. The api writes it on reports, scans, votes and cleanups, and ignores any `user_id` in a request body. These routes still send `device_token`.
 - `GET /reports/{id}` and `GET /scans/{id}` return 404 unless the token's user owns the item. A guest report made before accounts (no `user_id`) opens with its `X-Device-Token`.
@@ -85,10 +98,13 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `GET /scans/{id}` | api | `Authorization` | 200 scan status | 404 unless the user owns the scan |
 | `GET /sites?bbox=minLon,minLat,maxLon,maxLat` | api | none | 200 FeatureCollection of `site` | bbox up to 1 by 1 degree; at most 500 sites, newest first; `rejected` sites left out |
 | `GET /sites/{id}` | api | none | 200 `site` | |
-| `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and settles the community check; see below |
+| `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and recounts the backers; see below |
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` or `already_cleaned` |
 | `GET /areas/{kind}/{id}/scores` | api | none | 200 `ward_scores` | kind is `ward`, `assembly`, `loksabha` or `district`; an area with sites but no score yet returns 200 with zero counts and every score withheld (`too_few_reports`); an area with no sites returns 404 `area_not_found` |
-| `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`; 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
+| `GET /areas/{kind}?within=<id>&limit=<n>` | api | none | 200 `area_list` | kind as above; `within` (required) is a district id (`rajasthan-jodhpur`) or local body id (`jodhpur-mc`); `limit` 1 to 200, default 50, larger values capped at 200. One Query on the `scores` partition `area_kind`, filtered on `within`. Order: areas with a shown score first, lowest mean of the shown scores first, then the rest; ties by more verified reports, then area id. Rows are returned as stored, so withheld scores stay withheld and counts always show; `total` counts matches before the limit. No match returns 200 with an empty list, never 404 |
+| `POST /areas/{kind}/{id}/letters` | api | area letter request | 200 `area_letter_draft` | signed in; up to 60 s; 400 `bad_request` for an unknown kind, a bad id or body; 404 `area_not_found` when the area has no reported sites; 409 `not_verified` unless the area's verified sites of that issue hold at least 10 verified reports (the message gives the count, for example "Not enough verified reports yet (3 of 10) for this issue in this area."); for `no_bin`, and the no-bin zones inside `all`, a zone counts only once verified by 10 people (decision 20261010-1630), and the 409 message lists the zones left out, for example "No-bin sites left out: Fewer than 10 people have confirmed no dustbin within 1 km (2 sites)."; 422 `no_local_body` for a ward or assembly letter with no local body to address; 429 `rate_limited`, sharing the 5 letters an hour with site letters and checked before any site is read; never filed automatically |
+| `GET /areas/district/{id}/crawl` | api | none | 200 `area_crawl` | any district id matching `[a-z0-9-]{1,64}` answers 200 (`not_started` when the `crawls` table has no row); else 400 `bad_request` |
+| `POST /sites/{id}/letters` | api | letter request | 200 `letter_draft` | up to 60 s; 409 `not_verified` unless `verification` is `verified`; for a `no_bin` zone that means 10 people confirmed it, and a mapped bin nearby is shown as evidence, never a block (decision 20261010-1630); 422 `no_local_body`; 429 `rate_limited`; never filed automatically |
 | `GET /healthz` | api, ml | none | 200 `{"ok": true}` | probes and smoke test |
 
 Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never routes it; the worker calls it at `ML_URL`. Brand labels have no route: they run inside the worker.
@@ -97,13 +113,17 @@ Cluster-internal route on `ml`, its only route besides `/healthz`. The ALB never
 |---|---|---|
 | `POST /internal/verify` | verify request | `verification_result` with `insights` |
 
-**Community check.** The api owns it. Each vote has a weight of `0.5 + reputation`, so a new device (reputation 0.5) counts 1.0. While `site.verification` is `community_check`, the api sums the weights of confirm votes and subtracts the weights of reject votes. At +3 or more the site becomes `verified`; at -3 or less it becomes `rejected`. A report's status follows its site's verification once merged. Votes on a settled site still count as corroborations but never change it. The reporter (same user or same device) gets 403 `own_site`. Each device has one vote per site, and its latest vote counts; when settling, the api also keeps only the latest vote per `user_id`, so one user on two phones counts once. The weight uses the lower of the user's and the device's reputation.
+**No-bin zones** (decision 20261010-1630). A `no_bin` report says "There is no dustbin within 1 km of here" from where a signed-in user stands: GPS `accuracy_m` at most 50, photo optional. Without a photo the report has no `sha256` and the app makes its `upload_id` (`upl_` plus a lowercase ULID); with one, the photo is moderated and blurred like any other but never judged as waste. The worker skips moderation without a photo and skips the waste check and brands for every `no_bin` report. A report joins the nearest open `no_bin` site whose centre is within 500 m, else founds one; the centre is the mean of its reports' points, and the site carries `zone_radius_m` 1000. It is verified like any site, by 10 backers (reports or yes votes). `insights.nearest_bin` is evidence only ("A mapped bin is X m away (OpenStreetMap)"); it never blocks verification or letters. Scores-v3 bin access is the complement of the share of verified sites that are verified no-bin zones, averaged with the measured distance to known bins.
+
+**Ten people verify a site** (decision 20261010-1530). The models only gate each photo: a photo whose moderation passed and whose `verification_result.decision` is not `rejected` merges into a site, and a new site appears on the map as `unverified` ("1 of 10"). A model decision never verifies a site by itself. A person is a user id, else a device token, and counts once. A person backs a site with a model-passed photo of it or with a confirm vote (their latest vote). `site.backers` holds `count` (people who backed it either way), `needed` (10), `photo_people` and `vote_people`. At 10 backers the site becomes `verified`. Safety valve: when the distinct people whose latest vote is reject (and who sent no photo of it) exceed `backers.count` by 3 or more, the site becomes `rejected` and leaves the map. Verified and rejected are final; later votes still count but never change them. A report's status follows its site's verification once merged (`unverified`, `verified` or `rejected`), and scores count only reports in verified sites. The reporter (same user or same device) gets 403 `own_site`. Each device has one vote per site, and when counting the api keeps only the latest vote per person. Votes carry no weight. A rejected site refuses votes with 409 `site_rejected`. Once verified, `backers.count` never drops below its value at verification (stored as `verified_backers`), so a later yes-to-no flip never shows "9 of 10" next to verified.
 
 **Cleanup.** The worker moderates and blurs the after-photo (`cln_` id, `near_site` check), then calls `/internal/verify` with `purpose: cleanup`. For a cleanup, `is_clean == (decision == "auto_verified")`, and the schema enforces it. The worker accepts the cleanup only when moderation passed and `is_clean` is true. On acceptance the site's `status` becomes `cleaned` and `cleaned_at` and `cleanup_photo_url` are set. `cleanup_status` goes `checking` to `accepted` or `rejected`, and resets to `none` when the site reopens.
 
 **Scans** (decision 20261010-0203). The phone records the video and the GPS track in sync, PUTs the video with the presigned URL, then posts the `scan_session`. For a `kind: scan` message the worker checks the video against the scan video limit, cuts one frame per second, and maps each frame's `t_ms` onto `gps_track` by linear interpolation between the fixes before and after it; the frame's `accuracy_m` is the larger of the two. It drops frames under the scan frame rule. For each kept frame it writes the JPEG to `reports/{upload_id}.jpg` in the originals bucket, a `report_upload` with `capture_mode: scan`, the `scan` link and the session's type, context, `device_token` and `user_id`, and the report row (`queued`), then sends a `kind: report` message. From there the frame runs the normal pipeline, moderation and blur included. Consecutive frames of one spot usually fail the duplicate check, so one ride past adds one report per spot. The video is never public and never goes to a model.
 
 **Letters.** Every citation has `verified: true`, and `verifier.verified` equals `verifier.total` and the number of citations. A draft that fails the quote verifier falls back to the template letter with the same verified citations; an unverified quote never ships. Cc follows `site.location`: the councillor only when there is a ward, the MLA only when there is an assembly seat (outside Rajasthan the MP only), and never the MP of a Lok Sabha seat with `status: outdated`.
+
+**Area letters.** Same rule book, quote verifier, wording check, template fallback and counters as site letters. `to` follows the area kind: ward and assembly, the head of each local body with sites there; Lok Sabha and district, the District Collector of each district first, then the local body heads. `cc` is only the area's own seat, for attention: the ward councillor, the MLA, or the MP (never for an outdated Lok Sabha seat); a district letter has none. Rules are picked from the situation tags of every verified site of the issue (for Lok Sabha and district, Collector rules first), at most 4. `evidence` holds the issue's counts in the area, up to 5 worst verified sites with blurred photos, dates and measured insights, the measured `ward_scores` (withheld scores left out) and, for `waste_dump`, `no_bin` and `all`, bin access.
 
 ## Inline bodies
 
@@ -124,7 +144,7 @@ Presign response. The phone PUTs the bytes with exactly these headers, and S3 re
 }
 ```
 
-`GET /reports/{id}` response. `status` is one of `queued`, `processing`, `verified`, `community_check`, `rejected` or `needs_review`. `site_id`, `blurred_url`, `moderation` and `verification` are null until each one exists. Mock mode builds this from the `jdh-1` and `jpr-1` fixtures.
+`GET /reports/{id}` response. `status` is one of `queued`, `processing`, `unverified`, `verified`, `rejected` or `needs_review` (rows written before decision 20261010-1530 may still say `community_check`, which means `unverified`). `site_id`, `blurred_url`, `moderation` and `verification` are null until each one exists. Mock mode builds this from the `jdh-1` and `jpr-1` fixtures.
 
 ```json
 {
@@ -178,7 +198,7 @@ Vote request (`vote` is `confirm` or `reject`) and vote result:
 ```
 
 ```json
-{ "site_id": "site_jpr_1", "votes": { "confirm": 2, "reject": 0 }, "verification": "community_check" }
+{ "site_id": "site_jpr_1", "votes": { "confirm": 2, "reject": 0 }, "backers": { "count": 3, "needed": 10, "photo_people": 1, "vote_people": 2 }, "verification": "unverified" }
 ```
 
 Cleanup request (the photo is presigned first, with `purpose: cleanup`) and its 202 response:
@@ -192,6 +212,8 @@ Cleanup request (the photo is presigned first, with `purpose: cleanup`) and its 
 ```
 
 Letter request: `{"device_token": "<uuid>", "channel": "local_body", "language": "en"}`. `channel` takes the values of `letter_draft.channel`; `language` is `en` or `hi`.
+
+Area letter request: `{"issue": "waste_dump", "language": "en", "device_token": "<uuid>"}`. `issue` is a report type or `all`; `language` is `en` or `hi`.
 
 Verify request (worker to ml). `purpose` is `report` or `cleanup`; `ml` only ever reads the blurred copy.
 
@@ -217,15 +239,16 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 | `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`) top-level, `received_at`, `updated_at`, `status`, `completed_steps` (worker steps already done, from `moderate`, `verify`, `brands`, `locate`, `merge`, so a retried message resumes), `moderation_result`, `verification_result`, `brand_labels`, `location` (the full `location_lookup` the worker wrote), `site_id` |
 | `cleanups` | `cleanup_id` | none | none | `site_id`, `upload_id`, `device_token`, `user_id`, `gps`, `sha256`, `captured_at`, `received_at`, `status`, `moderation_result`, `verification_result` |
 | `scans` | `scan_id` | none | none | `scan_session` fields (with `user_id`), `received_at`, `status`, `reason`, `frames`, `report_ids` |
-| `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`) top-level, `lat`, `lon`, `geohash4`, and the internals: `version` (each write sets it one higher, conditional on the stored value), `report_ids`, `merged_reports` (`[{report_id, verified, insights}]`), `reporter_devices`, `reporter_users`, `me_too_count`, `embedding_key`, `pending_cleanup_id`; the api builds the Feature |
-| `votes` | `site_id` | `device_token` | none | `vote`, `weight`, `user_id`, `voted_at` |
+| `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`) top-level, `lat`, `lon`, `geohash4`, and the internals: `version` (each write sets it one higher, conditional on the stored value), `report_ids`, `merged_reports` (`[{report_id, verified, insights, point}]`, where `point` is `{lat, lon}` of where the reporter stood, null on older rows; no-bin zones centre on the mean of these points), `reporter_devices`, `reporter_users`, `reporter_ids` (the photo people, one per user id else device token), `yes_voters` and `no_voters` (people whose latest vote is yes or no), `verified_backers` (`backers.count` frozen at verification, null before), `me_too_count`, `embedding_key`, `pending_cleanup_id`; a row without `backers` predates decision 20261010-1530 and waits for the backers migration; the api builds the Feature |
+| `votes` | `site_id` | `device_token` | none | `vote`, `user_id`, `voted_at` (older rows also hold an unused `weight`) |
 | `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
 | `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
-| `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`; the CronJob overwrites it |
+| `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`, top-level, plus `within`: the sorted district and local body ids of the area's sites (from `site.location.district.id` and `site.location.local_body.id`); the CronJob overwrites both, the api strips `within` and the keys before validating the body |
+| `crawls` | `district_id` | none | none | one row per district: `district_name`, `status` (`queued`, `running`, `done`, `failed`, `no_sources`), `queued_at`, `started_at`, `last_crawled_at`, `next_due_at`, `expected_by`, `city` (the source file), `wards_found`, `wards_key`, `results` (per source: `url`, `status`, `wards_found`, `page_sha256`, `fetched_at`, `detail`), `error`, `attempts`, and `verified_report_ids` (a string set, only until the district is queued) |
 
 Every GSI (`by-site`, `by-device`, `by-user`, `by-geohash`) projects ALL attributes, so a query returns whole items and needs no second read.
 
-For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the report's cell and its neighbours and keep sites within 40 m. The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source.
+For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the cells that cover the merge radius around the report and keep sites within it: 40 m for a photo site, 500 m from the centre for a `no_bin` zone (the nearest open zone wins; decision 20261010-1630). The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source. The seeded row's `within` holds the founding site's district id and local body id; the next CronJob run rewrites it from every site in the area. A row without `within` (seeded before contracts v1.3) is left out of `GET /areas/{kind}` until the CronJob rewrites it.
 
 ## S3 key layout
 
@@ -238,6 +261,11 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | same | `datasets/{dataset}/...` | openly licensed public training images, their records and the OWLv2 teacher boxes (`teacher_boxes.jsonl`); models are trained and evaluated on public data only (decision 20261010-1245-hem-ml-public-data-only); offline training only, no pod has access |
 | same | `models/{name}/{sha256[:12]}-{file}` | trained model files (YOLO ONNX, SigLIP ONNX, embedding heads, meta-learner, phone model), written by `backend/ml/training` `learn publish`; `ml` reads them at start and checks the SHA-256 pinned in `backend/ml/src/ml/settings/models.json` |
 | same | `datasets/manifest.jsonl` | the dataset manifest (one line per image, with its split), written by `backend/ml/training` when it is over 5 MB; offline training only, no pod has access |
+| same | `crawl/pages/{sha256}.json` and `crawl/pages/{sha256}.bin` | every page the crawler fetched: `{url, sha256, fetched_at, content_type, etag, last_modified, text}` and the raw bytes (`sha256` is of the bytes); `crawler` only |
+| same | `crawl/urls/{sha256(url)[:24]}.json` | the newest page for a URL: `{url, sha256, fetched_at, checked_at, etag, last_modified}`, for conditional refetches; `crawler` only |
+| same | `crawl/extractions/{key}.json` | one model extraction per page chunk: `{key, prompt_version, models, source_url, page_sha256, chunk_sha256, model: {provider, model, version}, wards, created_at}`; `key` is SHA-256 of the prompt version, the model chain, the request and the chunk, so a changed prompt or page misses; `crawler` only |
+| same | `crawl/layers/{kind}-{sha256(bbox)[:16]}.json` | the last OpenStreetMap layer fetched for a city box (same shape as a `map_layers` entry), reused for `CRAWL_INTERVAL_DAYS` and when Overpass is busy; `crawler` only |
+| same | `crawl/wards/{city}.json` | the crawl output, same shape as `data/wards/<city>.json`, always `unreviewed`; `crawler` writes, and never over a stored file with more records or a map layer kind the new crawl lacks, nor when no official page was fetched (the crawl is then `failed` and retried after `CRAWL_RETRY_HOURS`); `worker` (at start) and `scores` (every run) read it, keeping per city the file with more reviewed records, then one with map layers, then the newer one |
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
 
@@ -259,7 +287,12 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `AWS_REGION` | api, worker, scores, ml | `ap-south-1` |
 | `REPORTS_TABLE`, `CLEANUPS_TABLE`, `SCANS_TABLE`, `SITES_TABLE`, `VOTES_TABLE`, `DEVICES_TABLE`, `USERS_TABLE`, `SCORES_TABLE` | api: all; worker: all; scores: reports, sites, scores; ml: none | `junksnap-<stage>-<table>` |
 | `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | api | the stage's user pool id and its app client id (no client secret); the api builds the issuer and JWKS URL from them and `AWS_REGION` |
-| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` and reads `models/`) | `junksnap-<stage>-originals-<account_id>` |
+| `ORIGINALS_BUCKET` | api, worker, ml (`embeddings/` and reads `models/`), scores and worker (read `crawl/wards/`), crawler (`crawl/`) | `junksnap-<stage>-originals-<account_id>` |
+| `CRAWLS_TABLE` | api (read), worker (queue a district), crawler | `junksnap-<stage>-crawls` |
+| `CRAWL_ACTIVATE_AFTER` | worker | model-passed photos merged into sites in a district before it is queued for a crawl; default `1` |
+| `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
+| `CRAWL_SOURCES_DIR`, `CRAWL_SCHEMA` | crawler | optional: the `sources/` folder and the `ward_record` schema file; the image sets both |
+| `CRAWL_MODELS` | crawler | optional JSON list of Bedrock extraction models in order, `[{"model_id", "version", "usd_per_million_in", "usd_per_million_out"}]`; the CronJob uses Nova Pro, then Nova Lite |
 | `PUBLIC_BUCKET` | worker, ml (reads `media/` only) | `junksnap-<stage>-public-<account_id>` |
 | `PUBLIC_BASE_URL` | api, worker | CloudFront base URL, no trailing slash |
 | `REPORTS_QUEUE_URL` | api, worker | URL of `junksnap-<stage>-reports` |
@@ -268,11 +301,14 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `ML_URL` | worker | `http://ml` (the Service in the same namespace); replaces `AGENT_URL` |
 | `OPENAI_SECRET_ID` | api (letters), ml (judge) | `junksnap/<stage>/openai-api-key` (Secrets Manager, decision 0133) |
 | `OPENROUTER_SECRET_ID` | planned (decision 0133); no provider yet | `junksnap/<stage>/openrouter-api-key` (Secrets Manager); neither `api` nor `ml` has an OpenRouter provider |
+| `BIN_RADIUS_M` | worker, api | `3000`: no known bin within this many metres sets `site.insights.no_bin_within_3km` |
+| `NO_BIN_MIN_REPORTERS` | api | unused since decision 20261010-1630 (a no-bin letter needs a verified zone) |
 | `ASSETS_DIR` | api, worker, scores | directory holding the repo's `data/` files (`rules/`, `brands/`, `boundaries/`, `wards/`, `representatives/`); `/app/data` in the image |
 | `LLM_TASKS` | api, worker, ml | optional JSON `{"<task>": {"provider", "model", "fallback": []}}`; each service reads only its own tasks (api: letters; worker: note moderation, Bedrock only; ml: judge); defaults live in code |
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |
 | `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID` | frontend | the same pool and app client as the api |
+| `VITE_WEB_URL` | frontend | the stage's public web app, `https://<stage>.<Amplify default domain>`, no trailing slash; share links point here (the Android app's own origin, `https://tauri.localhost`, is not public). Set by `deploy_web.py` and `build_android.py`; unset, links use the page's origin |
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
 | `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
 | `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |
@@ -282,24 +318,24 @@ Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), 
 ## Stages and names
 
 - Stages: `dev` for building, `demo` for the recording. Region `ap-south-1` for everything.
-- One EKS Auto Mode cluster, `junksnap`, with namespaces `junksnap-dev` and `junksnap-demo`. Deployments `api`, `worker` and `ml`, plus the CronJob `scores` (every 15 minutes). Containers listen on 8000; the `api` and `ml` Services listen on 80.
-- Images, in ECR repositories of the same names: `junksnap-server` runs `api`, `worker` and `scores` (one image, a different command each); `junksnap-ml` runs `ml`.
+- One EKS Auto Mode cluster, `junksnap`, with namespaces `junksnap-dev` and `junksnap-demo`. Deployments `api`, `worker` and `ml`, plus the CronJobs `scores` (every 15 minutes) and `crawler` (hourly: queued and due districts from the `crawls` table). Containers listen on 8000; the `api` and `ml` Services listen on 80.
+- Images, in ECR repositories of the same names: `junksnap-server` runs `api`, `worker` and `scores` (one image, a different command each); `junksnap-ml` runs `ml`; `junksnap-crawler` (`data/ward_crawler`) runs `crawler`.
 - AWS resources are named `junksnap-<stage>-<thing>`; bucket names add `-<account_id>` because S3 names are global; secrets use `junksnap/<stage>/<name>`. Tags: `project=junksnap`, `stage=<stage>`.
 
 ## Seed samples
 
 | Sample | City | Site | What it shows |
 |---|---|---|---|
-| `jdh-1` | Jodhpur | `site_jdh_1`: waste_dump, vacant_plot, open, verified, cleanup checking | the full chain: report by a signed-in user, moderation, auto-verified with fixed weights, insights, brand label, location in seat `s20-ac-128` with no ward map, area scores and insights for that seat, letter Cc MLA and MP; a ward record from the crawler |
-| `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin marker in seat `s20-ac-127` |
+| `jdh-1` | Jodhpur | `site_jdh_1`: waste_dump, vacant_plot, open, verified by 10 backers (5 by photo, 5 by vote), cleanup checking | the full chain: report by a signed-in user, moderation, a photo the models passed with fixed weights, insights, brand label, location in seat `s20-ac-128` with no ward map, area scores and insights for that seat, letter Cc MLA and MP; a ward record from the crawler |
+| `jdh-2` | Jodhpur | `site_jdh_2`: no_bin, no_pickup, open, verified | a no-bin zone (`zone_radius_m` 1000) in seat `s20-ac-127` that 10 people confirmed; nearest mapped bin 4.2 km |
 | `jdh-3` | Jodhpur | `site_jdh_3`: contaminated_water, choked_drain, reopened | an accepted cleanup (`cln_jdh_3c` moderation and verification, insights null), then reopened; a hazard and nearby places |
-| `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, community check | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
+| `jpr-1` | Jaipur | `site_jpr_1`: open_construction, uncovered_debris, unverified, 2 of 10 backers | a scan session (`scn_jpr_1`) and its frame at 4 s, meta-learner with disagreement and a stored embedding, no ward map, scores and area shares withheld |
 
 All fixture data is sample data, except `ward_record.jdh-1`, which is a real, unreviewed crawler record (its body `jodhpur-uttar-mc` predates the November 2025 merger; its id follows the ward rule). Coordinates are plausible; seat codes match the loaded boundaries; the brand and OpenStreetMap ids are invented; rule quotes are placeholders; user ids are random. Sample ids are short; real ids follow the rules above. No fixture names a person.
 
 ## Shared wording
 
-- Say "verified" only for auto-verified or community-confirmed reports. Otherwise say "waiting for a neighbour check".
+- Say "verified" only for a site 10 people backed. Otherwise say "n of 10 people confirmed".
 - Say "waste site", "reported" and "cleared". Never say "illegal" or "culprit", and never name a person.
 - Every Cc line says "for attention". Letters address offices, never people.
 - Below the guardrail, say "Not enough verified reports yet (N of 10)". Always show counts, and label Jodhpur data "Pilot city".

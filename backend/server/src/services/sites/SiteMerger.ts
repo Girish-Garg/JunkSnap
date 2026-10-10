@@ -3,7 +3,8 @@ import { BoundingBox } from "../../domain/sites/BoundingBox.js";
 import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import type { MergeableReport, MergeEvidence } from "../../domain/sites/MergeableReport.js";
 import type { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
-import { MERGE_RADIUS_M, Site } from "../../domain/sites/Site.js";
+import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
+import { Site } from "../../domain/sites/Site.js";
 import { StaleSiteError } from "../../domain/sites/SiteErrors.js";
 import type { Verification } from "../../domain/sites/SiteTypes.js";
 import { ZeroScoreRows } from "../../domain/sites/ZeroScoreRows.js";
@@ -48,18 +49,16 @@ export class SiteMerger {
     this.#deps = deps;
   }
 
-  // A settled site rewrites its reports' status on every pass, so a redelivered message repairs a failed write.
+  // Reports follow their site on every pass, so a redelivered message repairs a failed status write.
   async merge(evidence: MergeEvidence): Promise<MergeResult> {
     const report = this.#deps.reportFactory.create(evidence);
     const { site, outcome } = await this.#deps.retry.run(() => this.#attempt(report));
-    if (site.verification !== "community_check") {
-      await this.#deps.reports.followSite(site.reportIds, site.verification);
-    }
+    await this.#deps.reports.followSite(site.reportIds, site.verification);
     return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 
   async #attempt(report: MergeableReport): Promise<Merged> {
-    const nearby = await this.#nearby(report.point);
+    const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType));
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
       return { site: holder, outcome: "unchanged" };
@@ -68,8 +67,8 @@ export class SiteMerger {
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
   }
 
-  async #nearby(point: GeoPoint): Promise<Site[]> {
-    const cells = this.#deps.cells.covering(BoundingBox.around(point, MERGE_RADIUS_M));
+  async #nearby(point: GeoPoint, radius: number): Promise<Site[]> {
+    const cells = this.#deps.cells.covering(BoundingBox.around(point, radius));
     const perCell = await Promise.all(cells.map((cell) => this.#deps.sites.inCell(cell)));
     return perCell.flat();
   }
@@ -91,8 +90,9 @@ export class SiteMerger {
   // Seeds before creating, so a retry that finds the site already merged needs no seeding.
   async #found(report: MergeableReport): Promise<Merged> {
     const site = Site.found(report);
-    const rows = new ZeroScoreRows(site.toFeature()).rows(this.#deps.clock.now().toISOString());
-    await Promise.all(rows.map((row) => this.#deps.scores.seedIfMissing(row)));
+    const zero = new ZeroScoreRows(site.toFeature());
+    const within = zero.within();
+    await Promise.all(zero.rows(this.#deps.clock.now().toISOString()).map((row) => this.#deps.scores.seedIfMissing(row, within)));
     if (await this.#deps.sites.create(site)) {
       return { site, outcome: "founded" };
     }

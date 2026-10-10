@@ -1,3 +1,4 @@
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { Language, ReportType } from "../../domain/letters/types.js";
 import type { LetterBrief } from "../../ports/letters/LetterWriter.js";
 
@@ -8,6 +9,7 @@ const REQUEST: Readonly<Record<ReportType, string>> = {
   no_bin: "place waste bins here and arrange regular collection",
   contaminated_water: "clean the water and drains here and check the source of contamination",
   open_construction: "cover or remove the debris and enforce dust control measures",
+  overflowing_bin: "empty the bin regularly and repair or replace it",
 };
 
 const RULES = [
@@ -35,6 +37,14 @@ export class LetterPrompt {
     return [...RULES, `Write the subject and the prose in ${LANGUAGES[this.#brief.language]}.`].join("\n");
   }
 
+  #request(): string {
+    const { site, binRadiusM } = this.#brief;
+    if (site.reportType !== "no_bin") {
+      return REQUEST[site.reportType];
+    }
+    return `state "${new NoBinStatement(binRadiusM).english(site)}", then ask to ${REQUEST.no_bin}`;
+  }
+
   user(): string {
     const { site, addressees, citations } = this.#brief;
     const facts = {
@@ -47,7 +57,7 @@ export class LetterPrompt {
       to: addressees.to,
       cc: addressees.cc.map((line) => ({ office: line.office, seat: line.seat.name, marking: line.marking })),
       citations: citations.map(({ document, clause, quote }) => ({ document, clause, quote })),
-      request: REQUEST[site.reportType],
+      request: this.#request(),
     };
     return JSON.stringify(facts, null, 2);
   }

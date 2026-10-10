@@ -6,6 +6,7 @@ import type { Clock } from './Clock';
 import type { GpsWatcher } from './GpsWatcher';
 import type { PhotoHasher } from './PhotoHasher';
 import type { Recording } from './RecordingSession';
+import type { ScanHintLog } from './ScanHintLog';
 import type { ScanQueue } from './ScanQueue';
 import type { VideoRecorder } from './VideoRecorder';
 
@@ -29,6 +30,8 @@ export interface ScanStart {
   readonly firstFix: FirstFix;
   readonly choice: Pick<ScanDraft, 'report_type' | 'context'>;
   readonly onTick: (elapsedMs: number) => void;
+  /** Edge mode only: collects on-phone detections timed from the start of the video. */
+  readonly hints?: ScanHintLog;
 }
 
 export interface ActiveScan {
@@ -45,9 +48,10 @@ export class ScanCapture {
     this.#deps = deps;
   }
 
-  start({ stream, firstFix, choice, onTick }: ScanStart): ActiveScan {
+  start({ stream, firstFix, choice, onTick, hints }: ScanStart): ActiveScan {
     const now = () => this.#deps.clock.now().getTime();
     const session = this.#deps.recorder.start(stream);
+    hints?.begin(session.startedAtMs);
     const track = new GpsTrack(session.startedAtMs, { fix: firstFix.fix, takenAtMs: firstFix.takenAtMs ?? session.startedAtMs });
     const unwatch = this.#deps.gps.watch({ onFix: (fix, takenAtMs) => track.add({ fix, takenAtMs }), onProblem: () => undefined });
     const ticker = setInterval(() => {
@@ -58,12 +62,13 @@ export class ScanCapture {
       clearInterval(ticker);
       unwatch();
     });
-    return { stop: () => session.stop(), saved: finished.then((recording) => this.#save(recording, track, choice)) };
+    return { stop: () => session.stop(), saved: finished.then((recording) => this.#save(recording, track, { choice, hints })) };
   }
 
-  async #save(recording: Recording, track: GpsTrack, choice: ScanStart['choice']): Promise<QueuedScan> {
+  async #save(recording: Recording, track: GpsTrack, { choice, hints }: Pick<ScanStart, 'choice' | 'hints'>): Promise<QueuedScan> {
     const { bytes, startedAtMs, durationMs, contentType } = recording;
     track.pad(startedAtMs + durationMs);
+    const found = hints?.hints(durationMs);
     const draft: ScanDraft = {
       ...choice,
       started_at: new Date(startedAtMs).toISOString(),
@@ -73,6 +78,7 @@ export class ScanCapture {
       video_sha256: await this.#deps.hasher.sha256(bytes),
       size_bytes: bytes.byteLength,
       gps_track: track.fixes(durationMs),
+      ...(found ? { hints: found } : {}),
     };
     return this.#deps.queue.add(draft, bytes);
   }

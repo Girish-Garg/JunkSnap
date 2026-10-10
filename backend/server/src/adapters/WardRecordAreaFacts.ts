@@ -1,12 +1,14 @@
-import { readdir, readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { z } from "zod";
 import { validateWardRecord, type WardRecord } from "../contracts/index.gen.js";
 import type { AreaFactSheet } from "../domain/AreaFactSheet.js";
 import type { AreaKey } from "../domain/AreaKey.js";
 import { InternalDataError, ValidationError } from "../domain/errors.js";
-import { GeoPoint } from "../domain/GeoPoint.js";
 import type { AreaFacts, SkippedRecord } from "../ports/AreaFacts.js";
+import type { WardFile, WardFileSource } from "../ports/WardFileSource.js";
+import { DirectoryWardFiles } from "./wards/DirectoryWardFiles.js";
+import { readWardFile } from "./wards/readWardFile.js";
 
 // The city file and its map layers have no schema yet (contracts README); each reviewed record must pass ward_record.
 const CityFile = z.object({ records: z.array(z.unknown()), map_layers: z.array(z.object({ kind: z.string() })).nullish() });
@@ -24,7 +26,7 @@ interface CityWards {
 
 type Checked = { readonly record: WardRecord } | { readonly skipped: SkippedRecord };
 
-// <ASSETS_DIR>/wards/<city>.json and representatives/local_bodies.json; v1 has km² and disposal points for wards only.
+// Ward city files (the image's or newer crawled ones) and <ASSETS_DIR>/representatives/local_bodies.json; km² for wards only (bins come from BinLocator).
 export class WardRecordAreaFacts implements AreaFacts {
   readonly #cities: ReadonlyMap<string, CityWards>;
   readonly #bodyCities: ReadonlyMap<string, readonly string[]>;
@@ -35,10 +37,15 @@ export class WardRecordAreaFacts implements AreaFacts {
   }
 
   static async fromDirectory(assetsDir: string | null): Promise<WardRecordAreaFacts> {
+    return WardRecordAreaFacts.fromFiles(new DirectoryWardFiles(join(assetsDir ?? ".", "wards")), assetsDir);
+  }
+
+  // Without an assets folder no local body maps to a city, so no ward file could ever match.
+  static async fromFiles(source: WardFileSource, assetsDir: string | null): Promise<WardRecordAreaFacts> {
     if (assetsDir === null) {
       return new WardRecordAreaFacts(new Map(), new Map());
     }
-    const files = await WardRecordAreaFacts.#jsonFiles(join(assetsDir, "wards"));
+    const files = await source.files();
     const cities = await Promise.all(files.map((file) => WardRecordAreaFacts.#readCity(file)));
     const bodies = await WardRecordAreaFacts.#bodyCitiesFrom(join(assetsDir, "representatives", "local_bodies.json"));
     return new WardRecordAreaFacts(new Map(cities.map((city) => [city.city, city])), bodies);
@@ -49,7 +56,6 @@ export class WardRecordAreaFacts implements AreaFacts {
     const cities = localBodyIds.flatMap((id) => this.#bodyCities.get(id) ?? []);
     return {
       areaKm2: ward?.area_km2?.value ?? null,
-      disposalPoints: (ward?.disposal_points ?? []).map((point) => new GeoPoint(point.lat, point.lon)),
       placesMapped: cities.some((city) => this.#cities.get(city)?.placesMapped === true),
     };
   }
@@ -67,16 +73,16 @@ export class WardRecordAreaFacts implements AreaFacts {
     return found.length === 1 ? (found[0] ?? null) : null;
   }
 
-  static async #readCity(file: string): Promise<CityWards> {
-    const parsed = CityFile.safeParse(await WardRecordAreaFacts.#json(file));
+  static async #readCity(file: WardFile): Promise<CityWards> {
+    const parsed = CityFile.safeParse(await readWardFile(file.path));
     if (!parsed.success) {
-      throw new InternalDataError(`${file}: ${z.prettifyError(parsed.error)}`);
+      throw new InternalDataError(`${file.path}: ${z.prettifyError(parsed.error)}`);
     }
     const reviewed = parsed.data.records.filter((record) => Reviewed.safeParse(record).success);
-    const checked = reviewed.map((record) => WardRecordAreaFacts.#check(file, record));
+    const checked = reviewed.map((record) => WardRecordAreaFacts.#check(file.path, record));
     const kinds = (parsed.data.map_layers ?? []).map((layer) => layer.kind);
     return {
-      city: basename(file, ".json"),
+      city: file.city,
       reviewed: checked.flatMap((each) => ("record" in each ? [each.record] : [])),
       skipped: checked.flatMap((each) => ("skipped" in each ? [each.skipped] : [])),
       placesMapped: PLACE_LAYERS.some((kind) => kinds.includes(kind)),
@@ -105,22 +111,6 @@ export class WardRecordAreaFacts implements AreaFacts {
     }
     const slug = (town: string) => town.trim().toLowerCase().replace(/\s+/g, "-");
     return new Map(parsed.data.map((body) => [body.id, body.towns.map(slug)]));
-  }
-
-  static async #jsonFiles(dir: string): Promise<string[]> {
-    try {
-      const names = await readdir(dir);
-      return names.filter((name) => name.endsWith(".json")).sort().map((name) => join(dir, name));
-    } catch (error) {
-      if (WardRecordAreaFacts.#missing(error)) {
-        return [];
-      }
-      throw new InternalDataError(`cannot list ward files in ${dir}`, { cause: error });
-    }
-  }
-
-  static async #json(file: string): Promise<unknown> {
-    return WardRecordAreaFacts.#parse(file, await readFile(file, "utf8"));
   }
 
   static async #readIfPresent(file: string): Promise<string | null> {

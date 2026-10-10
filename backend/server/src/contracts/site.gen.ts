@@ -30,7 +30,11 @@ export interface Site {
      * Kept in properties so MapLibre can promoteId it.
      */
     site_id: string;
-    report_type: "waste_dump" | "no_bin" | "contaminated_water" | "open_construction";
+    /**
+     * no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430).
+     */
+    report_type:
+      "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
     context:
       | "vacant_plot"
       | "roadside"
@@ -43,21 +47,42 @@ export interface Site {
       | "foam"
       | "choked_drain"
       | "uncovered_debris"
-      | "dusty_site";
+      | "dusty_site"
+      | "overflowing"
+      | "damaged";
     /**
      * open -> cleaned (only with an after-photo the pipeline confirms) -> reopened.
      */
     status: "open" | "cleaned" | "reopened";
     /**
-     * verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value.
+     * Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value.
      */
-    verification: "verified" | "community_check" | "rejected";
+    verification: "unverified" | "verified" | "rejected";
     report_count: number;
+    /**
+     * Reports that count as verified: every report of a verified site, 0 otherwise.
+     */
     verified_count: number;
     /**
      * Confirm votes plus Me too reports from other devices.
      */
     corroborations: number;
+    /**
+     * Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites.
+     */
+    zone_radius_m?: 1000;
+    /**
+     * Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).
+     */
+    backers: {
+      /**
+       * People who backed it either way; one person with a photo and a vote counts once.
+       */
+      count: number;
+      needed: 10;
+      photo_people: number;
+      vote_people: number;
+    };
     votes: {
       confirm: number;
       reject: number;
@@ -143,6 +168,10 @@ export interface Site {
      * True inside the Jodhpur pilot area.
      */
     pilot: boolean;
+    /**
+     * Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it.
+     */
+    reporters?: number;
     /**
      * Merged insights (decision 20261010-0202) of the site's verified reports only, the same reports burning comes from. Recomputed whenever a report on the site becomes verified: by the worker on merge, or by the api when votes settle the site. Not in required so v1 producers stay valid; the worker always writes it.
      */
@@ -876,6 +905,21 @@ export interface Site {
         ref: string;
         source: LayerSource;
       }[];
+      /**
+       * The nearest known bin or collection point (OpenStreetMap waste baskets, waste disposal, recycling and transfer stations from the crawler's disposal map layer, and reviewed ward-record disposal points), measured from the site when it was founded. Null when none is known for the site's town. Not in required so older rows stay valid; the worker always writes it.
+       */
+      nearest_bin?: null | {
+        distance_m: number;
+        /**
+         * The bin's id at the source, for example osm:node/123.
+         */
+        ref: string;
+        source: LayerSource;
+      };
+      /**
+       * True when no known bin or collection point lies within BIN_RADIUS_M (3000 m by default) of the site; null when the site's town has no crawled bin data, so nothing can be said. Not in required so older rows stay valid; the worker always writes it.
+       */
+      no_bin_within_3km?: boolean | null;
     };
   };
 }
@@ -966,6 +1010,7 @@ export const siteSchema = {
         "report_count",
         "verified_count",
         "corroborations",
+        "backers",
         "votes",
         "photo_urls",
         "cleanup_status",
@@ -989,8 +1034,10 @@ export const siteSchema = {
             "waste_dump",
             "no_bin",
             "contaminated_water",
-            "open_construction"
-          ]
+            "open_construction",
+            "overflowing_bin"
+          ],
+          "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)."
         },
         "context": {
           "enum": [
@@ -1005,7 +1052,9 @@ export const siteSchema = {
             "foam",
             "choked_drain",
             "uncovered_debris",
-            "dusty_site"
+            "dusty_site",
+            "overflowing",
+            "damaged"
           ]
         },
         "status": {
@@ -1018,11 +1067,11 @@ export const siteSchema = {
         },
         "verification": {
           "enum": [
+            "unverified",
             "verified",
-            "community_check",
             "rejected"
           ],
-          "description": "verified once any report is verified; community_check while neighbours are asked to confirm; rejected when votes settle against it (hidden from GET /sites?bbox). Reports on the site follow this value."
+          "description": "Decision 20261010-1530. unverified from the first photo the models pass; verified once backers.count reaches backers.needed (10 different people); rejected when distinct no voters exceed backers.count by 3 or more (hidden from GET /sites?bbox). Verified and rejected are final. Reports on the site follow this value."
         },
         "report_count": {
           "type": "integer",
@@ -1030,12 +1079,46 @@ export const siteSchema = {
         },
         "verified_count": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Reports that count as verified: every report of a verified site, 0 otherwise."
         },
         "corroborations": {
           "type": "integer",
           "minimum": 0,
           "description": "Confirm votes plus Me too reports from other devices."
+        },
+        "zone_radius_m": {
+          "const": 1000,
+          "description": "Decision 20261010-1630: a no_bin site is a no-bin zone: reports within 500 m of its centre (the mean of its report points) join it, and each says no dustbin within this radius. Present exactly on no_bin sites."
+        },
+        "backers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "needed",
+            "photo_people",
+            "vote_people"
+          ],
+          "description": "Distinct people backing the site, each counted once by user id, else by device token: by a model-passed photo of the site or by a confirm vote (their latest vote).",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "People who backed it either way; one person with a photo and a vote counts once."
+            },
+            "needed": {
+              "const": 10
+            },
+            "photo_people": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "vote_people": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
         },
         "votes": {
           "type": "object",
@@ -1255,6 +1338,11 @@ export const siteSchema = {
           "type": "boolean",
           "description": "True inside the Jodhpur pilot area."
         },
+        "reporters": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Distinct people who reported this site: by user id, else by device. Not in required so older rows stay valid; the worker always writes it."
+        },
         "insights": {
           "type": "object",
           "additionalProperties": false,
@@ -1418,6 +1506,44 @@ export const siteSchema = {
                   }
                 }
               }
+            },
+            "nearest_bin": {
+              "description": "The nearest known bin or collection point (OpenStreetMap waste baskets, waste disposal, recycling and transfer stations from the crawler's disposal map layer, and reviewed ward-record disposal points), measured from the site when it was founded. Null when none is known for the site's town. Not in required so older rows stay valid; the worker always writes it.",
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "distance_m",
+                    "ref",
+                    "source"
+                  ],
+                  "properties": {
+                    "distance_m": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "ref": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "The bin's id at the source, for example osm:node/123."
+                    },
+                    "source": {
+                      "$ref": "#/$defs/layer_source"
+                    }
+                  }
+                }
+              ]
+            },
+            "no_bin_within_3km": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "True when no known bin or collection point lies within BIN_RADIUS_M (3000 m by default) of the site; null when the site's town has no crawled bin data, so nothing can be said. Not in required so older rows stay valid; the worker always writes it."
             }
           }
         }
@@ -1467,6 +1593,27 @@ export const siteSchema = {
           "if": {
             "properties": {
               "report_type": {
+                "const": "no_bin"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "zone_radius_m"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "zone_radius_m"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
                 "const": "contaminated_water"
               }
             }
@@ -1498,6 +1645,25 @@ export const siteSchema = {
                 "enum": [
                   "uncovered_debris",
                   "dusty_site"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "report_type": {
+                "const": "overflowing_bin"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "context": {
+                "enum": [
+                  "overflowing",
+                  "damaged"
                 ]
               }
             }

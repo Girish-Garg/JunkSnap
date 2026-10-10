@@ -39,7 +39,7 @@ describe("composition", () => {
   });
 
   it("ignores sites waiting for a neighbour check", () => {
-    const pending = site({ verification: "community_check", insights: insights({ reports: 4, composition: [share("metal", 90)] }) });
+    const pending = site({ verification: "unverified", insights: insights({ reports: 4, composition: [share("metal", 90)] }) });
     expect(areaInsights([pending, filler()]).composition.reports).toBe(0);
   });
 });

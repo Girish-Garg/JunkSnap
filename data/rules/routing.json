@@ -9,7 +9,7 @@
   "channels": [
     {
       "channel": "local_body",
-      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"],
       "or_burning": false,
       "states": null,
       "requires_local_body": true,
@@ -31,7 +31,7 @@
     },
     {
       "channel": "district_collector",
-      "report_types": ["waste_dump", "no_bin", "open_construction"],
+      "report_types": ["waste_dump", "no_bin", "open_construction", "overflowing_bin"],
       "or_burning": false,
       "states": null,
       "requires_local_body": false,
@@ -42,7 +42,7 @@
     },
     {
       "channel": "cpgrams",
-      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"],
       "or_burning": false,
       "states": null,
       "requires_local_body": false,
@@ -53,7 +53,7 @@
     },
     {
       "channel": "swachhata",
-      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"],
       "or_burning": false,
       "states": null,
       "requires_local_body": true,
@@ -64,7 +64,7 @@
     },
     {
       "channel": "rajasthan_sampark",
-      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction"],
+      "report_types": ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"],
       "or_burning": false,
       "states": ["Rajasthan"],
       "requires_local_body": false,

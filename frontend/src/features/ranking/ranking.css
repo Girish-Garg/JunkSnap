@@ -1,0 +1,92 @@
+/* City ranking. Neutral colours only: no traffic lights, no party colours. */
+.ranking-filters {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-4) 0 var(--s-2);
+}
+
+.ranking-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 64px;
+  margin: 0 calc(-1 * var(--s-2));
+  padding: var(--s-3) var(--s-2);
+  border-radius: var(--radius-m);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+
+.ranking-row:hover {
+  background: var(--tile);
+}
+
+/* The rank sits in a small round tile in the display face. */
+.ranking-row__rank {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--tile);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 800;
+}
+
+.ranking-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ranking-row__name {
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.ranking-row__meta,
+.ranking-row__of,
+.ranking-footnote {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.ranking-row__score {
+  flex: none;
+  text-align: right;
+}
+
+.ranking-row__score strong {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: 800;
+}
+
+.ranking-row__withheld {
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.ranking-footnote {
+  margin: var(--s-4) 0;
+}
+
+.ranking-skeleton {
+  display: grid;
+  gap: var(--s-3);
+}

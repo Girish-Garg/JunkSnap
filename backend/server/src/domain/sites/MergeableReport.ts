@@ -5,16 +5,19 @@ import type {
   ReportUpload,
   VerificationResult,
 } from "../../contracts/index.gen.js";
+import type { BinMeasure } from "../bins/KnownBin.js";
 import type { GeoPoint } from "./GeoPoint.js";
 import type { NearPlace, ReportContext, ReportInsights, ReportType, SiteBrand, SiteLocation } from "./SiteTypes.js";
 
 // What the worker holds for one report after moderation, verification, location (with nearby places) and brands.
 export interface MergeEvidence {
   readonly upload: ReportUpload;
-  readonly moderation: ModerationResult;
-  readonly verification: VerificationResult;
+  // Null for a no_bin report without a photo; verification is also null for any no_bin report (decision 20261010-1630).
+  readonly moderation: ModerationResult | null;
+  readonly verification: VerificationResult | null;
   readonly location: LocationLookup;
   readonly near: readonly NearPlace[];
+  readonly bin: BinMeasure;
   readonly brands: readonly BrandLabel[];
 }
 
@@ -26,12 +29,12 @@ export interface MergeableReport {
   readonly deviceToken: string;
   readonly userId: string | null;
   readonly reportedAt: string;
-  readonly autoVerified: boolean;
   readonly embeddingKey: string | null;
   readonly meTooSiteId: string | null;
   readonly photoUrl: string | null;
   readonly insights: ReportInsights | null;
   readonly near: readonly NearPlace[];
+  readonly bin: BinMeasure;
   readonly brands: readonly SiteBrand[];
   readonly location: SiteLocation;
   readonly pilot: boolean;

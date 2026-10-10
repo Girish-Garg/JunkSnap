@@ -1,0 +1,18 @@
+{
+  "layers": {
+    "areas": {
+      "features": 718,
+      "bytes": 835239,
+      "label_bytes": 107146,
+      "tolerance_deg": 0.024,
+      "sources": [
+        "rajasthan_assembly.geojson",
+        "india_loksabha.geojson"
+      ],
+      "fine": {
+        "bytes": 1110886,
+        "tolerance_deg": 0.024
+      }
+    }
+  }
+}

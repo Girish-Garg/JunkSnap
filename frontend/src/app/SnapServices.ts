@@ -1,12 +1,15 @@
+import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
 import type { ScanCapture } from '../services/ScanCapture';
 import type { GpsWatcher } from '../services/GpsWatcher';
+import type { NoBinReporter } from '../services/NoBinReporter';
 import type { ImageEncoder } from '../services/PhotoEncoder';
 import type { PhotoHasher } from '../services/PhotoHasher';
 import type { ReportQueue } from '../services/ReportQueue';
 import type { ReportTracker } from '../services/ReportTracker';
 import type { ScanQueue } from '../services/ScanQueue';
 import type { ScanTracker } from '../services/ScanTracker';
+import type { SiteActionService } from '../services/SiteActionService';
 import type { VideoRecorder } from '../services/VideoRecorder';
 
 /** Everything the Snap, Scan and Activity screens use. */
@@ -21,4 +24,7 @@ export interface SnapServices {
   readonly encoder: ImageEncoder;
   readonly hasher: PhotoHasher;
   readonly gps: GpsWatcher;
+  readonly siteActions: SiteActionService;
+  readonly areaLetters: AreaLetterService;
+  readonly noBin: NoBinReporter;
 }

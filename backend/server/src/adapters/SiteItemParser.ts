@@ -3,6 +3,7 @@ import type { AreaKind, AreaRef } from "../domain/AreaKey.js";
 import { AreaSite } from "../domain/AreaSite.js";
 import { InternalDataError } from "../domain/errors.js";
 import { GeoPoint } from "../domain/GeoPoint.js";
+import { LegacySiteFields } from "./sites/LegacySiteFields.js";
 
 type Location = Site["properties"]["location"];
 
@@ -10,7 +11,8 @@ const SITE_FIELDS = Object.keys(siteSchema.properties.properties.properties);
 
 // A sites-table item is the site properties plus lat, lon and private fields; it must pass the site contract.
 export class SiteItemParser {
-  parse(item: Record<string, unknown>): AreaSite {
+  parse(stored: Record<string, unknown>): AreaSite {
+    const item = new LegacySiteFields().upgrade(stored);
     const properties = Object.fromEntries(SITE_FIELDS.filter((field) => field in item).map((field) => [field, item[field]]));
     const feature = { type: "Feature", geometry: { type: "Point", coordinates: [item.lon, item.lat] }, properties };
     return SiteItemParser.#toSite(SiteItemParser.#checked(feature, String(item.site_id)));

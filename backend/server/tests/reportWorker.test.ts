@@ -1,5 +1,6 @@
 import { DeleteMessageCommand, ReceiveMessageCommand, type Message, type SQSClient } from "@aws-sdk/client-sqs";
-import { describe, expect, it } from "vitest";
+import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { SqsQueuePoller } from "../src/adapters/SqsQueuePoller.js";
 import { ConfigError, ExternalServiceError, ValidationError } from "../src/domain/errors.js";
@@ -140,9 +141,22 @@ describe("buildReportQueuePoller", () => {
     logger: logger(),
     env: vars,
   });
+  // Startup lists the crawler's crawl/wards/ files; the stub answers with none, so no request leaves the test.
+  let s3Send: MockInstance<S3Client["send"]>;
+
+  beforeEach(() => {
+    s3Send = vi.spyOn(S3Client.prototype, "send").mockResolvedValue({ Contents: [] } as never);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
   it("builds the SQS poller from the environment and the repo data without touching the network", async () => {
     expect(await buildReportQueuePoller(context(env))).toBeInstanceOf(SqsQueuePoller);
+    const sent = s3Send.mock.calls.map(([command]) => command);
+    expect(sent).toEqual([expect.any(ListObjectsV2Command)]);
+    expect(sent[0]?.input).toMatchObject({ Prefix: "crawl/wards/" });
   });
 
   it("names a missing variable", async () => {

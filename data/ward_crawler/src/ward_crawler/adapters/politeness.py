@@ -19,18 +19,18 @@ class Politeness:
         self._agent = user_agent
         self._robots: dict[str, RobotFileParser | None] = {}
 
-    def get(self, url: str) -> httpx.Response:
+    def get(self, url: str, headers: dict[str, str] | None = None) -> httpx.Response:
         """One hop, no redirects followed; a 429 or 503 with Retry-After is retried once."""
         if not self._allowed(url):
             raise FetchError(f"robots.txt disallows {url}")
         self._throttle.wait(url)
-        response = self._client.get(url)
+        response = self._client.get(url, headers=headers)
         delay = self._retry_after(response)
         if delay is None:
             return response
         self._throttle.hold(url, delay)
         self._throttle.wait(url)
-        return self._client.get(url)
+        return self._client.get(url, headers=headers)
 
     def _allowed(self, url: str) -> bool:
         parts = urlsplit(url)

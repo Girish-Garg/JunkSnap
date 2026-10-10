@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { REPORT_TYPES, type ReportType } from '../../../domain/ReportType';
 import { ChoiceChips } from '../../../ui/ChoiceChips';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
+import { TypeIcon } from '../../../ui/TypeIcon';
 
 interface TypePickerProps {
   readonly value: ReportType;
@@ -13,7 +13,7 @@ export function TypePicker({ value, onChange }: TypePickerProps) {
   const options = REPORT_TYPES.map((type) => ({
     value: type,
     label: t(`reportType.${type}`),
-    leading: <MarkerGlyph type={type} size={20} />,
+    leading: <TypeIcon type={type} size={20} />,
   }));
   return (
     <div className="field">

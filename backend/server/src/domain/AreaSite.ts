@@ -3,9 +3,9 @@ import type { GeoPoint } from "./GeoPoint.js";
 import type { BrandSighting, CompositionEstimate, PlaceKind, SiteInsights } from "./SiteInsights.js";
 import { DAY_MS, istParts } from "./scoreUtils.js";
 
-export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction"] as const;
+export const REPORT_TYPES = ["waste_dump", "no_bin", "contaminated_water", "open_construction", "overflowing_bin"] as const;
 export const SITE_STATUSES = ["open", "cleaned", "reopened"] as const;
-export const VERIFICATIONS = ["verified", "community_check", "rejected"] as const;
+export const VERIFICATIONS = ["unverified", "verified", "rejected"] as const;
 
 export type ReportType = (typeof REPORT_TYPES)[number];
 export type SiteStatus = (typeof SITE_STATUSES)[number];
@@ -54,6 +54,12 @@ export class AreaSite {
 
   get localBodyId(): string | null {
     return this.#props.localBodyId;
+  }
+
+  // The district and local body that hold the site, for the city list's within filter.
+  within(): string[] {
+    const districts = this.#props.areas.filter((area) => area.kind === "district").map((area) => area.id);
+    return this.#props.localBodyId === null ? districts : [...districts, this.#props.localBodyId];
   }
 
   withReportTimes(reportTimes: readonly number[]): AreaSite {
@@ -126,6 +132,19 @@ export class AreaSite {
 
   hasHazard(): boolean {
     return this.#props.burning || (this.#props.insights?.hazards.length ?? 0) > 0;
+  }
+
+  // From site.insights, measured when the site was founded; null when not measured.
+  nearestBinM(): number | null {
+    return this.#props.insights?.nearest_bin?.distance_m ?? null;
+  }
+
+  binMeasured(): boolean {
+    return typeof this.#props.insights?.no_bin_within_3km === "boolean";
+  }
+
+  noBinNearby(): boolean {
+    return this.#props.insights?.no_bin_within_3km === true;
   }
 
   hasNearbyPlaces(): boolean {

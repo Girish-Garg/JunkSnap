@@ -1,6 +1,7 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { Rule } from "../../domain/letters/Rule.js";
 import type { RuleBook } from "../../domain/letters/RuleBook.js";
+import type { Situation } from "../../domain/letters/Situation.js";
 import type { Channel } from "../../domain/letters/types.js";
 
 // Decision 12 names four SWM clauses for a dump letter: 5(1)(f), 15(1), 39(2)(vii) and (xi).
@@ -22,7 +23,10 @@ export class ClausePicker {
   }
 
   pick(channel: Channel, site: LetterSite): Rule[] {
-    const situation = site.situation();
+    return this.pickFor(channel, site.situation());
+  }
+
+  pickFor(channel: Channel, situation: Situation): Rule[] {
     return this.#book.rules
       .map((rule, order): Candidate => ({ rule, order, score: rule.score(situation) }))
       .filter((candidate) => candidate.score > 0 && candidate.rule.citableIn(channel))

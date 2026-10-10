@@ -30,6 +30,12 @@ import {
 const CLEANED_AT = "2026-10-10T05:00:00Z";
 const AFTER_PHOTO = `${BASE_URL}/media/cleanups/cln_x.jpg`;
 
+// Nine yes votes plus the founding photo make the ten backers that verify a site.
+function verified(site: Site): Site {
+  site.recordVotes(tally(...Array.from({ length: 9 }, () => "confirm" as const)));
+  return site;
+}
+
 function cleanedSite(): Site {
   const site = Site.found(report());
   site.startCleanup("cln_x");
@@ -44,7 +50,6 @@ function tally(...choices: ("confirm" | "reject")[]): VoteTally {
       deviceToken: `d${index}`,
       userId: null,
       choice,
-      weight: 1,
       votedAt: CLEANED_AT,
     })),
   );
@@ -52,7 +57,7 @@ function tally(...choices: ("confirm" | "reject")[]): VoteTally {
 
 describe("Site.found", () => {
   it("takes its id, place and evidence from the founding report", () => {
-    const site = Site.found(report());
+    const site = verified(Site.found(report()));
     const { properties, geometry } = validateSite(site.toFeature());
     expect(geometry.coordinates).toEqual([BASE_LON, BASE_LAT]);
     expect(properties).toMatchObject({
@@ -61,7 +66,7 @@ describe("Site.found", () => {
       verification: "verified",
       report_count: 1,
       verified_count: 1,
-      corroborations: 0,
+      corroborations: 9,
       photo_urls: [`${BASE_URL}/media/reports/rpt_jdh_1.jpg`],
       brands: [{ brand: "Sample Namkeen", source_url: "https://example.org/brand-map/sample-namkeen" }],
       first_reported_at: "2026-10-10T02:14:05Z",
@@ -80,9 +85,9 @@ describe("Site.found", () => {
     expect(text).not.toContain(userOf(DEVICE_A));
   });
 
-  it("starts a community check for a report the models could not settle", () => {
+  it("starts unverified, with no insights from unverified photos", () => {
     const site = Site.found(report({ decision: "community_check" }));
-    expect(site.verification).toBe("community_check");
+    expect(site.verification).toBe("unverified");
     expect(site.toFeature().properties).toMatchObject({
       verified_count: 0,
       insights: { reports: 0, composition: [], size_class: null, hazards: [], near: [] },
@@ -98,14 +103,23 @@ describe("Site.merge", () => {
     expect(site.accepts(report({ id: "jdh_2", reportType: "no_bin", context: "no_pickup" }))).toBe(false);
   });
 
-  it("counts reports, auto-verified reports, photos (newest first, at most 6) and time span", () => {
+  it("merges overflowing or broken bins like any other type: same type within 40 m", () => {
+    const bin = { reportType: "overflowing_bin", context: "overflowing" } as const;
+    const site = Site.found(report(bin));
+    expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(39), context: "damaged" }))).toBe(true);
+    expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(41) }))).toBe(false);
+    expect(site.accepts(report({ id: "jdh_2" }))).toBe(false);
+  });
+
+  it("counts reports, photos (newest first, at most 6) and time span", () => {
     const site = Site.found(report({ decision: "community_check" }));
     for (let n = 2; n <= 8; n += 1) {
       site.merge(report({ id: `jdh_${n}`, capturedAt: `2026-10-10T0${n}:00:00Z`, device: DEVICE_B }));
     }
     const properties = site.toFeature().properties;
     expect(properties.report_count).toBe(8);
-    expect(properties.verified_count).toBe(7);
+    expect(properties.verified_count).toBe(0);
+    expect(properties.backers).toMatchObject({ count: 2, photo_people: 2 });
     expect(properties.photo_urls).toHaveLength(6);
     expect(properties.photo_urls[0]).toBe(`${BASE_URL}/media/reports/rpt_jdh_8.jpg`);
     expect([properties.first_reported_at, properties.last_reported_at]).toEqual(["2026-10-10T02:00:00Z", "2026-10-10T08:00:00Z"]);
@@ -128,33 +142,31 @@ describe("Site.merge", () => {
     expect(site.toFeature().properties.corroborations).toBe(1);
   });
 
-  it("marks burning exactly when a verified report lists it as a hazard", () => {
-    const site = Site.found(report({ decision: "community_check", burning: true }));
+  it("marks burning exactly when a verified site's reports list it as a hazard", () => {
+    const site = Site.found(report({ burning: true }));
     expect(site.toFeature().properties).toMatchObject({ burning: false, insights: { hazards: [] } });
-    site.merge(report({ id: "jdh_2", burning: true }));
+    verified(site);
     expect(site.toFeature().properties).toMatchObject({
       burning: true,
       insights: { reports: 1, hazards: [{ hazard: "burning", reports: 1 }] },
     });
   });
 
-  it("leaves a community check report on an already verified site out of the verified count", () => {
-    const site = Site.found(report());
+  it("counts a report merged into a verified site as verified", () => {
+    const site = verified(Site.found(report()));
     site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
-    expect(site.toFeature().properties).toMatchObject({ report_count: 2, verified_count: 1, insights: { reports: 1 } });
+    expect(site.toFeature().properties).toMatchObject({ report_count: 2, verified_count: 2, insights: { reports: 2 } });
   });
 
-  it("verifies a community-check site when an auto-verified report merges in", () => {
+  it("never verifies a site from a confident model alone", () => {
     const site = Site.found(report({ decision: "community_check" }));
-    site.merge(report({ id: "jdh_2", device: DEVICE_B }));
-    expect(site.verification).toBe("verified");
+    site.merge(report({ id: "jdh_2", device: DEVICE_B, decision: "auto_verified" }));
+    expect(site.verification).toBe("unverified");
   });
 
-  it("takes only an auto-verified report once cleaned, which reopens it", () => {
+  it("takes any passed photo once cleaned, which reopens it", () => {
     const site = cleanedSite();
-    expect(site.accepts(report({ id: "jdh_2", decision: "community_check" }))).toBe(false);
-    expect(() => site.merge(report({ id: "jdh_2", decision: "community_check" }))).toThrow(InvalidTransitionError);
-    site.merge(report({ id: "jdh_3" }));
+    site.merge(report({ id: "jdh_3", decision: "community_check", device: DEVICE_B }));
     expect(site.toFeature().properties).toMatchObject({
       status: "reopened",
       cleanup_status: "none",
@@ -165,7 +177,7 @@ describe("Site.merge", () => {
 
   it("never takes reports into a rejected site", () => {
     const site = Site.found(report({ decision: "community_check" }));
-    site.recordVotes(tally("reject", "reject", "reject"));
+    site.recordVotes(tally("reject", "reject", "reject", "reject"));
     expect(site.isListed()).toBe(false);
     expect(site.accepts(report({ id: "jdh_2" }))).toBe(false);
   });
@@ -185,7 +197,7 @@ describe("Site votes", () => {
   it("counts every waiting report as verified once votes confirm the site, and merges their insights", () => {
     const site = Site.found(report({ decision: "community_check" }));
     site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B, burning: true }));
-    site.recordVotes(tally("confirm", "confirm", "confirm"));
+    site.recordVotes(tally(...Array.from({ length: 8 }, () => "confirm" as const)));
     expect(site.toFeature().properties).toMatchObject({
       verification: "verified",
       verified_count: 2,
@@ -195,10 +207,14 @@ describe("Site votes", () => {
     expect(site.toFeature().properties.insights?.composition[0]).toMatchObject({ material: "plastic", share_pct: 55, reports: 2 });
   });
 
-  it("settles only during the community check and always counts corroborations", () => {
-    const site = Site.found(report({ decision: "community_check" }));
-    site.recordVotes(tally("confirm", "confirm", "confirm"));
-    expect(site.voteResult()).toEqual({ site_id: "site_jdh_1", votes: { confirm: 3, reject: 0 }, verification: "verified" });
+  it("settles only while unverified and always counts the votes", () => {
+    const site = verified(Site.found(report({ decision: "community_check" })));
+    expect(site.voteResult()).toEqual({
+      site_id: "site_jdh_1",
+      votes: { confirm: 9, reject: 0 },
+      backers: { count: 10, needed: 10, photo_people: 1, vote_people: 9 },
+      verification: "verified",
+    });
     site.recordVotes(tally("reject", "reject", "reject", "reject"));
     expect(site.verification).toBe("verified");
     expect(site.toFeature().properties.corroborations).toBe(0);
@@ -236,11 +252,13 @@ describe("Site cleanup", () => {
 });
 
 describe("MergeableReportFactory", () => {
-  it("refuses a rejected report and a verification of another report", () => {
+  it("refuses a photo the models did not pass and a verification of another report", () => {
     const factory = new MergeableReportFactory(new PublicMedia(BASE_URL));
     const base = evidence();
     const rejected = { ...base, verification: { ...base.verification, decision: "rejected" as const } };
     expect(() => factory.create(rejected)).toThrow(InternalDataError);
+    const unsafe = { ...base, moderation: { ...base.moderation, outcome: "rejected" as const } };
+    expect(() => factory.create(unsafe)).toThrow(/did not pass/);
     const other = { ...base, verification: { ...base.verification, report_id: "rpt_other" } };
     expect(() => factory.create(other)).toThrow(/does not belong/);
   });

@@ -1,4 +1,6 @@
-import type { SiteLocation } from '../../domain/Site';
+import { areaPath } from '../../app/paths';
+import type { AreaKind } from '../../domain/AreaScores';
+import type { AreaRef, SiteLocation } from '../../domain/Site';
 import type { Fact } from '../../ui/FactList';
 
 export type Translate = (key: string, params?: Readonly<Record<string, string>>) => string;
@@ -13,27 +15,35 @@ export class LocationPresenter {
     this.#t = translate;
   }
 
-  /** Ward, MLA seat and MP seat on one line; an outdated MP seat is left out. */
+  /**
+   * Ward, MLA seat and MP seat on one line; an outdated MP seat is left out. Without a ward map, letters
+   * go to the city-wide body, which is said only when the site has one.
+   */
   line(): string {
     const { ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;
     const parts = [
-      ward?.name ?? this.#t('site.noWard'),
+      ward?.name ?? this.#t(this.#location.local_body ? 'site.noWardLine' : 'site.noWardLineShort'),
       assembly ? this.#t('site.mla', { name: assembly.name }) : this.#t('site.noAssembly'),
     ];
     if (loksabha.status !== 'outdated') parts.push(this.#t('site.mp', { name: loksabha.name }));
     return parts.join(' · ');
   }
 
+  /** Each known area links to its area page; an outdated MP seat does not. */
   facts(): readonly Fact[] {
-    const { local_body: body, ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;
+    const { local_body: body, district, ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;
+    const current = loksabha.status === 'outdated' ? null : loksabha;
     return [
       { label: this.#t('site.localBody'), value: body?.name ?? this.#t('site.notKnown') },
-      { label: this.#t('site.ward'), value: ward?.name ?? this.#t('site.noWard') },
-      { label: this.#t('site.assemblySeat'), value: assembly?.name ?? this.#t('site.noAssembly') },
-      {
-        label: this.#t('site.loksabhaSeat'),
-        value: loksabha.status === 'outdated' ? this.#t('site.seatOutdated') : loksabha.name,
-      },
+      this.#areaFact('site.district', 'district', district, 'site.notKnown'),
+      this.#areaFact('site.ward', 'ward', ward, body ? 'site.noWard' : 'site.noWardShort'),
+      this.#areaFact('site.assemblySeat', 'assembly', assembly, 'site.noAssembly'),
+      this.#areaFact('site.loksabhaSeat', 'loksabha', current, 'site.seatOutdated'),
     ];
+  }
+
+  #areaFact(label: string, kind: AreaKind, ref: AreaRef | null, missingKey: string): Fact {
+    const fact = { label: this.#t(label), value: ref?.name ?? this.#t(missingKey) };
+    return ref ? { ...fact, to: areaPath(kind, ref.id) } : fact;
   }
 }

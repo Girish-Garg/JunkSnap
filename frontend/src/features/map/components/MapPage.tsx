@@ -3,6 +3,7 @@ import { NavBar } from '../../nav/NavBar';
 import { useMapFallback } from '../hooks/useMapFallback';
 import { useMapPage } from '../hooks/useMapPage';
 import '../map.css';
+import '../overlay.css';
 import type { MapContext } from '../useMapContext';
 import { FiltersSheet } from './FiltersSheet';
 import { MapOverlay } from './MapOverlay';
@@ -12,7 +13,7 @@ export function MapPage() {
   const page = useMapPage();
   const { listMode, fail } = useMapFallback();
   const { selection, filters } = page;
-  const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite };
+  const context: MapContext = { userLocation: page.location.position, showSite: selection.showSite, sites: page.loaded };
   const classes = ['map-page', page.sheetOpen && 'map-page--sheet', selection.preview && 'map-page--card'];
   return (
     <main className={classes.filter(Boolean).join(' ')}>
@@ -20,7 +21,7 @@ export function MapPage() {
         <MapSurface
           sites={page.sites}
           selectedId={selection.selectedId}
-          mode={filters.mode}
+          {...page.layerBindings}
           userLocation={page.location.position}
           camera={selection.camera}
           onPick={selection.pick}

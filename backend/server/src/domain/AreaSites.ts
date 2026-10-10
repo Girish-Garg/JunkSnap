@@ -36,6 +36,11 @@ export class AreaSites {
     return [...new Set(ids)].sort();
   }
 
+  // Rejected sites still place the area, so every site counts here.
+  within(): string[] {
+    return [...new Set(this.#all.flatMap((site) => site.within()))].sort();
+  }
+
   isPilot(): boolean {
     return this.#all.some((site) => site.isPilot());
   }
@@ -55,6 +60,7 @@ export class AreaSites {
       open_sites: counted.filter((site) => site.hasStatus("open")).length,
       cleaned_sites: counted.filter((site) => site.hasStatus("cleaned")).length,
       reopened_sites: counted.filter((site) => site.hasStatus("reopened")).length,
+      sites_without_bin_within_3km: this.verified().filter((site) => site.noBinNearby()).length,
     };
   }
 }

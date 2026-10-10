@@ -20,8 +20,9 @@ import type { VerifyFeatures, VerifyRequest } from "./VerifyRequest.js";
 
 const OPEN_STATUSES: ReadonlySet<ReportStatus> = new Set(["queued", "processing"]);
 const DECISION_STATUS: Readonly<Record<VerificationResult["decision"], ReportStatus>> = {
-  auto_verified: "verified",
-  community_check: "community_check",
+  // A passed photo alone never verifies anything (decision 20261010-1530).
+  auto_verified: "unverified",
+  community_check: "unverified",
   rejected: "rejected",
 };
 const UPLOAD_FIELDS = [
@@ -79,6 +80,16 @@ export class Report {
   isOwnedBy(viewer: Viewer): boolean {
     const owner = this.#record.user_id;
     return owner === undefined ? viewer.deviceToken === this.#record.device_token : viewer.userId === owner;
+  }
+
+  // Decision 20261010-1630: a no_bin report may come without a photo (no sha256).
+  hasPhoto(): boolean {
+    return this.#record.sha256 !== undefined;
+  }
+
+  // A no_bin photo only shows the spot; the models never judge it as waste.
+  needsWasteCheck(): boolean {
+    return this.#record.report_type !== "no_bin";
   }
 
   // Rejected, needs_review and both verification outcomes end the pipeline.

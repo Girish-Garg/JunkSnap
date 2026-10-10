@@ -14,8 +14,16 @@ describe('LocationPresenter', () => {
 
   it('says when there is no ward map or assembly map', () => {
     const presenter = presenterFor({ location: { ward: null, assembly_seat: null } });
-    expect(presenter.line()).toBe('site.noWard · site.noAssembly · site.mp(Jodhpur)');
+    expect(presenter.line()).toBe('site.noWardLine · site.noAssembly · site.mp(Jodhpur)');
     expect(presenter.facts().map((fact) => fact.value)).toContain('site.noAssembly');
+  });
+
+  it('says letters go to the city-wide body only when the site has a local body', () => {
+    const withBody = presenterFor({ location: { ward: null } });
+    expect(withBody.facts().find((fact) => fact.label === 'site.ward')?.value).toBe('site.noWard');
+    const withoutBody = presenterFor({ location: { ward: null, local_body: null } });
+    expect(withoutBody.line()).toMatch(/^site\.noWardLineShort · /);
+    expect(withoutBody.facts().find((fact) => fact.label === 'site.ward')?.value).toBe('site.noWardShort');
   });
 
   it('leaves out an MP seat whose boundary is outdated', () => {

@@ -1,5 +1,5 @@
 // GET /reports/{id} in contracts/README.md: the fields the app reads.
-export type ReportStatus = 'queued' | 'processing' | 'verified' | 'community_check' | 'rejected' | 'needs_review';
+export type ReportStatus = 'queued' | 'processing' | 'unverified' | 'verified' | 'rejected' | 'needs_review';
 
 export interface ReportStatusView {
   readonly report_id: string;
@@ -11,7 +11,7 @@ export interface ReportStatusView {
 }
 
 const IN_PIPELINE: ReadonlySet<ReportStatus> = new Set(['queued', 'processing']);
-// community_check can still change when neighbours vote, so it is not final.
+// unverified can still change as people back the site, so it is not final.
 const FINAL: ReadonlySet<ReportStatus> = new Set(['verified', 'rejected', 'needs_review']);
 
 export class ReportStatuses {

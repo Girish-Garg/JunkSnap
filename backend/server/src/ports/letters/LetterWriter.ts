@@ -6,6 +6,8 @@ export interface LetterBrief {
   readonly addressees: Addressees;
   readonly citations: readonly Citation[];
   readonly language: Language;
+  // BIN_RADIUS_M, for the no-bin request line.
+  readonly binRadiusM: number;
 }
 
 export interface WrittenLetter extends Prose {

@@ -10,12 +10,24 @@ import { AuthFlowProvider } from '../src/features/auth/components/AuthFlowProvid
 import { LanguagePreference, type KeyValueStore, type Language } from '../src/i18n/LanguagePreference';
 import { Localization } from '../src/i18n/Localization';
 import { LayerRegistry } from '../src/layers/LayerRegistry';
+import { BoundaryCatalog } from '../src/services/BoundaryCatalog';
 import { GeoLocator } from '../src/services/GeoLocator';
+import { areaFixtureLoaders } from '../src/services/areaFixtures';
+import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
 import { MockApiClient } from '../src/services/MockApiClient';
+import { MockAreaApi } from '../src/services/MockAreaApi';
 import { MockAuthService } from '../src/services/MockAuthService';
+import { OnboardingPreference } from '../src/services/OnboardingPreference';
+import { CapabilityProbe } from '../src/services/CapabilityProbe';
+import { EdgeHints } from '../src/services/EdgeHints';
+import { EdgeHintsPreference } from '../src/services/EdgeHintsPreference';
+import { ThemePreference } from '../src/services/ThemePreference';
 import { Sharer } from '../src/services/Sharer';
 import { siteFixtureLoaders } from '../src/services/siteFixtures';
 import { testSnapServices, type SnapTestOptions } from './snapFakes';
+
+// The map's one areas layer, as scripts/simplify_boundaries.py lists it.
+export const TEST_BOUNDARY_INDEX = { layers: { assembly: {}, loksabha: {}, areas: { fine: {} } } };
 
 export class MemoryStore implements KeyValueStore {
   readonly #values = new Map<string, string>();
@@ -40,12 +52,19 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
   return new ServiceContainer({
     config: AppConfig.fromEnv({}),
     api: new MockApiClient(siteFixtureLoaders),
+    areas: new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
     auth,
     localization: new Localization(new LanguagePreference(store)),
     layers: new LayerRegistry([]),
+    boundaries: new BoundaryCatalog('/boundaries/', async () => Response.json(TEST_BOUNDARY_INDEX)),
     locator: new GeoLocator(undefined),
     sharer: new Sharer({ clipboard: { writeText: async () => undefined } as unknown as Clipboard }),
     snap: testSnapServices({ ...snap, auth }),
+    onboarding: new OnboardingPreference(store),
+    theme: new ThemePreference(store, null),
+    edge: new EdgeHints(new CapabilityProbe(CapabilityProbe.NONE), new EdgeHintsPreference(store), () => {
+      throw new Error('cloud mode in tests');
+    }),
   });
 }
 

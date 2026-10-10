@@ -971,13 +971,17 @@ export interface WardScores {
   counts: {
     verified_reports: number;
     /**
-     * Verified no_bin reports.
+     * Verified no_bin reports. Shown as a count only; bin access is measured, not taken from these (scores-v2).
      */
     no_bin_reports: number;
     sites: number;
     open_sites: number;
     cleaned_sites: number;
     reopened_sites: number;
+    /**
+     * Verified sites whose site.insights.no_bin_within_3km is true.
+     */
+    sites_without_bin_within_3km: number;
   };
   /**
    * Guardrail; 10 in v1.
@@ -1002,12 +1006,23 @@ export interface WardScores {
      * Share of no_bin sites cleared or served in the window (city score).
      */
     no_bin_response_pct: number | null;
+    /**
+     * Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid.
+     */
+    bin_service_pct?: number | null;
     new_dumps_per_km2_month: number | null;
     /**
      * Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score).
      */
     share_vacant_plot_drain_roadside_pct: number | null;
+    /**
+     * Median of site.insights.nearest_bin.distance_m over verified sites with a known nearest bin (bin access score).
+     */
     median_distance_to_disposal_m: number | null;
+    /**
+     * Share of measured verified sites (no_bin_within_3km not null) with no known bin within 3 km (bin access score).
+     */
+    no_bin_within_3km_pct: number | null;
   };
   /**
    * Empty when scores are withheld. dumping + no bins = infrastructure_gap; dumping + bins = behaviour; slow clearing = city_response; re-dumping = repeat_spot.
@@ -1092,7 +1107,8 @@ export const wardScoresSchema = {
         "sites",
         "open_sites",
         "cleaned_sites",
-        "reopened_sites"
+        "reopened_sites",
+        "sites_without_bin_within_3km"
       ],
       "properties": {
         "verified_reports": {
@@ -1102,7 +1118,7 @@ export const wardScoresSchema = {
         "no_bin_reports": {
           "type": "integer",
           "minimum": 0,
-          "description": "Verified no_bin reports."
+          "description": "Verified no_bin reports. Shown as a count only; bin access is measured, not taken from these (scores-v2)."
         },
         "sites": {
           "type": "integer",
@@ -1119,6 +1135,11 @@ export const wardScoresSchema = {
         "reopened_sites": {
           "type": "integer",
           "minimum": 0
+        },
+        "sites_without_bin_within_3km": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Verified sites whose site.insights.no_bin_within_3km is true."
         }
       }
     },
@@ -1158,7 +1179,8 @@ export const wardScoresSchema = {
         "no_bin_response_pct",
         "new_dumps_per_km2_month",
         "share_vacant_plot_drain_roadside_pct",
-        "median_distance_to_disposal_m"
+        "median_distance_to_disposal_m",
+        "no_bin_within_3km_pct"
       ],
       "description": "Inputs behind the scores; each null when withheld or not measurable in the data window.",
       "properties": {
@@ -1194,6 +1216,15 @@ export const wardScoresSchema = {
           "maximum": 100,
           "description": "Share of no_bin sites cleared or served in the window (city score)."
         },
+        "bin_service_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid."
+        },
         "new_dumps_per_km2_month": {
           "type": [
             "number",
@@ -1215,7 +1246,17 @@ export const wardScoresSchema = {
             "number",
             "null"
           ],
-          "minimum": 0
+          "minimum": 0,
+          "description": "Median of site.insights.nearest_bin.distance_m over verified sites with a known nearest bin (bin access score)."
+        },
+        "no_bin_within_3km_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Share of measured verified sites (no_bin_within_3km not null) with no known bin within 3 km (bin access score)."
         }
       }
     },

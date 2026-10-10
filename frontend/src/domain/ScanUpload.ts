@@ -1,4 +1,5 @@
 // Mirrors contracts/schemas/scan_session.schema.json and the scan bodies in contracts/README.md.
+import type { BoxFraction } from './EdgeModel';
 import type { ReportType } from './ReportType';
 import type { SiteContext } from './Site';
 
@@ -22,6 +23,19 @@ export interface TrackFix {
   readonly accuracy_m: number;
 }
 
+/** One scan_session.hints item: an on-phone waste box at t_ms, in frame fractions. */
+export interface ScanHintDetection {
+  readonly t_ms: number;
+  readonly score: number;
+  readonly box: BoxFraction;
+}
+
+/** On-phone detections, sent only in edge mode; they steer frame choice and are never evidence. */
+export interface ScanHints {
+  readonly model: string;
+  readonly detections: readonly ScanHintDetection[];
+}
+
 /** One finished recording, before it has a scan_id. */
 export interface ScanDraft {
   readonly report_type: ReportType;
@@ -33,6 +47,8 @@ export interface ScanDraft {
   readonly video_sha256: string;
   readonly size_bytes: number;
   readonly gps_track: readonly TrackFix[];
+  /** Absent in cloud mode, so the body is exactly what it was without a model. */
+  readonly hints?: ScanHints;
 }
 
 export interface ScanPresignRequest {
@@ -62,6 +78,7 @@ export interface ScanSession {
   readonly video_key: string;
   readonly video_sha256: string;
   readonly gps_track: readonly TrackFix[];
+  readonly hints?: ScanHints;
 }
 
 export interface AcceptedScan {

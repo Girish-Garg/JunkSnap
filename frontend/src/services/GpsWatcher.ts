@@ -1,4 +1,4 @@
-import type { LocationProblem } from '../domain/LocationError';
+import { LocationError, type LocationProblem } from '../domain/LocationError';
 import type { GpsFix } from '../domain/ReportUpload';
 import type { Clock } from './Clock';
 import { SystemClock } from './SystemClock';
@@ -41,6 +41,19 @@ export class GpsWatcher {
       OPTIONS,
     );
     return () => geolocation.clearWatch(id);
+  }
+
+  /** One fresh high-accuracy fix, for a vote. */
+  current(): Promise<GpsFix> {
+    const geolocation = this.#geolocation;
+    if (!geolocation) return Promise.reject(new LocationError('unavailable', 'No geolocation API'));
+    return new Promise((resolve, reject) => {
+      geolocation.getCurrentPosition(
+        (position) => resolve(GpsWatcher.#fix(position.coords)),
+        (error) => reject(new LocationError(error.code === PERMISSION_DENIED ? 'denied' : 'unavailable', error.message)),
+        { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
+      );
+    });
   }
 
   static #fix(coords: GeolocationCoordinates): GpsFix {

@@ -18,7 +18,7 @@ const jodhpur = wardSite();
 const body = { device_token: DEVICE, channel: "local_body", language: "en" };
 const sites = [
   jodhpur,
-  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "community_check" }),
+  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "unverified" }),
   siteWith(jodhpur, { site_id: "site_far_1" }, { local_body: null }),
 ];
 
@@ -138,6 +138,7 @@ describe("buildLettersRoutes", () => {
     SITES_TABLE: "junksnap-dev-sites",
     DEVICES_TABLE: "junksnap-dev-devices",
     USERS_TABLE: "junksnap-dev-users",
+    SCORES_TABLE: "junksnap-dev-scores",
     COGNITO_USER_POOL_ID: "ap-south-1_TestPool1",
     COGNITO_CLIENT_ID: "test-client-id",
   });

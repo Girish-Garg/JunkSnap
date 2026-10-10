@@ -73,8 +73,9 @@ export class ScoresJob {
     for (const site of sites) {
       timed.push(await this.#withReportTimes(site, times));
     }
-    const facts = await this.#ports.facts.factsFor(AreaKey.of(area), new AreaSites(sites).localBodies());
-    await this.#ports.scores.save(this.#calculator.calculate({ area, sites: timed, facts, now }));
+    const held = new AreaSites(sites);
+    const facts = await this.#ports.facts.factsFor(AreaKey.of(area), held.localBodies());
+    await this.#ports.scores.save(this.#calculator.calculate({ area, sites: timed, facts, now }), held.within());
   }
 
   // Each site's reports are read once, however many areas hold it; a failed read fails every one of those areas.

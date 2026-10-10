@@ -26,8 +26,19 @@ export interface ReportUpload extends ReportDraft {
   readonly device_token: string;
 }
 
+/** Decision 20261010-1630: "no dustbin within 1 km of here", without a photo; the app makes the upload_id. */
+export interface NoBinUpload {
+  readonly upload_id: string;
+  readonly report_type: 'no_bin';
+  readonly context: 'no_bin';
+  readonly capture_mode: 'snap';
+  readonly gps: GpsFix;
+  readonly captured_at: string;
+  readonly device_token: string;
+}
+
 export interface PresignRequest {
-  readonly purpose: 'report';
+  readonly purpose: 'report' | 'cleanup';
   readonly content_type: 'image/jpeg';
   readonly sha256: string;
   readonly device_token: string;

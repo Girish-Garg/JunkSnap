@@ -9,6 +9,7 @@ import type {
 import type { MergeableReport, MergeEvidence } from "../../src/domain/sites/MergeableReport.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
+import { UNMEASURED, type BinMeasure } from "../../src/domain/bins/KnownBin.js";
 import type {
   NearPlace,
   ReportContext,
@@ -56,6 +57,7 @@ export interface EvidenceOptions {
   readonly user?: string | null;
   readonly insights?: ReportInsights | null;
   readonly near?: readonly NearPlace[];
+  readonly bin?: BinMeasure;
 }
 
 // Each device belongs to its own user unless a test says otherwise.
@@ -85,10 +87,14 @@ const DEFAULTS = {
   embeddingKey: null,
   capturedAt: "2026-10-10T02:14:05Z",
   near: [],
+  bin: UNMEASURED,
 } as const;
 
 // A jdh-1 report from the fixtures, with the fields a test changes.
-export function evidence(options: EvidenceOptions = {}): MergeEvidence {
+// A photo report always has both results; no-bin reports without them are built by the zone tests.
+export type PhotoEvidence = MergeEvidence & { readonly moderation: ModerationResult; readonly verification: VerificationResult };
+
+export function evidence(options: EvidenceOptions = {}): PhotoEvidence {
   const o = { ...DEFAULTS, ...options };
   const upload = fixture<ReportUpload>("report_upload.jdh-1.json");
   const moderation = fixture<ModerationResult>("moderation_result.jdh-1.json");
@@ -109,6 +115,7 @@ export function evidence(options: EvidenceOptions = {}): MergeEvidence {
       device_token: o.device,
       captured_at: o.capturedAt,
     },
+    bin: o.bin,
     moderation: { ...moderation, report_id: `rpt_${o.id}`, blurred_key: `media/reports/rpt_${o.id}.jpg` },
     verification: {
       ...verification,

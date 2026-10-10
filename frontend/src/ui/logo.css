@@ -1,0 +1,116 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.logo__mark {
+  display: block;
+  flex: none;
+  transform-origin: 50% 90%;
+}
+
+.logo:hover .logo__mark {
+  animation: logo-hop var(--dur-4) var(--spring-bouncy);
+}
+
+.logo__word {
+  padding-top: 3px;
+  color: var(--text);
+  font-family: 'Baloo 2 Variable', sans-serif;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.logo__snap {
+  color: var(--accent);
+}
+
+/* Sign-in sheets open with the camera hopping in above the title. */
+.auth-heading .logo {
+  margin-bottom: var(--s-3);
+}
+
+.auth-heading .logo__mark {
+  animation: logo-hop var(--dur-4) var(--spring-bouncy) 120ms both;
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--radius-l);
+  background: var(--tile);
+  overflow-wrap: anywhere;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-8);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--divider);
+}
+
+.settings__label {
+  font-weight: 600;
+}
+
+@keyframes logo-hop {
+  30% {
+    transform: translateY(-4px) rotate(-6deg) scale(1.04, 0.96);
+  }
+
+  60% {
+    transform: translateY(0) rotate(3deg) scale(0.98, 1.02);
+  }
+}
+
+/* Loading: the camera hops and squashes while it waits. */
+.logo-loader {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  padding: var(--s-8) 0;
+  color: var(--text-secondary);
+}
+
+.logo-loader .logo__mark {
+  animation: logo-bounce 900ms var(--ease-out) infinite;
+}
+
+.logo-loader__shadow {
+  width: 36px;
+  height: 6px;
+  margin-top: calc(-1 * var(--s-3));
+  border-radius: 50%;
+  background: var(--tile-hover);
+  animation: logo-shadow 900ms var(--ease-out) infinite;
+}
+
+@keyframes logo-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+
+  15% {
+    transform: translateY(0) scale(0.94, 1.06);
+  }
+
+  50% {
+    transform: translateY(-18px) scale(1) rotate(-4deg);
+  }
+}
+
+@keyframes logo-shadow {
+  50% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+}

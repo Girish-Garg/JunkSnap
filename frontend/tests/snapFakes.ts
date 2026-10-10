@@ -1,4 +1,10 @@
 import type { SnapServices } from '../src/app/SnapServices';
+import type { AreaLetterApi } from '../src/services/AreaLetterApi';
+import { AreaLetterService } from '../src/services/AreaLetterService';
+import { areaFixtureLoaders } from '../src/services/areaFixtures';
+import { crawlFixtureLoaders } from '../src/services/crawlFixtures';
+import { MockAreaApi } from '../src/services/MockAreaApi';
+import { MockAreaLetterApi } from '../src/services/MockAreaLetterApi';
 import type { QueuedReportData } from '../src/domain/QueuedReport';
 import type { GpsFix, ReportDraft } from '../src/domain/ReportUpload';
 import type { AuthService } from '../src/services/AuthService';
@@ -8,6 +14,7 @@ import { DeviceIdentity } from '../src/services/DeviceIdentity';
 import { GpsWatcher } from '../src/services/GpsWatcher';
 import { MockReportApi } from '../src/services/MockReportApi';
 import type { ImageEncoder } from '../src/services/PhotoEncoder';
+import { NoBinReporter } from '../src/services/NoBinReporter';
 import { PhotoHasher } from '../src/services/PhotoHasher';
 import { QueueLock } from '../src/services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
@@ -20,7 +27,11 @@ import { ScanCapture } from '../src/services/ScanCapture';
 import { ScanQueue } from '../src/services/ScanQueue';
 import { ScanSender } from '../src/services/ScanSender';
 import { ScanTracker } from '../src/services/ScanTracker';
-import { sampleSiteLoader } from '../src/services/siteFixtures';
+import { sampleAreaLetterLoader, sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../src/services/siteFixtures';
+import { MockApiClient } from '../src/services/MockApiClient';
+import { MockSiteActionsApi } from '../src/services/MockSiteActionsApi';
+import { SiteActionService, type SiteActionPorts } from '../src/services/SiteActionService';
+import type { SiteActionsApi } from '../src/services/SiteActionsApi';
 import { MockScanApi } from '../src/services/MockScanApi';
 import { VideoRecorder } from '../src/services/VideoRecorder';
 import type { QueueItemData } from '../src/domain/QueueItem';
@@ -107,6 +118,12 @@ export class FakeGeolocation {
         return 1;
       },
       clearWatch: () => undefined,
+      getCurrentPosition: (onFix: PositionCallback, onError: PositionErrorCallback) => {
+        const first = this.#first;
+        if (!first) return onError({ code: 2, message: 'no fix' } as GeolocationPositionError);
+        const coords = { latitude: first.lat, longitude: first.lon, accuracy: first.accuracy_m } as GeolocationCoordinates;
+        onFix({ coords, timestamp: Date.now() } as GeolocationPosition);
+      },
     } as unknown as Geolocation;
   }
 
@@ -156,6 +173,8 @@ export interface SnapTestOptions {
   /** null leaves the page without a camera API. */
   readonly mediaDevices?: MediaDevices | null;
   readonly clock?: FakeClock;
+  readonly siteApi?: SiteActionsApi;
+  readonly areaLetterApi?: AreaLetterApi;
 }
 
 export function testSnapServices(options: SnapTestOptions): SnapServices {
@@ -182,5 +201,20 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     encoder: new FakeEncoder(),
     hasher,
     gps,
+    siteActions: testSiteActions(options.siteApi, { uploads: api, identity, gps }),
+    areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
+    noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
   };
+}
+
+function testSiteActions(siteApi: SiteActionsApi | undefined, ports: Omit<SiteActionPorts, 'api'>): SiteActionService {
+  const sites = new MockApiClient(siteFixtureLoaders);
+  const api = siteApi ?? new MockSiteActionsApi({ site: (id) => sites.getSite(id), letter: sampleLetterLoader }, 0);
+  return new SiteActionService({ ...ports, api });
+}
+
+function testAreaLetterApi(given: AreaLetterApi | undefined): AreaLetterApi {
+  if (given) return given;
+  const areas = new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders);
+  return new MockAreaLetterApi({ scores: (kind, id) => areas.scores(kind, id), letter: sampleAreaLetterLoader });
 }

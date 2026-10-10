@@ -1,4 +1,4 @@
-// Mirrors site.insights in contracts/schemas/site.schema.json (v1.1, decision 20261010-0202).
+// Mirrors site.insights in contracts/schemas/site.schema.json (v1.1 and v1.4, decisions 20261010-0202 and -1430).
 
 export type Material =
   | 'plastic'
@@ -52,4 +52,14 @@ export interface SiteInsights {
     readonly ref: string;
     readonly source: LayerSource;
   }[];
+  /** v1.4: the nearest known bin or collection point; null when none is known. Absent on older rows. */
+  readonly nearest_bin?: NearestBin | null;
+  /** v1.4: true when no known bin lies within 3 km; null when bins are not mapped for the town. */
+  readonly no_bin_within_3km?: boolean | null;
+}
+
+export interface NearestBin {
+  readonly distance_m: number;
+  readonly ref: string;
+  readonly source: LayerSource;
 }

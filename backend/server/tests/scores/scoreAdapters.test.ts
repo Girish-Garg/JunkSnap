@@ -1,13 +1,14 @@
 import {
   GetCommand,
   PutCommand,
+  QueryCommand,
   type DynamoDBDocumentClient,
-  type QueryCommand,
   type ScanCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it } from "vitest";
 import { DynamoAreaReportReader } from "../../src/adapters/DynamoAreaReportReader.js";
 import { DynamoAreaSiteReader } from "../../src/adapters/DynamoAreaSiteReader.js";
+import { DynamoScoreLister } from "../../src/adapters/DynamoScoreLister.js";
 import { DynamoScoreRepository } from "../../src/adapters/DynamoScoreRepository.js";
 import { SiteItemParser } from "../../src/adapters/SiteItemParser.js";
 import type { Site, WardScores } from "../../src/contracts/index.gen.js";
@@ -154,8 +155,9 @@ describe("DynamoScoreRepository", () => {
     const fake = new FakeDocumentClient();
     const repository = new DynamoScoreRepository(fake.asClient(), "junksnap-dev-scores");
     const row = computed();
-    await repository.save(row);
-    expect(fake.stored.get(AreaKey.of(WARD).toString())).toMatchObject({ area_kind: WARD.kind, area_id: WARD.id, formula_version: "scores-v1" });
+    await repository.save(row, ["jodhpur-mc", "rajasthan-jodhpur"]);
+    const stored = fake.stored.get(AreaKey.of(WARD).toString());
+    expect(stored).toMatchObject({ area_kind: WARD.kind, area_id: WARD.id, within: ["jodhpur-mc", "rajasthan-jodhpur"], formula_version: "scores-v3" });
     expect(await repository.find(AreaKey.of(WARD))).toEqual(row);
   });
 
@@ -174,8 +176,47 @@ describe("DynamoScoreRepository", () => {
     const repository = new DynamoScoreRepository(fake.asClient(), "t");
     const row = computed();
     const badInsights = { ...row, insights: { ...row.insights, hour_of_day: { value: [1], reports: 1, reason: null } } };
-    await expect(repository.save(badInsights)).rejects.toThrow(InternalDataError);
+    await expect(repository.save(badInsights, [])).rejects.toThrow(InternalDataError);
     fake.stored.set(AreaKey.of(WARD).toString(), { area_kind: WARD.kind, area_id: WARD.id, area: WARD });
     await expect(repository.find(AreaKey.of(WARD))).rejects.toThrow(InternalDataError);
+  });
+});
+
+describe("DynamoScoreLister", () => {
+  const rowOf = (sample: string) => readContract<WardScores>(`fixtures/ward_scores.${sample}.json`);
+  const itemOf = (sample: string) => {
+    const row = rowOf(sample);
+    return { area_kind: row.area.kind, area_id: row.area.id, within: ["rajasthan-jodhpur", "jodhpur-mc"], ...row };
+  };
+
+  it("queries the kind's partition filtered on within, reads every page and strips the table fields", async () => {
+    const fake = new FakeDocumentClient([
+      { Items: [itemOf("jdh-1")], LastEvaluatedKey: { area_kind: "assembly", area_id: "s20-ac-128" } },
+      { Items: [itemOf("jpr-1")] },
+    ]);
+    const rows = await new DynamoScoreLister(fake.asClient(), "junksnap-dev-scores").listWithin("assembly", "rajasthan-jodhpur");
+    expect(rows).toEqual([rowOf("jdh-1"), rowOf("jpr-1")]);
+    expect(fake.sent.every((command) => command instanceof QueryCommand)).toBe(true);
+    expect((fake.sent[0] as QueryCommand).input).toEqual({
+      TableName: "junksnap-dev-scores",
+      KeyConditionExpression: "area_kind = :kind",
+      FilterExpression: "contains(#within, :within)",
+      ExpressionAttributeNames: { "#within": "within" },
+      ExpressionAttributeValues: { ":kind": "assembly", ":within": "rajasthan-jodhpur" },
+      ExclusiveStartKey: undefined,
+    });
+    expect((fake.sent[1] as QueryCommand).input.ExclusiveStartKey).toEqual({ area_kind: "assembly", area_id: "s20-ac-128" });
+  });
+
+  it("returns an empty list when nothing matches", async () => {
+    const fake = new FakeDocumentClient([{ Items: [] }]);
+    expect(await new DynamoScoreLister(fake.asClient(), "t").listWithin("ward", "jodhpur-mc")).toEqual([]);
+  });
+
+  it("throws InternalDataError for a stored row that breaks the contract, ExternalServiceError when the SDK fails", async () => {
+    const fake = new FakeDocumentClient([{ Items: [{ area_kind: "ward", area_id: "x", within: [], area: WARD }] }]);
+    await expect(new DynamoScoreLister(fake.asClient(), "t").listWithin("ward", "jodhpur-mc")).rejects.toThrow(InternalDataError);
+    const failing = { send: async () => Promise.reject(new Error("AccessDenied")) } as unknown as DynamoDBDocumentClient;
+    await expect(new DynamoScoreLister(failing, "t").listWithin("ward", "jodhpur-mc")).rejects.toThrow(ExternalServiceError);
   });
 });

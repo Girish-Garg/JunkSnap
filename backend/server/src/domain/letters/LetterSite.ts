@@ -5,14 +5,24 @@ import type { ReportType, SeatRef, SiteContext } from "./types.js";
 
 type Location = Site["properties"]["location"];
 type LoksabhaSeat = Location["loksabha_seat"];
+type Facts = Site["properties"];
+export type SiteInsights = NonNullable<Facts["insights"]>;
+export type NearestBin = NonNullable<SiteInsights["nearest_bin"]>;
 
 export interface SiteEvidence {
   readonly lat: number;
   readonly lon: number;
   readonly reportCount: number;
   readonly verifiedCount: number;
+  // Null on sites from before reporters were counted.
+  readonly reporters: number | null;
   readonly firstReportedAt: string;
-  readonly photoUrls: readonly string[];
+  readonly lastReportedAt: string;
+  readonly photoUrls: Facts["photo_urls"];
+  readonly insights: SiteInsights | null;
+  readonly nearestBin: NearestBin | null;
+  // Null when bins were never measured for this site.
+  readonly noBinWithin3km: boolean | null;
 }
 
 export interface LetterSiteProps {
@@ -20,6 +30,8 @@ export interface LetterSiteProps {
   readonly reportType: ReportType;
   readonly context: SiteContext;
   readonly verified: boolean;
+  // site.backers.count: people who confirmed it by photo or yes vote, each once (decisions 20261010-1530, -1630).
+  readonly backers: number;
   readonly burning: boolean;
   readonly hazards: readonly string[];
   readonly packaging: boolean;
@@ -32,6 +44,7 @@ export class LetterSite {
   readonly reportType: ReportType;
   readonly context: SiteContext;
   readonly verified: boolean;
+  readonly backers: number;
   readonly burning: boolean;
   readonly hazards: readonly string[];
   readonly packaging: boolean;
@@ -43,6 +56,7 @@ export class LetterSite {
     this.reportType = props.reportType;
     this.context = props.context;
     this.verified = props.verified;
+    this.backers = props.backers;
     this.burning = props.burning;
     this.hazards = props.hazards;
     this.packaging = props.packaging;
@@ -58,18 +72,12 @@ export class LetterSite {
       reportType: facts.report_type,
       context: facts.context,
       verified: facts.verification === "verified",
+      backers: facts.backers.count,
       burning: facts.burning,
       hazards: (facts.insights?.hazards ?? []).map((entry) => entry.hazard),
       packaging: facts.brands.length > 0,
       place: LetterSite.#place(facts.location),
-      evidence: {
-        lat,
-        lon,
-        reportCount: facts.report_count,
-        verifiedCount: facts.verified_count,
-        firstReportedAt: facts.first_reported_at,
-        photoUrls: facts.photo_urls,
-      },
+      evidence: LetterSite.#evidence(facts, lat, lon),
     });
   }
 
@@ -89,6 +97,23 @@ export class LetterSite {
       loksabhaSeat: LetterSite.#currentSeat(location.loksabha_seat),
       representatives: location.representatives.map((row) => ({ office: row.office, seatId: row.seat_id })),
     });
+  }
+
+  static #evidence(facts: Facts, lat: number, lon: number): SiteEvidence {
+    const insights = facts.insights ?? null;
+    return {
+      lat,
+      lon,
+      reportCount: facts.report_count,
+      verifiedCount: facts.verified_count,
+      reporters: facts.reporters ?? null,
+      firstReportedAt: facts.first_reported_at,
+      lastReportedAt: facts.last_reported_at,
+      photoUrls: facts.photo_urls,
+      insights,
+      nearestBin: insights?.nearest_bin ?? null,
+      noBinWithin3km: insights?.no_bin_within_3km ?? null,
+    };
   }
 
   // Never Cc the MP of a seat whose loaded boundary predates a re-delimitation.

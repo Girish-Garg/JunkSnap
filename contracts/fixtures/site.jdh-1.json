@@ -8,9 +8,10 @@
     "status": "open",
     "verification": "verified",
     "report_count": 7,
-    "verified_count": 6,
-    "corroborations": 4,
-    "votes": { "confirm": 2, "reject": 0 },
+    "verified_count": 7,
+    "corroborations": 7,
+    "backers": { "count": 10, "needed": 10, "photo_people": 5, "vote_people": 5 },
+    "votes": { "confirm": 5, "reject": 0 },
     "photo_urls": [
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
       "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1a.jpg"
@@ -38,8 +39,9 @@
     "last_reported_at": "2026-10-10T02:14:05Z",
     "cleaned_at": null,
     "pilot": true,
+    "reporters": 5,
     "insights": {
-      "reports": 6,
+      "reports": 7,
       "composition": [
         { "material": "plastic", "share_pct": 52.5, "reports": 6, "sources": [
           { "signal": "rekognition_labels", "provider": "rekognition", "model": "DetectLabels", "version": "3.0" },
@@ -59,7 +61,9 @@
       "near": [
         { "kind": "school", "distance_m": 83, "ref": "osm:way/100000001",
           "source": { "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnwr%5B%22amenity%22%3D%22school%22%5D%3Bout%20skel%20center%3B", "fetched_at": "2026-10-10T01:00:00Z", "page_sha256": "2ae5a2771bde61c8dc657c12582342078fb3d03ff191b77bd0ec89ce124b2af3" } }
-      ]
+      ],
+      "nearest_bin": { "distance_m": 1840, "ref": "osm:node/100000006", "source": { "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnwr%5B%22amenity%22%3D%22waste_basket%22%5D%3Bout%20skel%20center%3B", "fetched_at": "2026-10-10T01:00:00Z", "page_sha256": "5d2f0b8c1e7a4f3b9c6d1e2a8b7c4d5e6f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c" } },
+      "no_bin_within_3km": false
     }
   }
 }

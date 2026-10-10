@@ -66,9 +66,11 @@ class FakeFacts implements AreaFacts {
 // Validates like the Dynamo repository, so every row the job writes passes ward_scores, insights included.
 class InMemoryScores implements ScoreRepository {
   readonly rows = new Map<string, WardScores>();
+  readonly within = new Map<string, readonly string[]>();
 
-  async save(row: ComputedAreaScores): Promise<void> {
+  async save(row: ComputedAreaScores, within: readonly string[]): Promise<void> {
     this.rows.set(`${row.area.kind}:${row.area.id}`, validateWardScores(row));
+    this.within.set(`${row.area.kind}:${row.area.id}`, within);
   }
 
   async find(area: AreaKey): Promise<WardScores | null> {
@@ -98,13 +100,15 @@ describe("ScoresJob", () => {
     expect(scores.rows.get("ward:jodhpur-mc-w37")?.counts.verified_reports).toBe(6);
     expect(scores.rows.get("assembly:s20-ac-127")?.counts.verified_reports).toBe(11);
     expect(facts.asked).toContain("ward:jodhpur-mc-w37 jodhpur-mc");
+    expect(scores.within.get("ward:jodhpur-mc-w37")).toEqual(["jodhpur-mc", "rajasthan-jodhpur"]);
+    expect(scores.within.get("assembly:s20-ac-127")).toEqual(["jodhpur-mc", "rajasthan-jodhpur"]);
   });
 
   it("gives an area whose sites were all rejected a zero-count, withheld row", async () => {
     const { job, scores } = setup([site({ areas: [OTHER_WARD], verification: "rejected", verifiedCount: 0 })]);
     await job.run(NOW);
     const row = scores.rows.get("ward:jodhpur-mc-w38");
-    expect(row?.counts).toEqual({ verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0 });
+    expect(row?.counts).toEqual({ verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0, sites_without_bin_within_3km: 0 });
     expect(row?.scores.city).toEqual({ value: null, reason: "too_few_reports" });
     expect(row?.data_window).toEqual({ from: "2026-10-20T00:00:00Z", to: "2026-10-20T00:00:00Z" });
   });
@@ -112,7 +116,7 @@ describe("ScoresJob", () => {
   it("reads report times once per verified site with verified reports", async () => {
     const { job, reports, scores } = setup([
       site({ siteId: "site_v", areas: everyArea, verifiedCount: 2 }),
-      site({ siteId: "site_c", verification: "community_check", verifiedCount: 0 }),
+      site({ siteId: "site_c", verification: "unverified", verifiedCount: 0 }),
       site({ siteId: "site_z", verifiedCount: 0 }),
     ]);
     await job.run(NOW);

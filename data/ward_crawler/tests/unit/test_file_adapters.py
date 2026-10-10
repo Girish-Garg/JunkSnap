@@ -11,6 +11,7 @@ from ward_crawler.adapters.source_catalog import JsonSourceCatalog
 from ward_crawler.domain.city import CityWards
 from ward_crawler.domain.errors import SourceListError, StoreError
 from ward_crawler.domain.provenance import Sourced
+from ward_crawler.domain.stored_page import StoredPage
 from ward_crawler.domain.ward import ModelInfo, WardKey, WardRecord
 
 SOURCES = Path(__file__).resolve().parents[2] / "sources"
@@ -67,8 +68,8 @@ def test_store_will_not_overwrite_reviewed_records(tmp_path: Path) -> None:
 def test_a_broken_cache_entry_is_a_miss(tmp_path: Path) -> None:
     cache = PageCache(tmp_path)
     page = make_page("https://x.gov.in/a", "Ward 1")
-    cache.put(page)
-    assert cache.get(page.url) == page
+    cache.put(StoredPage(page, "text/html", '"v1"'))
+    assert cache.get(page.url) == StoredPage(page, "text/html", '"v1"')
 
     for entry in tmp_path.glob("*.json"):
         entry.write_text("{half", encoding="utf-8")

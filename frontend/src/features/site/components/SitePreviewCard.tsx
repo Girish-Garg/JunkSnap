@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { Button } from '../../../ui/Button';
-import { MarkerGlyph } from '../../../ui/MarkerGlyph';
+import { TypeIcon } from '../../../ui/TypeIcon';
 import { useDistanceLabel } from '../hooks/useDistanceLabel';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import '../site.css';
@@ -27,7 +27,9 @@ export function SitePreviewCard({ site, userLocation, onDetails }: SitePreviewCa
       </ul>
       <div className="preview-card__body">
         <p className="preview-card__title">
-          <MarkerGlyph type={details.report_type} size={20} />
+          <span className={`type-chip type-chip--small type-chip--${details.report_type}`}>
+            <TypeIcon type={details.report_type} size={22} />
+          </span>
           {t(`reportType.${details.report_type}`)}
         </p>
         <p className="preview-card__meta">

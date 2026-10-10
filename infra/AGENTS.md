@@ -4,7 +4,7 @@ JunkSnap runs on one Amazon EKS Auto Mode cluster, `junksnap`, in `ap-south-1`. 
 
 ## Layout
 
-- `aws/shared.yaml`: stack `junksnap-shared`, the ECR repositories `junksnap-server` and `junksnap-ml`.
+- `aws/shared.yaml`: stack `junksnap-shared`, the ECR repositories `junksnap-server`, `junksnap-ml` and `junksnap-crawler`.
 - `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: KMS key, private originals bucket (photos, scan videos, embeddings), public blurred bucket, DynamoDB tables (on demand, including `scans` and `users`), SQS queue plus dead-letter queue, the Cognito user pool and app client (email sign-in, no client secret), the Secrets Manager placeholders, the stage's EKS Pod Identity roles and CloudFront. Amazon Location Places v2 needs no resource; the worker role gets `geo-places:ReverseGeocode`.
 - `eks/`: the eksctl config for the cluster (Auto Mode, ap-south-1).
 - `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace and stage config; `deploy.py` writes `k8s/deploy/<stage>/` (gitignored) on top with the image tags and stack outputs.
@@ -17,6 +17,7 @@ JunkSnap runs on one Amazon EKS Auto Mode cluster, `junksnap`, in `ap-south-1`. 
 | `worker` | `junksnap-server` (command `node dist/handlers/worker.js`) | Deployment | none; long-polls SQS and calls `ml` over HTTP |
 | `scores` | `junksnap-server` (command `node dist/handlers/scores.js`) | CronJob | none |
 | `ml` | `junksnap-ml` (`backend/ml`) | Deployment, FastAPI | none; `POST /internal/verify` at `http://ml`, inside the cluster only |
+| `crawler` | `junksnap-crawler` (`data/ward_crawler`) | CronJob, hourly | none; crawls queued and due districts from the `crawls` table into `crawl/` |
 
 Decision 20261010-0159. CloudFront sits in front of the ALB for HTTPS. Amplify hosts the web app. Images live in ECR repositories `junksnap-server` and `junksnap-ml`. The `ml` role may read only `media/` in the public bucket and write only `embeddings/` in the private one. Environment variable names come from `contracts/README.md`; values come from the stack outputs.
 

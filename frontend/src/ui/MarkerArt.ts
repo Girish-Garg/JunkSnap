@@ -25,6 +25,12 @@ const GLYPHS: Readonly<Record<ReportType, Glyph>> = {
     colour: '#5d4037',
     glyph: '<path d="M10 4h4l4 14H6zM4 18h16v2.5H4z" fill="#fff" stroke="#fff" stroke-linejoin="round"/>',
   },
+  overflowing_bin: {
+    colour: '#7b3fa6',
+    glyph:
+      '<path d="M4.5 9.5h11M6 9.5l1 10.5h7l1-10.5M15.8 9.2l3-5.4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="9" cy="6.8" r="2" fill="#fff"/><circle cx="19" cy="18.4" r="1.8" fill="#fff"/>',
+  },
 };
 
 const SHADOW =
@@ -32,21 +38,25 @@ const SHADOW =
   '<feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#3c4043" flood-opacity="0.35"/></filter></defs>';
 
 export class MarkerArt {
-  /** Round pin: type colour, 2 px white ring, soft shadow; selected adds an accent ring. */
-  static svg(type: ReportType, sizePx: number, selected = false): string {
+  /** Round pin: type colour, 2 px white ring, soft shadow; selected adds an accent ring; hollow (unverified) is a dashed outline. */
+  static svg(type: ReportType, sizePx: number, selected = false, hollow = false): string {
     const { colour, glyph } = GLYPHS[type];
     const ring = selected ? `<circle cx="16" cy="16" r="14" fill="#fff" stroke="${ACCENT}" stroke-width="3"/>` : '';
     const radius = selected ? 10.5 : 12;
     const scale = (radius * 1.1) / 24;
     const offset = 16 - 12 * scale;
+    const disc = hollow
+      ? `<circle cx="16" cy="16" r="${radius}" fill="#fffdf8" stroke="${colour}" stroke-width="2.5" stroke-dasharray="4 3"/>`
+      : `<circle cx="16" cy="16" r="${radius}" fill="${colour}" stroke="#fff" stroke-width="2"/>`;
+    const art = hollow ? glyph.replaceAll('#fff', colour) : glyph;
     return (
       `<svg xmlns="http://www.w3.org/2000/svg" width="${sizePx}" height="${sizePx}" viewBox="0 0 32 32">${SHADOW}` +
-      `<g filter="url(#s)">${ring}<circle cx="16" cy="16" r="${radius}" fill="${colour}" stroke="#fff" stroke-width="2"/></g>` +
-      `<g transform="translate(${offset} ${offset}) scale(${scale})">${glyph}</g></svg>`
+      `<g filter="url(#s)">${ring}${disc}</g>` +
+      `<g transform="translate(${offset} ${offset}) scale(${scale})">${art}</g></svg>`
     );
   }
 
-  static dataUrl(type: ReportType, sizePx: number, selected = false): string {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(MarkerArt.svg(type, sizePx, selected))}`;
+  static dataUrl(type: ReportType, sizePx: number, selected = false, hollow = false): string {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(MarkerArt.svg(type, sizePx, selected, hollow))}`;
   }
 }

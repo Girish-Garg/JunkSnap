@@ -34,5 +34,29 @@
   "provider": "bedrock",
   "model": "global.anthropic.claude-sonnet-4-6",
   "version": "4.6",
-  "created_at": "2026-10-10T02:30:00Z"
+  "created_at": "2026-10-10T02:30:00Z",
+  "evidence": {
+    "report_count": 7,
+    "reporters": 5,
+    "verified_count": 6,
+    "first_reported_at": "2026-10-09T03:40:00Z",
+    "last_reported_at": "2026-10-10T02:14:05Z",
+    "photo_urls": [
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1.jpg",
+      "https://d111111abcdef8.cloudfront.net/media/reports/rpt_jdh_1a.jpg"
+    ],
+    "insights": {
+      "reports": 6,
+      "composition": [
+        { "material": "plastic", "share_pct": 52.5, "reports": 6 },
+        { "material": "organic", "share_pct": 24, "reports": 5 },
+        { "material": "paper", "share_pct": 9, "reports": 4 }
+      ],
+      "size_class": "medium",
+      "hazards": [],
+      "near": [{ "kind": "school", "distance_m": 83 }]
+    },
+    "nearest_bin": { "distance_m": 1840, "ref": "osm:node/100000006", "source_url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%3Bnwr%5B%22amenity%22%3D%22waste_basket%22%5D%3Bout%20skel%20center%3B" },
+    "no_bin_within_3km": false
+  }
 }

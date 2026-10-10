@@ -1,5 +1,6 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
 import { coordinates, joinList, letterDate } from "./utils.js";
 
@@ -16,6 +17,8 @@ const WHAT: Readonly<Record<SiteContext, string>> = {
   choked_drain: "बंद नाली",
   uncovered_debris: "खुला पड़ा निर्माण मलबा",
   dusty_site: "धूल भरा निर्माण स्थल",
+  overflowing: "भरा हुआ कूड़ेदान, आसपास फैला कचरा",
+  damaged: "टूटा, जला या बिना ढक्कन का कूड़ेदान",
 };
 
 const REQUEST: Readonly<Record<ReportType, string>> = {
@@ -23,6 +26,7 @@ const REQUEST: Readonly<Record<ReportType, string>> = {
   no_bin: "अनुरोध है कि यहाँ कूड़ेदान लगाए जाएँ और नियमित कचरा संग्रह की व्यवस्था की जाए।",
   contaminated_water: "अनुरोध है कि यहाँ के पानी और नालियों की सफ़ाई कराई जाए और प्रदूषण के स्रोत की जाँच की जाए।",
   open_construction: "अनुरोध है कि मलबे को ढका या हटाया जाए और धूल नियंत्रण के उपाय लागू कराए जाएँ।",
+  overflowing_bin: "कृपया कूड़ेदान को नियमित रूप से खाली कराएँ और उसकी मरम्मत कराएँ या उसे बदलवाएँ।",
 };
 
 const OFFICE: Readonly<Record<CcLine["office"], string>> = {
@@ -34,6 +38,11 @@ const OFFICE: Readonly<Record<CcLine["office"], string>> = {
 // Hindi prose for the template; phrases avoid case endings so each WHAT entry fits every slot.
 export class HindiWording implements TemplateWording {
   readonly language = "hi";
+  readonly #binRadiusM: number;
+
+  constructor(binRadiusM = 3000) {
+    this.#binRadiusM = binRadiusM;
+  }
 
   subject(site: LetterSite): string {
     return `अनुरोध: ${site.place.name()} में ${WHAT[site.context]} (JunkSnap site ${site.siteId})`;
@@ -61,7 +70,10 @@ export class HindiWording implements TemplateWording {
   }
 
   request(site: LetterSite): string {
-    return REQUEST[site.reportType];
+    if (site.reportType !== "no_bin") {
+      return REQUEST[site.reportType];
+    }
+    return `${new NoBinStatement(this.#binRadiusM).hindi(site)} ${REQUEST.no_bin}`;
   }
 
   closing(cc: readonly CcLine[]): string {

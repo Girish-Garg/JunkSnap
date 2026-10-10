@@ -26,9 +26,11 @@ ROLLOUT_WAIT_SECONDS = {"api": 300, "ml": 600, "worker": 300}
 IMAGES = {
     "junksnap-server": (("backend/server",), "ServerRepositoryUri"),
     "junksnap-ml": (("backend/ml", "backend/agent"), "MlRepositoryUri"),
+    "junksnap-crawler": (("data/ward_crawler",), "CrawlerRepositoryUri"),
 }
-# image -> named build contexts (name=repo folder); the server image copies data/ into /app/data.
-BUILD_CONTEXTS = {"junksnap-server": ("data=data",)}
+# image -> named build contexts (name=repo folder); the server image copies data/ into /app/data,
+# the crawler image the ward_record schema from contracts/.
+BUILD_CONTEXTS = {"junksnap-server": ("data=data",), "junksnap-crawler": ("contracts=contracts",)}
 # ConfigMap variable (contracts/README.md) -> junksnap-<stage> output
 CONFIG_FROM_OUTPUTS = {
     "REPORTS_TABLE": "ReportsTableName",
@@ -39,6 +41,7 @@ CONFIG_FROM_OUTPUTS = {
     "VOTES_TABLE": "VotesTableName",
     "DEVICES_TABLE": "DevicesTableName",
     "SCORES_TABLE": "ScoresTableName",
+    "CRAWLS_TABLE": "CrawlsTableName",
     "ORIGINALS_BUCKET": "OriginalsBucketName",
     "PUBLIC_BUCKET": "PublicBucketName",
     "PUBLIC_BASE_URL": "PublicBaseUrl",
@@ -121,7 +124,7 @@ class StageDeployer:
         return deploy_stack(self._namespace, "infra/aws/stage.yaml", params + tags)
 
     def _push_images(self, repos: dict[str, str]) -> str:
-        """Build and push both images for linux/amd64; return the tag."""
+        """Build and push every image for linux/amd64; return the tag."""
         tag = run(["git", "rev-parse", "--short", "HEAD"])
         if run(["git", "status", "--porcelain", "--", "backend", "data"]):
             tag += "-dirty"

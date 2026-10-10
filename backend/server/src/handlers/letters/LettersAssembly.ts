@@ -2,7 +2,16 @@ import { AssetFiles } from "../../adapters/letters/AssetFiles.js";
 import { RoutingRepository } from "../../adapters/letters/RoutingRepository.js";
 import { RuleRepository } from "../../adapters/letters/RuleRepository.js";
 import { ConfigError } from "../../domain/errors.js";
+import type { RuleBook } from "../../domain/letters/RuleBook.js";
+import type { AreaLetterBrief, AreaLetterWriter } from "../../ports/letters/AreaLetterWriter.js";
+import type { AreaLetterSites } from "../../ports/letters/AreaLetterSites.js";
+import { AreaEnglishWording } from "../../services/letters/AreaEnglishWording.js";
+import { AreaHindiWording } from "../../services/letters/AreaHindiWording.js";
+import { AreaLetterRouter } from "../../services/letters/AreaLetterRouter.js";
+import { AreaLetterService, type AreaLetterParts } from "../../services/letters/AreaLetterService.js";
+import { AreaTemplateLetter } from "../../services/letters/AreaTemplateLetter.js";
 import type { Logger } from "../../ports/Logger.js";
+import { BinSettings } from "../../settings/BinSettings.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
 import type { LetterWriter } from "../../ports/letters/LetterWriter.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
@@ -13,6 +22,7 @@ import { HindiWording } from "../../services/letters/HindiWording.js";
 import { LetterRateLimiter, type LetterCounters } from "../../services/letters/LetterRateLimiter.js";
 import { LetterRouter } from "../../services/letters/LetterRouter.js";
 import { LetterService } from "../../services/letters/LetterService.js";
+import { NoBinEligibility } from "../../services/letters/NoBinEligibility.js";
 import { ProseDrafter } from "../../services/letters/ProseDrafter.js";
 import { QuoteVerifier } from "../../services/letters/QuoteVerifier.js";
 import { TemplateLetter } from "../../services/letters/TemplateLetter.js";
@@ -25,22 +35,29 @@ export interface LettersAdapters {
   readonly stamp: LetterStamp;
 }
 
+export interface AreaLettersAdapters {
+  readonly sites: AreaLetterSites;
+  readonly scores: AreaLetterParts["scores"];
+  readonly counters: LetterCounters;
+  readonly writer: AreaLetterWriter;
+  readonly stamp: LetterStamp;
+}
+
 export class LettersAssembly {
   readonly #rulesDir: string;
   readonly #logger: Logger;
+  readonly #bins: BinSettings;
 
-  constructor(rulesDir: string, logger: Logger) {
+  constructor(rulesDir: string, logger: Logger, bins: BinSettings = BinSettings.fromEnv({})) {
     this.#rulesDir = rulesDir;
     this.#logger = logger;
+    this.#bins = bins;
   }
 
   async service(adapters: LettersAdapters): Promise<LetterService> {
-    const files = new AssetFiles(this.#rulesDir);
-    const book = await new RuleRepository(files).load();
-    const routing = await new RoutingRepository(files).load();
-    const quotes = new QuoteVerifier(book);
-    LettersAssembly.#audit(quotes);
-    const template = new TemplateLetter([new EnglishWording(), new HindiWording()]);
+    const { book, quotes } = await this.#rules();
+    const routing = await new RoutingRepository(new AssetFiles(this.#rulesDir)).load();
+    const template = new TemplateLetter([new EnglishWording(this.#bins.radiusM), new HindiWording(this.#bins.radiusM)]);
     return new LetterService({
       sites: adapters.sites,
       router: new LetterRouter(routing),
@@ -49,7 +66,33 @@ export class LettersAssembly {
       limiter: new LetterRateLimiter(adapters.counters),
       drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
+      noBin: new NoBinEligibility(this.#bins.radiusM),
     });
+  }
+
+  async areaService(adapters: AreaLettersAdapters): Promise<AreaLetterService> {
+    const { book, quotes } = await this.#rules();
+    const radius = this.#bins.radiusM;
+    const template = new AreaTemplateLetter([new AreaEnglishWording(radius), new AreaHindiWording(radius)]);
+    const verifier = new DraftVerifier(quotes, book, new WordingCheck());
+    return new AreaLetterService({
+      sites: adapters.sites,
+      scores: adapters.scores,
+      router: new AreaLetterRouter(),
+      picker: new ClausePicker(book),
+      quotes,
+      limiter: new LetterRateLimiter(adapters.counters),
+      drafter: new ProseDrafter<AreaLetterBrief>(adapters.writer, verifier, template, this.#logger),
+      stamp: adapters.stamp,
+      logger: this.#logger,
+    });
+  }
+
+  async #rules(): Promise<{ book: RuleBook; quotes: QuoteVerifier }> {
+    const book = await new RuleRepository(new AssetFiles(this.#rulesDir)).load();
+    const quotes = new QuoteVerifier(book);
+    LettersAssembly.#audit(quotes);
+    return { book, quotes };
   }
 
   static #audit(quotes: QuoteVerifier): void {

@@ -31,7 +31,7 @@ from PIL import Image
 
 TIMEOUT_S = 30
 POLL_EVERY_S = 3
-FINAL = {"verified", "community_check", "rejected", "needs_review"}
+FINAL = {"unverified", "verified", "community_check", "rejected", "needs_review"}
 NOISE_SIZE = (640, 480)
 JODHPUR_BBOX = "72.95,26.2,73.1,26.35"
 UNAUTHORIZED = 401

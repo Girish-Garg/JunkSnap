@@ -36,13 +36,15 @@
     "close": "Close filters",
     "mapView": "Map view",
     "types": "Report types",
-    "verifiedOnly": "Verified only",
     "mode": {
       "auto": "Auto",
       "pins": "Pins",
       "heat": "Heat"
     },
-    "sampleNote": "Sample data: these are test sites, not live reports."
+    "sampleNote": "Sample data: these are test sites, not live reports.",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "verifiedOnly": "Verified only"
   },
   "map": {
     "label": "Map of reported waste sites",
@@ -57,6 +59,7 @@
     "offline": "Offline. Showing what was loaded.",
     "loadFailed": "Could not load sites.",
     "locationDenied": "Location is blocked in your browser.",
+    "locationDeniedApp": "Location is blocked for JunkSnap.",
     "locationUnavailable": "Could not find your location.",
     "filteredEmpty": "No sites match. Turn a filter off.",
     "zoomIn": "Zoom in to see every site here.",
@@ -74,7 +77,8 @@
     "waste_dump": "Waste dump",
     "no_bin": "No bin or pickup",
     "contaminated_water": "Contaminated water",
-    "open_construction": "Open construction"
+    "open_construction": "Open construction",
+    "overflowing_bin": "Overflowing or broken bin"
   },
   "context": {
     "vacant_plot": "Vacant plot",
@@ -88,7 +92,9 @@
     "foam": "Foam",
     "choked_drain": "Choked drain",
     "uncovered_debris": "Uncovered debris",
-    "dusty_site": "Dusty site"
+    "dusty_site": "Dusty site",
+    "overflowing": "Overflowing",
+    "damaged": "Broken, burnt or no lid"
   },
   "status": {
     "open": "Open",
@@ -97,8 +103,9 @@
   },
   "verification": {
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
-    "rejected": "Rejected after a neighbour check"
+    "rejected": "Rejected after a neighbour check",
+    "unverified": "Unverified",
+    "community_check": "Waiting for a neighbour check"
   },
   "actions": {
     "label": "Site actions",
@@ -108,7 +115,6 @@
     "letter": "Letter",
     "share": "Share",
     "copied": "Copied",
-    "soon": "Coming soon: Confirm, Me too, Cleaned and Letter.",
     "soonOne": "{{action}} is coming soon."
   },
   "site": {
@@ -132,7 +138,7 @@
     "localBody": "Local body",
     "notKnown": "Not known",
     "ward": "Ward",
-    "noWard": "No open ward map",
+    "noWard": "Not mapped yet; letters go to the city-wide body",
     "assemblySeat": "Assembly seat (MLA)",
     "loksabhaSeat": "Lok Sabha seat (MP)",
     "history": "History",
@@ -141,7 +147,20 @@
     "lastCleared": "Last cleared",
     "brands": "Packaging seen at this site",
     "noAssembly": "No assembly map here yet",
-    "seatOutdated": "Boundary out of date"
+    "seatOutdated": "Boundary out of date",
+    "district": "District",
+    "evidence": "Who reported it",
+    "reporters_one": "{{count}} person reported this",
+    "reporters_other": "{{count}} people reported this",
+    "bin": {
+      "nearest": "Nearest known bin: {{distance}} (OpenStreetMap)",
+      "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
+      "notMapped": "Bins not mapped here yet",
+      "mappedNear": "A mapped bin is {{distance}} away (OpenStreetMap)"
+    },
+    "noWardLine": "Ward: not mapped yet; letters go to the city-wide body",
+    "noWardShort": "Not mapped yet",
+    "noWardLineShort": "Ward: not mapped yet"
   },
   "snap": {
     "title": "Report a waste site",
@@ -163,6 +182,7 @@
     },
     "gpsWeak": "Wait a moment or step into the open for a better fix.",
     "gpsNeeded": "The report needs your location. Allow location in the browser settings.",
+    "gpsNeededApp": "The report needs your location. Tap Open app settings, then Permissions, Location, Allow.",
     "guest": "You are signed out. Photos wait on this phone until you sign in.",
     "signIn": "Sign in",
     "sample": "Sample mode: reports stay on this phone and are not sent.",
@@ -185,6 +205,13 @@
       "checked": "Photo checked"
     },
     "tryAgain": "Try again",
+    "openSettings": "Open app settings",
+    "helpApp": {
+      "camera_denied": [
+        "Tap Try again and choose Allow when Android asks.",
+        "If Android no longer asks, tap Open app settings, then Permissions, Camera, Allow."
+      ]
+    },
     "waitingForGps": "Waiting for your location before the first photo.",
     "help": {
       "camera_denied": [
@@ -204,14 +231,16 @@
     "mode": {
       "label": "Capture",
       "photo": "Photo",
-      "video": "Video"
+      "video": "Video",
+      "nobin": "No bin here"
     }
   },
   "account": {
     "title": "Account",
     "close": "Close account",
     "signedInAs": "Signed in as {{email}}",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "howItWorks": "How JunkSnap works"
   },
   "auth": {
     "close": "Close",
@@ -280,8 +309,99 @@
   },
   "areas": {
     "title": "Areas",
-    "soon": "Ward and seat scores come in the next build. A score shows only after 10 verified reports.",
-    "close": "Close areas"
+    "close": "Close areas",
+    "closeArea": "Close area",
+    "intro": "Scores for wards, seats and districts. A score shows only after 10 verified reports.",
+    "search": "Find an area",
+    "none": "No areas on the map yet. Move the map to a place with reports.",
+    "noMatch": "No area on the map matches that name.",
+    "sitesOnMap": "Sites on the map: {{n}}",
+    "all": "All areas",
+    "loading": "Loading area",
+    "loadFailed": "Could not load this area.",
+    "missing": "No reports in this area yet.",
+    "kind": {
+      "ward": "Ward",
+      "assembly": "Assembly seat (MLA)",
+      "loksabha": "Lok Sabha seat (MP)",
+      "district": "District"
+    },
+    "kinds": {
+      "ward": "Wards",
+      "assembly": "Assembly seats",
+      "loksabha": "Lok Sabha seats",
+      "district": "Districts"
+    },
+    "scores": "Scores",
+    "score": {
+      "city": "City response",
+      "citizen": "Citizen care",
+      "bin_access": "Bin access"
+    },
+    "scoreHint": {
+      "city": "How fast reported sites are cleared",
+      "citizen": "How rarely waste is dumped here",
+      "bin_access": "How close bins and pickup are"
+    },
+    "withheld": "No score yet",
+    "basedOn": "From {{n}} verified reports",
+    "notEnough": "Not enough reports yet ({{n}} of {{min}} verified)",
+    "noData": "Can't be measured here yet · {{n}} verified reports",
+    "diagnosisTitle": "What the reports show",
+    "diagnosis": {
+      "infrastructure_gap": {
+        "title": "Too few bins",
+        "text": "Waste is dumped, and bins or pickup are far away."
+      },
+      "behaviour": {
+        "title": "Dumping near bins",
+        "text": "Bins and pickup are close, but waste is still dumped."
+      },
+      "city_response": {
+        "title": "Slow clearing",
+        "text": "Reported sites take more than a week to clear."
+      },
+      "repeat_spot": {
+        "title": "Repeat spots",
+        "text": "Waste comes back to sites after they are cleared."
+      }
+    },
+    "counts": "Counts",
+    "count": {
+      "verified_reports": "Verified reports",
+      "no_bin_reports": "No-bin reports (verified)",
+      "sites": "Sites",
+      "open_sites": "Open sites",
+      "cleaned_sites": "Cleared sites",
+      "reopened_sites": "Reopened sites"
+    },
+    "composition": "What the waste is made of",
+    "compositionFrom": "Mean share over {{n}} verified reports, as estimated by the models.",
+    "material": {
+      "plastic": "Plastic",
+      "organic": "Organic",
+      "construction_debris": "Construction debris",
+      "paper": "Paper",
+      "glass": "Glass",
+      "metal": "Metal",
+      "textile": "Cloth",
+      "e_waste": "E-waste",
+      "medical": "Medical waste"
+    },
+    "insights": "Hazards and nearby places",
+    "insight": {
+      "hazards": "Sites with a hazard",
+      "near": "Sites near a school or water",
+      "repeat": "Repeat spots"
+    },
+    "ofSites": "{{part}} of {{whole}} sites",
+    "sitesTitle": "Sites on the map in this area",
+    "footnote": "Reports from {{from}} to {{to}}. Updated {{computed}}. Formula {{version}}. Scores describe the whole area, never a person.",
+    "crawl": {
+      "collecting": "We're collecting official ward data for this area. Scores appear after enough verified reports and once ward data is in.",
+      "expected": "Expected by {{date}}"
+    },
+    "noneTitle": "No areas on the map yet"
   },
   "activity": {
     "title": "Activity",
@@ -295,7 +415,8 @@
     "noPhoto": "Blurred photo not ready yet",
     "photoAlt": "Blurred photo of your report",
     "videos": "Videos",
-    "photos": "Photos"
+    "photos": "Photos",
+    "emptyTitle": "Nothing sent yet"
   },
   "queue": {
     "waiting_one": "{{count}} report waiting to send",
@@ -312,9 +433,10 @@
     "queued": "In line for checking",
     "processing": "Checking the photo",
     "verified": "Verified",
-    "community_check": "Waiting for a neighbour check",
     "rejected": "Not accepted after checking",
-    "needs_review": "Needs a manual check"
+    "needs_review": "Needs a manual check",
+    "unverified": "Waiting for 10 people to confirm",
+    "community_check": "Waiting for a neighbour check"
   },
   "scan": {
     "record": "Start recording",
@@ -352,5 +474,301 @@
       "done": "Done",
       "failed": "This video could not be used"
     }
+  },
+  "vote": {
+    "title": "Is this a waste site?",
+    "text": "Neighbours confirm reports. Your vote counts when you are within 1 km of the site.",
+    "yes": "Yes, it's waste",
+    "no": "No",
+    "thanks": "Thanks. Votes now: {{yes}} yes, {{no}} no.",
+    "errors": {
+      "own_site": "You reported this site, so your vote is not counted here.",
+      "site_rejected": "This site was hidden after a neighbour check, so it takes no more votes.",
+      "too_far": "Votes count only within 1 km of the site. Go closer and try again.",
+      "location": "Your location is needed to vote. Allow location in the browser settings.",
+      "rate_limited": "Too many tries. Wait a little and try again.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The vote did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    },
+    "noBin": {
+      "title": "Is there no dustbin within 1 km?",
+      "text": "Neighbours confirm no-bin zones. Your answer counts when you are within 1 km.",
+      "yes": "I confirm there's no bin within 1 km"
+    }
+  },
+  "cleanup": {
+    "title": "Report cleaned",
+    "sentTitle": "Cleanup photo sent",
+    "close": "Close cleanup",
+    "text": "Take a photo of the cleared place from where the waste was. It must be within 50 m of the site.",
+    "photoAlt": "Your photo of the cleared place",
+    "send": "Send cleanup photo",
+    "sending": "Sending",
+    "backToSite": "Back to the site",
+    "status": {
+      "checking": "Being checked",
+      "accepted": "Cleared",
+      "rejected": "Not accepted"
+    },
+    "statusText": {
+      "checking": "The photo is blurred and checked like any report. The site shows as cleared once it passes.",
+      "accepted": "The site is now marked cleared. It reopens if someone reports waste here again.",
+      "rejected": "The photo did not show a cleared site, or it was taken too far away."
+    },
+    "errors": {
+      "cleanup_pending": "A cleanup photo for this site is already being checked.",
+      "already_cleaned": "This site is already marked cleared.",
+      "rate_limited": "Too many tries. Wait a little and try again.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The photo did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    }
+  },
+  "letter": {
+    "title": "Draft letter",
+    "close": "Close letter",
+    "noAutoSend": "Draft for you to file. JunkSnap never sends or files anything.",
+    "sample": "Sample mode: this is the sample letter, with placeholder quotes.",
+    "intro": "JunkSnap drafts a letter to the local body, with copies to the elected offices for this place, and quotes the rules word for word.",
+    "language": "Letter language",
+    "draft": "Draft letter",
+    "drafting": "Drafting",
+    "wait": "This can take up to a minute.",
+    "print": "Print or save as PDF",
+    "copy": "Copy text",
+    "copied": "Copied",
+    "openPortal": "Open the filing portal",
+    "another": "Draft again",
+    "to": "To",
+    "ccLabel": "Copy",
+    "subject": "Subject",
+    "citations": "Rules quoted",
+    "clause": "clause",
+    "hash": "SHA-256 of the official text",
+    "verified": "{{verified}} of {{total}} quotes verified word for word",
+    "templateFallback": "Template letter: the drafted wording did not pass the quote check, so the standard letter with the same verified quotes is used.",
+    "residentFiles": "This letter is filed by a resident. JunkSnap does not send or file it.",
+    "cc": {
+      "councillor": "Ward councillor, {{seat}} (for attention)",
+      "mla": "MLA, {{seat}} assembly seat (for attention)",
+      "mp": "MP, {{seat}} Lok Sabha seat (for attention)"
+    },
+    "errors": {
+      "not_verified": "Letters open once the site is verified.",
+      "no_local_body": "No local body is known for this place yet, so there is no one to address.",
+      "rate_limited": "You can draft 5 letters an hour. Try again later.",
+      "not_found": "This site was not found.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "The letter could not be drafted. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    },
+    "copyFailed": "Could not copy. Select the letter text and copy it yourself.",
+    "evidence": {
+      "title": "Evidence",
+      "reports": "Reports",
+      "reporters": "People who reported",
+      "notCounted": "Not counted",
+      "verified": "Verified reports",
+      "first": "First reported",
+      "last": "Last reported",
+      "photoAlt": "Blurred photo {{n}}",
+      "material": "{{material}} about {{pct}}% ({{count}} reports)",
+      "size": {
+        "small": "Small pile",
+        "medium": "Medium pile",
+        "large": "Large pile"
+      },
+      "hazard": "Hazard seen: {{hazard}}",
+      "hazards": {
+        "burning": "burning",
+        "medical_waste": "medical waste",
+        "e_waste": "e-waste",
+        "dead_animal": "dead animal",
+        "chemicals": "chemicals"
+      },
+      "near": {
+        "school": "Near a school, {{distance}} (OpenStreetMap)",
+        "hospital": "Near a hospital, {{distance}} (OpenStreetMap)",
+        "water": "Near a water body, {{distance}} (OpenStreetMap)",
+        "drain": "Near an open drain, {{distance}} (OpenStreetMap)"
+      }
+    },
+    "areaEvidence": {
+      "score": "{{name}}: {{value}}/100 (from {{n}} verified reports)",
+      "sitesTitle": "Worst sites",
+      "site": "{{type}}, {{context}} · {{status}}: {{reports}} reports, {{verified}} verified",
+      "siteDates": "Reported from {{first}} to {{last}}",
+      "bins": "{{n}} of {{m}} measured sites have no known bin within 3 km (OpenStreetMap, ward records)"
+    }
+  },
+  "boundaries": {
+    "layer": {
+      "ward": "Wards",
+      "assembly": "Assembly",
+      "loksabha": "Lok Sabha"
+    },
+    "legend": "Map colours",
+    "tooltipScore": "{{name}}: score {{n}} of 100",
+    "tooltipReports_one": "{{name}}: {{n}} verified report, no score yet",
+    "tooltipReports_other": "{{name}}: {{n}} verified reports, no score yet",
+    "tooltipNone": "{{name}}: no verified reports yet",
+    "keyScore": "Marker: score out of 100",
+    "keyCount": "Marker: number of verified reports",
+    "areasLine": "Seats coloured by score where 10+ verified reports, else grey by report count.",
+    "legendChip": "Legend",
+    "caveat": "Scores show after 10 verified reports",
+    "outdated": "Dashed outline: seat boundary out of date"
+  },
+  "ranking": {
+    "open": "City ranking",
+    "title": "{{city}} ranking",
+    "close": "Close ranking",
+    "intro": "Areas worst first by the mean of their shown scores. A score shows only after 10 verified reports; areas without one come last, unranked.",
+    "cityLabel": "City",
+    "kindLabel": "Area type",
+    "city": {
+      "jodhpur": "Jodhpur",
+      "jaipur": "Jaipur"
+    },
+    "listLabel": "Areas, worst first",
+    "rank": "Rank {{n}}",
+    "unranked": "Not ranked",
+    "meanOf": "Mean of {{k}} shown scores",
+    "notEnough": "Not enough reports ({{n}} of {{min}})",
+    "noData": "Can't be measured here yet",
+    "reports": "{{n}} verified reports",
+    "loading": "Loading ranking",
+    "loadFailed": "Could not load the ranking.",
+    "empty": "No areas of this type have reports in this city yet.",
+    "footnote": "Showing {{shown}} of {{total}} areas. Today's scores only; no history is shown."
+  },
+  "backers": {
+    "label": "{{count}} of {{needed}} people confirmed",
+    "detail": "{{photos}} by photo, {{votes}} by vote",
+    "done": "Verified by {{count}} people",
+    "badge": "{{count}}/{{needed}}"
+  },
+  "areaLetter": {
+    "button": "Draft a letter about this area",
+    "short": "Letter",
+    "title": "Letter about this area",
+    "titleFor": "Letter about {{name}}",
+    "issue": "What the letter is about",
+    "issues": {
+      "waste_dump": "Waste dumps",
+      "no_bin": "No bin",
+      "contaminated_water": "Contaminated water",
+      "open_construction": "Open construction",
+      "overflowing_bin": "Overflowing or broken bins",
+      "all": "All issues"
+    }
+  },
+  "viewer": {
+    "label": "Photo {{n}} of {{total}}",
+    "count": "{{n}} / {{total}}",
+    "open": "Open photo",
+    "close": "Close photo",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "taken": "Taken {{date}}",
+    "reported": "Reported {{date}}",
+    "blurred": "Faces and number plates are blurred."
+  },
+  "desktop": {
+    "scan": "Scan a street",
+    "report": "Report",
+    "close": "Close",
+    "reportTitle": "Report from your phone",
+    "reportText": "Snapping needs your phone's camera and GPS. Point your phone at this code to open JunkSnap there, then tap Report.",
+    "scanTitle": "Scan from your phone",
+    "scanText": "A scan is a short video of a street, recorded on your phone as you walk. Point your phone at this code to open JunkSnap there.",
+    "qrLabel": "QR code that opens JunkSnap on your phone",
+    "steps": "Works in any phone browser. No app store needed."
+  },
+  "panel": {
+    "title": "In view",
+    "text": "Reports on the map right now. Pick one to see its photos, place and letter.",
+    "emptyTitle": "All clear here",
+    "emptyText": "No reports in this part of the map. Move the map or zoom out."
+  },
+  "onboarding": {
+    "label": "How JunkSnap works",
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "done": "Explore the map",
+    "signIn": "Sign in to report",
+    "step": "Card {{n}} of {{total}}",
+    "why": {
+      "title": "Waste piles up for three reasons",
+      "text": "Sometimes collection misses a street. Sometimes there is nowhere legal to put waste. And sometimes it gets left on an empty plot. JunkSnap measures all three, so the fix fits the cause."
+    },
+    "how": {
+      "title": "From your photo to the map",
+      "steps": [
+        "Snap a photo or scan a street with the in-app camera.",
+        "Faces and number plates are blurred before anyone sees it.",
+        "Our models check that it really is waste.",
+        "It joins a site on the map, with its ward, MLA seat and MP seat.",
+        "Neighbours nearby confirm it."
+      ]
+    },
+    "chain": {
+      "title": "Who looks after a site",
+      "text": "Every site shows the offices responsible for it. Offices only, never a person's name.",
+      "you": "Your report",
+      "youText": "It starts here",
+      "body": "Local body (Municipal Corporation)",
+      "bodyText": "Collects and clears the waste",
+      "councillor": "Ward councillor",
+      "councillorText": "Follows up for the ward",
+      "mla": "MLA",
+      "mlaText": "Takes it up for the assembly seat",
+      "mp": "MP",
+      "mpText": "Takes it up for the Lok Sabha seat",
+      "letter": "JunkSnap drafts a letter that quotes the rules word for word. You send it yourself."
+    },
+    "start": {
+      "title": "Fair scores, open to everyone",
+      "scores": "Every area score shows its counts, and appears only after 10 verified reports. Jodhpur is the pilot city, so its data goes deepest.",
+      "text": "Anyone can explore the map and the areas. To snap, scan, confirm or draft a letter, sign in first."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "edgeHints": "On-device hints",
+    "edgeHintsNote": "Boxes in the camera from a small model on this phone. Only hints: the server checks every photo again."
+  },
+  "edge": {
+    "loading": "Getting hints ready",
+    "spotted": "Waste spotted",
+    "pointAt": "Point at the waste",
+    "class": {
+      "waste_pile": "Pile",
+      "bag": "Bag",
+      "bin": "Bin",
+      "burning": "Burning",
+      "waste_item": "Waste"
+    }
+  },
+  "nobin": {
+    "title": "No dustbin within 1 km of here?",
+    "text": "Report it from where you stand. 10 different people make it a verified no-bin zone.",
+    "send": "There is no dustbin within 1 km of here",
+    "accuracy": "Location accurate to {{metres}} m",
+    "tooVague": "Location is only accurate to {{metres}} m; move into the open until it is 50 m or better.",
+    "waiting": "Finding your location",
+    "photo": "Add a photo instead (optional)",
+    "sending": "Sending",
+    "sent": "Thanks. Your report joins the no-bin zone here.",
+    "signIn": "Sign in to report a missing bin.",
+    "failed": "Could not send. Check your connection and try again."
   }
 }

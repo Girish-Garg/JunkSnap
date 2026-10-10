@@ -1,11 +1,14 @@
+import { Backers } from "./Backers.js";
 import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
+import { mergeRadiusM, publishedPoint, zoneCentre } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
 import {
   AlreadyCleanedError,
   CleanupPendingError,
   InvalidTransitionError,
   OwnSiteError,
+  SiteRejectedError,
   TooFarError,
 } from "./SiteErrors.js";
 import type { SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, Voter, VoteResult } from "./SiteTypes.js";
@@ -13,12 +16,12 @@ import { SiteTemplate } from "./SiteTemplate.js";
 import { earlierTime, laterTime, mergeBrands, newestPhotos, withItem } from "./utils.js";
 import type { VoteTally } from "./VoteTally.js";
 
-export const MERGE_RADIUS_M = 40;
 const VOTE_RADIUS_M = 1000;
 
-// Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (an auto-verified report merges in).
+// Lifecycle: open -> cleaned (accepted after-photo only) -> reopened (a new photo merges in).
+// Verification: unverified -> verified at 10 backers, or rejected by the no-vote valve (decision 20261010-1530).
 export class Site {
-  readonly #point: GeoPoint;
+  #point: GeoPoint;
   #props: SiteProperties;
   #internals: SiteInternals;
 
@@ -64,6 +67,10 @@ export class Site {
     return this.#internals.embeddingKey;
   }
 
+  get needsBackerCount(): boolean {
+    return this.#internals.needsBackerCount;
+  }
+
   get version(): number {
     return this.#internals.version;
   }
@@ -76,16 +83,13 @@ export class Site {
     return this.#props.verification !== "rejected";
   }
 
-  // Same type, within 40 m, not rejected; a cleaned site only takes an auto-verified report.
+  // Same type, within 40 m, not rejected; the models already passed the photo.
   accepts(report: MergeableReport): boolean {
-    const { report_type, verification, status } = this.#props;
+    const { report_type, verification } = this.#props;
     if (report_type !== report.reportType || verification === "rejected") {
       return false;
     }
-    if (status === "cleaned" && !report.autoVerified) {
-      return false;
-    }
-    return this.#point.distanceTo(report.point) <= MERGE_RADIUS_M;
+    return this.#point.distanceTo(report.point) <= mergeRadiusM(report_type);
   }
 
   merge(report: MergeableReport): void {
@@ -97,15 +101,20 @@ export class Site {
     }
     this.#addReporter(report);
     this.#addEvidence(report);
-    if (report.autoVerified) {
-      this.#confirmByReport();
-      this.#refreshInsights();
+    if (this.#props.report_type === "no_bin") {
+      this.#point = zoneCentre(this.#internals.reports, this.#point);
     }
+    this.#adoptBinMeasure(report);
+    this.#reopenIfCleaned();
+    this.#settle();
     this.#recount();
   }
 
-  // own_site (same user or same device) is checked before distance (contracts/README.md).
+  // A rejected site takes no votes; own_site (same user or device) is checked before distance.
   admitVoter(voter: Voter, from: GeoPoint): void {
+    if (!this.isListed()) {
+      throw new SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
+    }
     if (this.#reportedBy(voter)) {
       throw new OwnSiteError("You reported this site, so a neighbour has to check it");
     }
@@ -114,16 +123,21 @@ export class Site {
     }
   }
 
-  // Votes always count as corroborations but settle the site only during the community check.
+  // Votes always count, but only an unverified site can change verification.
   recordVotes(tally: VoteTally): void {
-    const before = this.#props;
-    const settled = before.verification === "community_check" ? tally.outcome() : null;
-    const votes = { confirm: tally.confirm, reject: tally.reject };
-    this.#props = { ...before, votes, verification: settled ?? before.verification };
-    if (settled === "verified") {
-      this.#confirmPendingReports();
-    }
+    this.#props = { ...this.#props, votes: { confirm: tally.confirm, reject: tally.reject } };
+    this.#internals = { ...this.#internals, yesVoters: tally.yesPeople, noVoters: tally.noPeople };
+    this.#settle();
     this.#recount();
+  }
+
+  // Migration to decision 20261010-1530: recounts from the stored photos and votes, forgetting the old verdict.
+  rebuild(tally: VoteTally): void {
+    const reports = this.#internals.reports.map((report) => ({ ...report, verified: false }));
+    this.#internals = { ...this.#internals, reports, needsBackerCount: false, verifiedBackers: null };
+    this.#props = { ...this.#props, verification: "unverified", verified_count: 0 };
+    this.#refreshInsights();
+    this.recordVotes(tally);
   }
 
   startCleanup(cleanupId: string): void {
@@ -158,41 +172,44 @@ export class Site {
   }
 
   voteResult(): VoteResult {
-    const { site_id, votes, verification } = this.#props;
-    return { site_id, votes, verification };
+    const { site_id, votes, backers, verification } = this.#props;
+    return { site_id, votes, backers, verification };
   }
 
+  // The public Feature: a no-bin zone with one backer shows its centre only to about 100 m (decision 20261010-1630).
   toFeature(): SiteFeature {
-    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
-    return { type: "Feature", geometry, properties: this.#props };
+    const shown = publishedPoint(this.#point, this.#props);
+    return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties: this.#props };
   }
 
+  // The stored state keeps the exact centre; zones merge on it.
   snapshot(): SiteState {
-    return { feature: this.toFeature(), internals: this.#internals };
+    const geometry = { type: "Point", coordinates: this.#point.coordinates() } as const;
+    return { feature: { type: "Feature", geometry, properties: this.#props }, internals: this.#internals };
   }
 
   #addReporter(report: MergeableReport): void {
     const { reports, reporterDevices, reporterUsers, meTooCount, embeddingKey } = this.#internals;
     const meToo = report.meTooSiteId === this.siteId && !this.#reportedBy(report);
-    const merged = { reportId: report.reportId, verified: report.autoVerified, insights: report.insights };
+    const point = { lat: report.point.lat, lon: report.point.lon };
+    const merged = { reportId: report.reportId, verified: false, insights: report.insights, point };
     this.#internals = {
       ...this.#internals,
       reports: [...reports, merged],
       reporterDevices: withItem(reporterDevices, report.deviceToken),
       reporterUsers: report.userId === null ? reporterUsers : withItem(reporterUsers, report.userId),
+      reporterIds: withItem(this.#internals.reporterIds, report.userId ?? report.deviceToken),
       meTooCount: meTooCount + (meToo ? 1 : 0),
       embeddingKey: embeddingKey ?? report.embeddingKey,
     };
   }
 
-  // verified_count: docs/decisions/20261010-0253-hem-verified-count.md.
   #addEvidence(report: MergeableReport): void {
     const props = this.#props;
     const photos = report.photoUrl === null ? props.photo_urls : [report.photoUrl, ...props.photo_urls];
     this.#props = {
       ...props,
       report_count: props.report_count + 1,
-      verified_count: props.verified_count + (report.autoVerified ? 1 : 0),
       photo_urls: newestPhotos(photos),
       brands: mergeBrands(props.brands, report.brands),
       first_reported_at: earlierTime(props.first_reported_at, report.reportedAt),
@@ -200,17 +217,27 @@ export class Site {
     };
   }
 
-  #confirmByReport(): void {
-    const reopened = this.#props.status === "cleaned";
-    this.#props = {
-      ...this.#props,
-      verification: "verified",
-      status: reopened ? "reopened" : this.#props.status,
-      cleanup_status: reopened ? "none" : this.#props.cleanup_status,
-    };
+  #reopenIfCleaned(): void {
+    if (this.#props.status === "cleaned") {
+      this.#props = { ...this.#props, status: "reopened", cleanup_status: "none" };
+    }
   }
 
-  // Neighbours confirmed the site, so every report still waiting on that check counts as verified.
+  // Backers are the photo people plus the yes voters; settling happens only while unverified.
+  #settle(): void {
+    const { reporterIds, yesVoters, noVoters, verifiedBackers } = this.#internals;
+    const backers = new Backers(reporterIds, yesVoters, noVoters);
+    const outcome = this.#props.verification === "unverified" ? backers.outcome() : null;
+    const verification = outcome ?? this.#props.verification;
+    const frozen = verification === "verified" ? backers.frozenAt(verifiedBackers) : null;
+    this.#internals = { ...this.#internals, verifiedBackers: frozen };
+    this.#props = { ...this.#props, backers: backers.view(frozen), verification };
+    if (verification === "verified") {
+      this.#confirmPendingReports();
+    }
+  }
+
+  // Every report of a verified site counts as verified, including the ones that merge in later.
   #confirmPendingReports(): void {
     const pending = this.#internals.reports.filter((report) => !report.verified).length;
     const reports = this.#internals.reports.map((report) => ({ ...report, verified: true }));
@@ -224,9 +251,20 @@ export class Site {
     const verified = this.#internals.reports.flatMap((report) =>
       report.verified && report.insights !== null ? [report.insights] : [],
     );
-    const insights = new InsightMerge(verified).merged(this.#props.insights?.near ?? []);
+    const kept = this.#props.insights;
+    const bin = { nearest_bin: kept?.nearest_bin ?? null, no_bin_within_3km: kept?.no_bin_within_3km ?? null };
+    const insights = new InsightMerge(verified).merged(kept?.near ?? [], bin);
     const burning = insights.hazards.some((entry) => entry.hazard === "burning");
     this.#props = { ...this.#props, insights, burning };
+  }
+
+  // A site founded before bins were measured takes the first measured reading of a report merged into it.
+  #adoptBinMeasure(report: MergeableReport): void {
+    const insights = this.#props.insights;
+    if (insights === undefined || typeof insights.no_bin_within_3km === "boolean" || report.bin.no_bin_within_3km === null) {
+      return;
+    }
+    this.#props = { ...this.#props, insights: { ...insights, ...report.bin } };
   }
 
   #reportedBy(voter: Voter): boolean {
@@ -237,7 +275,7 @@ export class Site {
 
   #recount(): void {
     const corroborations = this.#internals.meTooCount + this.#props.votes.confirm;
-    this.#props = { ...this.#props, corroborations };
+    this.#props = { ...this.#props, corroborations, reporters: Math.max(1, this.#internals.reporterIds.length) };
   }
 
   #assertAwaits(cleanupId: string): void {

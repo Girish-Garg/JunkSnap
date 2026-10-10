@@ -1,5 +1,5 @@
 import type { ReportStatusView } from '../domain/ReportStatus';
-import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
+import type { AcceptedReport, NoBinUpload, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import { HttpTransport } from './HttpTransport';
 import type { ReportApi, RequestIdentity } from './ReportApi';
 
@@ -14,7 +14,7 @@ export class HttpReportApi implements ReportApi {
     return this.#http.post<PresignResponse>('/uploads/presign', request);
   }
 
-  submit(upload: ReportUpload): Promise<AcceptedReport> {
+  submit(upload: ReportUpload | NoBinUpload): Promise<AcceptedReport> {
     return this.#http.post<AcceptedReport>('/reports', upload);
   }
 

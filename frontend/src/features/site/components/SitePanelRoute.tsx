@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { useSheetNavigation } from '../../../app/useSheetNavigation';
+import { useParams } from 'react-router';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import { useMapContext } from '../../map/useMapContext';
 import { useSite } from '../hooks/useSite';
@@ -10,10 +11,10 @@ import { SitePanelPending } from './SitePanelPending';
 export function SitePanelRoute() {
   const { t } = useTranslation();
   const { siteId = '' } = useParams();
-  const navigate = useNavigate();
+  const sheets = useSheetNavigation();
   const { userLocation, showSite } = useMapContext();
-  const { site, failed } = useSite(siteId);
-  const close = useCallback(() => navigate('/'), [navigate]);
+  const { site, failed, reload } = useSite(siteId);
+  const close = useCallback(() => sheets.close('/'), [sheets]);
   useEffect(() => {
     // A shared link may point outside the loaded area: move the map to the site.
     if (site) showSite(site);
@@ -26,7 +27,7 @@ export function SitePanelRoute() {
       onClose={close}
       focusKey={site?.properties.site_id ?? failed}
     >
-      {site ? <SitePanel site={site} userLocation={userLocation} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
+      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={reload} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} />}
     </BottomSheet>
   );
 }

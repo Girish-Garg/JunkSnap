@@ -10,6 +10,10 @@ from ml.domain.errors import ConfigError
 
 # Scores are clipped before the logit so a 0 or 1 never becomes infinite.
 SCORE_CLIP = 0.01
+# Report types a meta.json without "report_types" was fitted on (before contracts v1.7).
+TRAINED_REPORT_TYPES = frozenset(
+    {"waste_dump", "no_bin", "contaminated_water", "open_construction"}
+)
 
 
 class Logistic:
@@ -105,6 +109,10 @@ class MetaModel:
     judged: SignalLogistic
     fallback: SignalLogistic | None = None  # Rekognition only, for claims our models cannot see
     fallback_judged: SignalLogistic | None = None
+    report_types: frozenset[str] = TRAINED_REPORT_TYPES  # claims with training rows
+
+    def covers(self, report_type: str) -> bool:
+        return report_type in self.report_types
 
     def pick(self, present: frozenset[str], judged: bool) -> SignalLogistic:
         """The full model needs every one of its signals; its bias assumes they all spoke."""
@@ -124,4 +132,5 @@ class MetaModel:
             SignalLogistic.from_json(raw["judged"]),
             spare.get("fallback"),
             spare.get("fallback_judged"),
+            frozenset(raw.get("report_types", TRAINED_REPORT_TYPES)),
         )

@@ -10,7 +10,6 @@ const StoredVote = z.object({
   device_token: z.string(),
   user_id: z.string().optional(),
   vote: z.enum(["confirm", "reject"]),
-  weight: z.number().min(0),
   voted_at: z.string(),
 });
 
@@ -32,7 +31,6 @@ export class DynamoVoteRepository implements VoteRepository {
       device_token: vote.deviceToken,
       ...(vote.userId === null ? {} : { user_id: vote.userId }),
       vote: vote.choice,
-      weight: vote.weight,
       voted_at: vote.votedAt,
     };
     await this.#calls.run("DynamoDB put vote", () => this.#client.send(new PutCommand({ TableName: this.#table, Item })));
@@ -61,7 +59,7 @@ export class DynamoVoteRepository implements VoteRepository {
     if (!parsed.success) {
       throw new InternalDataError(`malformed vote item: ${z.prettifyError(parsed.error)}`);
     }
-    const { site_id, device_token, user_id, vote, weight, voted_at } = parsed.data;
-    return { siteId: site_id, deviceToken: device_token, userId: user_id ?? null, choice: vote, weight, votedAt: voted_at };
+    const { site_id, device_token, user_id, vote, voted_at } = parsed.data;
+    return { siteId: site_id, deviceToken: device_token, userId: user_id ?? null, choice: vote, votedAt: voted_at };
   }
 }

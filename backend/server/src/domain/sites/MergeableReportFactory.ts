@@ -1,4 +1,4 @@
-import type { BrandLabel, LocationLookup, ReportUpload, VerificationResult } from "../../contracts/index.gen.js";
+import type { BrandLabel, LocationLookup, ReportUpload } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../errors.js";
 import { GeoPoint } from "./GeoPoint.js";
 import type { MergeableReport, MergeEvidence } from "./MergeableReport.js";
@@ -16,41 +16,60 @@ export class MergeableReportFactory {
   }
 
   create(evidence: MergeEvidence): MergeableReport {
-    const { upload, moderation, verification, location } = evidence;
-    const blurredKey = moderation.blurred_key;
+    const reportId = MergeableReportFactory.#reportId(evidence);
+    MergeableReportFactory.#assertPassed(evidence, reportId);
+    const { upload, location } = evidence;
     return {
-      reportId: MergeableReportFactory.#reportId(upload, verification),
+      ...this.#results(evidence),
+      reportId,
       reportType: upload.report_type,
       context: upload.context,
       point: new GeoPoint(upload.gps.lat, upload.gps.lon),
       deviceToken: upload.device_token,
       userId: upload.user_id ?? null,
       reportedAt: upload.captured_at,
-      autoVerified: MergeableReportFactory.#autoVerified(verification),
-      embeddingKey: verification.embedding_key,
       meTooSiteId: upload.me_too_site_id ?? null,
-      photoUrl: blurredKey === null ? null : this.#media.urlFor(blurredKey),
-      insights: verification.insights ?? null,
       near: evidence.near,
+      bin: evidence.bin,
       brands: evidence.brands.map(MergeableReportFactory.#brand),
       location: MergeableReportFactory.#location(location),
       pilot: location.district.id === PILOT_DISTRICT_ID,
     };
   }
 
-  static #reportId(upload: ReportUpload, verification: VerificationResult): string {
+  // What the photo and the models added; all null for a no_bin report without a photo.
+  #results({ moderation, verification }: MergeEvidence): Pick<MergeableReport, "embeddingKey" | "photoUrl" | "insights"> {
+    const blurredKey = moderation?.blurred_key ?? null;
+    return {
+      embeddingKey: verification?.embedding_key ?? null,
+      photoUrl: blurredKey === null ? null : this.#media.urlFor(blurredKey),
+      insights: verification?.insights ?? null,
+    };
+  }
+
+  static #reportId({ upload, verification }: MergeEvidence): string {
     const reportId = `rpt_${upload.upload_id.slice(UPLOAD_PREFIX.length)}`;
-    if (verification.purpose !== "report" || verification.report_id !== reportId) {
+    if (verification !== null && (verification.purpose !== "report" || verification.report_id !== reportId)) {
       throw new InternalDataError(`verification ${verification.report_id} does not belong to ${reportId}`);
     }
     return reportId;
   }
 
-  static #autoVerified(verification: VerificationResult): boolean {
-    if (verification.decision === "rejected") {
-      throw new InternalDataError(`${verification.report_id} was rejected and is never merged`);
+  // The models only gate a photo (decision 20261010-1530); a no_bin report needs no waste check, nor a photo (-1630).
+  static #assertPassed({ upload, moderation, verification }: MergeEvidence, reportId: string): void {
+    const photoFailed = moderation !== null && moderation.outcome !== "passed";
+    const wasteFailed = upload.report_type !== "no_bin" && !MergeableReportFactory.#passedWasteCheck(verification);
+    if (photoFailed || wasteFailed || MergeableReportFactory.#photoMissing(upload, moderation === null)) {
+      throw new InternalDataError(`${reportId} did not pass the models and is never merged`);
     }
-    return verification.decision === "auto_verified";
+  }
+
+  static #passedWasteCheck(verification: MergeEvidence["verification"]): boolean {
+    return verification !== null && verification.decision !== "rejected";
+  }
+
+  static #photoMissing(upload: ReportUpload, unmoderated: boolean): boolean {
+    return upload.sha256 !== undefined && unmoderated;
   }
 
   static #brand(label: BrandLabel): SiteBrand {

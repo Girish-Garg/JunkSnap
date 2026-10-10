@@ -14,12 +14,22 @@ export type SiteContext =
   | 'foam'
   | 'choked_drain'
   | 'uncovered_debris'
-  | 'dusty_site';
+  | 'dusty_site'
+  | 'overflowing'
+  | 'damaged';
 
 export type SiteStatus = 'open' | 'cleaned' | 'reopened';
 
-/** GET /sites?bbox leaves out rejected sites. */
-export type SiteVerification = 'verified' | 'community_check' | 'rejected';
+/** Decision 20261010-1530: unverified until 10 people back it. GET /sites?bbox leaves out rejected sites. */
+export type SiteVerification = 'unverified' | 'verified' | 'rejected';
+
+/** People backing a site by photo or yes vote, each counted once. */
+export interface SiteBackers {
+  readonly count: number;
+  readonly needed: number;
+  readonly photo_people: number;
+  readonly vote_people: number;
+}
 
 /** Resets to none when the site reopens. */
 export type CleanupStatus = 'none' | 'checking' | 'accepted' | 'rejected';
@@ -83,6 +93,9 @@ export interface SiteProperties {
   readonly report_count: number;
   readonly verified_count: number;
   readonly corroborations: number;
+  readonly backers: SiteBackers;
+  /** Decision 20261010-1630: present on no_bin sites, which are no-bin zones of this radius. */
+  readonly zone_radius_m?: number;
   readonly votes: SiteVotes;
   readonly photo_urls: readonly string[];
   readonly cleanup_status: CleanupStatus;
@@ -94,6 +107,8 @@ export interface SiteProperties {
   readonly last_reported_at: string;
   readonly cleaned_at: string | null;
   readonly pilot: boolean;
+  /** v1.4: distinct people who reported the site (user id, else device); absent on older rows. */
+  readonly reporters?: number;
   /** Optional in v1.1 so older producers stay valid; the worker always writes it. */
   readonly insights?: SiteInsights;
 }

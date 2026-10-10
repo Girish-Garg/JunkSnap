@@ -1,0 +1,267 @@
+/* "How JunkSnap works": full screen on phones, a centred card deck over a scrim on desktop. */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background: var(--page);
+  animation: onboarding-in var(--dur-spring) var(--spring);
+}
+
+@keyframes onboarding-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.98);
+  }
+}
+
+.onboarding__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-2) 0 var(--edge);
+}
+
+.onboarding__label {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 700;
+}
+
+.onboarding__track {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.onboarding-card {
+  display: flex;
+  flex: 0 0 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-6) var(--s-6);
+  overflow-y: auto;
+  scroll-snap-align: center;
+  text-align: center;
+}
+
+.onboarding-card .illustration {
+  margin-bottom: var(--s-2);
+}
+
+.onboarding-card--current .illustration {
+  animation: chip-hop var(--dur-spring) var(--spring-bouncy);
+}
+
+.onboarding-card__title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.onboarding-card__text {
+  max-width: 34em;
+  color: var(--text-secondary);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.onboarding-card__note {
+  max-width: 34em;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius-m);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.onboarding-card .button--sun {
+  margin-top: var(--s-2);
+}
+
+.onboarding-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-width: 30em;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  list-style: none;
+  text-align: left;
+}
+
+.onboarding-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  counter-increment: step;
+}
+
+.onboarding-steps li::before {
+  content: counter(step);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: var(--outline) solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+  color: var(--on-sun);
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* The responsibility chain: offices joined by a line, top to bottom. */
+.chain {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 26em;
+  margin: var(--s-2) 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.chain__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+}
+
+.chain__link:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--s-2) + 40px);
+  bottom: calc(-1 * var(--s-2));
+  left: 19px;
+  width: 2px;
+  background: var(--line-strong);
+}
+
+.chain__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--accent-ink);
+}
+
+.chain__link--you .chain__icon {
+  border-color: var(--ink);
+  background: var(--sun);
+  color: var(--on-sun);
+}
+
+.chain__text {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.chain__text strong {
+  color: var(--text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.onboarding-card--current .chain__link {
+  animation: rise var(--dur-3) var(--ease-out) both;
+}
+
+.onboarding-card--current .chain__link:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.onboarding-card--current .chain__link:nth-child(3) {
+  animation-delay: 160ms;
+}
+
+.onboarding-card--current .chain__link:nth-child(4) {
+  animation-delay: 240ms;
+}
+
+.onboarding-card--current .chain__link:nth-child(5) {
+  animation-delay: 320ms;
+}
+
+.onboarding__footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--edge) var(--s-4);
+}
+
+.onboarding__dots {
+  display: flex;
+  gap: var(--s-4);
+}
+
+/* 10 px dots with 48 px tall hit areas that share the row; the current one stretches into a pill. */
+.onboarding__dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  cursor: pointer;
+  transition:
+    width var(--dur-3) var(--spring),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+.onboarding__dot::before {
+  content: '';
+  position: absolute;
+  inset: -19px -8px;
+}
+
+.onboarding__dot[aria-current='step'] {
+  width: 28px;
+  background: var(--accent);
+}
+
+@media (min-width: 1024px) {
+  .onboarding {
+    inset: 50% auto auto 50%;
+    width: 560px;
+    height: min(760px, 92vh);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: 0 0 0 100vmax var(--scrim), var(--shadow-2);
+    transform: translate(-50%, -50%);
+    animation: none;
+  }
+
+  .onboarding__footer {
+    padding-bottom: var(--s-6);
+  }
+}

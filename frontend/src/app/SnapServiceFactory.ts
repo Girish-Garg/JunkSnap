@@ -1,4 +1,11 @@
+import type { AreaLetterApi } from '../services/AreaLetterApi';
+import { AreaLetterService } from '../services/AreaLetterService';
+import { areaFixtureLoaders } from '../services/areaFixtures';
 import type { AuthService } from '../services/AuthService';
+import { crawlFixtureLoaders } from '../services/crawlFixtures';
+import { HttpAreaLetterApi } from '../services/HttpAreaLetterApi';
+import { MockAreaApi } from '../services/MockAreaApi';
+import { MockAreaLetterApi } from '../services/MockAreaLetterApi';
 import { CameraCapture } from '../services/CameraCapture';
 import type { Clock } from '../services/Clock';
 import { DeviceIdentity } from '../services/DeviceIdentity';
@@ -11,6 +18,7 @@ import { IndexedDbScanStore } from '../services/IndexedDbScanStore';
 import { JunkSnapDb } from '../services/JunkSnapDb';
 import { MockReportApi } from '../services/MockReportApi';
 import { MockScanApi } from '../services/MockScanApi';
+import { NoBinReporter } from '../services/NoBinReporter';
 import { PhotoEncoder } from '../services/PhotoEncoder';
 import { PhotoHasher } from '../services/PhotoHasher';
 import { QueueLock } from '../services/QueueLock';
@@ -23,7 +31,12 @@ import { ScanCapture } from '../services/ScanCapture';
 import { ScanQueue } from '../services/ScanQueue';
 import { ScanSender } from '../services/ScanSender';
 import { ScanTracker } from '../services/ScanTracker';
-import { sampleSiteLoader } from '../services/siteFixtures';
+import { sampleAreaLetterLoader, sampleLetterLoader, sampleSiteLoader, siteFixtureLoaders } from '../services/siteFixtures';
+import { HttpSiteActionsApi } from '../services/HttpSiteActionsApi';
+import { MockApiClient } from '../services/MockApiClient';
+import { MockSiteActionsApi } from '../services/MockSiteActionsApi';
+import { SiteActionService } from '../services/SiteActionService';
+import type { SiteActionsApi } from '../services/SiteActionsApi';
 import { SystemClock } from '../services/SystemClock';
 import { VideoRecorder, type RecorderFactory } from '../services/VideoRecorder';
 import type { ApiMode, AppConfig } from './AppConfig';
@@ -40,13 +53,30 @@ export interface SnapBrowserApis {
 interface Apis {
   readonly reports: ReportApi;
   readonly scans: ScanApi;
+  readonly sites: SiteActionsApi;
+  readonly areaLetters: AreaLetterApi;
 }
 
+const mockSites = new MockApiClient(siteFixtureLoaders);
+const mockAreas = new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders);
+const mockAreaLetters = () =>
+  new MockAreaLetterApi({
+    scores: (kind, id) => mockAreas.scores(kind, id),
+    letter: sampleAreaLetterLoader,
+  });
+
 const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: RequestIdentity) => Apis>> = {
-  mock: () => ({ reports: new MockReportApi(sampleSiteLoader), scans: new MockScanApi() }),
+  mock: () => ({
+    reports: new MockReportApi(sampleSiteLoader),
+    scans: new MockScanApi(),
+    sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
+    areaLetters: mockAreaLetters(),
+  }),
   live: (config, identity) => ({
     reports: new HttpReportApi(config.requireApiUrl(), identity),
     scans: new HttpScanApi(config.requireApiUrl(), identity),
+    sites: new HttpSiteActionsApi(config.requireApiUrl(), identity),
+    areaLetters: new HttpAreaLetterApi(config.requireApiUrl(), identity),
   }),
 };
 
@@ -78,6 +108,16 @@ export class SnapServiceFactory {
       encoder: new PhotoEncoder(),
       hasher,
       gps,
+      ...SnapServiceFactory.#actions(apis, identity, gps, () => browser.crypto.getRandomValues(new Uint8Array(16))),
+    };
+  }
+
+  // Site actions and area letters share the sign-in gate and the device token.
+  static #actions(apis: Apis, identity: RequestIdentity, gps: GpsWatcher, random: () => Uint8Array): Pick<SnapServices, 'siteActions' | 'areaLetters' | 'noBin'> {
+    return {
+      siteActions: new SiteActionService({ api: apis.sites, uploads: apis.reports, identity, gps }),
+      areaLetters: new AreaLetterService(apis.areaLetters, identity),
+      noBin: new NoBinReporter(apis.reports, identity, random),
     };
   }
 

@@ -19,20 +19,28 @@ export class LetterRateLimiter {
     this.#limit = limit;
   }
 
-  // Checks every counter before recording in any, so a refused letter uses up nothing.
-  async take(requester: Requester, now: Date): Promise<void> {
-    const counted = this.#counted(requester);
-    const request = (key: string) => ({ key, now, limit: this.#limit, windowMs: HOUR_MS });
-    for (const [counter, key] of counted) {
-      if (!(await counter.fits(request(key)))) {
+  // Reads only: refuses early, before any costly work, when a counter is already full.
+  async fits(requester: Requester, now: Date): Promise<void> {
+    for (const [counter, key] of this.#counted(requester)) {
+      if (!(await counter.fits(this.#request(key, now)))) {
         this.#refuse();
       }
     }
-    for (const [counter, key] of counted) {
+  }
+
+  // Checks every counter before recording in any, so a refused letter uses up nothing.
+  async take(requester: Requester, now: Date): Promise<void> {
+    await this.fits(requester, now);
+    const request = (key: string) => this.#request(key, now);
+    for (const [counter, key] of this.#counted(requester)) {
       if (!(await counter.take(request(key)))) {
         this.#refuse();
       }
     }
+  }
+
+  #request(key: string, now: Date) {
+    return { key, now, limit: this.#limit, windowMs: HOUR_MS };
   }
 
   #counted(requester: Requester): (readonly [LetterCounter, string])[] {

@@ -1,0 +1,24 @@
+{
+  "city": "jaipur",
+  "body_id": "jaipur-mc",
+  "body_name": "Nagar Nigam Jaipur (Jaipur Municipal Corporation)",
+  "wards": 150,
+  "official_order": "Rajasthan Gazette Extraordinary, 20 September 2025: ward formation (parisiman) of Nagar Nigam Jaipur, 150 wards, published on the corporation's site.",
+  "boundary_gazette": "https://jaipurmc.org/PDF/Others/FinalParisimanGazette2025.pdf",
+  "seat_ranges_source": "https://jaipurmc.org/PDF/Others/ParshadList_Jaiupr.pdf",
+  "seat_ranges": [
+    [1, 22, "s20-ac-50"],
+    [23, 37, "s20-ac-46"],
+    [38, 58, "s20-ac-55"],
+    [59, 72, "s20-ac-56"],
+    [73, 87, "s20-ac-54"],
+    [88, 103, "s20-ac-51"],
+    [104, 115, "s20-ac-52"],
+    [116, 132, "s20-ac-53"],
+    [133, 147, "s20-ac-49"],
+    [148, 150, "s20-ac-47"]
+  ],
+  "bbox": [26.75, 75.65, 27.05, 75.95],
+  "origin": [26.91, 75.79],
+  "reach_m": 700
+}

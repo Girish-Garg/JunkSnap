@@ -6,9 +6,11 @@ interface SitePhotoProps {
   /** Blurred public copy only, never an original. */
   readonly url: string | null;
   readonly alt: string;
+  /** Opens the full-screen viewer; without it the photo is not a button (e.g. the preview card). */
+  readonly onOpen?: () => void;
 }
 
-export function SitePhoto({ url, alt }: SitePhotoProps) {
+export function SitePhoto({ url, alt, onOpen }: SitePhotoProps) {
   const { t } = useTranslation();
   const [broken, setBroken] = useState(false);
   if (url === null || broken) {
@@ -19,9 +21,16 @@ export function SitePhoto({ url, alt }: SitePhotoProps) {
       </li>
     );
   }
+  const image = <img src={url} alt={alt} loading="lazy" draggable={false} onError={() => setBroken(true)} />;
   return (
     <li className="photo-strip__item">
-      <img src={url} alt={alt} loading="lazy" onError={() => setBroken(true)} />
+      {onOpen ? (
+        <button type="button" className="photo-open" title={t('viewer.open')} onClick={onOpen}>
+          {image}
+        </button>
+      ) : (
+        image
+      )}
     </li>
   );
 }

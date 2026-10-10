@@ -126,9 +126,9 @@ describe("ReportPipeline", () => {
   });
 
   it.each([
-    ["auto_verified", "verified"],
-    ["community_check", "community_check"],
-  ] as const)("maps decision %s to status %s when no merge result exists", async (decision, status) => {
+    ["auto_verified", "unverified"],
+    ["community_check", "unverified"],
+  ] as const)("maps decision %s to status %s when no merge result exists, since a photo alone never verifies", async (decision, status) => {
     await wire({ verified: { ...verification(), decision } }).pipeline.handle(delivery());
     expect(reports.stored("rpt_jdh_1").status).toBe(status);
   });
@@ -148,12 +148,12 @@ describe("ReportPipeline", () => {
 
   it("skips completed steps when SQS retries the message", async () => {
     journal.failTimes("locate", 1);
-    const { pipeline } = wire({ merge: { siteId: "site_jdh_1", verification: "community_check" } });
+    const { pipeline } = wire({ merge: { siteId: "site_jdh_1", verification: "unverified" } });
     await expect(pipeline.handle(delivery(1))).rejects.toThrow("locate failed");
     expect(reports.stored("rpt_jdh_1")).toMatchObject({ status: "processing", completed_steps: ["moderate", "verify", "brands"] });
     await pipeline.handle(delivery(2));
     expect(journal.calls).toEqual(["moderate", "verify", "brands", "locate", "locate", "merge"]);
-    expect(reports.stored("rpt_jdh_1").status).toBe("community_check");
+    expect(reports.stored("rpt_jdh_1").status).toBe("unverified");
   });
 
   it("marks the report needs_review when the last receive fails, then lets the message go to the DLQ", async () => {

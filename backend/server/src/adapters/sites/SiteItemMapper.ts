@@ -4,6 +4,7 @@ import { InternalDataError } from "../../domain/errors.js";
 import { Site } from "../../domain/sites/Site.js";
 import type { MergedReport, ReportInsights, SiteFeature, SiteInternals } from "../../domain/sites/SiteTypes.js";
 import type { Logger } from "../../ports/Logger.js";
+import { LegacySiteFields } from "./LegacySiteFields.js";
 import type { NgeohashCells } from "./NgeohashCells.js";
 
 export type SiteItem = Record<string, unknown>;
@@ -21,10 +22,21 @@ const StoredExtras = z.object({
   lon: z.number(),
   report_ids: z.array(z.string()).default([]),
   merged_reports: z
-    .array(z.object({ report_id: z.string(), verified: z.boolean(), insights: StoredInsights.nullable() }))
+    .array(
+      z.object({
+        report_id: z.string(),
+        verified: z.boolean(),
+        insights: StoredInsights.nullable(),
+        point: z.object({ lat: z.number(), lon: z.number() }).nullable().default(null),
+      }),
+    )
     .optional(),
   reporter_devices: z.array(z.string()).default([]),
   reporter_users: z.array(z.string()).default([]),
+  reporter_ids: z.array(z.string()).optional(),
+  yes_voters: z.array(z.string()).default([]),
+  no_voters: z.array(z.string()).default([]),
+  verified_backers: z.int().min(0).nullable().default(null),
   me_too_count: z.int().min(0).default(0),
   embedding_key: z.string().nullable().default(null),
   pending_cleanup_id: z.string().nullable().default(null),
@@ -53,9 +65,13 @@ export class SiteItemMapper {
       lon: site.point.lon,
       geohash4: this.#cells.cellOf(site.point),
       report_ids: reports.map((report) => report.reportId),
-      merged_reports: reports.map(({ reportId, verified, insights }) => ({ report_id: reportId, verified, insights })),
+      merged_reports: reports.map(({ reportId, verified, insights, point }) => ({ report_id: reportId, verified, insights, point })),
       reporter_devices: internals.reporterDevices,
       reporter_users: internals.reporterUsers,
+      reporter_ids: internals.reporterIds,
+      yes_voters: internals.yesVoters,
+      no_voters: internals.noVoters,
+      verified_backers: internals.verifiedBackers,
       me_too_count: internals.meTooCount,
       embedding_key: internals.embeddingKey,
       pending_cleanup_id: internals.pendingCleanupId,
@@ -63,7 +79,9 @@ export class SiteItemMapper {
     };
   }
 
-  toSite(item: SiteItem): Site {
+  toSite(stored: SiteItem): Site {
+    const item = new LegacySiteFields().upgrade(stored);
+    const needsBackerCount = !("backers" in stored);
     const parsed = StoredExtras.safeParse(item);
     if (!parsed.success) {
       throw new InternalDataError(`site item ${String(item.site_id)} is malformed: ${z.prettifyError(parsed.error)}`);
@@ -71,7 +89,7 @@ export class SiteItemMapper {
     const properties = Object.fromEntries(PROPERTY_KEYS.filter((key) => key in item).map((key) => [key, item[key]]));
     const geometry = { type: "Point", coordinates: [parsed.data.lon, parsed.data.lat] };
     const feature = SiteItemMapper.#checked({ type: "Feature", geometry, properties });
-    return Site.restore({ feature, internals: SiteItemMapper.#internals(parsed.data) });
+    return Site.restore({ feature, internals: { ...SiteItemMapper.#internals(parsed.data), needsBackerCount } });
   }
 
   // For lists: one bad item is logged and left out instead of failing the whole answer.
@@ -87,11 +105,16 @@ export class SiteItemMapper {
     }
   }
 
-  static #internals(extras: Extras): SiteInternals {
+  static #internals(extras: Extras): Omit<SiteInternals, "needsBackerCount"> {
     return {
       reports: SiteItemMapper.#reports(extras),
       reporterDevices: extras.reporter_devices,
       reporterUsers: extras.reporter_users,
+      // Older items only know devices.
+      reporterIds: extras.reporter_ids ?? extras.reporter_devices,
+      yesVoters: extras.yes_voters,
+      noVoters: extras.no_voters,
+      verifiedBackers: extras.verified_backers,
       meTooCount: extras.me_too_count,
       embeddingKey: extras.embedding_key,
       pendingCleanupId: extras.pending_cleanup_id,
@@ -103,9 +126,9 @@ export class SiteItemMapper {
   static #reports(extras: Extras): MergedReport[] {
     const stored = extras.merged_reports;
     if (stored === undefined) {
-      return extras.report_ids.map((reportId) => ({ reportId, verified: false, insights: null }));
+      return extras.report_ids.map((reportId) => ({ reportId, verified: false, insights: null, point: null }));
     }
-    return stored.map((report) => ({ reportId: report.report_id, verified: report.verified, insights: report.insights }));
+    return stored.map((report) => ({ reportId: report.report_id, verified: report.verified, insights: report.insights, point: report.point }));
   }
 
   static #checked(feature: unknown): SiteFeature {

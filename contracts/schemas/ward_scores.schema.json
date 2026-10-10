@@ -20,14 +20,15 @@
     "counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["verified_reports", "no_bin_reports", "sites", "open_sites", "cleaned_sites", "reopened_sites"],
+      "required": ["verified_reports", "no_bin_reports", "sites", "open_sites", "cleaned_sites", "reopened_sites", "sites_without_bin_within_3km"],
       "properties": {
         "verified_reports": { "type": "integer", "minimum": 0 },
-        "no_bin_reports": { "type": "integer", "minimum": 0, "description": "Verified no_bin reports." },
+        "no_bin_reports": { "type": "integer", "minimum": 0, "description": "Verified no_bin reports. Shown as a count only; bin access is measured, not taken from these (scores-v2)." },
         "sites": { "type": "integer", "minimum": 0 },
         "open_sites": { "type": "integer", "minimum": 0 },
         "cleaned_sites": { "type": "integer", "minimum": 0 },
-        "reopened_sites": { "type": "integer", "minimum": 0 }
+        "reopened_sites": { "type": "integer", "minimum": 0 },
+        "sites_without_bin_within_3km": { "type": "integer", "minimum": 0, "description": "Verified sites whose site.insights.no_bin_within_3km is true." }
       }
     },
     "min_verified_reports": { "type": "integer", "minimum": 1, "description": "Guardrail; 10 in v1." },
@@ -45,16 +46,18 @@
     "metrics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["median_days_to_clear", "cleared_within_7_days_pct", "redumped_pct", "no_bin_response_pct", "new_dumps_per_km2_month", "share_vacant_plot_drain_roadside_pct", "median_distance_to_disposal_m"],
+      "required": ["median_days_to_clear", "cleared_within_7_days_pct", "redumped_pct", "no_bin_response_pct", "new_dumps_per_km2_month", "share_vacant_plot_drain_roadside_pct", "median_distance_to_disposal_m", "no_bin_within_3km_pct"],
       "description": "Inputs behind the scores; each null when withheld or not measurable in the data window.",
       "properties": {
         "median_days_to_clear": { "type": ["number", "null"], "minimum": 0 },
         "cleared_within_7_days_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "redumped_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
         "no_bin_response_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of no_bin sites cleared or served in the window (city score)." },
+        "bin_service_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified overflowing_bin sites ever cleared, so bins serviced (city score, scores-v3). Not in required so scores-v2 rows stay valid." },
         "new_dumps_per_km2_month": { "type": ["number", "null"], "minimum": 0 },
         "share_vacant_plot_drain_roadside_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of verified waste_dump reports on vacant plots, drains and roadsides (citizen score)." },
-        "median_distance_to_disposal_m": { "type": ["number", "null"], "minimum": 0 }
+        "median_distance_to_disposal_m": { "type": ["number", "null"], "minimum": 0, "description": "Median of site.insights.nearest_bin.distance_m over verified sites with a known nearest bin (bin access score)." },
+        "no_bin_within_3km_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100, "description": "Share of measured verified sites (no_bin_within_3km not null) with no known bin within 3 km (bin access score)." }
       }
     },
     "diagnosis": {

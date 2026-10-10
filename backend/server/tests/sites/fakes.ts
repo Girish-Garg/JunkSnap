@@ -4,7 +4,7 @@ import type { CleanupFinish, CleanupRecord } from "../../src/domain/sites/Cleanu
 import type { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { StaleSiteError } from "../../src/domain/sites/SiteErrors.js";
-import type { SiteFeature, SiteInternals, SiteState, Verification, Voter } from "../../src/domain/sites/SiteTypes.js";
+import type { SiteFeature, SiteInternals, SiteState, Verification } from "../../src/domain/sites/SiteTypes.js";
 import type { Vote } from "../../src/domain/sites/VoteTally.js";
 import type { Logger } from "../../src/ports/Logger.js";
 import type { AreaScoreSeeder } from "../../src/ports/sites/AreaScoreSeeder.js";
@@ -15,7 +15,6 @@ import type { EmbeddingStore } from "../../src/ports/sites/EmbeddingStore.js";
 import type { ReportStatusWriter } from "../../src/ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../src/ports/sites/SiteRepository.js";
 import type { VoteRepository } from "../../src/ports/sites/VoteRepository.js";
-import type { VoterReputation } from "../../src/ports/sites/VoterReputation.js";
 
 export const NOW = "2026-10-10T06:00:00.000Z";
 
@@ -63,6 +62,10 @@ export class FakeSiteRepository implements SiteRepository {
     return sites.filter((site) => this.#cells.cellOf(site.point) === cell);
   }
 
+  async allIds(): Promise<string[]> {
+    return [...this.#states.keys()];
+  }
+
   async create(site: Site): Promise<boolean> {
     if (this.#states.has(site.siteId)) {
       return false;
@@ -91,6 +94,11 @@ export class FakeSiteRepository implements SiteRepository {
       reports: [],
       reporterDevices: [],
       reporterUsers: [],
+      reporterIds: [],
+      yesVoters: [],
+      noVoters: [],
+      needsBackerCount: false,
+      verifiedBackers: null,
       meTooCount: 0,
       embeddingKey: null,
       pendingCleanupId: null,
@@ -136,21 +144,6 @@ export class FakeVoteRepository implements VoteRepository {
   }
 }
 
-// Keys are device tokens or user ids; anything unknown counts 0.5, and the lower of the two wins.
-export class FakeReputation implements VoterReputation {
-  readonly #reputations: ReadonlyMap<string, number>;
-
-  constructor(reputations: Record<string, number> = {}) {
-    this.#reputations = new Map(Object.entries(reputations));
-  }
-
-  async reputationOf(voter: Voter): Promise<number> {
-    const device = this.#reputations.get(voter.deviceToken) ?? 0.5;
-    const user = voter.userId === null ? 0.5 : (this.#reputations.get(voter.userId) ?? 0.5);
-    return Math.min(device, user);
-  }
-}
-
 export class FakeReportStatus implements ReportStatusWriter {
   readonly statuses = new Map<string, Verification>();
   calls = 0;
@@ -174,11 +167,13 @@ export class FakeReportStatus implements ReportStatusWriter {
 
 export class FakeScoreSeeder implements AreaScoreSeeder {
   readonly rows = new Map<string, WardScores>();
+  readonly within = new Map<string, readonly string[]>();
 
-  async seedIfMissing(row: WardScores): Promise<void> {
+  async seedIfMissing(row: WardScores, within: readonly string[]): Promise<void> {
     const key = `${row.area.kind}/${row.area.id}`;
     if (!this.rows.has(key)) {
       this.rows.set(key, row);
+      this.within.set(key, within);
     }
   }
 }

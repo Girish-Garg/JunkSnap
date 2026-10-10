@@ -62,17 +62,17 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("report adapters against AWS",
     expect((await repository.get(report.id))?.version).toBe(2);
   });
 
-  it("the sites status writer changes only verified or community_check reports and bumps their version", async () => {
+  it("the sites status writer changes only settled reports and bumps their version", async () => {
     const repository = new DynamoReportRepository(documents(), intake().reportsTable);
     const now = () => isoSeconds(new Date());
-    const reportIn = async (status: "queued" | "processing" | "verified" | "community_check") => {
+    const reportIn = async (status: "queued" | "processing" | "auto_verified" | "community_check") => {
       const report = guestReport();
       await repository.create(report);
       if (status !== "queued") {
         report.start(now());
       }
-      if (status === "verified" || status === "community_check") {
-        report.recordVerification({ ...verification(), decision: status === "verified" ? "auto_verified" : status });
+      if (status === "auto_verified" || status === "community_check") {
+        report.recordVerification({ ...verification(), decision: status });
         report.finish(now());
       }
       if (status !== "queued") {
@@ -80,14 +80,14 @@ describe.runIf(process.env.RUN_AWS_TESTS === "1")("report adapters against AWS",
       }
       return report;
     };
-    const reports = await Promise.all([reportIn("queued"), reportIn("processing"), reportIn("verified"), reportIn("community_check")]);
+    const reports = await Promise.all([reportIn("queued"), reportIn("processing"), reportIn("auto_verified"), reportIn("community_check")]);
     const writer = new DynamoReportStatusWriter(documents(), intake().reportsTable, new SystemClock(), new AwsCalls());
     await writer.followSite(reports.map((report) => report.id), "verified");
     const after = await Promise.all(reports.map((report) => repository.get(report.id)));
     expect(after.map((report) => [report?.status, report?.version])).toEqual([
       ["queued", 1],
       ["processing", 2],
-      ["verified", 2],
+      ["verified", 3],
       ["verified", 3],
     ]);
     await expect(repository.save(reports[3] ?? guestReport())).rejects.toThrow(ConcurrentUpdateError);

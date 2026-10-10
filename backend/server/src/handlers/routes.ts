@@ -1,3 +1,4 @@
+import { buildAreaCrawlRoutes } from "./areaCrawlRoutes.js";
 import { buildAreaScoresRoutes } from "./areaScoresRoutes.js";
 import { buildLettersRoutes } from "./lettersRoutes.js";
 import { buildReportRoutes } from "./reportRoutes.js";
@@ -10,6 +11,7 @@ export const ROUTE_BUILDERS: readonly RouteBuilder[] = [
   // one builder per line
   buildSitesRoutes,
   buildAreaScoresRoutes,
+  buildAreaCrawlRoutes,
   buildLettersRoutes,
   buildReportRoutes,
   buildScanRoutes,

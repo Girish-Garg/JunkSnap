@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 interface ButtonProps {
   readonly children: ReactNode;
-  readonly variant?: 'primary' | 'text';
+  readonly variant?: 'primary' | 'secondary' | 'sun' | 'text';
   readonly type?: 'button' | 'submit';
   readonly onClick?: () => void;
   readonly disabled?: boolean;

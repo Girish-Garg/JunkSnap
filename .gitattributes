@@ -5,3 +5,5 @@
 *.jpg binary
 *.gif binary
 *.geojson -diff
+*.onnx binary
+*.wasm binary
