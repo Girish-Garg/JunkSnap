@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { InvalidImageError } from "../../domain/moderation/errors.js";
-import type { LoadedPhoto } from "../../domain/moderation/LoadedPhoto.js";
+import { type LoadedPhoto, meanBrightness } from "../../domain/moderation/LoadedPhoto.js";
 import { PerceptualHash } from "../../domain/moderation/PerceptualHash.js";
 import type { PhotoSubmission } from "../../domain/moderation/PhotoSubmission.js";
 import type { ImageCodec } from "../../ports/moderation/ImageCodec.js";
@@ -28,11 +28,19 @@ export class PhotoLoader {
     if (original === null) {
       return { invalid: "over_8_mb" };
     }
-    if (!JPEG_MAGIC.every((byte, index) => original[index] === byte)) {
+    if (!this.#isJpeg(original)) {
       return { invalid: "not_jpeg" };
     }
     if (createHash("sha256").update(original).digest("hex") !== submission.fields.sha256) {
       return { invalid: "sha256_mismatch" };
+    }
+    return this.decode(original);
+  }
+
+  // For bytes already trusted, such as a stored original being re-blurred.
+  async decode(original: Uint8Array): Promise<PhotoLoad> {
+    if (!this.#isJpeg(original)) {
+      return { invalid: "not_jpeg" };
     }
     try {
       return await this.#decode(original);
@@ -44,14 +52,20 @@ export class PhotoLoader {
     }
   }
 
+  #isJpeg(bytes: Uint8Array): boolean {
+    return JPEG_MAGIC.every((byte, index) => bytes[index] === byte);
+  }
+
   async #decode(original: Uint8Array): Promise<PhotoLoad> {
     const facts = await this.#codec.describe(original);
     if (facts.format !== "jpeg") {
       return { invalid: "not_jpeg" };
     }
-    const hash = PerceptualHash.fromGrayscale(await this.#codec.grayscale(original, PerceptualHash.SIDE));
+    const grey = await this.#codec.grayscale(original, PerceptualHash.SIDE);
     // Always re-encoded, so an EXIF rotation can never put Rekognition's boxes and the blur in different frames.
     const upright = await this.#codec.uprightBelow(original, MAX_UPRIGHT_BYTES);
-    return { photo: { upright, hash } };
+    const shape = await this.#codec.describe(upright);
+    const aspect = shape.width / shape.height;
+    return { photo: { upright, hash: PerceptualHash.fromGrayscale(grey), brightness: meanBrightness(grey), aspect } };
   }
 }

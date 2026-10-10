@@ -1,5 +1,6 @@
 import { GetObjectCommand, PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
 import { ExternalServiceError } from "../../domain/errors.js";
+import { BLUR_POLICY } from "../../domain/moderation/BlurPlanner.js";
 import type { ImageStore } from "../../ports/moderation/ImageStore.js";
 import { callService } from "./utils.js";
 
@@ -9,6 +10,8 @@ export interface ImageBuckets {
 }
 
 const PUBLIC_CACHE = "public, max-age=86400";
+// S3 user metadata naming the blur rules a public copy was made under.
+export const BLUR_POLICY_METADATA = "blur-policy";
 
 export class S3ImageStore implements ImageStore {
   readonly #client: S3Client;
@@ -49,6 +52,7 @@ export class S3ImageStore implements ImageStore {
       Body: jpeg,
       ContentType: "image/jpeg",
       CacheControl: PUBLIC_CACHE,
+      Metadata: { [BLUR_POLICY_METADATA]: BLUR_POLICY },
     });
     await callService("S3 PutObject", () => this.#client.send(command));
   }

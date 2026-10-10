@@ -1,0 +1,6 @@
+{
+  "_about": "A plain dump photo: no face, no plate, no person or vehicle.",
+  "DetectFaces": { "FaceDetails": [] },
+  "DetectText": { "TextModelVersion": "3.0", "TextDetections": [] },
+  "DetectLabels": { "LabelModelVersion": "3.0", "Labels": [] }
+}

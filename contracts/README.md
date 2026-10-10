@@ -26,6 +26,8 @@ Contracts v1.11 (decision 20261011-0400-hem-long-range-target, issue 115) adds l
 
 Contracts v1.12 (decision 20261010-1855-hem-cleaned-quorum-expiry) adds the `cleanup_status` value `pending_confirmation`, the optional `site.clearance` (`count`, `needed`, `still_there`), the site `status` value `expired` with the optional `site.expires_at`, and the table-only `sites.cleanup_people`. One accepted after-photo no longer cleans a site: it is one person's word, and 3 different people must say cleared. A site with no activity for 90 days becomes `expired`; the `scores` CronJob now writes that status on the sites table. Additive only; stored rows stay valid, and an already-cleaned site stays cleaned. `site.jpr-1` gains `expires_at`.
 
+Contracts v1.13 (decision 20261011-0900-hem-blur-fallback, issue 110) adds the optional `moderation_result.blur.regions` (every region blurred, by kind, including the dark-photo `band`) and `blur.low_light`. Blurred public copies carry the S3 object metadata `blur-policy` (no key change). Additive only; `moderation_result.jdh-1` shows the new fields.
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.

@@ -71,6 +71,17 @@ export class Box {
     return smaller > 0 ? this.intersectionArea(other) / smaller : 0;
   }
 
+  holdsCentreOf(other: Box): boolean {
+    const x = other.left + other.width / 2;
+    const y = other.top + other.height / 2;
+    return x >= this.left && x <= this.right && y >= this.top && y <= this.bottom;
+  }
+
+  // The full-width band from `from` to `to`, each a share of this box's height measured from its top.
+  band(from: number, to: number): Box {
+    return new Box(this.left, this.top + this.height * from, this.width, this.height * (to - from));
+  }
+
   // True when this box starts within about one line height below `above` and shares some of its width.
   liesJustBelow(above: Box): boolean {
     const gap = this.top - above.bottom;

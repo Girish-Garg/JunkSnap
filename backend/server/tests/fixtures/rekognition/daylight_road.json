@@ -1,0 +1,32 @@
+{
+  "_about": "The normal case: a daylight street where DetectFaces finds the one face and DetectText reads the one plate, inside the person and the car that DetectLabels places.",
+  "DetectFaces": {
+    "FaceDetails": [{ "Confidence": 99.1, "BoundingBox": { "Left": 0.2, "Top": 0.18, "Width": 0.05, "Height": 0.07 } }]
+  },
+  "DetectText": {
+    "TextModelVersion": "3.0",
+    "TextDetections": [
+      { "Id": 0, "Type": "LINE", "DetectedText": "RJ19 SA 1234", "Confidence": 97.5, "Geometry": { "BoundingBox": { "Left": 0.6, "Top": 0.7, "Width": 0.08, "Height": 0.03 } } }
+    ]
+  },
+  "DetectLabels": {
+    "LabelModelVersion": "3.0",
+    "Labels": [
+      {
+        "Name": "Person",
+        "Confidence": 98.7,
+        "Instances": [{ "Confidence": 98.7, "BoundingBox": { "Left": 0.15, "Top": 0.15, "Width": 0.15, "Height": 0.6 } }]
+      },
+      {
+        "Name": "Car",
+        "Confidence": 97.2,
+        "Instances": [{ "Confidence": 97.2, "BoundingBox": { "Left": 0.5, "Top": 0.5, "Width": 0.3, "Height": 0.3 } }]
+      },
+      {
+        "Name": "License Plate",
+        "Confidence": 91.0,
+        "Instances": [{ "Confidence": 91.0, "BoundingBox": { "Left": 0.605, "Top": 0.7, "Width": 0.07, "Height": 0.03 } }]
+      }
+    ]
+  }
+}

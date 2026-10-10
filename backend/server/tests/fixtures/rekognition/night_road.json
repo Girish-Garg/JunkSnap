@@ -1,0 +1,37 @@
+{
+  "_about": "Shaped like the issue 110 field photo: a Jodhpur road at night with motorbikes, a car and two people. DetectFaces and DetectText find nothing; DetectLabels still places the people and vehicles.",
+  "DetectFaces": { "FaceDetails": [] },
+  "DetectText": {
+    "TextModelVersion": "3.0",
+    "TextDetections": [
+      { "Id": 0, "Type": "LINE", "DetectedText": "DANGER", "Confidence": 61.2, "Geometry": { "BoundingBox": { "Left": 0.05, "Top": 0.05, "Width": 0.1, "Height": 0.04 } } }
+    ]
+  },
+  "DetectLabels": {
+    "LabelModelVersion": "3.0",
+    "Labels": [
+      {
+        "Name": "Person",
+        "Confidence": 81.4,
+        "Instances": [
+          { "Confidence": 81.4, "BoundingBox": { "Left": 0.12, "Top": 0.35, "Width": 0.06, "Height": 0.3 } },
+          { "Confidence": 64.9, "BoundingBox": { "Left": 0.62, "Top": 0.4, "Width": 0.05, "Height": 0.25 } }
+        ]
+      },
+      {
+        "Name": "Motorcycle",
+        "Confidence": 79.3,
+        "Instances": [
+          { "Confidence": 79.3, "BoundingBox": { "Left": 0.3, "Top": 0.5, "Width": 0.18, "Height": 0.3 } },
+          { "Confidence": 58.1, "BoundingBox": { "Left": 0.5, "Top": 0.6, "Width": 0.1, "Height": 0.2 } }
+        ]
+      },
+      {
+        "Name": "Car",
+        "Confidence": 90.2,
+        "Instances": [{ "Confidence": 90.2, "BoundingBox": { "Left": 0.74, "Top": 0.45, "Width": 0.22, "Height": 0.3 } }]
+      },
+      { "Name": "Transportation", "Confidence": 90.2, "Instances": [] }
+    ]
+  }
+}

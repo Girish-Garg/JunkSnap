@@ -6,7 +6,7 @@ import { InternalDataError } from "../../src/domain/errors.js";
 import { InvalidImageError } from "../../src/domain/moderation/errors.js";
 import { PerceptualHash } from "../../src/domain/moderation/PerceptualHash.js";
 import { FACE_PADDING, PLATE_PADDING, PrivacyBlur } from "../../src/services/moderation/PrivacyBlur.js";
-import { box, FakeFinder, FakeImageStore, meanDiff, noiseJpeg, sidewaysJpeg, testJpeg } from "./fakes.js";
+import { box, FakeFinder, FakeImageStore, FakeSubjectFinder, meanDiff, noiseJpeg, sidewaysJpeg, testJpeg } from "./fakes.js";
 
 const codec = new SharpImageCodec();
 
@@ -109,12 +109,13 @@ describe("PrivacyBlur padding", () => {
   });
 
   it("blurs past the edge of a tight plate box", async () => {
-    const plates = new FakeFinder("DetectText+DetectLabels", "3.0+3.0");
+    const plates = new FakeFinder("DetectText", "3.0");
     // 16 x 8 px inside the checkerboard; the 6 px margin reaches x 66 to 94 and y 66 to 86.
     plates.boxes = [box(72 / 256, 72 / 192, 16 / 256, 8 / 192)];
-    const blur = new PrivacyBlur({ faces: new FakeFinder("DetectFaces", null), plates, blurrer: new SharpBlurrer(95), store: new FakeImageStore() });
+    const ports = { faces: new FakeFinder("DetectFaces", null), plates, subjects: new FakeSubjectFinder() };
+    const blur = new PrivacyBlur({ ...ports, blurrer: new SharpBlurrer(95), store: new FakeImageStore() });
     const upright = await testJpeg();
-    const blurred = await blur.blur({ upright, hash: PerceptualHash.fromHex("0000000000000000") });
+    const blurred = await blur.blur({ upright, hash: PerceptualHash.fromHex("0000000000000000"), brightness: 0.5, aspect: 256 / 192 });
     const before = await rgb(upright);
     const after = await rgb(blurred.jpeg);
     expect(meanDiff(before.data, after.data, before.width, (x, y) => x >= 66 && x < 72 && y >= 72 && y < 80)).toBeGreaterThan(30);

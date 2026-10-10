@@ -9,6 +9,7 @@ import { DynamoReader } from "../../src/adapters/moderation/DynamoReader.js";
 import { RekognitionFaceFinder } from "../../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../../src/adapters/moderation/RekognitionPlateFinder.js";
+import { RekognitionSubjectFinder } from "../../src/adapters/moderation/RekognitionSubjectFinder.js";
 import { S3ImageStore } from "../../src/adapters/moderation/S3ImageStore.js";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { ExternalServiceError } from "../../src/domain/errors.js";
@@ -31,6 +32,8 @@ describe.skipIf(process.env.RUN_AWS_TESTS !== "1")("moderation adapters on AWS",
     expect(screening.stamp.version).toMatch(/^\d+\.\d+\+\d+\.\d+$/);
     expect((await new RekognitionFaceFinder(rekognition).find(jpeg)).boxes).toEqual([]);
     expect((await new RekognitionPlateFinder(rekognition).find(jpeg)).boxes).toEqual([]);
+    // Rekognition refuses the whole call if any LabelInclusionFilters name is not in its label list.
+    expect((await new RekognitionSubjectFinder(rekognition).find(jpeg)).version).toMatch(/^\d+\.\d+$/);
   });
 
   it("queries the stage's sites and reports indexes", async () => {

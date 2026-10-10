@@ -11,6 +11,7 @@ import { NoWasteLocator } from "../src/adapters/moderation/NoWasteLocator.js";
 import { RekognitionFaceFinder } from "../src/adapters/moderation/RekognitionFaceFinder.js";
 import { RekognitionImageModerator } from "../src/adapters/moderation/RekognitionImageModerator.js";
 import { RekognitionPlateFinder } from "../src/adapters/moderation/RekognitionPlateFinder.js";
+import { RekognitionSubjectFinder } from "../src/adapters/moderation/RekognitionSubjectFinder.js";
 import { SharpBlurrer } from "../src/adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../src/adapters/moderation/SharpImageCodec.js";
 import { SystemClock } from "../src/adapters/moderation/SystemClock.js";
@@ -56,6 +57,7 @@ class PhotoRun {
       blur: new PrivacyBlur({
         faces: new RekognitionFaceFinder(rekognition),
         plates: new RekognitionPlateFinder(rekognition),
+        subjects: new RekognitionSubjectFinder(rekognition),
         blurrer: new SharpBlurrer(),
         store: this.#store,
       }),
