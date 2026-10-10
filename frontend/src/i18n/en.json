@@ -146,11 +146,11 @@
     "evidence": "Who reported it",
     "reporters_one": "{{count}} person reported this",
     "reporters_other": "{{count}} people reported this",
-    "noBinReporters": "{{count}} of {{min}} people reported no bin here",
     "bin": {
       "nearest": "Nearest known bin: {{distance}} (OpenStreetMap)",
       "noneWithin3km": "No known bin within 3 km (OpenStreetMap, ward records)",
-      "notMapped": "Bins not mapped here yet"
+      "notMapped": "Bins not mapped here yet",
+      "mappedNear": "A mapped bin is {{distance}} away (OpenStreetMap)"
     }
   },
   "snap": {
@@ -214,7 +214,8 @@
     "mode": {
       "label": "Capture",
       "photo": "Photo",
-      "video": "Video"
+      "video": "Video",
+      "nobin": "No bin here"
     }
   },
   "account": {
@@ -471,6 +472,11 @@
       "offline": "No connection. Try again when you are online.",
       "failed": "The vote did not go through. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    },
+    "noBin": {
+      "title": "Is there no dustbin within 1 km?",
+      "text": "Neighbours confirm no-bin zones. Your answer counts when you are within 1 km.",
+      "yes": "I confirm there's no bin within 1 km"
     }
   },
   "cleanup": {
@@ -722,5 +728,18 @@
       "light": "Light",
       "dark": "Dark"
     }
+  },
+  "nobin": {
+    "title": "No dustbin within 1 km of here?",
+    "text": "Report it from where you stand. 10 different people make it a verified no-bin zone.",
+    "send": "There is no dustbin within 1 km of here",
+    "accuracy": "Location accurate to {{metres}} m",
+    "tooVague": "Location is only accurate to {{metres}} m; move into the open until it is 50 m or better.",
+    "waiting": "Finding your location",
+    "photo": "Add a photo instead (optional)",
+    "sending": "Sending",
+    "sent": "Thanks. Your report joins the no-bin zone here.",
+    "signIn": "Sign in to report a missing bin.",
+    "failed": "Could not send. Check your connection and try again."
   }
 }

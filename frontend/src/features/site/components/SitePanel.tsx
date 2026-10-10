@@ -34,7 +34,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
       <SiteBackersBar backers={details.backers} />
       <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />
-      {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} />}
+      {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} noBin={details.report_type === 'no_bin'} />}
       <SitePhotoStrip photos={presenter.photos()} />
       <SiteLocationLine location={details.location} />
       <SiteCounts reports={details.report_count} verified={details.verified_count} />

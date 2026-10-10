@@ -2,6 +2,7 @@ import type { AreaLetterService } from '../services/AreaLetterService';
 import type { CameraCapture } from '../services/CameraCapture';
 import type { ScanCapture } from '../services/ScanCapture';
 import type { GpsWatcher } from '../services/GpsWatcher';
+import type { NoBinReporter } from '../services/NoBinReporter';
 import type { ImageEncoder } from '../services/PhotoEncoder';
 import type { PhotoHasher } from '../services/PhotoHasher';
 import type { ReportQueue } from '../services/ReportQueue';
@@ -25,4 +26,5 @@ export interface SnapServices {
   readonly gps: GpsWatcher;
   readonly siteActions: SiteActionService;
   readonly areaLetters: AreaLetterService;
+  readonly noBin: NoBinReporter;
 }
