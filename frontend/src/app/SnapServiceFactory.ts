@@ -17,6 +17,7 @@ import { IndexedDbMetaStore } from '../services/IndexedDbMetaStore';
 import { IndexedDbReportStore } from '../services/IndexedDbReportStore';
 import { IndexedDbScanStore } from '../services/IndexedDbScanStore';
 import { JunkSnapDb } from '../services/JunkSnapDb';
+import { MockConfirmations } from '../services/MockConfirmations';
 import { MockReportApi } from '../services/MockReportApi';
 import { MockReportEvidence } from '../services/MockReportEvidence';
 import { MockScanApi } from '../services/MockScanApi';
@@ -27,6 +28,7 @@ import { PhotoHasher } from '../services/PhotoHasher';
 import { QueueLock } from '../services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../services/ReportApi';
 import { reportEvidenceLoaders } from '../services/reportFixtures';
+import { ReportConfirmer } from '../services/ReportConfirmer';
 import { ReportQueue } from '../services/ReportQueue';
 import { ReportSender } from '../services/ReportSender';
 import { ReportTracker } from '../services/ReportTracker';
@@ -75,7 +77,7 @@ const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: Reque
   mock: () => {
     const evidence = new MockReportEvidence(reportEvidenceLoaders);
     return {
-      reports: new MockReportApi(sampleSiteLoader, undefined, evidence),
+      reports: new MockReportApi(sampleSiteLoader, undefined, evidence, new MockConfirmations(reportEvidenceLoaders.confirm)),
       scans: new MockScanApi(undefined, evidence),
       sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
       areaLetters: mockAreaLetters(),
@@ -120,6 +122,7 @@ export class SnapServiceFactory {
     return {
       queue,
       tracker: new ReportTracker(apis.reports, queue),
+      confirmer: new ReportConfirmer({ api: apis.reports, identity, queue }),
       scans,
       scanTracker: new ScanTracker(apis.scans, scans),
       recorder,

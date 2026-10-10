@@ -25,6 +25,10 @@ class RecordingReportApi implements ReportApi {
   status(): Promise<ReportStatusView> {
     throw new Error('not used');
   }
+
+  confirm(): Promise<ReportStatusView> {
+    throw new Error('a no-bin report is never asked to confirm');
+  }
 }
 
 const signedIn: RequestIdentity = { idToken: async () => 'token', deviceToken: async () => '3f6c2a1e-8b4d-4c7a-9e21-5d0b7f3a6c14' };

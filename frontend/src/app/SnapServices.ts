@@ -7,6 +7,7 @@ import type { GpsWatcher } from '../services/GpsWatcher';
 import type { NoBinReporter } from '../services/NoBinReporter';
 import type { ImageEncoder } from '../services/PhotoEncoder';
 import type { PhotoHasher } from '../services/PhotoHasher';
+import type { ReportConfirmer } from '../services/ReportConfirmer';
 import type { ReportQueue } from '../services/ReportQueue';
 import type { ReportTracker } from '../services/ReportTracker';
 import type { ScanQueue } from '../services/ScanQueue';
@@ -18,6 +19,8 @@ import type { VideoRecorder } from '../services/VideoRecorder';
 export interface SnapServices {
   readonly queue: ReportQueue;
   readonly tracker: ReportTracker;
+  /** The reporter's answer when the check was unsure (contracts v1.16). */
+  readonly confirmer: ReportConfirmer;
   readonly scans: ScanQueue;
   readonly scanTracker: ScanTracker;
   readonly recorder: VideoRecorder;

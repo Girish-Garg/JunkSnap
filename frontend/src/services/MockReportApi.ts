@@ -1,7 +1,10 @@
+import { ApiError } from '../domain/ApiError';
+import type { ConfirmRequest } from '../domain/ReportConfirmation';
 import type { ReportStatus, ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
 import type { SiteFeature } from '../domain/Site';
 import { isoSeconds } from '../domain/utils';
+import type { MockConfirmations } from './MockConfirmations';
 import type { MockReportEvidence } from './MockReportEvidence';
 import type { ReportApi } from './ReportApi';
 
@@ -13,14 +16,19 @@ export class MockReportApi implements ReportApi {
   readonly #sampleSite: () => Promise<SiteFeature>;
   readonly #delayMs: number;
   readonly #evidence: MockReportEvidence | null;
+  readonly #confirmations: MockConfirmations | null;
   readonly #polls = new Map<string, number>();
   #count = 0;
 
-  /** evidence: the fixtures behind the "What we checked" view; null leaves statuses bare, as tests expect. */
-  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = 400, evidence: MockReportEvidence | null = null) {
+  /**
+   * evidence: the fixtures behind the "What we checked" view; null leaves statuses bare, as tests expect.
+   * confirmations: reports the check was unsure about; null never asks.
+   */
+  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = 400, evidence: MockReportEvidence | null = null, confirmations: MockConfirmations | null = null) {
     this.#sampleSite = sampleSite;
     this.#delayMs = delayMs;
     this.#evidence = evidence;
+    this.#confirmations = confirmations;
   }
 
   async presign(request: PresignRequest): Promise<PresignResponse> {
@@ -38,7 +46,9 @@ export class MockReportApi implements ReportApi {
 
   async submit(upload: ReportUpload): Promise<AcceptedReport> {
     await this.#wait();
-    return { report_id: upload.upload_id.replace(/^upl_/, 'rpt_'), status: 'queued' };
+    const reportId = upload.upload_id.replace(/^upl_/, 'rpt_');
+    this.#confirmations?.noteSubmitted(reportId, upload.report_type);
+    return { report_id: reportId, status: 'queued' };
   }
 
   async status(reportId: string): Promise<ReportStatusView> {
@@ -50,9 +60,19 @@ export class MockReportApi implements ReportApi {
     this.#polls.set(reportId, poll + 1);
     const status = STEPS[Math.min(poll, STEPS.length - 1)] ?? 'queued';
     if (status !== 'verified') return { report_id: reportId, status, site_id: null, blurred_url: null, updated_at };
+    return (await this.#confirmations?.settled(reportId, new Date())) ?? this.#verified(reportId, updated_at);
+  }
+
+  async #verified(reportId: string, updated_at: string): Promise<ReportStatusView> {
     const site = (await this.#sampleSite()).properties;
-    const view: ReportStatusView = { report_id: reportId, status, site_id: site.site_id, blurred_url: site.photo_urls[0] ?? null, updated_at };
+    const view: ReportStatusView = { report_id: reportId, status: 'verified', site_id: site.site_id, blurred_url: site.photo_urls[0] ?? null, updated_at };
     return this.#evidence ? this.#evidence.snap(view) : view;
+  }
+
+  async confirm(reportId: string, request: ConfirmRequest): Promise<ReportStatusView> {
+    await this.#wait();
+    if (!this.#confirmations) throw new ApiError(409, 'confirmation_closed', 'This report is not waiting for an answer.');
+    return this.#confirmations.answer(reportId, request.sure, new Date());
   }
 
   #wait(): Promise<void> {

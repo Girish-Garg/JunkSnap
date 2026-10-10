@@ -38,6 +38,9 @@ const RESULTS: Readonly<Record<string, FrameResult>> = {
   community_check: "waiting",
   needs_review: "failed",
   withdrawn: "withdrawn",
+  // A frame is never asked (an unsure judge rejects it, contracts v1.16); these only guard a row written otherwise.
+  needs_confirmation: "not_waste",
+  not_confirmed: "not_waste",
 };
 const ON_MAP: ReadonlySet<FrameResult> = new Set(["added", "waiting"]);
 

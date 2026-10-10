@@ -21,6 +21,8 @@ export interface MergeEvidence {
   readonly brands: readonly BrandLabel[];
   // Scan frames only: t_ms of the first frame of the frame's spot (contracts v1.10).
   readonly scanSpot?: number;
+  // The reporter answered sure after the judge was unsure (contracts v1.16); only then does needs_confirmation pass.
+  readonly reporterConfirmed?: boolean;
 }
 
 export interface MergeableReport {

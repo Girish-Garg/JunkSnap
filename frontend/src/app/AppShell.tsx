@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { AuthFlowProvider } from '../features/auth/components/AuthFlowProvider';
 import { SplashScreen } from '../features/brand/components/SplashScreen';
 import { SplashSession } from '../features/brand/SplashSession';
+import { ConfirmToast } from '../features/snap/components/ConfirmToast';
 import { RejectionToast } from '../features/snap/components/RejectionToast';
 import { AppRoutes } from './AppRoutes';
 import { WELCOME_PATH } from './paths';
@@ -33,6 +34,7 @@ export function AppShell() {
         <AppRoutes />
       </AuthFlowProvider>
       <RejectionToast />
+      <ConfirmToast />
       {splash && <SplashScreen onDone={afterSplash} />}
     </div>
   );

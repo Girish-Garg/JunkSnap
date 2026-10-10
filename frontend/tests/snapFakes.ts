@@ -19,6 +19,7 @@ import { NoBinReporter } from '../src/services/NoBinReporter';
 import { PhotoHasher } from '../src/services/PhotoHasher';
 import { QueueLock } from '../src/services/QueueLock';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
+import { ReportConfirmer } from '../src/services/ReportConfirmer';
 import { ReportQueue } from '../src/services/ReportQueue';
 import { ReportSender } from '../src/services/ReportSender';
 import type { ItemStore, MetaStore, ReportStore } from '../src/services/ReportStore';
@@ -194,6 +195,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
   return {
     queue,
     tracker: new ReportTracker(api, queue),
+    confirmer: new ReportConfirmer({ api, identity, queue }),
     scans,
     scanTracker: new ScanTracker(scanApi, scans),
     recorder,

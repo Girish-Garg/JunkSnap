@@ -27,7 +27,7 @@ def test_first_valid_answer_wins() -> None:
 
     answer = router({"first": first, "second": None}).complete_json(JOB)
 
-    assert answer.value.report_type == "waste_dump"
+    assert answer.value.to_verdict().report_type == "waste_dump"
     assert answer.response.model == "first"
 
 

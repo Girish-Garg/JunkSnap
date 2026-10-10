@@ -3,11 +3,20 @@
 from dataclasses import replace
 
 import pytest
-from fakes import JUDGE_JSON, FakeBuilder, FakeDetector, FakeProvider, FixedClock, make_case
+from fakes import (
+    CLEAN_FIELDS,
+    FakeBuilder,
+    FakeDetector,
+    FakeProvider,
+    FixedClock,
+    judge_json,
+    make_case,
+)
 from model_fakes import meta_model
 
 from ml.domain.detections import Detection, DetectionSet
 from ml.domain.images import BlurredImage
+from ml.domain.judge_attributes import ClaimAnswer
 from ml.domain.label_insights import LabelInsights
 from ml.domain.llm import TaskConfig
 from ml.domain.pricing import PriceTable
@@ -38,9 +47,7 @@ class BoxDetector(ObjectDetector):
 
 
 def bin_answer(context: str) -> str:
-    return JUDGE_JSON.replace('"waste_dump"', '"overflowing_bin"').replace(
-        '"vacant_plot"', f'"{context}"'
-    )
+    return judge_json(bin="yes", bin_overflowing_or_broken="yes", context=context)
 
 
 @pytest.mark.parametrize("context", ["overflowing", "damaged"])
@@ -57,7 +64,17 @@ def test_judge_answer_and_verify_body_accept_overflowing_bin(context: str) -> No
 
 def test_a_context_of_another_type_becomes_null() -> None:
     verdict = JudgeAnswer.model_validate_json(bin_answer("no_pickup")).to_verdict()
-    assert verdict.context is None
+    assert (verdict.report_type, verdict.context) == ("overflowing_bin", None)
+
+
+def test_a_clean_bin_is_not_an_overflowing_bin() -> None:
+    """The #123 replay: clean bins were named overflowing_bin or no_bin and reached neighbours."""
+    clean = judge_json(CLEAN_FIELDS, bin="yes", context="overflowing")
+    verdict = JudgeAnswer.model_validate_json(clean).to_verdict()
+
+    assert (verdict.report_type, verdict.context) == ("not_waste", None)
+    assert verdict.answer_for(OVERFLOWING) is ClaimAnswer.NO
+    assert verdict.answer_for(Claim("waste_dump", "roadside")) is ClaimAnswer.NO
 
 
 def test_yolo_bin_with_waste_spilling_beside_it_supports_the_claim() -> None:

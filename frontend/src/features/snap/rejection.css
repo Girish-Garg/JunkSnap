@@ -46,6 +46,11 @@
   }
 }
 
+/* The same toast when the check was unsure (contracts v1.16): the question, then the way to answer it. */
+.confirm-toast__question {
+  margin: 0;
+}
+
 .report-rejection {
   margin: var(--s-2) 0 0;
 }

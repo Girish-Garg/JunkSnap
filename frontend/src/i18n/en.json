@@ -500,7 +500,9 @@
     "unclear": "Retake: photo not clear",
     "not_waste": "Not a waste site",
     "unconfirmed": "Waste not confirmed",
-    "withdrawn": "Withdrawn"
+    "withdrawn": "Withdrawn",
+    "needs_confirmation": "Your answer needed",
+    "not_confirmed": "Not added: no answer"
   },
   "rejection": {
     "unclear": "Retake: we couldn't see waste clearly. Hold the phone steady and snap the waste in good light.",
@@ -950,6 +952,25 @@
       "sign_in": "Your sign-in has expired. Sign in again and try once more."
     }
   },
+  "confirm": {
+    "title": "Are you sure?",
+    "question": "Our check wasn't sure this shows “{{type}}”. Only report it if you're 100% sure.",
+    "questionPlain": "Our check wasn't sure about this photo. Only report it if you're 100% sure.",
+    "reasonLabel": "What the AI check saw",
+    "sure": "Yes, I'm sure",
+    "withdraw": "Withdraw",
+    "answer": "Answer",
+    "sending": "Sending your answer…",
+    "notConfirmed": "No answer within 24 hours, so this report was not added to the map.",
+    "errors": {
+      "confirmation_closed": "This report is no longer waiting for your answer.",
+      "rate_limited": "Too many answers this hour. Try again later.",
+      "not_found": "This report could not be found.",
+      "offline": "No connection. Try again when you are online.",
+      "failed": "Your answer did not go through. Try again.",
+      "sign_in": "Your sign-in has expired. Sign in again and try once more."
+    }
+  },
   "activityDelete": {
     "action": "Delete",
     "yes": "Yes, delete",
@@ -998,7 +1019,9 @@
       "withdrawn": "Withdrawn",
       "removed": "Removed by neighbours",
       "stopped": "Stopped at the photo checks",
-      "review": "Couldn't be checked"
+      "review": "Couldn't be checked",
+      "asking": "Your answer needed",
+      "not_confirmed": "Not added to the map"
     },
     "explain": {
       "checking": "We're still checking this photo. This page updates by itself.",
@@ -1010,7 +1033,9 @@
       "withdrawn": "You took this report back.",
       "removed": "Neighbours said there is no waste here, so the spot left the map.",
       "stopped": "This photo was stopped before anyone else could see it.",
-      "review": "Something went wrong while checking this photo, so it isn't on the map."
+      "review": "Something went wrong while checking this photo, so it isn't on the map.",
+      "asking": "Answer within 24 hours. Until then, this report is not on the map.",
+      "not_confirmed": "No answer within 24 hours, so this report was not added to the map."
     },
     "reason": {
       "invalid_image": "The photo file couldn't be read, or didn't match what the phone sent.",

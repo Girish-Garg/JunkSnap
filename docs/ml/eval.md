@@ -161,6 +161,27 @@ The precision of about 0.51 is not caused by #123. 58 of the 119 clean photos go
 
 Cost of the run: 235 Bedrock judge calls (230 Nova Lite, 5 Nova Pro; schema retries included) for 583k input and 34k output tokens, about $0.058 at list prices; 224 Rekognition DetectLabels calls. Median judge latency was 1.7 s. YOLO and SigLIP ran locally. Scores and the one-off replay scripts are kept outside the repo, like the other scored files.
 
+## Structured judge re-test (11 Oct, judge_v1)
+
+Measured on 11 Oct 2026 for decision 20261011-0305 (issue 135). The same 224 test photos and the same cached detector signals as the #123 replay above (claim `waste_dump`/`roadside`), with fresh judge calls on the new `judge_v1` prompt (per-attribute yes, no or uncertain, and a user verdict on the stated claim), Nova Lite first and Nova Pro next; OpenAI was not called. Each case then went through this branch's own `StackedVerifier`, `meta-v2` and report rules. Every case was decided by meta-v2. One photo (`garbage_img__90`) got no valid answer from either Nova model and took the outage path (community check).
+
+On the 184 QR4Change photos (65 garbage, 119 not), accepted meaning auto-verified or community check:
+
+| rules | waste: auto-verified / community check / needs confirmation / rejected | not waste: auto-verified / community check / needs confirmation / rejected | accuracy | precision | recall | genuine waste rejected | clean photos accepted |
+|---|---|---|---|---|---|---|---|
+| #123 (`judge_v0`) | 40 / 22 / 0 / 3 | 1 / 58 / 0 / 60 | 0.663 | 0.512 | 0.954 | 3 (4.6%) | 59 (49.6%) |
+| `judge_v1` (this change) | 41 / 21 / 0 / 3 | 1 / 6 / 0 / 112 | 0.946 | 0.899 | 0.954 | 3 (4.6%) | 7 (5.9%) |
+
+Clean photos accepted fell from 59 to 7, and community checks of clean photos from 58 to 6. The target of at most 2 genuine waste photos rejected was not met: it stays at 3 of 65, which is accepted as the outcome. Two of the three were rejected under #123 too, arguably correctly (a photo too blurry to show anything, and a tray of food).
+
+- The three garbage photos rejected: `garbage_img__54` (`judge_veto:unclear`, "too blurry", every detector under 0.1; rejected under #123 too), `garbage_img__2` (`judge_veto:not_waste`, "a person holding a tray with food", detectors 0, 0, 0.45; rejected under #123 too) and `garbage_img__210` (`judge_veto:low_support`, "a dirty puddle on the roadside, not a waste dump", YOLO 0.36, embeddings 0.13; new). `garbage_img__77`, the false rejection of #123, is now judged usable and auto-verified.
+- The detector exception fired three times: `garbage_img__80` (judge: photo unusable; YOLO 0.72, embeddings 0.97) went to community check instead of a rejection, and two clean photos where YOLO alone was sure (0.93 on a snowy owl, 0.6 on a clean roadside bin) went to community check after a judge "no". The shipped rule counts YOLO only; counting the embedding head too gives the same numbers on this split, but the head gave 0.77 to the prod indoor-cupboard photo the judge rightly rejected. Rekognition labels are at 0.5 or more on 31 clean photos, so counting them would lift far more.
+- Of the 7 clean photos accepted, 5 are judge "yes" answers on photos with a bin and some litter, one of them auto-verified (a bucket of waste indoors, every detector at 0.6 or more).
+- No photo reached `needs_confirmation`: the judge said uncertain in 5 user verdicts, and every one of them also had a "no" attribute or an unusable photo, which take precedence. The reporter-confirmation path is therefore not exercised by this split.
+- `photo_usable` was "no" on 7 of 224 photos (2 garbage, 4 clean, 1 D-Fire). None of the 17 dark photos (mean luma under 70) was marked unusable or uncertain. All 40 D-Fire photos were rejected (38 `not_waste`, 1 `low_support`, 1 `unclear`), against 28 under #123.
+
+Cost of the run: 237 Bedrock judge calls (234 Nova Lite, 3 Nova Pro; schema retries included) for 743k input and 41k output tokens, about $0.064 at list prices. The longer prompt costs about 3,100 input tokens a call, against 2,500 for `judge_v0`. Median judge latency was 1.7 s. No detector was re-run. The re-test scripts and answers are kept outside the repo, like the other scored files. The meta-learner was fitted on `judge_v0` supports and has not been refitted.
+
 ## Gaps and what would change these numbers
 
 - Public data only: no Jodhpur photo is trained on or evaluated, and QR4Change's clean photos include street scenes from outside India, so real-world accuracy in Jodhpur is not measured here.
