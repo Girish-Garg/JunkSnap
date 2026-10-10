@@ -30,7 +30,7 @@ export function AreaDirectoryList({ state, query }: AreaDirectoryListProps) {
   }
   const failed = state.partial && (
     <div className="area-partial">
-      <Notice icon="info" text={t('areas.listPartial')} tone="alert" />
+      <Notice icon="info" text={t(state.partial === 'counts' ? 'areas.listPartial' : 'areas.listPartialOther')} tone="alert" />
       <Button variant="secondary" onClick={state.retry}>{t('areas.retry')}</Button>
     </div>
   );

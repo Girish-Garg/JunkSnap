@@ -470,9 +470,10 @@
     "pilotNote": "Jodhpur is the pilot city: every seat is listed here, reported or not.",
     "localBodyNote": "Area letters go to its head. Its ward maps are not reviewed yet, so reports are counted by seat and district for now.",
     "retry": "Try again",
-    "listPartial": "Couldn't load some counts. Areas marked below are not zero; their counts are unknown for now.",
+    "listPartial": "Couldn't load some counts. Areas that say \"Couldn't load counts\" are not zero; their counts are unknown for now.",
     "countsFailed": "Couldn't load counts",
-    "scoreWithheld": "Score withheld for now"
+    "scoreWithheld": "Score withheld for now",
+    "listPartialOther": "Couldn't load the reported areas of other districts around the map, so some may be missing here. Jodhpur's areas and counts are complete."
   },
   "activity": {
     "title": "Activity",

@@ -13,18 +13,23 @@ export type { AreaEntry } from '../../../domain/AreaDirectory';
 // GET /areas/{kind} caps a page at 200 areas; a district has far fewer wards and seats.
 const LIMIT = 200;
 
+/**
+ * What failed: `counts`, a list of the pilot city (its areas say "Couldn't load counts"); `areas`, only a list of
+ * another district around the map (its reported areas may be missing); null when every list loaded.
+ */
+export type PartialLoad = 'counts' | 'areas' | null;
+
 export interface AreaDirectoryState {
   /** null while loading. */
   readonly entries: readonly AreaEntry[] | null;
-  /** Some list could not load: its pilot areas show "Couldn't load counts", and reported areas elsewhere may be missing. */
-  readonly partial: boolean;
+  readonly partial: PartialLoad;
   /** Asks again for the lists that failed (CachedAreaApi forgets a failed request at once). */
   readonly retry: () => void;
 }
 
 interface Loaded {
   readonly entries: readonly AreaEntry[];
-  readonly partial: boolean;
+  readonly partial: PartialLoad;
 }
 
 interface Outcome {
@@ -35,7 +40,7 @@ interface Outcome {
 }
 
 /** Every list for these districts; a list that fails leaves the others in place and marks its pilot kind unloaded. */
-async function loadDirectory(areas: AreaApi, districts: readonly string[]): Promise<Loaded> {
+export async function loadDirectory(areas: AreaApi, districts: readonly string[]): Promise<Loaded> {
   const asked = districts.flatMap((within) => AREA_KINDS.map((kind) => ({ kind, within })));
   const outcomes = await Promise.all(
     asked.map(({ kind, within }) =>
@@ -49,7 +54,8 @@ async function loadDirectory(areas: AreaApi, districts: readonly string[]): Prom
   const failed = outcomes.filter((outcome) => outcome.listing === null);
   if (failed.length > 0) console.error('Could not load some areas', failed[0]?.error);
   const unloaded = new Set(failed.filter((outcome) => outcome.within === DEFAULT_CITY.id).map((outcome) => outcome.kind));
-  return { entries: AreaDirectory.of(listings, PILOT_AREAS, unloaded), partial: failed.length > 0 };
+  const partial: PartialLoad = unloaded.size > 0 ? 'counts' : failed.length > 0 ? 'areas' : null;
+  return { entries: AreaDirectory.of(listings, PILOT_AREAS, unloaded), partial };
 }
 
 /**
@@ -73,5 +79,5 @@ export function useAreaDirectory(query: string): AreaDirectoryState {
   const retry = useCallback(() => setAttempt((count) => count + 1), []);
   // A new district set keeps the last list on screen until its own arrives.
   const entries = useMemo(() => loaded && AreaDirectory.match(loaded.entries, query), [loaded, query]);
-  return { entries, partial: loaded?.partial ?? false, retry };
+  return { entries, partial: loaded?.partial ?? null, retry };
 }

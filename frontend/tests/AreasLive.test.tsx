@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
+import { loadDirectory } from '../src/features/areas/hooks/useAreaDirectory';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import type { AreaApi } from '../src/services/AreaApi';
 import { renderApp, testServices } from './helpers';
@@ -85,10 +86,28 @@ describe('Areas tab when a list fails', () => {
     expect(osian).not.toHaveTextContent('No reports yet');
     expect(osian).not.toHaveTextContent('Sites: 0');
     expect((await group('Lok Sabha seats')).getByRole('link', { name: /Pali/ })).toHaveTextContent('No reports yet');
+    expect(screen.getByText(/^Couldn't load some counts/)).toBeInTheDocument();
     failing.assembly = false;
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(seats.getByRole('link', { name: /Osian/ })).toHaveTextContent('No reports yet'));
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  });
+});
+
+describe('loadDirectory when only another district fails', () => {
+  it('says areas elsewhere may be missing, and keeps every Jodhpur count', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const areas: AreaApi = {
+      scores: () => Promise.reject(new Error('unused')),
+      list: async (kind, within, limit) => {
+        if (within === 'rajasthan-jaipur') throw new Error('offline');
+        return { kind, within, total: 0, limit, areas: [] };
+      },
+      crawl: () => Promise.reject(new Error('unused')),
+    };
+    const loaded = await loadDirectory(areas, ['rajasthan-jodhpur', 'rajasthan-jaipur']);
+    expect(loaded.partial).toBe('areas');
+    expect(loaded.entries.some((entry) => entry.unloaded)).toBe(false);
   });
 });
 
