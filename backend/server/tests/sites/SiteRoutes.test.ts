@@ -78,7 +78,7 @@ async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance>
   cleanups = new FakeCleanups();
   rig = withdrawalRig(sites);
   const routes = new SiteRoutes({
-    finder: new SiteFinder(sites, new NgeohashCells()),
+    finder: new SiteFinder(sites, new NgeohashCells(), clock),
     votes: new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry }),
     cleanups: new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry }),
     withdrawals: rig.service,

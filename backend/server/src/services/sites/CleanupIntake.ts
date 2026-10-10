@@ -32,8 +32,9 @@ export class CleanupIntake {
     if (existing !== null) {
       return this.#resume(existing, siteId);
     }
-    await this.#deps.retry.run(() => this.#markChecking(siteId, cleanupId));
-    const receivedAt = this.#deps.clock.now().toISOString();
+    const now = this.#deps.clock.now();
+    await this.#deps.retry.run(() => this.#markChecking(siteId, cleanupId, now));
+    const receivedAt = now.toISOString();
     const record: CleanupRecord = {
       ...request,
       cleanup_id: cleanupId,
@@ -58,7 +59,7 @@ export class CleanupIntake {
     return CleanupIntake.#accepted(record);
   }
 
-  async #markChecking(siteId: string, cleanupId: string): Promise<void> {
+  async #markChecking(siteId: string, cleanupId: string, now: Date): Promise<void> {
     const site = await this.#deps.sites.get(siteId);
     if (site === null) {
       throw new SiteNotFoundError(`No site ${siteId}`);
@@ -66,7 +67,7 @@ export class CleanupIntake {
     if (site.awaitsCleanup(cleanupId)) {
       return;
     }
-    site.startCleanup(cleanupId);
+    site.startCleanup(cleanupId, now);
     await this.#deps.sites.save(site);
   }
 

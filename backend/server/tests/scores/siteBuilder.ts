@@ -55,6 +55,7 @@ export function site(overrides: Partial<AreaSiteProps> = {}): AreaSite {
     verifiedCount: 1,
     firstReportedAt: "2026-10-10T00:00:00Z",
     cleanedAt: null,
+    expiresAt: "2027-01-08T00:00:00Z",
     pilot: false,
     burning: false,
     point: HERE,

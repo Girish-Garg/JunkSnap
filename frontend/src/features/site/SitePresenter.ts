@@ -1,9 +1,11 @@
 import type { SiteProperties } from '../../domain/Site';
+import { SiteLifecycle } from '../../domain/SiteLifecycle';
 import { UlidTime } from '../../domain/UlidTime';
 
 export interface BadgeView {
   readonly key: string;
   readonly tone: 'alert' | 'plain';
+  readonly params?: Readonly<Record<string, number>>;
 }
 
 export interface PhotoView {
@@ -28,6 +30,8 @@ export class SitePresenter {
     const badges: BadgeView[] = [];
     if (this.#site.burning) badges.push({ key: 'site.burning', tone: 'alert' });
     if (this.#site.cleanup_status === 'checking') badges.push({ key: 'site.cleanupChecking', tone: 'plain' });
+    const pending = new SiteLifecycle(this.#site).pendingClearance();
+    if (pending) badges.push({ key: 'site.reportedCleaned', tone: 'plain', params: { count: pending.count, needed: pending.needed } });
     if (this.#site.pilot) badges.push({ key: 'site.pilot', tone: 'plain' });
     return badges;
   }

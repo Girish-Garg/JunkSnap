@@ -4,6 +4,7 @@ import { NotVerifiedError } from "../../domain/letters/errors.js";
 import { LetterEvidence } from "../../domain/letters/LetterEvidence.js";
 import { LetterSite } from "../../domain/letters/LetterSite.js";
 import type { Rule } from "../../domain/letters/Rule.js";
+import { isLapsed } from "../../domain/SiteExpiry.js";
 import type { Addressees, Channel, Citation, Language, Requester } from "../../domain/letters/types.js";
 import type { LetterBrief } from "../../ports/letters/LetterWriter.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
@@ -59,6 +60,10 @@ export class LetterService {
     const stored = await this.#parts.sites.find(siteId);
     if (stored === null) {
       throw new NotFoundError(`No site ${siteId}`);
+    }
+    // Decision 20261010-1855: an expired site takes no letter, even before the CronJob marks it.
+    if (isLapsed(stored.properties, this.#parts.stamp.now())) {
+      throw new NotFoundError(`Site ${siteId} expired after 90 days without activity`);
     }
     const site = LetterSite.fromSite(stored);
     if (!site.verified) {

@@ -2,7 +2,7 @@ import type { WardScores } from "../contracts/index.gen.js";
 import type { AreaSite } from "./AreaSite.js";
 import { sum } from "./scoreUtils.js";
 
-// The sites of one area; rejected sites never count, metrics read verified sites only.
+// The sites of one area; rejected, removed and expired sites never count, metrics read verified sites only.
 export class AreaSites {
   readonly #all: readonly AreaSite[];
 
@@ -15,7 +15,7 @@ export class AreaSites {
   }
 
   verified(): readonly AreaSite[] {
-    return this.#all.filter((site) => site.isVerified());
+    return this.counted().filter((site) => site.isVerified());
   }
 
   // The sites behind the area insights: verified, with at least one verified report.

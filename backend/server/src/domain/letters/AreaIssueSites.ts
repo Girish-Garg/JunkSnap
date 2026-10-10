@@ -79,9 +79,10 @@ export class AreaIssueSites {
     });
   }
 
-  // Rejected sites and removed (withdrawn) sites never count (decisions 20261010-1530 and -1700).
+  // Rejected, removed (withdrawn) and expired sites never count (decisions 20261010-1530, -1700 and 20261010-1855).
   static #standing(site: Site): boolean {
-    return site.properties.verification !== "rejected" && site.properties.status !== "removed";
+    const { verification, status } = site.properties;
+    return verification !== "rejected" && status !== "removed" && status !== "expired";
   }
 
   // Decision 20261010-1630: a no-bin zone counts once 10 people confirmed it; a mapped bin nearby is evidence, not a gate.

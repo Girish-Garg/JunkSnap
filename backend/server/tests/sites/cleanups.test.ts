@@ -9,7 +9,7 @@ import { CleanupIntake } from "../../src/services/sites/CleanupIntake.js";
 import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { BASE_URL, DEVICE_B, fixture, report } from "./builders.js";
-import { FakeCleanups, FakeQueue, FakeSiteRepository, FixedClock, NOW } from "./fakes.js";
+import { FakeCleanups, FakeQueue, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
 
 const REQUEST: CleanupRequest = {
   upload_id: "upl_jdh_3c",
@@ -30,7 +30,7 @@ function setup() {
   const queue = new FakeQueue();
   const retry = new ConflictRetry();
   const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry });
-  const service = new CleanupService({ sites, cleanups, media: new PublicMedia(BASE_URL), retry });
+  const service = new CleanupService({ sites, cleanups, votes: new FakeVoteRepository(), media: new PublicMedia(BASE_URL), retry });
   return { sites, cleanups, queue, intake, service };
 }
 
@@ -67,7 +67,7 @@ describe("CleanupIntake", () => {
   it("finishes the job when a retry follows a failure after the site was marked", async () => {
     const { intake, sites, cleanups, queue } = setup();
     const site = await sites.get("site_jdh_1");
-    site?.startCleanup("cln_jdh_3c");
+    site?.startCleanup("cln_jdh_3c", new Date(NOW));
     if (site) {
       await sites.save(site);
     }
@@ -83,11 +83,14 @@ describe("CleanupIntake", () => {
     await expect(intake.submit("site_jdh_1", second, USER)).rejects.toThrow(CleanupPendingError);
   });
 
-  it("returns 409 already_cleaned once the site is cleaned, but the stored status to a retry", async () => {
+  it("takes more after-photos while pending, then returns 409 already_cleaned, but the stored status to a retry", async () => {
     const { intake, service } = setup();
-    await intake.submit("site_jdh_1", REQUEST, USER);
-    await service.apply("cln_jdh_3c", PASSED);
-    expect(await intake.submit("site_jdh_1", REQUEST, USER)).toMatchObject({ status: "accepted" });
+    for (const person of [USER, "user-two", "user-three"]) {
+      const upload = { ...REQUEST, upload_id: `upl_${person}` };
+      const { cleanup_id: cleanupId } = await intake.submit("site_jdh_1", upload, person);
+      await service.apply(cleanupId, { moderation: { ...MODERATION, report_id: cleanupId }, verification: { ...VERIFICATION, report_id: cleanupId } });
+    }
+    expect(await intake.submit("site_jdh_1", { ...REQUEST, upload_id: `upl_${USER}` }, USER)).toMatchObject({ status: "accepted" });
     await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_new" }, USER)).rejects.toThrow(AlreadyCleanedError);
   });
 
@@ -101,16 +104,18 @@ describe("CleanupIntake", () => {
 });
 
 describe("CleanupService.apply", () => {
-  it("accepts a passed, clean after-photo: the site is cleaned with its photo and decision time", async () => {
+  it("accepts a passed, clean after-photo as one person's word: the site waits for two more (decision 20261010-1855)", async () => {
     const { intake, service, sites, cleanups } = setup();
     await intake.submit("site_jdh_1", REQUEST, USER);
     expect(await service.apply("cln_jdh_3c", PASSED)).toBe("accepted");
     expect(sites.feature("site_jdh_1").properties).toMatchObject({
-      status: "cleaned",
-      cleanup_status: "accepted",
+      status: "open",
+      cleanup_status: "pending_confirmation",
       cleanup_photo_url: `${BASE_URL}/media/cleanups/cln_jdh_3c.jpg`,
-      cleaned_at: "2026-10-09T06:21:40Z",
+      clearance: { count: 1, needed: 3, still_there: 0 },
+      cleaned_at: null,
     });
+    expect(sites.internals("site_jdh_1")?.cleanupPeople).toEqual([{ person: USER, at: NOW }]);
     expect(cleanups.finished.get("cln_jdh_3c")).toEqual({ status: "accepted", ...PASSED });
   });
 

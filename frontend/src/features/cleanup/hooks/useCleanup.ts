@@ -6,7 +6,7 @@ import { usePhotoCapture, type CapturedPhoto } from '../../snap/hooks/usePhotoCa
 export type CleanupPhase = 'camera' | 'review' | 'sent';
 
 // 409s with their own message; anything else says the photo did not go through.
-const KNOWN_ERRORS: ReadonlySet<string> = new Set(['cleanup_pending', 'already_cleaned', 'rate_limited']);
+const KNOWN_ERRORS: ReadonlySet<string> = new Set(['cleanup_pending', 'already_cleaned', 'rate_limited', 'not_found']);
 
 const problemOf = (error: unknown) => ActionProblem.of(error, KNOWN_ERRORS);
 

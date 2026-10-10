@@ -112,7 +112,7 @@ stateDiagram-v2
 
 State names are the `status` values of GET /reports/{id} in `contracts/README.md`. A passed report is merged into a site, which sets its `site_id`, and then follows the site: a site is verified when 10 different people back it by photo or yes vote (decision 20261010-1530).
 
-A site moves open → cleaned (only with an after-photo the pipeline confirms is clean) → reopened. A scan moves queued → processing → done, or failed (`invalid_video` or `retries_exhausted`).
+A site moves open → cleaned (once 3 different people say it is cleared, by an after-photo the pipeline confirms is clean or a cleared vote; decision 20261010-1855) → reopened. An open or reopened site with no report, vote or after-photo for 90 days becomes expired, off the map but kept. A scan moves queued → processing → done, or failed (`invalid_video` or `retries_exhausted`).
 
 ## 5. Capture: Snap and Scan
 

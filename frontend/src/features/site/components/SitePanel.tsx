@@ -7,7 +7,9 @@ import '../site.css';
 import { SiteActions } from './SiteActions';
 import { SiteBackersBar } from './SiteBackersBar';
 import { SiteBrands } from './SiteBrands';
+import { SiteClearance } from './SiteClearance';
 import { SiteCounts } from './SiteCounts';
+import { SiteExpiryNote } from './SiteExpiryNote';
 import { SiteReporters } from './SiteReporters';
 import { SiteHistoryFacts } from './SiteHistoryFacts';
 import { SiteLocationFacts } from './SiteLocationFacts';
@@ -35,6 +37,8 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
     <article className="site-panel">
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
       <SiteBackersBar backers={details.backers} />
+      <SiteClearance site={details} onChanged={() => onChanged?.()} />
+      <SiteExpiryNote site={details} />
       <SiteActions site={site} primary={presenter.primaryAction()} onConfirm={() => setVoting(true)} />
       {voting && <VoteBox siteId={details.site_id} onVoted={() => onChanged?.()} noBin={details.report_type === 'no_bin'} />}
       <WithdrawReport site={details} onChanged={() => onChanged?.()} />

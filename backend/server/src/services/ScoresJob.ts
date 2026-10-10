@@ -6,6 +6,7 @@ import type { AreaReportReader } from "../ports/AreaReportReader.js";
 import type { AreaSiteReader, UnreadableSite } from "../ports/AreaSiteReader.js";
 import type { Logger } from "../ports/Logger.js";
 import type { ScoreRepository } from "../ports/ScoreRepository.js";
+import type { SiteExpirer } from "../ports/SiteExpirer.js";
 import type { AreaGroup, AreaGrouper } from "./AreaGrouper.js";
 import type { ScoreCalculator } from "./ScoreCalculator.js";
 
@@ -14,6 +15,7 @@ export interface ScoresJobPorts {
   readonly reports: AreaReportReader;
   readonly facts: AreaFacts;
   readonly scores: ScoreRepository;
+  readonly expirer: SiteExpirer;
 }
 
 export interface ScoresRunSummary {
@@ -40,8 +42,9 @@ export class ScoresJob {
   }
 
   async run(now: Date): Promise<ScoresRunSummary> {
-    const { sites, unreadable } = await this.#ports.sites.readAll();
-    const skipped = this.#logSkipped(unreadable);
+    const read = await this.#ports.sites.readAll();
+    const skipped = this.#logSkipped(read.unreadable);
+    const sites = await this.#expireLapsed(read.sites, now);
     const groups = this.#grouper.group(sites);
     const times: ReportTimes = new Map();
     let failed = 0;
@@ -55,6 +58,28 @@ export class ScoresJob {
       }
     }
     return { sites: sites.length, areas: groups.length, failed: failed + skipped };
+  }
+
+  // Decision 20261010-1855: lapsed sites are marked expired first, so they leave this run's scores.
+  async #expireLapsed(sites: readonly AreaSite[], now: Date): Promise<AreaSite[]> {
+    const current: AreaSite[] = [];
+    for (const site of sites) {
+      current.push(site.isLapsedAt(now) ? await this.#expire(site, now) : site);
+    }
+    return current;
+  }
+
+  // A refreshed site keeps counting; a failed write is retried on the next run, and the site reads as expired meanwhile.
+  async #expire(site: AreaSite, now: Date): Promise<AreaSite> {
+    try {
+      if (!(await this.#ports.expirer.expire(site.id, now))) {
+        return site;
+      }
+      this.#logger.info({ site_id: site.id }, "site expired");
+    } catch (error) {
+      this.#logger.error({ site_id: site.id, error }, "site expiry failed");
+    }
+    return site.expired();
   }
 
   #logSkipped(unreadable: readonly UnreadableSite[]): number {

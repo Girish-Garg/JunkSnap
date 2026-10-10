@@ -3,6 +3,7 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { DynamoAreaReportReader } from "../adapters/DynamoAreaReportReader.js";
 import { DynamoAreaSiteReader } from "../adapters/DynamoAreaSiteReader.js";
 import { DynamoScoreRepository } from "../adapters/DynamoScoreRepository.js";
+import { DynamoSiteExpirer } from "../adapters/DynamoSiteExpirer.js";
 import { SiteItemParser } from "../adapters/SiteItemParser.js";
 import { WardRecordAreaFacts } from "../adapters/WardRecordAreaFacts.js";
 import { AreaGrouper } from "../services/AreaGrouper.js";
@@ -24,6 +25,7 @@ export class ScoresJobFactory {
       reports: new DynamoAreaReportReader(client, settings.reportsTable),
       facts: await ScoresJobFactory.#facts(context, settings.assetsDir),
       scores: new DynamoScoreRepository(client, settings.scoresTable),
+      expirer: new DynamoSiteExpirer(client, settings.sitesTable),
     };
     return new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger);
   }

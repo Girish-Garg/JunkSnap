@@ -136,6 +136,13 @@ describe("LetterService errors", () => {
     await expect(service.draft(request)).rejects.toThrow(NotVerifiedError);
   });
 
+  it("returns not_found for an expired site, marked or lapsed (decision 20261010-1855)", async () => {
+    const marked = await letterService({ sites: [siteWith(jodhpur, { status: "expired" })] });
+    await expect(marked.draft(request)).rejects.toThrow(NotFoundError);
+    const lapsed = await letterService({ sites: [siteWith(jodhpur, { status: "open", expires_at: "2026-01-01T00:00:00Z" })] });
+    await expect(lapsed.draft(request)).rejects.toThrow(/expired/);
+  });
+
   it("allows 5 letters an hour per device, then rate_limited, then again after an hour", async () => {
     const stamp = new FixedStamp();
     const service = await letterService({ sites: [jodhpur], stamp });

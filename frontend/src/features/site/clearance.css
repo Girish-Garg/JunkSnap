@@ -1,0 +1,76 @@
+/* Clearing progress and the expiry line on the site sheet (decision 20261010-1855). Tokens only. */
+.clearance {
+  display: grid;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  border: var(--outline) solid var(--divider);
+  border-radius: var(--radius-l);
+  background: var(--status-cleaned-tint);
+  animation: rise var(--dur-3) var(--ease-out);
+}
+
+.clearance__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-2);
+}
+
+.clearance__title {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 800;
+}
+
+.clearance__progress {
+  color: var(--status-cleaned);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  font-weight: 600;
+}
+
+.clearance__text,
+.expiry-note {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.clearance__bar {
+  width: 100%;
+  height: 14px;
+  appearance: none;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.clearance__bar::-webkit-progress-bar {
+  background: var(--surface);
+}
+
+.clearance__bar::-webkit-progress-value {
+  border-radius: var(--radius-pill);
+  background: var(--status-cleaned);
+  transition: width var(--dur-4) var(--spring);
+}
+
+.clearance__bar::-moz-progress-bar {
+  border-radius: var(--radius-pill);
+  background: var(--status-cleaned);
+}
+
+.clearance__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.expiry-note {
+  margin-top: var(--s-3);
+}

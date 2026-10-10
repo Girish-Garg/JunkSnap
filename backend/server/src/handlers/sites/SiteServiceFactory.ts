@@ -71,15 +71,13 @@ export class SiteServiceFactory {
   }
 
   finder(): SiteFinder {
-    return new SiteFinder(this.#sites(), this.#cells);
+    return new SiteFinder(this.#sites(), this.#cells, this.#clock);
   }
 
   voteService(): VoteService {
-    const { dynamo } = this.#clients;
-    const { tables } = this.#settings;
     return new VoteService({
       sites: this.#sites(),
-      votes: new DynamoVoteRepository(dynamo, tables.votes, this.#calls),
+      votes: this.#votes(),
       reports: this.#reports(),
       clock: this.#clock,
       retry: this.#retry,
@@ -124,8 +122,12 @@ export class SiteServiceFactory {
   }
 
   cleanupService(): CleanupService {
-    const deps = { sites: this.#sites(), cleanups: this.#cleanups(), media: this.#media(), retry: this.#retry };
+    const deps = { sites: this.#sites(), cleanups: this.#cleanups(), votes: this.#votes(), media: this.#media(), retry: this.#retry };
     return new CleanupService(deps);
+  }
+
+  #votes(): DynamoVoteRepository {
+    return new DynamoVoteRepository(this.#clients.dynamo, this.#settings.tables.votes, this.#calls);
   }
 
   #sites(): DynamoSiteRepository {
