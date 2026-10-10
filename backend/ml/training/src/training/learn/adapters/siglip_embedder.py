@@ -38,6 +38,11 @@ class SiglipImageEmbedder(ImageEmbedder):
         normed = torch.nn.functional.normalize(pooled.float(), dim=-1)
         return [tuple(row) for row in normed.cpu().tolist()]
 
+    def pixels(self, images: list[Path]) -> Any:
+        """The processor's pixel values as a NumPy array, for checking an exported model."""
+        inputs = self._processor(images=[self._open(p) for p in images], return_tensors="np")
+        return inputs["pixel_values"]
+
     @staticmethod
     def _open(path: Path) -> Image.Image:
         with Image.open(path) as opened:

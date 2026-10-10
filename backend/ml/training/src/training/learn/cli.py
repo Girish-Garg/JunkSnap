@@ -63,6 +63,7 @@ class LearnParser:
         stacker.add_argument("--version", default="meta-v1")
         bench = self._sub.add_parser("bench")
         bench.add_argument("runs", nargs="+", help="model=path/to/scores.jsonl")
+        self._sub.add_parser("embedder-export").add_argument("--out", required=True)
         publish = self._sub.add_parser("publish")
         publish.add_argument("files", nargs="+", help="name=path@version, e.g. yolo=best.onnx@v1")
 
