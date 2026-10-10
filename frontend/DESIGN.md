@@ -5,7 +5,7 @@ Playful on top of map-app patterns (decision 20261010-1502, which replaces the m
 ## Brand
 
 - Mark: a chunky yellow camera with a thick ink outline, a crumpled paper ball for a lens, a coral shutter button and three flash pops. The file is `public/brand/junksnap-mark.svg`; the `Logo` component shows it with the two-tone wordmark (Junk in ink, Snap in teal).
-- Icons are in `public/brand/`: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` and the lockups. The Android adaptive set (432 px foreground and background, legacy and round launchers) is in `public/brand/android/`. `favicon.svg` is the mark on a teal tile.
+- Icons are in `public/brand/`: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` and the lockups; a 432 px Android adaptive set is in `public/brand/android/`. `favicon.svg` is the mark on a teal tile (a charcoal tile in dark mode) and `favicon.ico` holds 16 and 32 px with the fine details dropped. `uv run scripts/make_icons.py` makes all of them, plus the Android launcher sources in `apps/android-tauri/` (then `npx tauri icon app-icon.json` there), from `junksnap-mark.svg`.
 
 ## Layout
 
