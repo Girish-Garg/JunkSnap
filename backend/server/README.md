@@ -11,3 +11,5 @@ One TypeScript image, three entry points: `api` (default, `node dist/handlers/we
 7. Sign-in: in your builder, `const guard = RouteGuard.fromEnv(context.env)` (from `handlers/auth/RouteGuard.ts`; needs `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`).
    Routes that create reports, scans, votes, cleanups or letters call `const user = await guard.requireUser(request)` (401 `unauthorized` without a valid Cognito ID token); browsing routes call `await guard.optionalUser(request)` (undefined for a guest or a bad or expired token, so browsing never 401s).
    Key data by `user.userId` (the token `sub`), never by email. A user who does not own an item gets `NotFoundError` (404 `not_found`), as if it were missing; `ForbiddenError` (403 `forbidden`) is only for a user blocked in the `users` table.
+8. Data files: read `data/{boundaries,representatives,brands,rules,wards}` through the `AssetReader` port (`FileAssetReader` rooted at `AssetSettings.assetsDir`); no build step derives anything from them.
+9. `ASSETS_DIR` defaults to `../../data` from the working directory (the repo's `data/` when run from `backend/server`); the image sets `ASSETS_DIR=/app/data` (contracts v1.2).

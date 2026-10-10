@@ -417,6 +417,13 @@ Resources:
                 Effect: Allow
                 Action: s3:PutObject
                 Resource: !Sub "${PublicBucket.Arn}/media/*"
+              # Rekognition reads S3 objects with the caller's rights; the brand judge reads the blurred copy.
+              - Sid: ReadBlurredCopies
+                Effect: Allow
+                Action: s3:GetObject
+                Resource:
+                  - !Sub "${PublicBucket.Arn}/media/reports/*"
+                  - !Sub "${PublicBucket.Arn}/media/cleanups/*"
               - Sid: ModerateAndBlur
                 Effect: Allow
                 Action: [rekognition:DetectModerationLabels, rekognition:DetectFaces,
@@ -447,11 +454,21 @@ Resources:
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
                   - !GetAtt ScoresTable.Arn
+              # cleanups has no site index, so the cleanup duplicate check scans it filtered by site_id.
+              - Sid: ScanCleanups
+                Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt CleanupsTable.Arn
               # No provider keys: the worker reads originals and its model calls are Bedrock only.
               - Sid: ConsumeReports
                 Effect: Allow
                 Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:ChangeMessageVisibility,
                   sqs:GetQueueAttributes]
+                Resource: !GetAtt ReportsQueue.Arn
+              # A scan message becomes one report message per kept frame.
+              - Sid: QueueScanFrames
+                Effect: Allow
+                Action: sqs:SendMessage
                 Resource: !GetAtt ReportsQueue.Arn
 
   MlRole:

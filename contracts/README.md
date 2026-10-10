@@ -4,6 +4,8 @@ This folder is the source of truth for every shape, route, table, S3 key, queue 
 
 Contracts v1.1 (decisions 20261010-0159 to -0203 and -0227) adds `insights` to `verification_result`, `site` and `ward_scores`, a `scan` link and `user_id` on `report_upload`, a Lok Sabha seat `status`, a nullable assembly seat, accounts, and the new `scan_session` and `ward_record` (the ward crawler's shape, issue 9). The new fields on existing schemas are not in `required`, so v1 producers stay valid, but new code always sends them. After any schema change, run `cd backend/server; npm ci; npm run gen:contracts` and commit the regenerated `src/contracts/*.gen.ts` in the same PR.
 
+Contracts v1.2 (decision 20261010-0344, issue 53) changes no schema shape. It lists the worker's fields on the `reports` and `sites` rows, states that every GSI projects all attributes, adds `ASSETS_DIR`, marks `OPENROUTER_SECRET_ID` as planned, and rewords the description of `letter_draft` `source_sha256` (decision 20261010-0330).
+
 ## Files and CI
 
 - `schemas/<name>.schema.json`: JSON Schema draft 2020-12. Every object sets `additionalProperties: false`.
@@ -212,14 +214,16 @@ All tables are on-demand and named `junksnap-<stage>-<table>`.
 
 | Table | Partition key | Sort key | GSIs | Holds |
 |---|---|---|---|---|
-| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`), `received_at`, `status`, `moderation_result`, `verification_result`, brand labels, `site_id` |
+| `reports` | `report_id` | none | `by-site` (`site_id`, `captured_at`); `by-device` (`device_token`, `received_at`); `by-user` (`user_id`, `received_at`) | `report_upload` fields (with `user_id`) top-level, `received_at`, `updated_at`, `status`, `completed_steps` (worker steps already done, from `moderate`, `verify`, `brands`, `locate`, `merge`, so a retried message resumes), `moderation_result`, `verification_result`, `brand_labels`, `location` (the full `location_lookup` the worker wrote), `site_id` |
 | `cleanups` | `cleanup_id` | none | none | `site_id`, `upload_id`, `device_token`, `user_id`, `gps`, `sha256`, `captured_at`, `received_at`, `status`, `moderation_result`, `verification_result` |
 | `scans` | `scan_id` | none | none | `scan_session` fields (with `user_id`), `received_at`, `status`, `reason`, `frames`, `report_ids` |
-| `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`), `lat`, `lon`, `geohash4`, merged report ids; the api builds the Feature |
+| `sites` | `site_id` | none | `by-geohash` (`geohash4`, `last_reported_at`) | `site` properties (full `location`, `cleanup_status`, `insights`) top-level, `lat`, `lon`, `geohash4`, and the internals: `version` (each write sets it one higher, conditional on the stored value), `report_ids`, `merged_reports` (`[{report_id, verified, insights}]`), `reporter_devices`, `reporter_users`, `me_too_count`, `embedding_key`, `pending_cleanup_id`; the api builds the Feature |
 | `votes` | `site_id` | `device_token` | none | `vote`, `weight`, `user_id`, `voted_at` |
 | `devices` | `device_token` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked` |
 | `users` | `user_id` | none | none | `reputation`, report counts, `letter_window_start`, `letter_count`, `first_seen`, `blocked`; never the user's name or email |
 | `scores` | `area_kind` | `area_id` | none | the latest `ward_scores` per area, with `insights`; the CronJob overwrites it |
+
+Every GSI (`by-site`, `by-device`, `by-user`, `by-geohash`) projects ALL attributes, so a query returns whole items and needs no second read.
 
 For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geohash` once per cell and filter by `lat` and `lon`. To merge, query the report's cell and its neighbours and keep sites within 40 m. The worker writes the full location and the merged insights into the site when merging, and the api reads the location from the sites table for letters. When a site first lands in an area with no `scores` row (its ward, assembly seat, Lok Sabha seat or district), the worker creates a zero-count row for that area with every score withheld, using the area name from `site.location`. The write is conditional and never overwrites, so `GET /areas/{kind}/{id}/scores` always has a source.
 
@@ -263,7 +267,9 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `CORS_ORIGINS` | api | comma-separated: the Amplify URL and `http://localhost:5173` |
 | `PRESIGN_TTL_SECONDS` | api | `300`, for photos and scan videos |
 | `ML_URL` | worker | `http://ml` (the Service in the same namespace); replaces `AGENT_URL` |
-| `OPENAI_SECRET_ID`, `OPENROUTER_SECRET_ID` | api (letters), ml (judge) | `junksnap/<stage>/openai-api-key`, `junksnap/<stage>/openrouter-api-key` (Secrets Manager, decision 0133) |
+| `OPENAI_SECRET_ID` | api (letters), ml (judge) | `junksnap/<stage>/openai-api-key` (Secrets Manager, decision 0133) |
+| `OPENROUTER_SECRET_ID` | planned (decision 0133); no provider yet | `junksnap/<stage>/openrouter-api-key` (Secrets Manager); neither `api` nor `ml` has an OpenRouter provider |
+| `ASSETS_DIR` | api, worker, scores | directory holding the repo's `data/` files (`rules/`, `brands/`, `boundaries/`, `wards/`, `representatives/`); `/app/data` in the image |
 | `LLM_TASKS` | api, worker, ml | optional JSON `{"<task>": {"provider", "model", "fallback": []}}`; each service reads only its own tasks (api: letters; worker: note moderation, Bedrock only; ml: judge); defaults live in code |
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |

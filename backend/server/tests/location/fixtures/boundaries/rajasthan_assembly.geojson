@@ -1,0 +1,16 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "id": "s20-ac-128", "ac_no": 128, "name": "Jodhpur", "category": "GEN", "pc_id": "s20-pc-16" },
+      "geometry": { "type": "Polygon", "coordinates": [[[72.99, 26.25], [73.02, 26.25], [73.02, 26.265], [73.005, 26.265], [73.005, 26.28], [72.99, 26.28], [72.99, 26.25]]] } },
+    { "type": "Feature", "properties": { "id": "s20-ac-127", "ac_no": 127, "name": "Sardarpura", "category": "GEN", "pc_id": "s20-pc-16" },
+      "geometry": { "type": "MultiPolygon", "coordinates": [
+        [[[73.03, 26.30], [73.04, 26.30], [73.04, 26.31], [73.03, 26.31], [73.03, 26.30]]],
+        [[[73.04, 26.265], [73.05, 26.265], [73.05, 26.275], [73.04, 26.275], [73.04, 26.265]]]
+      ] } },
+    { "type": "Feature", "properties": { "id": "s20-ac-54", "ac_no": 54, "name": "Malviya Nagar", "category": "GEN", "pc_id": "s20-pc-7" },
+      "geometry": { "type": "Polygon", "coordinates": [[[75.80, 26.84], [75.83, 26.84], [75.83, 26.87], [75.80, 26.87], [75.80, 26.84]]] } },
+    { "type": "Feature", "properties": { "id": "s20-ac-7", "ac_no": 7, "name": "Sangaria", "category": "GEN", "pc_id": "s20-pc-1" },
+      "geometry": { "type": "Polygon", "coordinates": [[[74.35, 29.90], [74.45, 29.90], [74.45, 30.00], [74.35, 30.00], [74.35, 29.90]]] } }
+  ]
+}

@@ -1,0 +1,4 @@
+[
+  { "id": "jodhpur-mc", "name": "Jodhpur Municipal Corporation", "head_office": "Commissioner", "state": "Rajasthan", "towns": ["Jodhpur"], "wards": 100, "ward_map": null, "note": null, "as_of": "2026-10-10", "source": "https://lsg.rajasthan.gov.in/" },
+  { "id": "jaipur-mc", "name": "Jaipur Municipal Corporation", "head_office": "Commissioner", "state": "Rajasthan", "towns": ["Jaipur"], "wards": 150, "ward_map": null, "note": null, "as_of": "2026-10-10", "source": "https://lsg.rajasthan.gov.in/" }
+]
