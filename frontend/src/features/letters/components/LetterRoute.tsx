@@ -5,6 +5,7 @@ import { useParams } from 'react-router';
 import { sitePath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
+import { useShareLinks } from '../../../app/useShareLinks';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import '../../../ui/form.css';
 import { useLetter } from '../hooks/useLetter';
@@ -22,6 +23,7 @@ export function LetterRoute() {
   const { t } = useTranslation();
   const { config } = useServices();
   const { siteId = '' } = useParams();
+  const links = useShareLinks();
   const sheets = useSheetNavigation();
   const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useLetter(siteId);
@@ -36,7 +38,7 @@ export function LetterRoute() {
       {config.isSampleData() && <p className="form__note">{t('letter.sample')}</p>}
       {!draft && <LetterChooser flow={flow} />}
       {draft && <LetterView draft={draft} evidence={evidence} />}
-      {draft && <LetterActions draft={draft} onReset={flow.reset} />}
+      {draft && <LetterActions draft={draft} onReset={flow.reset} link={links.site(siteId)} />}
       {draft && createPortal(<LetterView draft={draft} evidence={evidence} forPrint />, document.body)}
     </BottomSheet>
   );

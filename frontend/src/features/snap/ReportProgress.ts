@@ -13,6 +13,7 @@ export interface ProgressView {
 const TONES: Readonly<Record<string, ProgressTone>> = {
   verified: 'good',
   rejected: 'alert',
+  unclear: 'alert',
   not_waste: 'alert',
   unconfirmed: 'alert',
   refused: 'alert',
