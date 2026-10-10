@@ -15,6 +15,9 @@ export class ContextAutoClaim implements AutoClaim {
     return { report_type: stored.report_type, context: AUTO };
   }
 
+  // Without the judge the type's fallback context stands, so any answer settles the claim.
+  assertAnswered(): void {}
+
   found(stored: ClaimPair, { judge }: VerificationResult): ClaimPair {
     const named = judge?.report_type === stored.report_type ? judge.context : null;
     return this.#types.pair(stored.report_type, named);

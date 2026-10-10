@@ -175,11 +175,22 @@ describe("area scout frames", () => {
     expect(reports.stored("rpt_frame_0")).toMatchObject({ report_type: "contaminated_water", context: "stagnant" });
   });
 
-  it("retries the frame when the judge could not answer, rather than guessing a type", async () => {
+  it.each(["community_check", "rejected"] as const)(
+    "retries the frame when the judge could not answer (decision %s), rather than guessing or rejecting",
+    async (decision) => {
+      reports.put(frame(0, 0, "type"));
+      const worker = pipeline(new ScriptedVerifier({ decision, judge: null }));
+      await expect(worker.handle(new QueueMessage({ kind: "report", report_id: "rpt_frame_0" }, 1, 3))).rejects.toThrow(ExternalServiceError);
+      expect(sites.count()).toBe(0);
+      expect(reports.stored("rpt_frame_0").status).toBe("processing");
+    },
+  );
+
+  it("marks the frame needs_review when the judge is still out on the last delivery", async () => {
     reports.put(frame(0, 0, "type"));
-    const worker = pipeline(new ScriptedVerifier({ decision: "community_check", judge: null }));
-    await expect(worker.handle(new QueueMessage({ kind: "report", report_id: "rpt_frame_0" }, 1, 3))).rejects.toThrow(ExternalServiceError);
-    expect(sites.count()).toBe(0);
+    const worker = pipeline(new ScriptedVerifier({ decision: "rejected", judge: null }));
+    await expect(worker.handle(new QueueMessage({ kind: "report", report_id: "rpt_frame_0" }, 3, 3))).rejects.toThrow(ExternalServiceError);
+    expect(reports.stored("rpt_frame_0").status).toBe("needs_review");
   });
 
   it("asks only for the place when the person picked the type, and keeps a judged context of that type", async () => {

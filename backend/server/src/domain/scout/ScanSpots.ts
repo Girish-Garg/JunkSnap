@@ -3,7 +3,7 @@ import type { LocatedFrame } from "../ScanFrame.js";
 import { SCAN_FRAME_RULES } from "../scanLimits.js";
 
 // Groups one scan's kept frames into spots: a frame joins the first spot whose first frame is within the radius.
-// Frames of one spot and one type always end up in one site (contracts v1.10), whatever their embeddings say.
+// Frames of one spot and type merge into one site (contracts v1.10) unless an existing neighbour site takes the frame.
 export class ScanSpots {
   readonly #radiusM: number;
 

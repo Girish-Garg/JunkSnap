@@ -16,11 +16,16 @@ export class TypeAutoClaim implements AutoClaim {
     return { report_type: AUTO, context: AUTO };
   }
 
-  // ml always runs the judge for an auto claim, so a missing verdict is an outage and the message retries.
-  found(_stored: ClaimPair, { judge }: VerificationResult): ClaimPair | null {
+  // ml always runs the judge for an auto claim, so a missing verdict is an outage: retry, never reject on it.
+  assertAnswered({ judge }: VerificationResult): void {
     if (judge === null) {
       throw new ExternalServiceError("the vision judge did not answer, so the scout frame has no type yet");
     }
-    return this.#types.has(judge.report_type) ? this.#types.pair(judge.report_type, judge.context) : null;
+  }
+
+  found(_stored: ClaimPair, verification: VerificationResult): ClaimPair | null {
+    this.assertAnswered(verification);
+    const judge = verification.judge;
+    return judge !== null && this.#types.has(judge.report_type) ? this.#types.pair(judge.report_type, judge.context) : null;
   }
 }

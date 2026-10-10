@@ -125,6 +125,10 @@ export class Report {
 
   // A scout frame takes on the type and context the models found; finding nothing rejects it.
   recordVerification(verification: VerificationResult): void {
+    const kind = this.#record.auto_claim;
+    if (kind !== undefined) {
+      AUTO_CLAIMS[kind].assertAnswered(verification);
+    }
     const rejected = verification.decision === "rejected";
     const found = rejected ? undefined : this.#found(verification);
     const status = rejected || found === null ? "rejected" : this.status;

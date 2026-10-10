@@ -89,7 +89,7 @@ describe('Scan in Activity', () => {
     expect(within(videos).getByText('Found 2: 1 dump, 1 overflowing bin')).toBeInTheDocument();
     const strip = within(videos).getByRole('list', { name: 'Frames from this video' });
     const results = within(strip).getAllByRole('listitem').map((item) => item.textContent);
-    expect(results).toEqual(['Waiting for neighbours', 'Waiting for neighbours', 'Same spot', 'Added to a site', 'Not waste', 'Not waste']);
+    expect(results).toEqual(['Waiting for neighbours', 'Waiting for neighbours', 'Skipped', 'Added to a site', 'Not waste', 'Not waste']);
     expect(within(strip).getByRole('img', { name: 'Frame at 3 s' })).toHaveAttribute('src', SAMPLE_FOUND.frames[3]?.blurred_url);
   });
 });

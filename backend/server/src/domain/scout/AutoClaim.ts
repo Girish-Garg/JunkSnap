@@ -14,6 +14,8 @@ export interface VerifyClaim {
 export interface AutoClaim {
   readonly kind: AutoClaimKind;
   verifyClaim(stored: ClaimPair): VerifyClaim;
+  // Throws when the answer cannot settle this claim (a judge outage), whatever the decision, so SQS retries.
+  assertAnswered(verification: VerificationResult): void;
   // The claim the report takes on once the models passed it, or null when they found nothing it can become.
   found(stored: ClaimPair, verification: VerificationResult): ClaimPair | null;
 }
