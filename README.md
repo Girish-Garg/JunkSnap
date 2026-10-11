@@ -314,6 +314,10 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 
 Hemang, Girish, Harshit.
 
+## AI tools used
+
+Claude Code.
+
 ## Licence
 
 AGPL-3.0 (see [LICENSE](LICENSE)). The detector is trained with Ultralytics YOLO (AGPL-3.0), so the server and phone models ship under the same licence (decision 20261010-0400).
