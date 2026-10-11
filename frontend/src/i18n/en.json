@@ -102,6 +102,26 @@
     "rejected": "Rejected",
     "clearing": "{{count}} of {{needed}} say cleared"
   },
+  "explain": {
+    "hint": "What does this mean?",
+    "close": "Close",
+    "waiting": "10 different people must back this spot with a photo or a yes vote before it counts as verified. You can help by confirming if you're within 1 km.",
+    "verified": "10 different people backed this spot with a photo or a yes vote. Residents can now draft a letter to the local body and file it themselves.",
+    "verifiedClosed": "10 different people backed this spot with a photo or a yes vote before it left the map.",
+    "clearing": "Someone says this spot is cleared. It leaves the map once {{needed}} different people say so; if you've seen it, say whether it's cleared or still there.",
+    "clearingNoBin": "Someone says a bin is here now. This no-bin zone leaves the map once {{needed}} different people say so; if you've seen it, say whether there's a bin.",
+    "cleared": "Enough people said this spot was cleared, so it left the map. If the waste is back, report it with a new photo.",
+    "clearedNoBin": "Enough people said a bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
+    "reopened": "This spot was cleared once, but a new photo shows waste here again, so it is back on the map.",
+    "removed": "Its reporter withdrew the report before it was verified, so it left the map.",
+    "removedReported": "Several people reported its photos, so it left the map.",
+    "expired": "Nobody added a photo or a vote here for 90 days, so it left the map. If the waste is still there, report it again.",
+    "rejected": "At least 3 more neighbours said no than backed it, so it was hidden from the map."
+  },
+  "ask": {
+    "action": "Ask neighbours to confirm",
+    "text": "Can you confirm this waste spot near {{place}}? It needs {{needed}} people and has {{count}} so far."
+  },
   "addPhoto": {
     "action": "Add a photo",
     "title": "Add a photo to this site",

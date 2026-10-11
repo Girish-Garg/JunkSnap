@@ -1,6 +1,7 @@
 import { PhotoId } from '../../domain/PhotoFlag';
 import type { SiteProperties } from '../../domain/Site';
 import { SiteLifecycle } from '../../domain/SiteLifecycle';
+import { SiteStatusChip, type ChipView } from '../../domain/SiteStatusChip';
 import { UlidTime } from '../../domain/UlidTime';
 import { SiteClosure, type ClosedReason } from './SiteClosure';
 
@@ -23,6 +24,9 @@ export interface PhotoView {
 }
 
 export type PrimaryAction = 'confirm' | 'letter';
+
+// A no-bin zone "is cleared" when a bin is there now, so its clearing words have their own text.
+const NO_BIN_WORDS: ReadonlySet<string> = new Set(['explain.clearing', 'explain.cleared']);
 
 /** Display rules for one site, kept out of the components. */
 export class SitePresenter {
@@ -80,6 +84,22 @@ export class SitePresenter {
   /** The status chip says verified or waiting only for an open site; any other status spells it out beside the chip. */
   showsVerification(): boolean {
     return this.#site.status !== 'open';
+  }
+
+  /** Still on the map and gathering its 10 people, so neighbours can be asked to confirm it. */
+  waitsForBackers(): boolean {
+    const { verification } = this.#site;
+    return verification !== 'verified' && verification !== 'rejected' && new SiteLifecycle(this.#site).isActive();
+  }
+
+  /**
+   * The plain words behind a status chip (explain.*): a verified site off the map promises no letter, and a no-bin
+   * zone is cleared by a bin, not a cleanup.
+   */
+  explainKey(chip: ChipView): string {
+    const key = SiteStatusChip.explainKey(chip);
+    if (key === 'explain.verified' && this.closedReason() !== null) return 'explain.verifiedClosed';
+    return this.#site.report_type === 'no_bin' && NO_BIN_WORDS.has(key) ? `${key}NoBin` : key;
   }
 
   /** "n of 10 people confirmed" means nothing once a site is off the map, unless it was verified first. */
