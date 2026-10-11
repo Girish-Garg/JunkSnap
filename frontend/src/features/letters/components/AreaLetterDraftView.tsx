@@ -18,7 +18,7 @@ export function AreaLetterDraftView({ draft, onReset }: AreaLetterDraftViewProps
   return (
     <>
       <LetterView draft={draft} evidence={evidence} />
-      <LetterActions draft={draft} onReset={onReset} link={links.area(draft.area.kind, draft.area.id)} />
+      <LetterActions draft={draft} onReset={onReset} link={links.area(draft.area.kind, draft.area.id)} scope="area" />
       {createPortal(<LetterView draft={draft} evidence={evidence} forPrint />, document.body)}
     </>
   );

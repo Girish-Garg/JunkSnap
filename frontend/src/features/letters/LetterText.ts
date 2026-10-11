@@ -52,4 +52,9 @@ export class LetterText {
       ...(link ? ['', `${this.label('link')}: ${link}`] : []),
     ].join('\n');
   }
+
+  /** An email body for a letter too long for a mailto: link: the resident pastes the letter under it. */
+  short(link?: string): string {
+    return [this.label('mailShort'), ...(link ? ['', `${this.label('link')}: ${link}`] : [])].join('\n');
+  }
 }
