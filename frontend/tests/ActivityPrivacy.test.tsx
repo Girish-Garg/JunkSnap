@@ -27,7 +27,9 @@ describe('Activity on an install from before this release (no list token)', () =
     expect(reportIds(snap)).toEqual(['rpt_1']);
     expect(scanIds(snap)).toEqual(['3'.repeat(64)]);
   });
+});
 
+describe('Activity before the list is confirmed for this account', () => {
   it('shows no sent row in the sheet until the list is confirmed for this account', async () => {
     const api = new FakeReportApi();
     api.failNext('mine', 0, 'network_error');
@@ -37,6 +39,20 @@ describe('Activity on an install from before this release (no list token)', () =
     await signIn(services.auth as MockAuthService, 'resident@example.com');
     await renderApp(<AppRoutes />, { route: '/activity', services });
     expect(await screen.findByRole('button', { name: 'Take your first photo' })).toBeInTheDocument();
+    expect(screen.queryByText('Loading your reports')).not.toBeInTheDocument();
+    expect(screen.queryByText('Waste dump')).not.toBeInTheDocument();
+  });
+
+  it('says it is loading, and shows no sent row, while the list is on its way', async () => {
+    const api = new FakeReportApi();
+    api.holdList();
+    const store = new MemoryReportStore();
+    await store.put(sentRow(1).data);
+    const services = testServices(new MemoryStore(), { api, store });
+    await signIn(services.auth as MockAuthService, 'resident@example.com');
+    await renderApp(<AppRoutes />, { route: '/activity', services });
+    // While GET /me/reports is on its way the sheet says it is loading, never "Nothing sent yet".
+    expect(await screen.findByText('Loading your reports')).toBeInTheDocument();
     expect(screen.queryByText('Waste dump')).not.toBeInTheDocument();
   });
 });

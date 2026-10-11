@@ -16,6 +16,7 @@ export function useCleanup(siteId: string) {
   const handle = useActionErrors('cleanup', KNOWN_ERRORS);
   const [phase, setPhase] = useState<CleanupPhase>('camera');
   const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
+  const [cleanupId, setCleanupId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const capture = usePhotoCapture((taken) => {
@@ -27,7 +28,8 @@ export function useCleanup(siteId: string) {
     setBusy(true);
     setProblem(null);
     try {
-      await snap.siteActions.cleanup(siteId, { bytes: photo.bytes, sha256: photo.sha256, gps: photo.gps, capturedAt: photo.capturedAt });
+      const accepted = await snap.siteActions.cleanup(siteId, { bytes: photo.bytes, sha256: photo.sha256, gps: photo.gps, capturedAt: photo.capturedAt });
+      setCleanupId(accepted.cleanup_id);
       setPhase('sent');
     } catch (error) {
       setProblem(handle(error, reauthed ? null : () => void send(true)));
@@ -36,7 +38,7 @@ export function useCleanup(siteId: string) {
     }
   };
   const sendable = useSessionGate(CLEANUP_SEND_GATE, { busy });
-  return { phase, photo, busy, problem, capture, sendable, send: () => void send(), retake: () => setPhase('camera') };
+  return { phase, photo, cleanupId, busy, problem, capture, sendable, send: () => void send(), retake: () => setPhase('camera') };
 }
 
 export type CleanupFlow = ReturnType<typeof useCleanup>;

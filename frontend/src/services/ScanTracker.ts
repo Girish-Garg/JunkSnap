@@ -1,4 +1,5 @@
 import { ApiError } from '../domain/ApiError';
+import { AuthError } from '../domain/AuthError';
 import type { QueuedScan } from '../domain/QueuedScan';
 import type { ScanApi } from './ScanApi';
 import type { ScanQueue } from './ScanQueue';
@@ -30,7 +31,8 @@ export class ScanTracker {
       const status = await this.#api.status(scanId);
       await this.#queue.update(id, (latest) => latest.withStatus(status));
     } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
+      // Offline with a sign-in that cannot be refreshed (AuthError) is no different from offline.
+      if (!(error instanceof ApiError || error instanceof AuthError)) throw error;
     }
   }
 

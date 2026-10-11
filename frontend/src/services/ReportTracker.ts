@@ -1,4 +1,5 @@
 import { ApiError } from '../domain/ApiError';
+import { AuthError } from '../domain/AuthError';
 import type { QueuedReport } from '../domain/QueuedReport';
 import { ReportStatuses, type ReportStatusView } from '../domain/ReportStatus';
 import type { ReportApi } from './ReportApi';
@@ -22,7 +23,7 @@ export class ReportTracker {
     return report.data.report_id !== null && (status === undefined || !ReportStatuses.isFinal(status));
   }
 
-  /** Offline or not visible to this viewer: the last known status stays. */
+  /** Offline, signed out or not visible to this viewer: the last known status stays. */
   async refresh(id: string): Promise<void> {
     const reportId = this.#queue.find(id)?.data.report_id;
     if (!reportId) return;
@@ -30,7 +31,8 @@ export class ReportTracker {
       const status = await this.#api.status(reportId);
       await this.#queue.update(id, (latest) => latest.withStatus(status));
     } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
+      // Offline with a sign-in that cannot be refreshed (AuthError) is no different from offline.
+      if (!(error instanceof ApiError || error instanceof AuthError)) throw error;
     }
   }
 

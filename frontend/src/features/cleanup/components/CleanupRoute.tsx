@@ -31,7 +31,7 @@ export function CleanupRoute() {
         {t(flow.phase === 'sent' ? 'cleanup.sentTitle' : 'cleanup.title')}
       </h2>
       <CleanupStage flow={flow} gps={gps} locked={locked} onBack={close} />
-      {flow.phase === 'sent' && <CleanupStatus site={site.site} siteId={siteId} reload={site.reload} />}
+      {flow.phase === 'sent' && flow.cleanupId && <CleanupStatus site={site.site} siteId={siteId} cleanupId={flow.cleanupId} reload={site.reload} />}
     </BottomSheet>
   );
 }
