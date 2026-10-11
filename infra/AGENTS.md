@@ -7,7 +7,7 @@ JunkSnap runs on one Amazon EKS Auto Mode cluster, `junksnap`, in `ap-south-1`. 
 - `aws/shared.yaml`: stack `junksnap-shared`, the ECR repositories `junksnap-server`, `junksnap-ml` and `junksnap-crawler`.
 - `aws/stage.yaml`: one CloudFormation template with a `Stage` parameter. It holds the per-stage AWS resources: KMS key, private originals bucket (photos, scan videos, embeddings), public blurred bucket, DynamoDB tables (on demand, including `scans` and `users`), SQS queue plus dead-letter queue, the Cognito user pool and app client (email sign-in, no client secret), the Secrets Manager placeholders, the stage's EKS Pod Identity roles and CloudFront. Amazon Location Places v2 needs no resource; the worker role gets `geo-places:ReverseGeocode`.
 - `eks/`: the eksctl config for the cluster (Auto Mode, ap-south-1).
-- `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace and stage config; `deploy.py` writes `k8s/deploy/<stage>/` (gitignored) on top with the image tags and stack outputs.
+- `k8s/base/`: Kustomize base for the workloads. `k8s/overlays/dev/` and `k8s/overlays/demo/` set the namespace and stage wiring; `deploy.py` writes `k8s/deploy/<stage>/` (gitignored) on top with the image tags, stack outputs and every tunable from `config/` (`docs/config.md`; never set a tunable in a kustomization).
 
 ## Workloads
 

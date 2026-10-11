@@ -7,7 +7,8 @@
 Usage: uv run scripts/deploy_web.py dev [--frontend frontend] [--skip-build]
 Creates the Amplify app junksnap-<stage>-web and branch <stage> once, then each run builds
 frontend/ against the stage's CloudFront URL, Cognito pool and its own branch URL
-(VITE_WEB_URL, for share links), zips dist/, uploads it with
+(VITE_WEB_URL, for share links), plus every VITE_ tunable from config/defaults.env and
+config/<stage>.env (docs/config.md), zips dist/, uploads it with
 create-deployment and start-deployment, and waits for the job. Rerun after every frontend
 change. Then point the api CORS at the printed URL: uv run scripts/deploy.py dev --origins ...
 """
@@ -23,6 +24,7 @@ import urllib.request
 from pathlib import Path
 
 from deploy import ROOT, aws, run
+from stage_config import load_or_exit
 
 JOB_WAIT_SECONDS = 600
 # Single-page app: every path without a file extension (or an unknown one) serves index.html.
@@ -78,13 +80,24 @@ def branch_url(stage: str, app: dict) -> str:
     return f"https://{stage}.{app['defaultDomain']}"
 
 
+def build_env(outputs: dict[str, str], web_url: str, tunables: dict[str, str]) -> dict[str, str]:
+    """The VITE_ tunables, then the stage's endpoints (always from the stack, never config/)."""
+    env = dict(tunables)
+    env.update({key: outputs[name] for key, name in VITE_FROM_OUTPUTS.items()})
+    env["VITE_API_MODE"] = "live"
+    env["VITE_WEB_URL"] = web_url
+    # Share links use the web app's host; its /share/* rule proxies to the api
+    # (AmplifyHost.ensure_app).
+    env["VITE_SHARE_URL"] = web_url
+    return env
+
+
 class WebBuild:
     """Builds frontend/ for one stage and zips dist/ with index.html at the root."""
 
-    def __init__(self, frontend: Path, outputs: dict[str, str], web_url: str) -> None:
+    def __init__(self, frontend: Path, env: dict[str, str]) -> None:
         self._frontend = frontend
-        self._outputs = outputs
-        self._web_url = web_url
+        self._env = env
 
     def zip(self, skip_build: bool, folder: str) -> Path:
         if not skip_build:
@@ -95,14 +108,8 @@ class WebBuild:
         return Path(shutil.make_archive(str(Path(folder, "web")), "zip", dist))
 
     def _build(self) -> None:
-        env = {key: self._outputs[name] for key, name in VITE_FROM_OUTPUTS.items()}
-        env["VITE_API_MODE"] = "live"
-        env["VITE_WEB_URL"] = self._web_url
-        # Share links use the web app's host; its /share/* rule proxies to the api
-        # (AmplifyHost.ensure_app).
-        env["VITE_SHARE_URL"] = self._web_url
-        print("build env:", json.dumps(env))
-        os.environ.update(env)
+        print("build env:", json.dumps(self._env))  # public values only
+        os.environ.update(self._env)
         folder = str(self._frontend)
         run(["npm", "--prefix", folder, "ci", "--no-audit", "--no-fund"])
         run(["npm", "--prefix", folder, "run", "build"])
@@ -178,6 +185,7 @@ def main() -> None:
     parser.add_argument("--human-approved", action="store_true", help="required for demo")
     args = parser.parse_args()
     refuse_unsafe(args.stage, args.human_approved)
+    tunables = load_or_exit(args.stage).vite  # a typo in config/ stops here, before any AWS call
     os.environ.setdefault("AWS_PROFILE", "junksnap")
     outputs = stack_outputs(f"junksnap-{args.stage}")
     host = AmplifyHost(args.stage)
@@ -186,7 +194,8 @@ def main() -> None:
     url = branch_url(args.stage, app)
     with tempfile.TemporaryDirectory() as folder:
         frontend = (ROOT / args.frontend).resolve()
-        archive = WebBuild(frontend, outputs, url).zip(args.skip_build, folder)
+        env = build_env(outputs, url, tunables)
+        archive = WebBuild(frontend, env).zip(args.skip_build, folder)
         host.deploy(app["appId"], archive)
     print(f"\nWeb app: {url}\nAPI: {outputs['PublicBaseUrl']}")
     print(f"CORS: uv run scripts/deploy.py {args.stage} --origins {url},http://localhost:5173,"

@@ -13,8 +13,7 @@ configMapGenerator:
     behavior: merge
     literals:
       - JUNKSNAP_STAGE=demo
-      # Field audit days: more Snap and Me too photos per person and phone.
-      - SNAP_PER_HOUR=100
+      # Tunables such as the field-audit SNAP_PER_HOUR=100 live in config/demo.env (docs/config.md).
       # Public: the release key's certificate fingerprint for /.well-known/assetlinks.json (docs/android.md).
       - ANDROID_CERT_SHA256=B8:60:4A:F2:0A:0A:F9:1D:E4:A9:1B:BF:18:1E:27:01:FE:AB:E1:6C:44:01:87:EF:24:35:A5:FB:03:2D:A2:D8
 # api and ml often run one pod each: Auto Mode (Karpenter) consolidation must not evict them mid-recording.

@@ -503,6 +503,8 @@ Every tunable variable with a default above (the rule, limit, rate, timeout, ret
 
 Every `ML_*` tuning variable above is optional: unset, ml behaves as before they existed. Seconds are above 0 and at most 600, and attempts 1 to 10. A value out of bounds, or two that do not fit together, stops ml at startup with a config error. ml reads them once at startup (`backend/ml/src/ml/settings/tuning.py`).
 
+Per-stage values for every tunable above, and for the frontend's `VITE_*` tunables, are set in `config/`: `config/defaults.env` lists each one with the default given here, and `config/<stage>.env` holds that stage's overrides. How to change one and deploy it: `docs/config.md`. `scripts/check_config.py` (CI) fails when `config/defaults.env` and this table disagree.
+
 Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), which needs no place index, so there is no `PLACE_INDEX` variable; the worker's Pod Identity role gets that one action.
 
 ## Stages and names

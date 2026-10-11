@@ -19,6 +19,9 @@ ENV_NAMES = {
     "web_url": "VITE_WEB_URL",
     "uploads_bucket": "JUNKSNAP_UPLOADS_BUCKET",
 }
+# Optional: where share links point (a host proxying the api's /share/* previews); blank, the api.
+# CI sets it from <STAGE>_SHARE_URL; a local build takes it from the shell, as before.
+SHARE_URL = "VITE_SHARE_URL"
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,7 @@ class StageSettings:
     client_id: str
     web_url: str
     uploads_bucket: str
+    share_url: str = ""
 
     @staticmethod
     def from_aws(stage: str) -> "StageSettings":
@@ -39,7 +43,7 @@ class StageSettings:
                      f"(uv run scripts/deploy_web.py {stage}), since share links point at it")
         return StageSettings(outputs["PublicBaseUrl"], outputs["UserPoolId"],
                              outputs["UserPoolClientId"], branch_url(stage, app),
-                             outputs["OriginalsBucketName"])
+                             outputs["OriginalsBucketName"], os.environ.get(SHARE_URL, "").strip())
 
     @staticmethod
     def from_env() -> "StageSettings":
@@ -47,15 +51,17 @@ class StageSettings:
         if missing:
             sys.exit(f"missing env vars for --settings env: {', '.join(missing)}")
         values = {field: os.environ[name].strip() for field, name in ENV_NAMES.items()}
-        return StageSettings(**values)
+        return StageSettings(**values, share_url=os.environ.get(SHARE_URL, "").strip())
 
     def vite_env(self) -> dict[str, str]:
+        """The endpoints; the build applies them last, over the VITE_ tunables and the shell."""
         return {
             "VITE_API_MODE": "live",
             "VITE_API_URL": self.api_url.rstrip("/"),
             "VITE_COGNITO_USER_POOL_ID": self.user_pool_id,
             "VITE_COGNITO_CLIENT_ID": self.client_id,
             "VITE_WEB_URL": self.web_url.rstrip("/"),  # share links point at the web app
+            SHARE_URL: self.share_url.rstrip("/"),  # blank: share links use the api
         }
 
     def csp_sources(self) -> tuple[str, str]:
