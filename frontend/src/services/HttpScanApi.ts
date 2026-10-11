@@ -1,13 +1,13 @@
 import type { AcceptedScan, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatusView } from '../domain/ScanUpload';
-import { HttpTransport } from './HttpTransport';
+import { HttpTransport, type HttpTimeouts } from './HttpTransport';
 import type { RequestIdentity } from './ReportApi';
 import type { ScanApi } from './ScanApi';
 
 export class HttpScanApi implements ScanApi {
   readonly #http: HttpTransport;
 
-  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch) {
-    this.#http = new HttpTransport(baseUrl, identity, fetchImpl);
+  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch, timeouts?: HttpTimeouts) {
+    this.#http = new HttpTransport(baseUrl, identity, fetchImpl, timeouts);
   }
 
   presign(request: ScanPresignRequest): Promise<ScanPresignResponse> {

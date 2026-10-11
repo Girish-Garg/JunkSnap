@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import type { SiteFilter } from '../../../domain/SiteFilter';
 import { SiteTiles } from '../../../domain/SiteTiles';
 import { ViewCounts } from '../../../domain/ViewCounts';
@@ -19,7 +20,8 @@ export interface FilterCounts {
 
 /** The sites of the current view: loaded by tiles, filtered for the map, counted for the Filters sheet on every move. */
 export function useSiteData(view: MapView | null, filter: SiteFilter) {
-  const plan = useMemo(() => (view ? SiteTiles.plan(view.bbox) : null), [view]);
+  const { map } = useConfig();
+  const plan = useMemo(() => (view ? SiteTiles.plan(view.bbox, map) : null), [view, map]);
   const loaded = useSites(plan);
   const sites = useMemo(() => filter.apply(loaded.sites), [filter, loaded.sites]);
   const counts = useMemo((): FilterCounts | null => {

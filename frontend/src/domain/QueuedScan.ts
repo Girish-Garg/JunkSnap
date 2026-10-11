@@ -24,8 +24,6 @@ export interface QueuedScanData {
   readonly saved_at: string;
 }
 
-// Presigned URLs live PRESIGN_TTL_SECONDS (300 s); re-presign a little before that.
-const UPLOAD_URL_LIFETIME_MS = 240_000;
 const CLEAR_WAIT = { problem: null, retry_at: null } as const;
 
 export class QueuedScan implements QueueItem<QueuedScan, QueuedScanData> {
@@ -57,10 +55,10 @@ export class QueuedScan implements QueueItem<QueuedScan, QueuedScanData> {
     return this.data.retry_at === null || Date.parse(this.data.retry_at) <= now.getTime();
   }
 
-  needsPresign(now: Date): boolean {
+  needsPresign(now: Date, reuseMs: number): boolean {
     const upload = this.data.upload;
     if (this.data.stage !== 'saved') return false;
-    return upload === null || now.getTime() - Date.parse(upload.presigned_at) > UPLOAD_URL_LIFETIME_MS;
+    return upload === null || now.getTime() - Date.parse(upload.presigned_at) > reuseMs;
   }
 
   /** Body of POST /scans; the video key follows the scan id and the recorded container. */

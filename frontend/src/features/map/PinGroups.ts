@@ -1,3 +1,4 @@
+import { MAP_DEFAULTS, type MapSettings } from '../../config/MapSettings';
 import { REPORT_TYPES, type ReportType } from '../../domain/ReportType';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import { SiteListing } from '../../domain/SiteListing';
@@ -18,15 +19,12 @@ export interface PinGroup {
   readonly unverified: boolean;
 }
 
-export interface PinGroupLimits {
-  /** Sites closer than this share a pin at every zoom. */
-  readonly nearMetres: number;
-  /** Sites whose pins or n/10 badges would overlap on screen share a pin at that zoom. */
-  readonly overlapPx: number;
-}
-
-// A pin disc is about 26 px and its n/10 badge about 34 by 20 px, 18 px below it: 40 px apart, neither touches.
-const DEFAULT_LIMITS: PinGroupLimits = { nearMetres: 15, overlapPx: 40 };
+/**
+ * The config's map settings: sites closer than pinStackRadiusM (20 m) share a pin at every zoom, and sites whose pins
+ * or n/10 badges would overlap on screen share a pin at that zoom. A pin disc is about 26 px and its n/10 badge about
+ * 34 by 20 px, 18 px below it: pinStackOverlapPx (40 px) apart, neither touches.
+ */
+export type PinGroupLimits = Pick<MapSettings, 'pinStackRadiusM' | 'pinStackOverlapPx'>;
 
 /**
  * Groups site pins that sit on one spot (a photo site and a scan site, or two report types at one place) so
@@ -36,7 +34,7 @@ const DEFAULT_LIMITS: PinGroupLimits = { nearMetres: 15, overlapPx: 40 };
 export class PinGroups {
   readonly #limits: PinGroupLimits;
 
-  constructor(limits: PinGroupLimits = DEFAULT_LIMITS) {
+  constructor(limits: PinGroupLimits = MAP_DEFAULTS) {
     this.#limits = limits;
   }
 
@@ -57,7 +55,8 @@ export class PinGroups {
   }
 
   #near(a: LonLat, b: LonLat, zoom: number): boolean {
-    return PinGroups.metresBetween(a, b) <= this.#limits.nearMetres || PinGroups.pixelsBetween(a, b, zoom) <= this.#limits.overlapPx;
+    const { pinStackRadiusM, pinStackOverlapPx } = this.#limits;
+    return PinGroups.metresBetween(a, b) <= pinStackRadiusM || PinGroups.pixelsBetween(a, b, zoom) <= pinStackOverlapPx;
   }
 
   /** Ground distance; equirectangular is exact enough over a few hundred metres. */

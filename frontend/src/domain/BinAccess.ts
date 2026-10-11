@@ -1,6 +1,3 @@
-// Decision 20261010-1630: each no-bin report says no dustbin within this radius.
-export const ZONE_RADIUS_M = 1000;
-
 export type BinLine =
   | { readonly key: 'nearest'; readonly metres: number }
   | { readonly key: 'mappedNear'; readonly metres: number }
@@ -17,9 +14,12 @@ export class BinAccess {
     return null;
   }
 
-  /** In a no-bin zone, a mapped bin within 1 km is shown as evidence for readers to judge, never as a block. */
-  static zoneLine(nearest: { readonly distance_m: number } | null | undefined, noBinWithin3km: boolean | null | undefined): BinLine | null {
-    if (nearest && nearest.distance_m <= ZONE_RADIUS_M) return { key: 'mappedNear', metres: nearest.distance_m };
+  /**
+   * In a no-bin zone, a mapped bin within the zone radius (1 km, decision 20261010-1630: each no-bin report says no
+   * dustbin within it) is shown as evidence for readers to judge, never as a block.
+   */
+  static zoneLine(nearest: { readonly distance_m: number } | null | undefined, noBinWithin3km: boolean | null | undefined, zoneRadiusM: number): BinLine | null {
+    if (nearest && nearest.distance_m <= zoneRadiusM) return { key: 'mappedNear', metres: nearest.distance_m };
     return BinAccess.line(nearest, noBinWithin3km);
   }
 

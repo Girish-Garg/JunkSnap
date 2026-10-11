@@ -1,4 +1,5 @@
 import { LanguagePreference, type KeyValueStore } from '../i18n/LanguagePreference';
+import { CopyNumbers } from '../i18n/CopyNumbers';
 import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
@@ -43,17 +44,17 @@ import type { SnapServices } from './SnapServices';
 // A new API mode is a new entry here, not a new branch.
 const API_CLIENT_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, caches: SiteCaches) => ApiClient>> = {
   mock: () => new MockApiClient(siteFixtureLoaders),
-  live: (config, caches) => new HttpApiClient(config.requireApiUrl(), undefined, caches),
+  live: (config, caches) => new HttpApiClient(config.requireApiUrl(), undefined, caches, config.network.requestTimeoutMs),
 };
 
 const AREA_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig) => TaggedAreaApi>> = {
   mock: () => new MockAreaApi(areaFixtureLoaders, siteFixtureLoaders, crawlFixtureLoaders),
-  live: (config) => new HttpAreaApi(config.requireApiUrl()),
+  live: (config) => new HttpAreaApi(config.requireApiUrl(), undefined, config.network.requestTimeoutMs),
 };
 
 // The mock signs anyone in, so it only runs with sample data; live mode signs in with Cognito.
 const AUTH_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, store: KeyValueStore) => AuthService>> = {
-  mock: (_config, store) => new MockAuthService(store),
+  mock: (config, store) => new MockAuthService(store, config.network.mockDelayMs),
   live: (config) => (config.cognito ? AmplifyAuthFactory.build(config.cognito) : new UnavailableAuthService()),
 };
 
@@ -140,7 +141,7 @@ export class ServiceContainer implements Services {
     this.edge = services.edge;
     this.notifier = services.notifier ?? new Notifier();
     this.errors = services.errors ?? new ErrorReporter(console, () => navigator.onLine);
-    this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now());
+    this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now(), services.config.ui.cooldownMs);
     this.ownSites = services.ownSites ?? OwnSiteMemory.following(services.auth);
     this.locationAccess = services.locationAccess ?? new LocationAccess(new BrowserLocationPermission(undefined));
   }
@@ -149,23 +150,32 @@ export class ServiceContainer implements Services {
     const auth = AUTH_BUILDERS[config.apiMode](config, browser.store);
     const clock = new SystemClock();
     // One set of site copies: the api reads into it, and site actions forget a site after writing to it.
-    const siteCaches = SiteCaches.standard(clock);
+    const siteCaches = SiteCaches.standard(clock, config.cache);
     return new ServiceContainer({
       config,
       api: API_CLIENT_BUILDERS[config.apiMode](config, siteCaches),
-      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.POLICY, clock)),
+      areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.policy(config.cache), clock)),
       auth,
-      localization: new Localization(new LanguagePreference(browser.store)),
-      layers: new LayerRegistry(),
-      boundaries: new BoundaryCatalog(BoundaryCatalog.defaultBaseUrl()),
-      locator: new GeoLocator(browser.geolocation, browser.permissions),
+      localization: new Localization(new LanguagePreference(browser.store), CopyNumbers.of(config.site)),
+      ...ServiceContainer.#map(config, clock),
+      locator: new GeoLocator(browser.geolocation, browser.permissions, config.capture),
       sharer: new Sharer(browser.share),
       snap: SnapServiceFactory.build(config, browser, auth, siteCaches),
       onboarding: new OnboardingPreference(browser.store),
       theme: new ThemePreference(browser.store, browser.root ?? null),
-      edge: ServiceContainer.#edge(browser),
+      edge: ServiceContainer.#edge(browser, config),
       locationAccess: new LocationAccess(ServiceContainer.#locationSource(browser)),
     });
+  }
+
+  // The map's layers (a no-bin zone's circle) and the boundary files under the app's base URL.
+  static #map(config: AppConfig, clock: SystemClock): Pick<Services, 'layers' | 'boundaries'> {
+    const zones = { zoneRadiusM: config.site.zoneRadiusM, latitude: config.map.pilotCentre[1] };
+    const folder = config.assetUrl(config.map.boundariesPath, globalThis.location.href);
+    return {
+      layers: new LayerRegistry(undefined, zones),
+      boundaries: new BoundaryCatalog(folder, undefined, BoundaryCatalog.caches(clock, config.cache.boundaryIndexTtlMs)),
+    };
   }
 
   // The Android app's WebView never reports the app's location permission, so the app is asked there.
@@ -176,8 +186,8 @@ export class ServiceContainer implements Services {
   }
 
   // The startup probe runs here, once; it only reads what the browser offers and downloads nothing.
-  static #edge(browser: BrowserApis): EdgeHints {
-    const probe = new CapabilityProbe(browser.edge?.capabilities ?? CapabilityProbe.NONE);
+  static #edge(browser: BrowserApis, config: AppConfig): EdgeHints {
+    const probe = new CapabilityProbe(browser.edge?.capabilities ?? CapabilityProbe.NONE, config.capture);
     return new EdgeHints(probe, new EdgeHintsPreference(browser.store), browser.edge?.detector ?? NO_DETECTOR);
   }
 }

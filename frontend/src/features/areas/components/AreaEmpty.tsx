@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { AreaProgress } from '../../../domain/AreaProgress';
 import type { AreaKind } from '../../../domain/AreaScores';
 import { useFormatter } from '../../../i18n/useFormatter';
@@ -22,7 +23,7 @@ export function AreaEmpty({ kind, name, pilot }: AreaEmptyProps) {
   const { t } = useTranslation();
   const format = useFormatter();
   const text = useAreaProgressText();
-  const { min } = AreaProgress.of(null);
+  const { min } = AreaProgress.of(null, useConfig().site.minVerifiedReports);
   return (
     <article className="area-page area-empty">
       <AreaBackLink />

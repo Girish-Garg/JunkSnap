@@ -2,11 +2,13 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
-import { CHECK_MS, STALL_MS } from '../src/services/LiveCamera';
 import { FakeTrack, fakeStream } from './cameraFakes';
+import { DEFAULTS } from './config';
 import { MemoryStore, renderApp, testServices } from './helpers';
 import { FakeScanApi } from './scanFakes';
 import { FakeClock } from './snapFakes';
+
+const { cameraStallMs: STALL_MS, cameraCheckMs: CHECK_MS } = DEFAULTS.capture;
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 

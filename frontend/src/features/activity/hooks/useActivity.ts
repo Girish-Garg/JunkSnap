@@ -1,11 +1,10 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import type { QueuedScan } from '../../../domain/QueuedScan';
 import { useQueue } from '../../snap/hooks/useQueue';
 import { useScans } from '../../snap/hooks/useScanProgress';
-
-const REFRESH_MS = 15_000;
 
 export interface ActivityRows {
   readonly reports: readonly QueuedReport[];
@@ -32,17 +31,18 @@ export function useActivity(): ActivityRows {
   return { reports: reports.filter((row) => row.data.stage !== 'sent'), scans: scans.filter((scan) => scan.data.stage !== 'sent'), loading: state.loading };
 }
 
-// At once and every REFRESH_MS while the sheet is open; a sign-in change (a new generation) starts again at once.
+// At once and every cache.activitySyncMs (15 s) while the sheet is open; a sign-in change (a new generation) starts again at once.
 // A failure is a load's: reported with the structured tag, and the phone's copy stays.
 function useActivityRefresh(generation: number): void {
   const { snap, errors } = useServices();
+  const { activitySyncMs } = useConfig().cache;
   useEffect(() => {
     const failed = (error: unknown) => void errors.report('activity', error);
     const statuses = () => Promise.all([snap.tracker.refreshOpen(), snap.scanTracker.refreshOpen()]);
     // The list first, so rows it brings back get their statuses refreshed in the same pass.
     const refresh = () => void snap.activity.revalidate().catch(failed).then(statuses).catch(failed);
     refresh();
-    const timer = window.setInterval(refresh, REFRESH_MS);
+    const timer = window.setInterval(refresh, activitySyncMs);
     return () => window.clearInterval(timer);
-  }, [snap.activity, snap.tracker, snap.scanTracker, errors, generation]);
+  }, [snap.activity, snap.tracker, snap.scanTracker, errors, generation, activitySyncMs]);
 }

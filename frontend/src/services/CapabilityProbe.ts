@@ -1,3 +1,5 @@
+import { CAPTURE_DEFAULTS, type CaptureSettings } from '../config/CaptureSettings';
+
 /** What the page can do, read once at startup; cheap checks only, nothing is downloaded. */
 export interface DeviceCapabilities {
   readonly wasmSimd: boolean;
@@ -17,10 +19,11 @@ export interface ProbeVerdict {
   readonly reason: ProbeFailure | null;
 }
 
-/** Below this the phone keeps its memory for the camera and the map. */
-export const MIN_MEMORY_GB = 2;
-/** A warm inference slower than this cannot keep live boxes near 4 fps; the app stays in cloud mode. */
-export const WARMUP_BUDGET_MS = 150;
+/**
+ * The probe's bars (the config's capture settings): below minMemoryGb the phone keeps its memory for the camera and
+ * the map; a warm inference slower than warmupBudgetMs cannot keep live boxes near 4 fps, so the app stays in cloud mode.
+ */
+export type ProbeLimits = Pick<CaptureSettings, 'minMemoryGb' | 'warmupBudgetMs'>;
 
 // The smallest module that uses a SIMD instruction (i32x4.splat); WebAssembly.validate rejects it without SIMD.
 const SIMD_PROBE = new Uint8Array([
@@ -53,11 +56,13 @@ export class CapabilityProbe {
   };
 
   readonly #capabilities: DeviceCapabilities;
+  readonly #limits: ProbeLimits;
   readonly #startup: ProbeVerdict;
 
-  constructor(capabilities: DeviceCapabilities) {
+  constructor(capabilities: DeviceCapabilities, limits: ProbeLimits = CAPTURE_DEFAULTS) {
     this.#capabilities = capabilities;
-    this.#startup = CapabilityProbe.#judge(capabilities);
+    this.#limits = limits;
+    this.#startup = CapabilityProbe.#judge(capabilities, limits);
   }
 
   static read(globals: ProbeGlobals): DeviceCapabilities {
@@ -79,7 +84,7 @@ export class CapabilityProbe {
   /** The final word once the model has run its warm-up. */
   afterWarmup(warmMs: number): ProbeVerdict {
     if (!this.#startup.ok) return this.#startup;
-    return warmMs < WARMUP_BUDGET_MS ? OK : fail('too_slow');
+    return warmMs < this.#limits.warmupBudgetMs ? OK : fail('too_slow');
   }
 
   /** WASM threads need SharedArrayBuffer, which needs a cross-origin isolated page; else one thread. */
@@ -88,11 +93,11 @@ export class CapabilityProbe {
     return crossOriginIsolated ? Math.max(1, Math.min(4, Math.floor(cores / 2))) : 1;
   }
 
-  static #judge(device: DeviceCapabilities): ProbeVerdict {
+  static #judge(device: DeviceCapabilities, limits: ProbeLimits): ProbeVerdict {
     if (!device.wasmSimd) return fail('no_wasm_simd');
     if (!device.worker) return fail('no_worker');
     if (!device.offscreenCanvas || !device.imageBitmap) return fail('no_offscreen_canvas');
-    if (device.memoryGb !== undefined && device.memoryGb < MIN_MEMORY_GB) return fail('low_memory');
+    if (device.memoryGb !== undefined && device.memoryGb < limits.minMemoryGb) return fail('low_memory');
     return OK;
   }
 

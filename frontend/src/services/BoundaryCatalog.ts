@@ -1,4 +1,5 @@
 import type { FeatureCollection, Point } from 'geojson';
+import { CACHE_DEFAULTS } from '../config/CacheSettings';
 import { AreaColouring } from '../domain/AreaColouring';
 import type { AreaPolygons, AreaShapes } from '../domain/AreaShapes';
 import type { Clock } from './Clock';
@@ -53,8 +54,6 @@ export interface BoundaryCaches {
 const AREAS = 'areas';
 const NONE: AreasIndex = { available: false, fine: false, attribution: null };
 const NO_ENTRY: AreasEntry = { index: NONE, version: null };
-// A session left open across a deploy reads the new index within 10 minutes.
-const INDEX_POLICY: CachePolicy = { ttlMs: 10 * 60 * 1000, staleWhileRevalidate: true, maxEntries: 1 };
 // Marker points, polygons and their colouring never age; they are read again only when the index names another version.
 const VERSIONED_POLICY: CachePolicy = { ttlMs: Number.POSITIVE_INFINITY, staleWhileRevalidate: false, maxEntries: 1 };
 
@@ -75,18 +74,15 @@ export class BoundaryCatalog {
     this.#caches = caches;
   }
 
-  static caches(clock: Clock): BoundaryCaches {
+  /** A session left open across a deploy reads the new index within indexTtlMs (VITE_BOUNDARY_INDEX_TTL_MS). */
+  static caches(clock: Clock, indexTtlMs: number = CACHE_DEFAULTS.boundaryIndexTtlMs): BoundaryCaches {
+    const index: CachePolicy = { ttlMs: indexTtlMs, staleWhileRevalidate: true, maxEntries: 1 };
     return {
-      index: new ExpiringCache(INDEX_POLICY, clock),
+      index: new ExpiringCache(index, clock),
       labels: new ExpiringCache(VERSIONED_POLICY, clock),
       polygons: new ExpiringCache(VERSIONED_POLICY, clock),
       shapes: new ExpiringCache(VERSIONED_POLICY, clock),
     };
-  }
-
-  /** The app's own folder, as an absolute URL so MapLibre's workers can fetch it. */
-  static defaultBaseUrl(): string {
-    return new URL(`${import.meta.env.BASE_URL}boundaries/`, globalThis.location.href).href;
   }
 
   /** What the index says about the areas layer; nothing when it cannot be read. */

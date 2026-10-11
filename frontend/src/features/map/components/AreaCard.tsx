@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { AreaProgress } from '../../../domain/AreaProgress';
 import { pilotArea } from '../../../domain/PilotAreas';
 import { IconButton } from '../../../ui/IconButton';
@@ -34,7 +35,7 @@ export function AreaCard({ area, tint, onOpen, onClose }: AreaCardProps) {
   const state = useAreaScores(area.kind, area.id);
   // The row's own flag once it is in, else a pilot-city area's; a scored area is drawn in its score colour, not its tint.
   const pilot = state.scores?.pilot ?? pilotArea(area.kind, area.id) !== null;
-  const scored = AreaProgress.of(state.scores).stage === 'scored';
+  const scored = AreaProgress.of(state.scores, useConfig().site.minVerifiedReports).stage === 'scored';
   return (
     <section
       ref={card}

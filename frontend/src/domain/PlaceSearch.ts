@@ -27,7 +27,6 @@ interface Entry {
   point: LonLat | null;
 }
 
-const MAX_RESULTS = 6;
 // Smallest first, as the Areas tab lists them.
 const KIND_ORDER: readonly PlaceKind[] = ['ward', 'assembly', 'loksabha', 'local_body', 'town'];
 
@@ -47,8 +46,11 @@ const keyOf = (kind: PlaceKind, name: string) => `${kind}:${name.toLocaleLowerCa
  */
 export class PlaceSearch {
   readonly #places: readonly Place[];
+  readonly #maxResults: number;
 
-  constructor(sites: readonly SiteFeature[], seats: readonly SeatLabel[] = []) {
+  /** maxResults: places a search lists at most (the config's limits.searchResults). */
+  constructor(sites: readonly SiteFeature[], seats: readonly SeatLabel[], maxResults: number) {
+    this.#maxResults = maxResults;
     const byKey = new Map<string, Entry>();
     for (const site of sites) PlaceSearch.#addSite(byKey, site);
     for (const seat of seats) {
@@ -75,7 +77,7 @@ export class PlaceSearch {
     return this.#places
       .filter((place) => text.matches(place.name))
       .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
-      .slice(0, MAX_RESULTS);
+      .slice(0, this.#maxResults);
   }
 
   static #addSite(byKey: Map<string, Entry>, site: SiteFeature): void {

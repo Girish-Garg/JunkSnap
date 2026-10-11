@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { createPortal } from 'react-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ServicesContext } from '../src/app/ServicesContext';
 import { TargetMapView } from '../src/features/snap/components/TargetMapView';
 import { MapSupport } from '../src/features/map/MapSupport';
 import { BottomSheet } from '../src/ui/BottomSheet';
+import { testServices } from './helpers';
 
 vi.mock('maplibre-gl', () => import('./fakeMapLibre'));
 
@@ -69,7 +71,12 @@ describe('touches a sheet must not take', () => {
 
   it('dragging the long-range pin map does not drag the Snap sheet', () => {
     vi.spyOn(MapSupport, 'hasWebGl2').mockReturnValue(true);
-    const { onClose } = sheet(<TargetMapView origin={ORIGIN} spot={ORIGIN} headingEnd={null} onMove={() => undefined} />);
+    // The map reads its style and zooms from the app's configuration.
+    const { onClose } = sheet(
+      <ServicesContext.Provider value={testServices()}>
+        <TargetMapView origin={ORIGIN} spot={ORIGIN} headingEnd={null} onMove={() => undefined} />
+      </ServicesContext.Provider>,
+    );
     const map = document.querySelector('.target-map');
     expect(map).toHaveAttribute('data-own-drag');
     expect(dragDown(map as Element)).toBe(false);

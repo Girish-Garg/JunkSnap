@@ -1,3 +1,5 @@
+import { LIMIT_DEFAULTS } from '../../config/ListLimits';
+
 /** Office addresses for To and Cc: only ones that already exist in the letter draft or the ward data, never guessed. */
 export interface MailRecipients {
   readonly to: readonly string[];
@@ -13,9 +15,6 @@ export interface LetterMail {
 /** letter_draft, area_letter_draft and ward_scores carry no office email, so To and Cc stay empty for the resident to fill. */
 export const NO_KNOWN_ADDRESSES: MailRecipients = { to: [], cc: [] };
 
-// Mail apps and Android intents cut long mailto: links; about 1,800 characters gets through all of them.
-export const MAX_MAILTO_LENGTH = 1800;
-
 // One plain address: anything that could add a recipient or a header (space, comma, ?, &, %) drops it.
 const ADDRESS = /^[^\s@?&%,;:<>"#/]+@[^\s@?&%,;:<>"#/]+\.[a-z]{2,}$/i;
 
@@ -26,16 +25,19 @@ const encode = (text: string) => encodeURIComponent(text.replace(/\r?\n/g, '\r\n
 export class LetterMailto {
   readonly #to: string;
   readonly #cc: string;
+  readonly #maxLength: number;
 
-  constructor(recipients: MailRecipients) {
+  /** Mail apps and Android intents cut long mailto: links; about 1,800 characters (limits.mailtoMaxLength) gets through all of them. */
+  constructor(recipients: MailRecipients, maxLength: number = LIMIT_DEFAULTS.mailtoMaxLength) {
     this.#to = recipients.to.filter((address) => ADDRESS.test(address)).join(',');
     this.#cc = recipients.cc.filter((address) => ADDRESS.test(address)).join(',');
+    this.#maxLength = maxLength;
   }
 
   /** The whole letter when the link stays short enough; else the subject and `short`, which says the letter is pasted. */
   compose(subject: string, letter: string, short: string): LetterMail {
     const full = this.#url(subject, letter);
-    return full.length <= MAX_MAILTO_LENGTH ? { url: full, long: false } : { url: this.#url(subject, short), long: true };
+    return full.length <= this.#maxLength ? { url: full, long: false } : { url: this.#url(subject, short), long: true };
   }
 
   #url(subject: string, body: string): string {

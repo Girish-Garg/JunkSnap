@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { LetterBase } from '../../../domain/SiteActions';
 import { LetterMailto, NO_KNOWN_ADDRESSES } from '../LetterMailto';
@@ -11,9 +12,10 @@ import { LetterText } from '../LetterText';
 export function useMailLetter(draft: LetterBase, link?: string) {
   const { t } = useTranslation();
   const { sharer, notifier } = useServices();
+  const { mailtoMaxLength } = useConfig().limits;
   const text = new LetterText(t, draft);
   const letter = text.plain(link);
-  const mail = new LetterMailto(NO_KNOWN_ADDRESSES).compose(draft.subject, letter, text.short(link));
+  const mail = new LetterMailto(NO_KNOWN_ADDRESSES, mailtoMaxLength).compose(draft.subject, letter, text.short(link));
   const onOpen = () => {
     if (!mail.long) return;
     sharer.copy(letter).then(

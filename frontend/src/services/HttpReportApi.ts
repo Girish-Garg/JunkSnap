@@ -2,14 +2,14 @@ import type { ConfirmRequest } from '../domain/ReportConfirmation';
 import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AcceptedReport, NoBinUpload, PresignRequest, PresignResponse, ReportUpload } from '../domain/ReportUpload';
-import { HttpTransport } from './HttpTransport';
+import { HttpTransport, type HttpTimeouts } from './HttpTransport';
 import type { ReportApi, RequestIdentity } from './ReportApi';
 
 export class HttpReportApi implements ReportApi {
   readonly #http: HttpTransport;
 
-  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch) {
-    this.#http = new HttpTransport(baseUrl, identity, fetchImpl);
+  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch, timeouts?: HttpTimeouts) {
+    this.#http = new HttpTransport(baseUrl, identity, fetchImpl, timeouts);
   }
 
   presign(request: PresignRequest): Promise<PresignResponse> {

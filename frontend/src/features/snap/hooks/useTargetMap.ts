@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import type { LatLon } from '../../../domain/ReportUpload';
 import { TargetMap, type TargetMapLabels, type TargetMapOptions } from '../TargetMap';
 
@@ -34,6 +35,7 @@ function tryCreate(options: TargetMapOptions, onFail: () => void): TargetMap | n
 /** Creates one TargetMap for the container while enabled, and keeps its pin and lines on the placement. */
 export function useTargetMap(enabled: boolean, view: TargetMapState, onFail: () => void) {
   const { t } = useTranslation();
+  const { map: settings } = useConfig();
   const container = useRef<HTMLDivElement | null>(null);
   const map = useRef<TargetMap | null>(null);
   const onMove = useEffectEvent(view.onMove);
@@ -43,7 +45,7 @@ export function useTargetMap(enabled: boolean, view: TargetMapState, onFail: () 
   useEffect(() => {
     if (!enabled || !container.current) return undefined;
     const labels = labelsIn(t);
-    const options = { container: container.current, origin: { lat, lon }, labels, onMove: (point: LatLon) => onMove(point) };
+    const options = { container: container.current, origin: { lat, lon }, labels, onMove: (point: LatLon) => onMove(point), settings };
     const created = tryCreate(options, () => failed());
     if (created) showOn(created);
     map.current = created;
@@ -51,7 +53,7 @@ export function useTargetMap(enabled: boolean, view: TargetMapState, onFail: () 
       created?.destroy();
       map.current = null;
     };
-  }, [enabled, lat, lon, t]);
+  }, [enabled, lat, lon, t, settings]);
   useEffect(() => {
     map.current?.show(view.spot, view.headingEnd);
   }, [view.spot, view.headingEnd]);

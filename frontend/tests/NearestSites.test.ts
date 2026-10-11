@@ -6,6 +6,7 @@ import { NearestSites } from '../src/domain/NearestSites';
 import { LegendKeys } from '../src/features/map/LegendKeys';
 import type { AreaMarker } from '../src/features/map/AreaMarkers';
 import { areaRow } from './areaRows';
+import { DEFAULTS } from './config';
 import { testSite } from './siteBuilder';
 
 // The live bug: a phone's opening view of Jodhpur, with the only site about 700 m east of its edge.
@@ -16,12 +17,13 @@ const CLEARED = testSite({ site_id: 'site_cleared', status: 'cleaned', coordinat
 
 describe('NearestSites', () => {
   it('searches one query-sized box around an empty view, and nothing around a view already that wide', () => {
-    const reach = NearestSites.reach(PHONE_VIEW);
+    const { tileSpanDeg } = DEFAULTS.map;
+    const reach = NearestSites.reach(PHONE_VIEW, tileSpanDeg);
     expect(reach?.contains([73.052, 26.27])).toBe(true);
     expect(reach?.isWiderThan(1)).toBe(false);
-    expect(NearestSites.reach(BBox.around([73, 26], 2))).toBeNull();
+    expect(NearestSites.reach(BBox.around([73, 26], 2), tileSpanDeg)).toBeNull();
     // List mode already loads one query-sized box; searching it again would find nothing new.
-    expect(NearestSites.reach(BBox.around([73.02, 26.27], 0.99))).toBeNull();
+    expect(NearestSites.reach(BBox.around([73.02, 26.27], 0.99), tileSpanDeg)).toBeNull();
   });
 
   it('picks the nearest site on the active map, with others only when nearly as near', () => {

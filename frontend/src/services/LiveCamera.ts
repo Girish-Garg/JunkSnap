@@ -1,3 +1,4 @@
+import { CAPTURE_DEFAULTS, type CaptureSettings } from '../config/CaptureSettings';
 import { CaptureError, type CaptureProblem } from '../domain/CaptureError';
 import { CameraCapture } from './CameraCapture';
 import type { FrameCounter } from './FrameCounter';
@@ -15,16 +16,25 @@ export interface CameraScreen {
   play(): Promise<void>;
 }
 
+/**
+ * The watchdog's timings (the config's capture settings): a visible viewfinder with no new frame for cameraStallMs is
+ * frozen; it looks every cameraCheckMs; after cameraMaxRestarts restarts in a row without a frame the camera help
+ * (Try again) shows.
+ */
+export type CameraWatchdog = Pick<CaptureSettings, 'cameraStallMs' | 'cameraCheckMs' | 'cameraMaxRestarts'>;
+
 export interface LiveCameraPorts {
   readonly open: () => Promise<MediaStream>;
   readonly page: PageVisibility;
   readonly timer: Timer;
   readonly now: () => number;
+  /** Absent: the defaults. */
+  readonly watchdog?: CameraWatchdog;
 }
 
 export interface LiveCameraView {
   readonly screen: CameraScreen;
-  /** Null where the browser cannot report frames: then a track muted for STALL_MS counts as frozen. */
+  /** Null where the browser cannot report frames: then a track muted for cameraStallMs counts as frozen. */
   readonly frames: FrameCounter | null;
   readonly onState: (state: CameraState) => void;
   readonly onEvent?: (event: CameraEvent, restarts: number) => void;
@@ -34,21 +44,16 @@ export interface LiveCameraView {
   readonly onLost?: () => void;
 }
 
-/** A visible viewfinder with no new frame for this long is frozen. */
-export const STALL_MS = 2_000;
-export const CHECK_MS = 500;
-/** Restarts in a row without a single frame before the camera help (Try again) shows. */
-export const MAX_RESTARTS = 5;
-
 /**
  * The viewfinder stream while it is on screen. Android can leave a stream "live" but muted for
  * good, for example when another app had the camera while JunkSnap was in the background: the
  * video then shows its last frame forever. A watchdog opens the stream again when no frame
- * arrives for STALL_MS while the page is visible, or when the track ends; tries back off.
+ * arrives for cameraStallMs while the page is visible, or when the track ends; tries back off.
  * During a Scan recording it does not reopen; it asks the recording to stop, then reopens.
  */
 export class LiveCamera {
   readonly #ports: LiveCameraPorts;
+  readonly #watchdog: CameraWatchdog;
   readonly #view: LiveCameraView;
   #stream: MediaStream | null = null;
   #state: CameraState = 'starting';
@@ -64,6 +69,7 @@ export class LiveCamera {
 
   constructor(ports: LiveCameraPorts, view: LiveCameraView) {
     this.#ports = ports;
+    this.#watchdog = ports.watchdog ?? CAPTURE_DEFAULTS;
     this.#view = view;
   }
 
@@ -115,7 +121,7 @@ export class LiveCamera {
   }
 
   #schedule(): void {
-    if (!this.#stopped) this.#check = this.#ports.timer.set(() => this.#tick(), CHECK_MS);
+    if (!this.#stopped) this.#check = this.#ports.timer.set(() => this.#tick(), this.#watchdog.cameraCheckMs);
   }
 
   #tick(): void {
@@ -160,7 +166,7 @@ export class LiveCamera {
 
   // 2 s without progress, then 4, 8 and 16 s between tries.
   #due(): boolean {
-    const wait = STALL_MS * 2 ** Math.min(this.#restarts, 3);
+    const wait = this.#watchdog.cameraStallMs * 2 ** Math.min(this.#restarts, 3);
     return this.#ports.now() - this.#quietSince >= wait;
   }
 
@@ -170,7 +176,7 @@ export class LiveCamera {
     this.#restarts += 1;
     this.#release();
     this.#quietSince = this.#ports.now();
-    if (this.#restarts > MAX_RESTARTS) {
+    if (this.#restarts > this.#watchdog.cameraMaxRestarts) {
       this.#view.onEvent?.('gave_up', this.#restarts - 1);
       return this.#set('camera_unavailable');
     }
@@ -180,7 +186,7 @@ export class LiveCamera {
   }
 
   // Back on screen (after the background, a permission dialog or the lock screen): play again,
-  // and give the camera STALL_MS to deliver before the watchdog judges it.
+  // and give the camera cameraStallMs to deliver before the watchdog judges it.
   #pageChanged(): void {
     if (!this.#ports.page.visible()) return;
     this.#quietSince = this.#ports.now();

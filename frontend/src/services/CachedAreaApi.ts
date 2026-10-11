@@ -1,3 +1,4 @@
+import { CACHE_DEFAULTS, type CacheSettings } from '../config/CacheSettings';
 import type { AreaCrawl } from '../domain/AreaCrawl';
 import type { AreaListing } from '../domain/AreaListing';
 import type { AreaKind, AreaScores } from '../domain/AreaScores';
@@ -11,8 +12,10 @@ import type { TaggedAreaApi } from './TaggedAreaApi';
  * rejects, and a failed first request is not kept, so the next open tries again.
  */
 export class CachedAreaApi implements AreaApi {
-  // The scores CronJob rewrites the rows every 15 minutes; a listing younger than 5 minutes is reused as is.
-  static readonly POLICY: CachePolicy = { ttlMs: 5 * 60 * 1000, staleWhileRevalidate: false, maxEntries: 32 };
+  /** The scores CronJob rewrites the rows every 15 minutes; a listing younger than areaListTtlMs (5 min) is reused as is. */
+  static policy(settings: Pick<CacheSettings, 'areaListTtlMs' | 'areaListEntries'> = CACHE_DEFAULTS): CachePolicy {
+    return { ttlMs: settings.areaListTtlMs, staleWhileRevalidate: false, maxEntries: settings.areaListEntries };
+  }
 
   readonly #inner: TaggedAreaApi;
   readonly #lists: ExpiringCache<AreaListing>;

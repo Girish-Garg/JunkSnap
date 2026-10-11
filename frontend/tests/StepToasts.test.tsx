@@ -5,9 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AVAILABLE } from '../src/domain/ActionAvailability';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { useLocationHelp } from '../src/features/actions/hooks/useLocationHelp';
-import { STEP_TOAST_MS, TOAST_MS } from '../src/features/actions/hooks/useToast';
 import { Notifier } from '../src/services/Notifier';
+import { DEFAULTS } from './config';
 import { renderApp, testServices } from './helpers';
+
+const { toastMs: TOAST_MS, stepToastMs: STEP_TOAST_MS } = DEFAULTS.ui;
 
 const OFF = "Your phone's location is off. Turn it on and try again.";
 const OFFLINE = "You're offline. Try again once you're connected.";

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BBox } from '../src/domain/BBox';
 import type { SiteFeature } from '../src/domain/Site';
 import { SITES_PER_QUERY, SiteTiles } from '../src/domain/SiteTiles';
+import { DEFAULTS } from './config';
 import { testSite } from './siteBuilder';
 
 const spans = (box: BBox) => [box.maxLon - box.minLon, box.maxLat - box.minLat];
@@ -25,14 +26,14 @@ describe('BBox.split', () => {
 
 describe('SiteTiles.plan', () => {
   it('loads a city view with one query, as before', () => {
-    const plan = SiteTiles.plan(new BBox(72.9, 26.1, 73.2, 26.4));
+    const plan = SiteTiles.plan(new BBox(72.9, 26.1, 73.2, 26.4), DEFAULTS.map);
     expect(plan.tiles).toHaveLength(1);
     expect(plan.partial).toBe(false);
   });
 
   it('tiles a view wider than 1 degree instead of loading only its centre', () => {
     const view = new BBox(72.5, 26, 76, 27.2);
-    const plan = SiteTiles.plan(view);
+    const plan = SiteTiles.plan(view, DEFAULTS.map);
     expect(plan.partial).toBe(false);
     expect(plan.loaded).toBe(view);
     expect(plan.tiles).toHaveLength(4 * 2);
@@ -40,7 +41,7 @@ describe('SiteTiles.plan', () => {
   });
 
   it('loads only the middle 4 by 4 tiles of a state-wide view and marks it partial', () => {
-    const plan = SiteTiles.plan(new BBox(68, 22, 80, 30));
+    const plan = SiteTiles.plan(new BBox(68, 22, 80, 30), DEFAULTS.map);
     expect(plan.partial).toBe(true);
     expect(plan.tiles).toHaveLength(16);
     expect(plan.loaded.center()).toEqual([74, 26]);
@@ -49,7 +50,7 @@ describe('SiteTiles.plan', () => {
 });
 
 describe('SiteTiles.merge', () => {
-  const plan = SiteTiles.plan(new BBox(72, 26, 74, 27));
+  const plan = SiteTiles.plan(new BBox(72, 26, 74, 27), DEFAULTS.map);
 
   it('keeps each site once, newest first', () => {
     const older = site('site_a', '2026-10-09T00:00:00Z');

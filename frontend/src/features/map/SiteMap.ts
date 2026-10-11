@@ -1,6 +1,6 @@
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type VectorTileSource } from 'maplibre-gl';
+import type { MapSettings } from '../../config/MapSettings';
 import { BBox } from '../../domain/BBox';
-import { PilotCity } from '../../domain/PilotCity';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
@@ -15,14 +15,8 @@ import { PinPicker } from './PinPicker';
 import { PinDrop } from './PinDrop';
 import { SelectedPulse } from './SelectedPulse';
 
-// OpenFreeMap needs no key; its style carries the OpenStreetMap credit for the attribution control.
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
-// MapLibre zooms use 512 px tiles (one below Google Maps); 12 shows about 6 km across a phone.
-const CITY_ZOOM = 12;
-const SITE_ZOOM = 14;
-// OpenFreeMap tiles stop at 14 and are overzoomed; past 18 a phone shows a few metres of plain background.
-const MAX_ZOOM = 18;
-const INDIA_BOUNDS: [[number, number], [number, number]] = [[60, 4], [100, 38.5]];
+// The style (OpenFreeMap needs no key) carries the OpenStreetMap credit for the attribution control. MapLibre zooms
+// use 512 px tiles (one below Google Maps). Both, the bounds and the pilot city the map opens on, are MapSettings.
 const SOURCE_ID = 'sites';
 const PIN_SOURCE_ID = 'site-pin-groups';
 // Must match DESKTOP_QUERY in ui/useMediaQuery.ts: the map then sits beside the side panel, not under it.
@@ -50,6 +44,8 @@ export interface SiteMapOptions {
   readonly onViewChange: (view: MapView) => void;
   /** The basemap started loading, drew its first full view, or could not load (BasemapWatch). */
   readonly onBasemap: (signal: BasemapSignal) => void;
+  /** The style, the opening view and the zooms (the config's map settings). */
+  readonly settings: MapSettings;
 }
 
 export class SiteMap {
@@ -65,19 +61,23 @@ export class SiteMap {
   readonly #boundaries: BoundaryOverlay;
   readonly #pulse: SelectedPulse;
   readonly #drop: PinDrop;
-  readonly #groups = new PinGroups();
+  readonly #groups: PinGroups;
   readonly #picker: PinPicker;
+  readonly #settings: MapSettings;
 
   constructor(options: SiteMapOptions) {
+    const { settings } = options;
     this.#layers = options.layers;
+    this.#settings = settings;
+    this.#groups = new PinGroups(settings);
     this.#map = new MapLibreMap({
       container: options.container,
       // Always the pilot city first; a location fix shows the dot but never moves the map on its own.
-      center: [...PilotCity.centre],
-      zoom: CITY_ZOOM,
-      minZoom: 4,
-      maxZoom: MAX_ZOOM,
-      maxBounds: INDIA_BOUNDS,
+      center: [...settings.pilotCentre],
+      zoom: settings.pilotZoom,
+      minZoom: settings.minZoom,
+      maxZoom: settings.maxZoom,
+      maxBounds: [[settings.maxBounds.minLon, settings.maxBounds.minLat], [settings.maxBounds.maxLon, settings.maxBounds.maxLat]],
       attributionControl: false,
       locale: { 'AttributionControl.ToggleAttribution': options.attributionLabel },
     });
@@ -87,7 +87,7 @@ export class SiteMap {
     this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
     this.#foldAttribution();
     this.#basemap = new BasemapMode(this.#map);
-    this.#watch = new BasemapWatch(this.#map, STYLE_URL, options.onBasemap);
+    this.#watch = new BasemapWatch(this.#map, settings.styleUrl, options.onBasemap);
     this.#loadStyle();
     this.#boundaries = new BoundaryOverlay(this.#map, options.boundaries, this.#layers.all()[0]?.id);
     this.#listen(options);
@@ -141,12 +141,12 @@ export class SiteMap {
     const [first] = points;
     if (!first) return;
     if (points.length === 1) {
-      const to = zoom ?? Math.max(this.#map.getZoom(), SITE_ZOOM);
+      const to = zoom ?? Math.max(this.#map.getZoom(), this.#settings.siteZoom);
       this.#map.flyTo({ center: [...first], zoom: to, offset: this.#clearOffset() });
       return;
     }
     const bounds = points.reduce((box, point) => box.extend([...point]), new LngLatBounds([...first], [...first]));
-    this.#map.fitBounds(bounds, { padding: FitPadding.of(this.#map.getContainer()), maxZoom: SITE_ZOOM });
+    this.#map.fitBounds(bounds, { padding: FitPadding.of(this.#map.getContainer(), this.#settings), maxZoom: this.#settings.siteZoom });
   }
 
   /** MapLibre reads its locale once; this keeps the attribution toggle in the UI language. */
@@ -190,7 +190,7 @@ export class SiteMap {
 
   #loadStyle(): void {
     this.#watch.start();
-    this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => this.#basemap.transform(next) });
+    this.#map.setStyle(this.#settings.styleUrl, { transformStyle: (_previous, next) => this.#basemap.transform(next) });
   }
 
   #listen({ onPick, onPickStack, onPickArea, onViewChange }: SiteMapOptions): void {

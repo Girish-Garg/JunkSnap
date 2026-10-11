@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import { ApiError } from '../domain/ApiError';
 import { JunkSnapError } from '../domain/JunkSnapError';
 import type { QueuedReport } from '../domain/QueuedReport';
@@ -14,12 +15,15 @@ export class ReportSender {
   readonly #api: ReportApi;
   readonly #identity: RequestIdentity;
   readonly #clock: Clock;
+  readonly #presignReuseMs: number;
   readonly #signedIn: SignedInStep;
 
-  constructor(api: ReportApi, identity: RequestIdentity, clock: Clock) {
+  /** presignReuseMs: how long a presigned URL is reused (network.presignReuseMs, under the api's PRESIGN_TTL_SECONDS). */
+  constructor(api: ReportApi, identity: RequestIdentity, clock: Clock, presignReuseMs: number = NETWORK_DEFAULTS.presignReuseMs) {
     this.#api = api;
     this.#identity = identity;
     this.#clock = clock;
+    this.#presignReuseMs = presignReuseMs;
     this.#signedIn = new SignedInStep(identity);
   }
 
@@ -29,7 +33,7 @@ export class ReportSender {
 
   async #advance(report: QueuedReport): Promise<QueuedReport> {
     const now = this.#clock.now();
-    if (report.needsPresign(now)) return report.presigned(await this.#presign(report), now);
+    if (report.needsPresign(now, this.#presignReuseMs)) return report.presigned(await this.#presign(report), now);
     if (report.data.stage === 'saved') return this.#put(report);
     const accepted = await this.#api.submit(report.toUpload(await this.#identity.deviceToken()));
     return report.sent(accepted.report_id);

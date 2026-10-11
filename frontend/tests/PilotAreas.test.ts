@@ -10,6 +10,7 @@ import { PILOT_AREAS, PILOT_LOCAL_BODY, pilotArea } from '../src/domain/PilotAre
 import { AreaProgressText } from '../src/features/areas/AreaProgressText';
 import { LocaleFormatter } from '../src/i18n/LocaleFormatter';
 import { areaRow } from './areaRows';
+import { DEFAULTS } from './config';
 
 interface SeatProperties {
   readonly id: string;
@@ -69,17 +70,19 @@ describe('AreaDirectory.of with the pilot areas', () => {
   });
 });
 
+const MIN = DEFAULTS.site.minVerifiedReports;
+
 describe('AreaProgress in words', () => {
   const text = new AreaProgressText((key, params) => `${key} ${JSON.stringify(params ?? {})}`, new LocaleFormatter('en'));
 
   it('says "No reports yet" with zero counts for an area without a row', () => {
-    const progress = AreaProgress.of(null);
+    const progress = AreaProgress.of(null, MIN);
     expect(progress).toMatchObject({ stage: 'none', sites: 0, verified: 0, min: 10, score: null });
     expect(text.lines(progress)).toEqual({ counts: 'areas.rowCounts {"sites":"0","verified":"0"}', status: 'areas.noReports {}' });
   });
 
   it('says "Not enough reports yet (n of 10)" below 10 verified reports, whatever the row holds', () => {
-    const progress = AreaProgress.of(areaRow({ reports: 9, scores: { city: 30 } }));
+    const progress = AreaProgress.of(areaRow({ reports: 9, scores: { city: 30 } }), MIN);
     expect(progress).toMatchObject({ stage: 'few', verified: 9, score: null });
     expect(text.lines(progress).status).toBe('areas.notEnough {"n":"9","min":"10"}');
   });
@@ -87,7 +90,7 @@ describe('AreaProgress in words', () => {
   it('never says "No reports yet" once a row exists, even when its sites have since cleared or expired', () => {
     const row = areaRow({ reports: 0 });
     const cleared = { ...row, counts: { ...row.counts, sites: 0, open_sites: 0 } };
-    expect(AreaProgress.of(cleared)).toMatchObject({ stage: 'few', sites: 0 });
+    expect(AreaProgress.of(cleared, MIN)).toMatchObject({ stage: 'few', sites: 0 });
   });
 
 });
@@ -96,13 +99,13 @@ describe('AreaProgress in words, from 10 verified reports', () => {
   const text = new AreaProgressText((key, params) => `${key} ${JSON.stringify(params ?? {})}`, new LocaleFormatter('en'));
 
   it('says "Score withheld for now", not "Not enough reports", when 10+ verified reports still have no score', () => {
-    const progress = AreaProgress.of(areaRow({ reports: 12, scores: { city: 'no_data', citizen: 'no_data', bin_access: 'no_data' } }));
+    const progress = AreaProgress.of(areaRow({ reports: 12, scores: { city: 'no_data', citizen: 'no_data', bin_access: 'no_data' } }), MIN);
     expect(progress).toMatchObject({ stage: 'withheld', verified: 12, score: null });
     expect(text.lines(progress).status).toBe('areas.scoreWithheld {}');
   });
 
   it('shows the mean of the shown scores with its count from 10 verified reports', () => {
-    const progress = AreaProgress.of(areaRow({ reports: 12, scores: { city: 40, citizen: 50, bin_access: 60 } }));
+    const progress = AreaProgress.of(areaRow({ reports: 12, scores: { city: 40, citizen: 50, bin_access: 60 } }), MIN);
     expect(progress).toMatchObject({ stage: 'scored', score: 50 });
     expect(text.lines(progress).status).toBe('areas.scoreLine {"n":"50","reports":"12"}');
   });

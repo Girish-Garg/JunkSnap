@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BasemapWatch, type BasemapSignal } from '../src/features/map/BasemapWatch';
 import { SiteMap } from '../src/features/map/SiteMap';
 import { LayerRegistry } from '../src/layers/LayerRegistry';
+import { DEFAULTS } from './config';
 import { made } from './fakeBasemap';
 
 vi.mock('maplibre-gl', () => import('./fakeBasemap'));
@@ -95,7 +96,7 @@ const boundaries = { polygonsUrl: () => '/a.geojson', fineUrl: () => '/b.geojson
 const ignore = () => undefined;
 
 function siteMap(signals: BasemapSignal[]) {
-  const options = { container: document.createElement('div'), layers: new LayerRegistry([]), attributionLabel: 'Map credits', boundaries };
+  const options = { container: document.createElement('div'), layers: new LayerRegistry([]), attributionLabel: 'Map credits', boundaries, settings: DEFAULTS.map };
   const created = new SiteMap({ ...options, onPick: ignore, onPickStack: ignore, onPickArea: ignore, onViewChange: ignore, onBasemap: (signal) => signals.push(signal) });
   return { siteMap: created, map: made.at(-1)! };
 }

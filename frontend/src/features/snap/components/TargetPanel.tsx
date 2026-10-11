@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { GeoBearing } from '../../../domain/GeoBearing';
-import { HIGH_CAP_M } from '../../../domain/TargetPlacement';
 import { Checkbox } from '../../../ui/Checkbox';
 import { useCompassHeading } from '../hooks/useCompassHeading';
 import type { TargetPlace } from '../hooks/useTargetPlacement';
@@ -10,6 +10,7 @@ import { TargetMapView } from './TargetMapView';
 /** "Farther away": the map with the pin, how far it is, why it stopped at the cap, and the rooftop reach. */
 export function TargetPanel({ place }: { readonly place: TargetPlace }) {
   const { t } = useTranslation();
+  const { targetMaxM } = useConfig().site;
   const { placement } = place;
   const heading = useCompassHeading(true);
   const { origin, capM } = placement;
@@ -24,11 +25,11 @@ export function TargetPanel({ place }: { readonly place: TargetPlace }) {
       </p>
       {placement.capped && (
         <p className="place-target__cap" role="status">
-          {t(capNote, { metres: capM, high: HIGH_CAP_M })}
+          {t(capNote, { metres: capM, high: targetMaxM })}
         </p>
       )}
       {heading !== null && <p className="field__hint">{t('longRange.heading')}</p>}
-      <Checkbox id="place-high" label={t('longRange.high', { metres: HIGH_CAP_M })} checked={placement.high} onChange={place.setHigh} />
+      <Checkbox id="place-high" label={t('longRange.high', { metres: targetMaxM })} checked={placement.high} onChange={place.setHigh} />
     </div>
   );
 }

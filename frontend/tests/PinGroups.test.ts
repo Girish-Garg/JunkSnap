@@ -43,6 +43,18 @@ describe('PinGroups.of', () => {
 
 });
 
+describe('PinGroups stack radius', () => {
+  const groups = new PinGroups();
+
+  it('stacks sites within 20 m of each other at every zoom, and keeps sites 25 m apart separate up close', () => {
+    // At zoom 22 a pin's 40 px is under a metre, so only the stack radius (VITE_PIN_STACK_RADIUS_M) joins them.
+    const at = (metresNorth: number): readonly [number, number] => [SPOT[0], SPOT[1] + metresNorth / 110_540];
+    const a = testSite({ site_id: 'site_a', coordinates: SPOT });
+    expect(groups.of([a, testSite({ site_id: 'site_b', coordinates: at(18) })], 22)).toHaveLength(1);
+    expect(groups.of([a, testSite({ site_id: 'site_c', coordinates: at(25) })], 22)).toHaveLength(2);
+  });
+});
+
 describe('PinGroups.of counts and looks', () => {
   const groups = new PinGroups();
 

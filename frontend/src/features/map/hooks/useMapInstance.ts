@@ -35,7 +35,7 @@ function mount(options: SiteMapOptions, onFail: (error: unknown) => void, ref: R
 
 /** Creates one SiteMap for the container and removes it on unmount. */
 export function useMapInstance(container: RefObject<HTMLDivElement | null>, callbacks: MapCallbacks) {
-  const { layers, localization, boundaries } = useServices();
+  const { layers, localization, boundaries, config } = useServices();
   const mapRef = useRef<SiteMap | null>(null);
   const onPick = useEffectEvent(callbacks.onPick);
   const onPickStack = useEffectEvent(callbacks.onPickStack);
@@ -55,8 +55,9 @@ export function useMapInstance(container: RefObject<HTMLDivElement | null>, call
       onPickArea: (area) => onPickArea(area),
       onViewChange: (view) => onViewChange(view),
       onBasemap: (signal) => onBasemap(signal),
+      settings: config.map,
     };
     return mount(options, (error) => onFail(error), mapRef);
-  }, [container, layers, localization, boundaries]);
+  }, [container, layers, localization, boundaries, config]);
   return mapRef;
 }

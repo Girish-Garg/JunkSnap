@@ -4,7 +4,7 @@ import type { ThinActions } from '../hooks/useThinActions';
 import '../thin.css';
 
 interface ThinNoteProps {
-  /** Sites here, 0 to THIN_MAX: always the real count, never rounded up. */
+  /** Sites here, 0 to map.thinMax: always the real count, never rounded up. */
   readonly count: number;
   readonly actions: ThinActions;
   readonly titleId?: string;

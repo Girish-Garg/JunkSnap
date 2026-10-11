@@ -4,11 +4,17 @@ import { GateRules, type SessionFacts } from './GateRules';
 import type { SiteProperties } from './Site';
 import { SiteListing } from './SiteListing';
 
-/** contracts/README.md: votes count within 1 km of the site; a cleanup photo must be taken within 50 m. */
-export const VOTE_RADIUS_M = 1000;
-export const CLEANUP_RADIUS_M = 50;
-// The map's location fix is older and rougher than the fresh fix the action sends, so only clearly too far blocks.
-export const DISTANCE_MARGIN_M = 100;
+/**
+ * The api's distance rules the gates check before asking (contracts/README.md: votes and photo reports within 1 km
+ * of the site, a cleanup photo within 50 m), from the config's SiteRules. The map's location fix is older and rougher
+ * than the fresh fix the action sends, so only clearly too far (past the margin) blocks.
+ */
+export interface SiteReach {
+  readonly voteRadiusM: number;
+  readonly flagRadiusM: number;
+  readonly cleanupRadiusM: number;
+  readonly distanceMarginM: number;
+}
 
 export interface SiteActionFacts extends SessionFacts {
   readonly site: Pick<SiteProperties, 'verification' | 'status' | 'cleanup_status'>;
@@ -24,6 +30,7 @@ export interface SiteActionFacts extends SessionFacts {
   readonly locationDenied: boolean;
   /** The farthest a photo can still join this site from, up high (SitePhotoPreset.limitM); Send checks the photo's own fix. */
   readonly addPhotoLimitM: number;
+  readonly reach: SiteReach;
 }
 
 export interface AreaLetterFacts extends SessionFacts {
@@ -40,9 +47,9 @@ type Limit = (facts: SiteActionFacts) => number;
 const tooFar = (limit: Limit, reason: string): Rule => (facts) => {
   if (facts.distanceM === null) return facts.locating ? waiting(CHECKING) : null;
   const limitM = limit(facts);
-  return facts.distanceM > limitM + DISTANCE_MARGIN_M ? blocked(reason, { limit: limitM }, 'relocate') : null;
+  return facts.distanceM > limitM + facts.reach.distanceMarginM ? blocked(reason, { limit: limitM }, 'relocate') : null;
 };
-const within = (metres: number): Limit => () => metres;
+const voteRadius: Limit = (facts) => facts.reach.voteRadiusM;
 
 // Right after "too far": with location blocked no distance can be checked, so the tap says how to allow it.
 const locationOff = (limit: Limit, reason: string): Rule => (facts) =>
@@ -60,7 +67,7 @@ const VOTE: readonly Rule[] = [
   GateRules.busy(),
   GateRules.when((facts) => facts.ownSite, 'vote.errors.own_site'),
   GateRules.waitWhile((facts) => facts.checkingOwner === true, CHECKING),
-  ...located(within(VOTE_RADIUS_M), 'vote.errors.too_far', 'gate.locationOff.vote'),
+  ...located(voteRadius, 'vote.errors.too_far', 'gate.locationOff.vote'),
   GateRules.cooling('vote', 'vote.errors.rate_limited'),
   GateRules.offline(),
   GateRules.signIn('gate.signIn.vote'),
@@ -76,7 +83,7 @@ export const SITE_GATES = {
     GateRules.busy(),
     offMap(),
     GateRules.when((facts) => facts.site.cleanup_status === 'checking', 'cleanup.errors.cleanup_pending'),
-    ...located(within(CLEANUP_RADIUS_M), 'gate.tooFarCleanup', 'gate.locationOff.cleanup'),
+    ...located((facts) => facts.reach.cleanupRadiusM, 'gate.tooFarCleanup', 'gate.locationOff.cleanup'),
     GateRules.cooling('cleanup', 'cleanup.errors.rate_limited'),
     GateRules.offline(),
     GateRules.signIn('gate.signIn.cleanup'),
@@ -96,10 +103,10 @@ export const SITE_GATES = {
     ...located((facts) => facts.addPhotoLimitM, 'addPhoto.tooFar', 'gate.locationOff.addPhoto'),
     GateRules.signIn('addPhoto.signIn'),
   ]),
-  // "Report this photo" (#133): within 1 km of the site, by the same fresh-fix rule as a vote, and signed in.
+  // "Report this photo" (#133): within 1 km of the site (api FLAG_RADIUS_M), by the same fresh-fix rule as a vote, and signed in.
   reportPhoto: new ActionGate<SiteActionFacts>([
     offMap(),
-    ...located(within(VOTE_RADIUS_M), 'gate.tooFarReport', 'gate.locationOff.reportPhoto'),
+    ...located((facts) => facts.reach.flagRadiusM, 'gate.tooFarReport', 'gate.locationOff.reportPhoto'),
     GateRules.cooling('reportPhoto', 'photoReport.errors.rate_limited'),
     GateRules.signIn('gate.signIn.reportPhoto'),
   ]),
@@ -190,10 +197,12 @@ export const AREA_ISSUE_GATE = new ActionGate<AreaIssueFacts>([
 
 // A deep-linked sheet checks only what the site or area itself allows; its own Draft or Send button says the rest.
 const ROUTE_SESSION: SessionFacts = { signedIn: true, online: true, cooling: new Set() };
+// With no distance known, no distance rule applies, so the radii do not matter here.
+const ROUTE_REACH: SiteReach = { voteRadiusM: 0, flagRadiusM: 0, cleanupRadiusM: 0, distanceMarginM: 0 };
 
 /** Whether a letter or cleanup sheet opened by link can be used at all: off the map, not verified, a photo checking. */
 export function decideSiteRoute(rule: ActionGate<SiteActionFacts>, site: SiteActionFacts['site']): Availability {
-  return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false, addPhotoLimitM: 0 });
+  return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false, addPhotoLimitM: 0, reach: ROUTE_REACH });
 }
 
 /** Whether an area letter sheet opened by link can draft at all: 10 verified reports. */

@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import { NativeBridge } from '../../../services/NativeBridge';
 
-const COPIED_MS = 2500;
-
 /**
  * Shares a title and a link, with an optional message: the browser's share sheet, else the clipboard (`copied` is
- * true for a moment), and inside the Android app the native share sheet with the message (else the title) and link.
+ * true for ui.copiedMs), and inside the Android app the native share sheet with the message (else the title) and link.
  */
 export function useShareLink() {
   const { sharer, errors, notifier } = useServices();
+  const { copiedMs } = useConfig().ui;
   const native = useMemo(() => new NativeBridge(window), []);
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
-    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
+    const timer = window.setTimeout(() => setCopied(false), copiedMs);
     return () => window.clearTimeout(timer);
-  }, [copied]);
+  }, [copied, copiedMs]);
   const share = useCallback(
     (title: string, url: string, text?: string) => {
       const shared = native.canShareText()

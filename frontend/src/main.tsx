@@ -14,6 +14,7 @@ import { App } from './app/App';
 import { AppConfig } from './app/AppConfig';
 import { browserDetectorFactory } from './app/BrowserEdgeDetector';
 import { ServiceContainer } from './app/ServiceContainer';
+import { EDGE_MODEL_URL_PATH } from './domain/EdgeModel';
 import { CapabilityProbe } from './services/CapabilityProbe';
 import { BrowserStore } from './services/BrowserStore';
 import { QueueTriggers } from './services/QueueTriggers';
@@ -21,7 +22,8 @@ import { QueueTriggers } from './services/QueueTriggers';
 // MapLibre looks for its worker next to its own file, which Vite relocates.
 setWorkerUrl(mapWorkerUrl);
 
-const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
+const config = AppConfig.fromBuild();
+const services = ServiceContainer.build(config, {
   store: new BrowserStore(() => window.localStorage),
   root: document.documentElement,
   geolocation: navigator.geolocation,
@@ -33,7 +35,10 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   locks: navigator.locks,
   mediaRecorder: typeof MediaRecorder === 'undefined' ? undefined : MediaRecorder,
   orientation: window,
-  edge: { capabilities: CapabilityProbe.read(globalThis), detector: browserDetectorFactory },
+  edge: {
+    capabilities: CapabilityProbe.read(globalThis),
+    detector: browserDetectorFactory(config.assetUrl(EDGE_MODEL_URL_PATH, window.location.href)),
+  },
 });
 // Crashes nobody caught are logged with the same structured tag as handled ones; nothing leaves the phone.
 services.errors.watch(window);

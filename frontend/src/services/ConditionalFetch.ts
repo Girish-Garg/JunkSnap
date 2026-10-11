@@ -1,6 +1,6 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import type { Tagged } from './ExpiringCache';
 import { HttpErrors } from './HttpErrors';
-import { REQUEST_TIMEOUT_MS } from './HttpTransport';
 
 type Fetch = typeof fetch;
 
@@ -11,9 +11,13 @@ export class ConditionalFetch {
   readonly #baseUrl: string;
   readonly #fetch: Fetch;
 
-  constructor(baseUrl: string, fetchImpl: Fetch) {
+  readonly #timeoutMs: number;
+
+  /** timeoutMs: the config's network.requestTimeoutMs. */
+  constructor(baseUrl: string, fetchImpl: Fetch, timeoutMs: number = NETWORK_DEFAULTS.requestTimeoutMs) {
     this.#baseUrl = baseUrl.replace(/\/+$/, '');
     this.#fetch = fetchImpl;
+    this.#timeoutMs = timeoutMs;
   }
 
   async get<T>(path: string, previous: Tagged<T> | null): Promise<Tagged<T>> {
@@ -30,7 +34,7 @@ export class ConditionalFetch {
     if (token) headers['If-None-Match'] = token;
     try {
       // The same timeout as every other api call, so a hung read ends as a timeout (ErrorClassifier), not a spinner.
-      return await this.#fetch(`${this.#baseUrl}${path}`, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      return await this.#fetch(`${this.#baseUrl}${path}`, { headers, signal: AbortSignal.timeout(this.#timeoutMs) });
     } catch (cause) {
       throw HttpErrors.network(`Request to ${path}`, cause);
     }

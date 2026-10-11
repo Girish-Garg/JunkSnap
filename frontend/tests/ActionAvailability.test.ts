@@ -13,6 +13,7 @@ import {
 } from '../src/domain/SiteActionGates';
 import en from '../src/i18n/en.json';
 import hi from '../src/i18n/hi.json';
+import { DEFAULTS } from './config';
 
 const SESSION: SessionFacts = { signedIn: true, online: true, cooling: new Set() };
 const SITE: SiteActionFacts = {
@@ -22,6 +23,7 @@ const SITE: SiteActionFacts = {
   distanceM: 200,
   locationDenied: false,
   addPhotoLimitM: 490,
+  reach: DEFAULTS.site,
 };
 const site = (patch: Partial<SiteActionFacts>): SiteActionFacts => ({ ...SITE, ...patch });
 const cooling = (group: string) => new Set([group]);

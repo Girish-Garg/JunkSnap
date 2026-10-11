@@ -1,7 +1,7 @@
 import type { QueueItem, QueueItemData } from '../domain/QueueItem';
 import type { Clock } from './Clock';
 import type { QueueLock } from './QueueLock';
-import { RetryPolicy } from './RetryPolicy';
+import { RetryPolicy, type RetryWaits } from './RetryPolicy';
 import type { ItemStore } from './ReportStore';
 
 export interface ItemSender<Item> {
@@ -13,6 +13,8 @@ export interface QueuePorts<Item, Data extends QueueItemData> {
   readonly sender: ItemSender<Item>;
   readonly clock: Clock;
   readonly lock: QueueLock;
+  /** The back-off after a failed send (network settings); absent: the defaults. */
+  readonly retry?: RetryWaits;
 }
 
 const MIN_TIMER_MS = 1_000;
@@ -123,7 +125,7 @@ export abstract class UploadQueue<Item extends QueueItem<Item, Data>, Data exten
       next = await this.ports.sender.step(item);
     } catch (error) {
       const problem = RetryPolicy.problemOf(error);
-      next = item.failed(problem, RetryPolicy.retryAt(problem, item.data.attempts + 1, this.ports.clock.now()));
+      next = item.failed(problem, RetryPolicy.retryAt(problem, item.data.attempts + 1, this.ports.clock.now(), this.ports.retry));
       keepGoing = problem === 'refused';
     }
     // Removed by the reporter mid-send: do not bring it back.

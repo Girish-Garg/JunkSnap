@@ -2,12 +2,18 @@ import { BBox } from './BBox';
 import type { SiteFeature } from './Site';
 import { SiteListing } from './SiteListing';
 
-// GET /sites allows 1 by 1 degree (contracts/README.md); stay under it after toQuery rounds to 5 decimals.
-const MAX_QUERY_SPAN_DEG = 0.99;
-// At most 4 by 4 queries per view, about 4 degrees: a phone at MapLibre zoom 7, a desktop at zoom 8.
-const MAX_TILES_PER_SIDE = 4;
-/** GET /sites answers at most this many sites per query, newest first. */
+/** GET /sites answers at most this many sites per query, newest first (contracts/README.md; the notice text says 500). */
 export const SITES_PER_QUERY = 500;
+
+/**
+ * How a view is cut into queries (the config's map settings): tiles of at most tileSpanDeg (0.99: GET /sites allows
+ * 1 by 1 degree, and toQuery rounds to 5 decimals), at most tilesPerSide per side (4 by 4, about 4 degrees: a phone at
+ * MapLibre zoom 7, a desktop at zoom 8).
+ */
+export interface Tiling {
+  readonly tileSpanDeg: number;
+  readonly tilesPerSide: number;
+}
 
 /** What one load of the map's sites holds. */
 export interface SiteBatch {
@@ -17,7 +23,7 @@ export interface SiteBatch {
 }
 
 /**
- * How the map loads the sites of a view: one GET /sites per tile of at most 1 degree. A view wider than
+ * How the map loads the sites of a view: one GET /sites per tile of at most 1 degree (Tiling). A view wider than
  * 4 by 4 tiles loads only its middle 4 by 4 and says so (`partial`), so nothing is cut off silently.
  */
 export class SiteTiles {
@@ -27,16 +33,16 @@ export class SiteTiles {
   readonly tiles: readonly BBox[];
   readonly partial: boolean;
 
-  private constructor(view: BBox) {
-    const maxSpan = MAX_QUERY_SPAN_DEG * MAX_TILES_PER_SIDE;
+  private constructor(view: BBox, { tileSpanDeg, tilesPerSide }: Tiling) {
+    const maxSpan = tileSpanDeg * tilesPerSide;
     this.view = view;
     this.partial = view.isWiderThan(maxSpan);
     this.loaded = this.partial ? view.clampedTo(maxSpan) : view;
-    this.tiles = this.loaded.split(MAX_QUERY_SPAN_DEG);
+    this.tiles = this.loaded.split(tileSpanDeg);
   }
 
-  static plan(view: BBox): SiteTiles {
-    return new SiteTiles(view);
+  static plan(view: BBox, tiling: Tiling): SiteTiles {
+    return new SiteTiles(view, tiling);
   }
 
   /** One list per tile into one: each site once, only sites the active map shows, newest first. */

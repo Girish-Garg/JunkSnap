@@ -1,7 +1,8 @@
+import { CAPTURE_DEFAULTS } from '../config/CaptureSettings';
 import { CaptureError } from '../domain/CaptureError';
 import type { VideoType } from '../domain/ScanUpload';
 import type { Clock } from './Clock';
-import { RecordingSession } from './RecordingSession';
+import { RecordingSession, type RecordingLimits } from './RecordingSession';
 
 // MP4 (H.264) where the browser records it, else WebM; both are allowed scan video types.
 const PREFERRED_TYPES = [
@@ -13,9 +14,6 @@ const PREFERRED_TYPES = [
   'video/webm',
 ] as const;
 
-// 2.5 Mbit/s makes a full minute about 19 MB, half the 40 MB limit, with room for encoder overshoot.
-export const VIDEO_BITS_PER_SECOND = 2_500_000;
-
 export type RecorderFactory = {
   new (stream: MediaStream, options?: MediaRecorderOptions): MediaRecorder;
   isTypeSupported(type: string): boolean;
@@ -25,10 +23,13 @@ export type RecorderFactory = {
 export class VideoRecorder {
   readonly #factory: RecorderFactory | undefined;
   readonly #clock: Clock;
+  readonly #limits: RecordingLimits;
 
-  constructor(factory: RecorderFactory | undefined, clock: Clock) {
+  // The bit rate (2.5 Mbit/s: a full minute is about 19 MB, half the 40 MB limit) leaves room for encoder overshoot.
+  constructor(factory: RecorderFactory | undefined, clock: Clock, limits: RecordingLimits = CAPTURE_DEFAULTS) {
     this.#factory = factory;
     this.#clock = clock;
+    this.#limits = limits;
   }
 
   isSupported(): boolean {
@@ -43,8 +44,8 @@ export class VideoRecorder {
   start(stream: MediaStream): RecordingSession {
     const mimeType = this.pickType();
     if (!this.#factory || !mimeType) throw new CaptureError('recorder_unsupported', 'This browser cannot record video');
-    const recorder = new this.#factory(stream, { mimeType, videoBitsPerSecond: VIDEO_BITS_PER_SECOND });
-    return new RecordingSession(recorder, VideoRecorder.baseType(mimeType), this.#clock);
+    const recorder = new this.#factory(stream, { mimeType, videoBitsPerSecond: this.#limits.scanVideoBitsPerSecond });
+    return new RecordingSession(recorder, VideoRecorder.baseType(mimeType), this.#clock, this.#limits);
   }
 
   /** The container type without codecs, as the api expects it. */

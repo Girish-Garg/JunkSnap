@@ -1,21 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import type { BasemapSignal } from '../BasemapWatch';
 import type { BasemapPhase } from '../MapNotice';
 
 type Stage = 'loading' | 'waiting' | 'slow';
 
-const SHOW_AFTER_MS = 600;
-const SLOW_AFTER_MS = 8000;
-
-/** How long load number `load` has run, as a stage; each new load starts the clock again. */
+/** How long load number `load` has run, as a stage (map.loadingAfterMs, map.slowAfterMs); each new load starts the clock again. */
 function useLoadClock(load: number, running: boolean): Stage {
+  const { loadingAfterMs, slowAfterMs } = useConfig().map;
   const [clock, setClock] = useState<{ readonly load: number; readonly stage: Stage }>({ load, stage: 'loading' });
   useEffect(() => {
     if (!running) return undefined;
     const at = (stage: Stage, ms: number) => setTimeout(() => setClock({ load, stage }), ms);
-    const timers = [at('waiting', SHOW_AFTER_MS), at('slow', SLOW_AFTER_MS)];
+    const timers = [at('waiting', loadingAfterMs), at('slow', slowAfterMs)];
     return () => timers.forEach(clearTimeout);
-  }, [load, running]);
+  }, [load, running, loadingAfterMs, slowAfterMs]);
   return clock.load === load ? clock.stage : 'loading';
 }
 

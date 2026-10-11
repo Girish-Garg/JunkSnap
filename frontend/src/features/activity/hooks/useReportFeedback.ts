@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { ReportStatusView } from '../../../domain/ReportStatus';
 import { FeedbackPolling, type FeedbackRead } from '../FeedbackPolling';
@@ -43,9 +44,10 @@ export function useReportFeedback(reportId: string): ReportFeedbackState {
 // Each finished read is a new object, so the wait restarts after every read, failed or not.
 function useNextRead(read: FeedbackRead | null, again: () => void): void {
   const due = FeedbackPolling.due(read);
+  const { feedbackPollMs } = useConfig().cache;
   useEffect(() => {
     if (!due) return undefined;
-    const timer = window.setTimeout(again, FeedbackPolling.INTERVAL_MS);
+    const timer = window.setTimeout(again, feedbackPollMs);
     return () => window.clearTimeout(timer);
-  }, [due, read, again]);
+  }, [due, read, again, feedbackPollMs]);
 }

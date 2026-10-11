@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import type { AcceptedScan, FrameResult, ScanFound, ScanPresignRequest, ScanPresignResponse, ScanSession, ScanStatus, ScanStatusView } from '../domain/ScanUpload';
 import { AUTO, VIDEO_EXTENSIONS } from '../domain/ScanUpload';
 import { isoSeconds } from '../domain/utils';
@@ -16,7 +17,7 @@ export class MockScanApi implements ScanApi {
   #count = 0;
 
   /** evidence: told each sample frame's result, so GET /reports/{id} in mock mode agrees with the strip. */
-  constructor(delayMs = 400, evidence: MockReportEvidence | null = null) {
+  constructor(delayMs = NETWORK_DEFAULTS.mockDelayMs, evidence: MockReportEvidence | null = null) {
     this.#delayMs = delayMs;
     this.#evidence = evidence;
   }

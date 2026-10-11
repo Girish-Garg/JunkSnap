@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { BBox } from '../../../domain/BBox';
 import { NearestSites } from '../../../domain/NearestSites';
@@ -38,7 +39,8 @@ function aroundOf(box: BBox, mine: Found | null): AroundSites {
 export function useNearbySites(view: MapView | null, empty: boolean): NearbySites {
   const { api, errors } = useServices();
   const [found, setFound] = useState<Found | null>(null);
-  const reach = useMemo(() => (view && empty ? NearestSites.reach(view.bbox) : null), [view, empty]);
+  const { tileSpanDeg } = useConfig().map;
+  const reach = useMemo(() => (view && empty ? NearestSites.reach(view.bbox, tileSpanDeg) : null), [view, empty, tileSpanDeg]);
   useEffect(() => {
     if (!view || !reach) return undefined;
     let current = true;

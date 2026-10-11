@@ -52,6 +52,7 @@ import { SiteActionService } from '../services/SiteActionService';
 import type { SiteActionsApi } from '../services/SiteActionsApi';
 import { SystemClock } from '../services/SystemClock';
 import { VideoRecorder, type RecorderFactory } from '../services/VideoRecorder';
+import type { NetworkSettings } from '../config/NetworkSettings';
 import type { ApiMode, AppConfig } from './AppConfig';
 import type { SnapServices } from './SnapServices';
 
@@ -81,20 +82,20 @@ const mockAreaLetters = () =>
   });
 
 const API_BUILDERS: Readonly<Record<ApiMode, (config: AppConfig, identity: RequestIdentity) => Apis>> = {
-  mock: () => {
+  mock: ({ network }) => {
     const evidence = new MockReportEvidence(reportEvidenceLoaders);
     return {
-      reports: new MockReportApi(sampleSiteLoader, undefined, evidence, new MockConfirmations(reportEvidenceLoaders.confirm)),
-      scans: new MockScanApi(undefined, evidence),
-      sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }),
+      reports: new MockReportApi(sampleSiteLoader, network.mockDelayMs, evidence, new MockConfirmations(reportEvidenceLoaders.confirm)),
+      scans: new MockScanApi(network.mockDelayMs, evidence),
+      sites: new MockSiteActionsApi({ site: (id) => mockSites.getSite(id), letter: sampleLetterLoader }, network.mockDelayMs),
       areaLetters: mockAreaLetters(),
     };
   },
   live: (config, identity) => ({
-    reports: new HttpReportApi(config.requireApiUrl(), identity),
-    scans: new HttpScanApi(config.requireApiUrl(), identity),
-    sites: new HttpSiteActionsApi(config.requireApiUrl(), identity),
-    areaLetters: new HttpAreaLetterApi(config.requireApiUrl(), identity),
+    reports: new HttpReportApi(config.requireApiUrl(), identity, undefined, config.network),
+    scans: new HttpScanApi(config.requireApiUrl(), identity, undefined, config.network),
+    sites: new HttpSiteActionsApi(config.requireApiUrl(), identity, undefined, config.network),
+    areaLetters: new HttpAreaLetterApi(config.requireApiUrl(), identity, undefined, config.network),
   }),
 };
 
@@ -116,6 +117,7 @@ interface ActivityParts {
   readonly identity: RequestIdentity;
   readonly dismissed: DismissedReports;
   readonly meta: IndexedDbMetaStore;
+  readonly ttlMs: number;
 }
 
 const NO_EVICTION: SiteCacheEviction = { forgetSite: () => undefined };
@@ -125,6 +127,7 @@ interface QueueParts {
   readonly apis: Apis;
   readonly identity: RequestIdentity;
   readonly clock: Clock;
+  readonly network: NetworkSettings;
 }
 
 export class SnapServiceFactory {
@@ -136,22 +139,21 @@ export class SnapServiceFactory {
     const built = API_BUILDERS[config.apiMode](config, identity);
     const apis: Apis = { ...built, sites: new EvictingSiteActionsApi(built.sites, eviction) };
     const clock = new SystemClock();
-    const queue = SnapServiceFactory.#reportQueue({ db, apis, identity, clock }, browser.locks);
-    const scans = SnapServiceFactory.#scanQueue({ db, apis, identity, clock }, browser.locks);
-    const recorder = new VideoRecorder(browser.mediaRecorder, clock);
+    const { queue, scans } = SnapServiceFactory.#queues({ db, apis, identity, clock, network: config.network }, browser.locks);
+    const recorder = new VideoRecorder(browser.mediaRecorder, clock, config.capture);
     const hasher = new PhotoHasher(browser.crypto.subtle);
-    const gps = new GpsWatcher(browser.geolocation, clock);
+    const gps = new GpsWatcher(browser.geolocation, clock, config.capture);
     const dismissed = new DismissedReports(meta);
     return {
       queue,
       ...SnapServiceFactory.#reportStatus(apis, identity, queue),
-      activity: SnapServiceFactory.#activity({ apis, queue, scans, clock, identity, dismissed, meta }, auth, browser.crypto),
+      activity: SnapServiceFactory.#activity({ apis, queue, scans, clock, identity, dismissed, meta, ttlMs: config.cache.activityTtlMs }, auth, browser.crypto),
       scans,
       scanTracker: new ScanTracker(apis.scans, scans),
       recorder,
       scanCapture: new ScanCapture({ recorder, gps, hasher, queue: scans, clock }),
       camera: new CameraCapture(browser.mediaDevices),
-      encoder: new PhotoEncoder(),
+      encoder: new PhotoEncoder(config.capture),
       hasher,
       gps,
       compass: new CompassHeading(browser.orientation ?? null),
@@ -168,7 +170,7 @@ export class SnapServiceFactory {
   static #activity(parts: ActivityParts, auth: AuthService, crypto: Crypto): ActivitySync {
     const { apis, queue, scans, clock, identity, dismissed, meta } = parts;
     const account = new AccountKey(identity, crypto.subtle);
-    const freshness = new ActivityFreshness(meta, clock);
+    const freshness = new ActivityFreshness(meta, clock, parts.ttlMs);
     const ownership = new ActivityOwnership({ queue, scans, freshness, account, meta, clock });
     const activity = new ActivitySync({ api: apis.reports, queue, freshness, ownership, dismissed, account, clock });
     activity.watch(auth);
@@ -187,14 +189,20 @@ export class SnapServiceFactory {
     };
   }
 
+  // Photos and videos each wait in their own queue, with the network settings' presign reuse and back-off.
+  static #queues(parts: QueueParts, locks: LockManager | undefined): Pick<SnapServices, 'queue' | 'scans'> {
+    return { queue: SnapServiceFactory.#reportQueue(parts, locks), scans: SnapServiceFactory.#scanQueue(parts, locks) };
+  }
+
   static #reportQueue(parts: QueueParts, locks: LockManager | undefined): ReportQueue {
-    const sender = new ReportSender(parts.apis.reports, parts.identity, parts.clock);
-    return new ReportQueue({ store: new IndexedDbReportStore(parts.db), sender, clock: parts.clock, lock: new QueueLock(locks) });
+    const sender = new ReportSender(parts.apis.reports, parts.identity, parts.clock, parts.network.presignReuseMs);
+    const lock = new QueueLock(locks);
+    return new ReportQueue({ store: new IndexedDbReportStore(parts.db), sender, clock: parts.clock, lock, retry: parts.network });
   }
 
   static #scanQueue(parts: QueueParts, locks: LockManager | undefined): ScanQueue {
-    const sender = new ScanSender(parts.apis.scans, parts.identity, parts.clock);
+    const sender = new ScanSender(parts.apis.scans, parts.identity, parts.clock, parts.network.presignReuseMs);
     const lock = new QueueLock(locks, 'junksnap-scan-queue');
-    return new ScanQueue({ store: new IndexedDbScanStore(parts.db), sender, clock: parts.clock, lock });
+    return new ScanQueue({ store: new IndexedDbScanStore(parts.db), sender, clock: parts.clock, lock, retry: parts.network });
   }
 }

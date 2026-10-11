@@ -11,7 +11,7 @@ export interface Toast {
   readonly params?: Readonly<Record<string, number | string>>;
   /** i18n key of a second sentence, e.g. where to allow location. */
   readonly detail?: string;
-  /** A toast with a step stays until the person takes it or dismisses it, the next line drops it, or STEP_TOAST_MS. */
+  /** A toast with a step stays until the person takes it or dismisses it, the next line drops it, or ui.stepToastMs (useToast). */
   readonly action?: ToastAction;
   readonly tone: 'info' | 'alert';
 }

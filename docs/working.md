@@ -14,7 +14,8 @@ saboot/                       repo (product: JunkSnap)
 ├─ contracts/                 schemas/, fixtures/, README.md (source of truth)
 ├─ frontend/
 │  ├─ src/
-│  │  ├─ app/                 App.tsx, routes, ServiceContainer (composition root)
+│  │  ├─ app/                 App.tsx, routes, ServiceContainer (composition root), AppConfig, useConfig()
+│  │  ├─ config/              the VITE_ tunables in groups, each with its default (frontend/.env.example)
 │  │  ├─ domain/              types mirroring contracts, small domain classes
 │  │  ├─ services/            classes: ApiClient, UploadQueue, CameraCapture, GeoLocator,
 │  │  │                       CapabilityProbe, ScanController, EdgeDetector

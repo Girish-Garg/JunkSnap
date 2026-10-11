@@ -18,9 +18,11 @@ export interface FeedbackRead {
 // The api answers 404 for anyone but the owner, and 403 when it refuses outright.
 const REFUSED: ReadonlySet<number> = new Set([403, 404]);
 
-/** When the view reads the report again: while it is still being checked, and a few times after a failed read. */
+/**
+ * When the view reads the report again (every cache.feedbackPollMs): while it is still being checked, and a few times
+ * after a failed read.
+ */
 export class FeedbackPolling {
-  static readonly INTERVAL_MS = 5_000;
   static readonly MAX_FAILURES = 3;
 
   static succeeded(reportId: string, view: ReportStatusView): FeedbackRead {

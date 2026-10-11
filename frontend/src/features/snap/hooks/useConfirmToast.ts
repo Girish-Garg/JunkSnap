@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { ConfirmationAskView } from '../../../domain/ReportConfirmation';
 import { ConfirmWatcher } from '../ConfirmWatcher';
 
-const SHOW_MS = 15_000;
-
-/** Raises the toast when one of this phone's reports starts waiting for the reporter's answer; null while hidden. */
+/** Raises the toast (for ui.confirmToastMs) when one of this phone's reports starts waiting for the reporter's answer; null while hidden. */
 export function useConfirmToast(): { readonly ask: ConfirmationAskView | null; readonly dismiss: () => void } {
   const { snap } = useServices();
+  const { confirmToastMs } = useConfig().ui;
   const [ask, setAsk] = useState<ConfirmationAskView | null>(null);
   useEffect(() => {
     const watcher = new ConfirmWatcher();
@@ -20,9 +20,9 @@ export function useConfirmToast(): { readonly ask: ConfirmationAskView | null; r
   }, [snap.queue]);
   useEffect(() => {
     if (ask === null) return undefined;
-    const timer = window.setTimeout(() => setAsk(null), SHOW_MS);
+    const timer = window.setTimeout(() => setAsk(null), confirmToastMs);
     return () => window.clearTimeout(timer);
-  }, [ask]);
+  }, [ask, confirmToastMs]);
   const dismiss = useCallback(() => setAsk(null), []);
   return { ask, dismiss };
 }

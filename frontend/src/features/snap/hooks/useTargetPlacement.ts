@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import type { LatLon } from '../../../domain/ReportUpload';
 import { TargetPlacement } from '../../../domain/TargetPlacement';
 
@@ -7,7 +8,8 @@ import { TargetPlacement } from '../../../domain/TargetPlacement';
  * drag the pin or tap the map. Leaving "farther away" forgets the pin.
  */
 export function useTargetPlacement(origin: LatLon) {
-  const [placement, setPlacement] = useState(() => TargetPlacement.here(origin));
+  const { site: reach } = useConfig();
+  const [placement, setPlacement] = useState(() => TargetPlacement.here(origin, reach));
   const [far, setFar] = useState(false);
   return {
     far,

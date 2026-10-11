@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TargetMap } from '../src/features/snap/TargetMap';
+import { DEFAULTS } from './config';
 import { created } from './fakeMapLibre';
 
 vi.mock('maplibre-gl', () => import('./fakeMapLibre'));
@@ -20,7 +21,7 @@ const labels = {
 
 function create() {
   const moves: { lat: number; lon: number }[] = [];
-  const map = new TargetMap({ container: document.createElement('div'), origin: ORIGIN, labels, onMove: (point) => moves.push(point) });
+  const map = new TargetMap({ container: document.createElement('div'), origin: ORIGIN, labels, onMove: (point) => moves.push(point), settings: DEFAULTS.map });
   const [you, pin] = created.markers;
   const [seen] = created.maps;
   if (!you || !pin || !seen) throw new Error('TargetMap made no map or markers');

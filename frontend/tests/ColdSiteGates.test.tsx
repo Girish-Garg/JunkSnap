@@ -4,13 +4,12 @@ import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
-import { FRESH_FIX_MS } from '../src/domain/FreshFix';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
-import { CHECK_LIMIT_MS } from '../src/features/actions/hooks/useLate';
 import { SitePreviewCard } from '../src/features/site/components/SitePreviewCard';
 import { GeoLocator } from '../src/services/GeoLocator';
 import { MockAuthService } from '../src/services/MockAuthService';
 import { listed } from './activityRig';
+import { DEFAULTS } from './config';
 import { FakeReportApi } from './FakeReportApi';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
 import { findEnabledButton, fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
@@ -22,6 +21,8 @@ const SITE = '/sites/site_jpr_1';
 const OWN_SITE = 'You reported this site, so your vote is not counted here.';
 // The line under the site's action tiles.
 const NOTE = '.action-row__note';
+const { checkLimitMs: CHECK_LIMIT_MS } = DEFAULTS.ui;
+const { freshFixMs: FRESH_FIX_MS } = DEFAULTS.capture;
 
 afterEach(() => {
   vi.useRealTimers();

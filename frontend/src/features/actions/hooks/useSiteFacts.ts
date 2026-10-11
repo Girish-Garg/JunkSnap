@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import { FreshFix } from '../../../domain/FreshFix';
 import type { LocationProblem } from '../../../domain/LocationError';
@@ -24,6 +25,7 @@ export interface SiteFacts {
  */
 export function useSiteFacts(site: SiteFeature, mapLocation: LonLat | null): SiteFacts {
   const session = useSessionFacts();
+  const { site: rules } = useConfig();
   const { ownSite, checkingOwner } = useOwnSite(site.properties.site_id, session);
   const { locator } = useServices();
   const locationDenied = useLocationAccess() === 'denied';
@@ -31,10 +33,10 @@ export function useSiteFacts(site: SiteFeature, mapLocation: LonLat | null): Sit
   const point = site.geometry.coordinates;
   const distanceM = fix ? metresBetween(fix.at, point) : null;
   const { properties } = site;
-  const addPhotoLimitM = useMemo(() => SitePhotoPreset.of(site).limitM(true), [site]);
+  const addPhotoLimitM = useMemo(() => SitePhotoPreset.of(site, rules).limitM(true), [site, rules]);
   const facts = useMemo(
-    () => ({ ...session, site: properties, ownSite, checkingOwner, distanceM, locating, locationDenied, addPhotoLimitM }),
-    [session, properties, ownSite, checkingOwner, distanceM, locating, locationDenied, addPhotoLimitM],
+    () => ({ ...session, site: properties, ownSite, checkingOwner, distanceM, locating, locationDenied, addPhotoLimitM, reach: rules }),
+    [session, properties, ownSite, checkingOwner, distanceM, locating, locationDenied, addPhotoLimitM, rules],
   );
   const measure = useCallback(() => relocate().then((fresh) => (fresh instanceof FreshFix ? metresBetween(fresh.at, point) : fresh)), [relocate, point]);
   return { facts, measure: locator.canLocate() ? measure : null };

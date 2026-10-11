@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import { SitePhotoPreset } from '../../../domain/SitePhotoPreset';
 import { SiteClosure } from '../../site/SiteClosure';
@@ -22,6 +23,7 @@ const LOADING: SitePhotoTarget = { kind: 'loading' };
 /** Reads the site from GET /sites/{id}: its type, context and point preset the photo; a closed or missing site stops it. */
 export function useSitePhotoPreset(siteId: string | null): SitePhotoTarget {
   const { api } = useServices();
+  const { site: rules } = useConfig();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   useEffect(() => {
     if (!siteId) return undefined;
@@ -29,7 +31,7 @@ export function useSitePhotoPreset(siteId: string | null): SitePhotoTarget {
     api.getSite(siteId).then(
       (site) => {
         const closed = SiteClosure.reasonOf(site.properties) !== null;
-        if (current) setLoaded({ siteId, target: closed ? { kind: 'closed' } : { kind: 'ready', preset: SitePhotoPreset.of(site) } });
+        if (current) setLoaded({ siteId, target: closed ? { kind: 'closed' } : { kind: 'ready', preset: SitePhotoPreset.of(site, rules) } });
       },
       (error: unknown) => {
         console.error(`Could not load site ${siteId} for its photo`, error);
@@ -39,7 +41,7 @@ export function useSitePhotoPreset(siteId: string | null): SitePhotoTarget {
     return () => {
       current = false;
     };
-  }, [api, siteId]);
+  }, [api, siteId, rules]);
   if (!siteId) return NONE;
   return loaded?.siteId === siteId ? loaded.target : LOADING;
 }
