@@ -63,6 +63,21 @@ describe('AppConfig defaults', () => {
   });
 });
 
+describe('VITE_ASK_LOCATION_AT_START', () => {
+  it('asks for location at start by default, as the human asked', () => {
+    expect(read({}).config.capture.askLocationAtStart).toBe(true);
+  });
+
+  it('turns the start-up fix off with false and on with true', () => {
+    expect(read({ VITE_ASK_LOCATION_AT_START: 'false' })).toMatchObject({ config: { capture: { askLocationAtStart: false } }, warnings: [] });
+    expect(read({ VITE_ASK_LOCATION_AT_START: ' true ' })).toMatchObject({ config: { capture: { askLocationAtStart: true } }, warnings: [] });
+  });
+
+  it('takes blank as the default, true', () => {
+    expect(read({ VITE_ASK_LOCATION_AT_START: '  ' })).toEqual(read({}));
+  });
+});
+
 describe('AppConfig variables', () => {
   it('gives each group its declared defaults, frozen', () => {
     const { config } = read({});
@@ -148,6 +163,9 @@ const BAD_VALUES: readonly (readonly [string, string])[] = [
   ['VITE_PILOT_BOUNDS', '73.08,26.22,72.96,26.36'],
   ['VITE_PILOT_BOUNDS', '72.96,26.22,73.08'],
   ['VITE_PILOT_BOUNDS', '72.5,26,73.6,26.5'],
+  ['VITE_ASK_LOCATION_AT_START', 'no'],
+  ['VITE_ASK_LOCATION_AT_START', '0'],
+  ['VITE_ASK_LOCATION_AT_START', 'TRUE'],
 ];
 
 describe('AppConfig bad values', () => {

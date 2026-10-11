@@ -32,6 +32,11 @@ export class Vars {
     return Vars.number(name, fallback, { min: 0, max: 1 });
   }
 
+  /** A switch, "true" or "false". */
+  static flag(name: string, fallback: boolean): EnvVar<boolean> {
+    return { name, fallback, parse: (text) => EnvParsers.flag(text) };
+  }
+
   static url(name: string, fallback: string): EnvVar<string> {
     return { name, fallback, parse: (text) => EnvParsers.url(text) };
   }

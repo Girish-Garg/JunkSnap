@@ -15,6 +15,8 @@ export class GeoLocator {
   readonly #geolocation: Geolocation | undefined;
   readonly #permissions: PermissionQuery | undefined;
   readonly #timings: LocateTimings;
+  // When the app got each fix it handed out, so a fix passed on as a plain LonLat (the map's) keeps its real age.
+  readonly #taken = new WeakMap<LonLat, number>();
 
   constructor(geolocation: Geolocation | undefined, permissions?: PermissionQuery, timings: LocateTimings = CAPTURE_DEFAULTS) {
     this.#geolocation = geolocation;
@@ -33,8 +35,8 @@ export class GeoLocator {
   }
 
   /**
-   * A fix only when location is already allowed, so opening the app never asks. Null when it is not allowed
-   * yet, blocked, or cannot be read; the map then stays on the pilot city.
+   * A fix only when location is already allowed, so this read never asks (StartupLocation may, once). Null when it
+   * is not allowed yet, blocked, or cannot be read; the map then stays on the pilot city.
    */
   async locateIfAllowed(): Promise<LonLat | null> {
     try {
@@ -45,16 +47,26 @@ export class GeoLocator {
     }
   }
 
+  /** When the app got this fix from locate() (Date.now() ms), or null for a point it did not hand out. */
+  takenMs(at: LonLat): number | null {
+    return this.#taken.get(at) ?? null;
+  }
+
   locate(): Promise<LonLat> {
     const geolocation = this.#geolocation;
     if (!geolocation) return Promise.reject(new LocationError('unavailable', 'No geolocation API'));
     return new Promise((resolve, reject) => {
       geolocation.getCurrentPosition(
-        ({ coords }) => resolve([coords.longitude, coords.latitude]),
+        ({ coords }) => resolve(this.#stamped([coords.longitude, coords.latitude])),
         (error) => reject(GeoLocator.#translate(error)),
         { enableHighAccuracy: true, timeout: this.#timings.locateTimeoutMs, maximumAge: this.#timings.locateMaxAgeMs },
       );
     });
+  }
+
+  #stamped(at: LonLat): LonLat {
+    this.#taken.set(at, Date.now());
+    return at;
   }
 
   static #translate(error: GeolocationPositionError): LocationError {

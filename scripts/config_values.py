@@ -8,6 +8,7 @@ The default's form sets what a value may be (docs/config.md):
   default on a bad VITE_ value, so VITE_ values may be 0;
 - a JSON list (`[90,80]`) takes a non-empty JSON list of the same kind of numbers;
 - comma-separated numbers (`73.02,26.27`) take as many numbers;
+- a switch (`true` or `false`) takes `true` or `false`;
 - anything else (a URL, a folder) is taken as it is.
 The code still checks its own ranges when it starts; these checks catch the typos.
 """
@@ -19,6 +20,7 @@ from decimal import Decimal
 WHOLE = re.compile(r"-?\d+")
 NUMBER = re.compile(r"-?\d+(\.\d+)?")
 NUMBERS = re.compile(r"-?\d+(\.\d+)?(\s*,\s*-?\d+(\.\d+)?)+")
+SWITCH = frozenset({"true", "false"})
 VITE_PREFIX = "VITE_"
 # Server and ml values with a default above 0 whose code also takes 0 (backend/server/src/settings,
 # backend/ml/src/ml/settings).
@@ -43,6 +45,8 @@ def value_problem(key: str, value: str, default: str) -> str | None:
     """Why `value` cannot stand in for `default`, or None when it can."""
     if NUMBER.fullmatch(default):
         return number_problem(key, value, default)
+    if default in SWITCH:
+        return None if value in SWITCH else f"needs true or false like the default {default}"
     if default.startswith("["):
         return list_problem(value, default)
     if NUMBERS.fullmatch(default):

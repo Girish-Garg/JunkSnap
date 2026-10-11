@@ -17,7 +17,7 @@ The app declares only what it uses, and asks for each at runtime the first time 
 | `INTERNET` | api, map tiles, uploads | never; granted at install |
 | `ACCESS_NETWORK_STATE` | `navigator.onLine` and the `online` event for the offline queue | never; granted at install |
 | `CAMERA` | Snap photos and Scan video (`getUserMedia`, `MediaRecorder`) | first Snap or Scan |
-| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | the GPS fix and the Scan track (`watchPosition`) | first locate, Snap or Scan |
+| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` | the GPS fix and the Scan track (`watchPosition`) | at start, after the splash and the first-run cards, until the person refuses it once (`VITE_ASK_LOCATION_AT_START`); else first locate, Snap or Scan |
 
 There is no `RECORD_AUDIO`, because video records without sound. There is no storage permission either: print and share go through Android's own screens.
 
@@ -30,6 +30,10 @@ If the camera is blocked, the Snap help screen offers two ways back:
 After "Don't allow" for location, the app does not ask again for 5 minutes. The page retries location on its own, and the quiet period keeps the dialog from popping up again and again. Once Android stops asking, location is allowed in the same settings page. A permission that is already allowed is never asked for.
 
 The WebView's `navigator.permissions` never reports the app's location permission: the app answers each location prompt without the WebView remembering it, so the query says `prompt` (and `denied` on WebViews from before mid-2024). The page therefore learns a denial from the answer to a tap, and asks `window.JunkSnapAndroid.checkLocation()`, which answers with a `junksnap:location` event on `window` whose `detail` is true when Android allows location. The page asks when a site sheet opens and whenever it comes back on screen, so the vote, Me too, Cleaned, Add a photo and Report tiles open again after the person allows location in the settings. An app build without `checkLocation` makes the page forget the denial instead, and the next tap asks Android again.
+
+At start, once per launch and never over the splash or the first-run cards, the page calls `checkLocation()` and takes one fix (`StartupLocation`). When Android already allows location, the fix comes quietly with no dialog. When it does not yet, the request shows Android's dialog. A fix shows the person's dot and "Go to my location", but the map stays on Jodhpur. A "Don't allow" shows nothing at start, and the distance tiles then say to allow location.
+
+`checkLocation()` cannot tell "never asked" from "refused", so the page remembers a refusal in local storage (`junksnap.locationRefused`), whether it came at start or on a tap. While that mark is set, no later launch asks at start; the distance tiles still ask or explain on a tap. The mark is cleared as soon as `checkLocation()`, the browser or a fix says location is allowed. If the WebView blocks storage, no mark is kept, and each launch asks at start again.
 
 The app answers camera and location prompts one at a time (`PermissionChromeClient.kt`, `PermissionAsker.kt`). wry's own WebView client keeps a single listener, so Snap's simultaneous camera and location prompts used to cross and close the app.
 

@@ -10,6 +10,11 @@ export interface NumberRange {
 // Digits with optional single _ between them (60_000), a sign and decimals; never a leading, trailing or double _,
 // an exponent, hex or a unit.
 const NUMBER = /^-?\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?$/;
+// The two words a switch takes, as config/defaults.env writes them (scripts/config_values.py takes only these too).
+const FLAGS: ReadonlyMap<string, boolean> = new Map([
+  ['true', true],
+  ['false', false],
+]);
 
 /** Text to value for the VITE_ variables; each returns null for text that is not a valid value. */
 export class EnvParsers {
@@ -20,6 +25,11 @@ export class EnvParsers {
       if (value === null || value < range.min || value > range.max) return null;
       return range.integer && !Number.isInteger(value) ? null : value;
     };
+  }
+
+  /** A switch: exactly "true" or "false"; "yes", "1" or "TRUE" are not switches here. */
+  static flag(text: string): boolean | null {
+    return FLAGS.get(text.trim()) ?? null;
   }
 
   /** An absolute http or https URL. */

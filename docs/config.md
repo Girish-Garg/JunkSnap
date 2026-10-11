@@ -15,6 +15,7 @@ Rules, enforced by `scripts/stage_config.py` before any deploy or build starts. 
   - A whole-number default (`20`) takes whole numbers. A default with a decimal point (`0.85`, `60.0`) takes any plain number. Neither may go below 0.
   - A server or ml value whose default is above 0 must stay above 0, unless its code takes 0 (`ZERO_OK`).
   - A JSON list (`[90,80,70]`) takes a non-empty JSON list of the same kind of numbers. Comma-separated numbers (`73.02,26.27`) take as many numbers.
+  - A switch (`true` or `false`, such as `VITE_ASK_LOCATION_AT_START`) takes `true` or `false`, in lower case.
   - So `SNAP_PER_HOUR=abc`, `0`, `1.5` or `-1` stops the deploy. The api and ml still check their own ranges when they start (see below).
 - `VITE_ZONE_RADIUS_M` is fixed at 1000. The server's no-bin zone radius is code, not config, so no stage file may change it.
 - Public values only. Server and ml values go into a Kubernetes ConfigMap, and `VITE_*` values are baked into the web and Android bundles. Names that look secret (`SECRET`, `PASSWORD`, `TOKEN`, `KEY`, except ids such as `..._SECRET_ID`) are refused. That is why `config/*.env` may be committed, unlike other `.env` files.

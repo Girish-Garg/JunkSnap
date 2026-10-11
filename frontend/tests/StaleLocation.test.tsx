@@ -71,6 +71,32 @@ describe('too far rests on a fresh fix', () => {
   });
 });
 
+describe('the map fix keeps its real age', () => {
+  const IN_JODHPUR = { lat: 26.27, lon: 73.02, accuracy_m: 10 };
+
+  it('does not trust a fix from app start that is over 2 minutes old when the sheet opens; the tap takes a fresh one', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const services = await servicesAt(IN_JODHPUR);
+    // The start-up fix, taken by the app's GeoLocator, then the person browses for a while before opening the site.
+    const atStart = await services.locator.locate();
+    act(() => vi.advanceTimersByTime(FRESH_FIX_MS + 1_000));
+    await renderSite(atStart, services);
+    // Counted from when the sheet opened, the old fix would still say "too far" and mute the tile.
+    await waitFor(() => expect(meToo()).toBeEnabled());
+    expect(meToo()).not.toHaveAttribute('aria-disabled');
+    await user.click(meToo());
+    // The fresh fix the tap took decides: still in Jodhpur, so too far.
+    expect(await screen.findByText(/Votes count only within 1 km/)).toBeInTheDocument();
+  });
+
+  it('still trusts the same fix while it is under 2 minutes old', async () => {
+    const services = await servicesAt(IN_JODHPUR);
+    await renderSite(await services.locator.locate(), services);
+    await waitFor(() => expect(meToo()).toHaveAttribute('aria-disabled', 'true'));
+  });
+});
+
 describe('FreshFix', () => {
   it('measures only while under 2 minutes old', () => {
     const fix = new FreshFix(JODHPUR, 1_000, FRESH_FIX_MS);

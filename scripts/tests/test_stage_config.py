@@ -31,6 +31,7 @@ VITE_PILOT_CENTRE=73.02,26.27
 VITE_PILOT_ZOOM=12.0
 VITE_THIN_MAX=2
 VITE_ZONE_RADIUS_M=1000
+VITE_ASK_LOCATION_AT_START=true
 """
 
 
@@ -87,6 +88,9 @@ def test_a_scaled_mirror_needs_a_number(value: str, message: str) -> None:
     ("VITE_PILOT_CENTRE=73.02", "needs 2 comma-separated numbers like the default 73.02,26.27"),
     ("VITE_PILOT_CENTRE=east,north", "needs 2 comma-separated numbers"),
     ("VITE_ZONE_RADIUS_M=900", "VITE_ZONE_RADIUS_M cannot change: the server's no-bin zone radius"),
+    ("VITE_ASK_LOCATION_AT_START=no", "VITE_ASK_LOCATION_AT_START='no' needs true or false like the "
+                                      "default true"),
+    ("VITE_ASK_LOCATION_AT_START=False", "needs true or false"),
 ])
 def test_bad_values_stop_the_load_and_name_file_line_and_key(line: str, message: str) -> None:
     with pytest.raises(ConfigError, match=re.escape(message)):
@@ -97,6 +101,7 @@ def test_bad_values_stop_the_load_and_name_file_line_and_key(line: str, message:
     "SNAP_PER_HOUR=100", "ML_AUTO_VERIFY_MIN=0.9", "ML_AUTO_VERIFY_MIN=1", "ML_AUTO_VERIFY_MIN=0",
     "ML_IMAGE_JPEG_QUALITIES=[85, 70]", "VITE_PILOT_CENTRE=73.1, 26.3", "VITE_PILOT_ZOOM=12.5",
     "VITE_THIN_MAX=0", "VITE_MAP_STYLE_URL=https://tiles.example/styles/bright",
+    "VITE_ASK_LOCATION_AT_START=false",
 ])
 def test_good_values_load(line: str) -> None:
     build(DEFAULTS, line, "demo")
