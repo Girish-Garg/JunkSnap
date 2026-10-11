@@ -9,7 +9,8 @@ MATERIALS = (
 )
 HAZARDS = ("burning", "medical_waste", "e_waste", "dead_animal", "chemicals")
 SIZE_CLASSES = ("small", "medium", "large")
-# The least confidence at which YOLO, the embedding head or the judge reports a hazard.
+# The least confidence at which YOLO, the embedding head or the judge reports a hazard; each has
+# its own variable (ML_YOLO_HAZARD_MIN, ML_EMBEDDING_HAZARD_MIN, ML_JUDGE_HAZARD_MIN).
 HAZARD_MIN = 0.5
 
 

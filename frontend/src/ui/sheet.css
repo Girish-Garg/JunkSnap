@@ -87,11 +87,22 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* The raised Report button overlaps the sheet's foot: the last line and a focused field stay clear of it. */
-  padding: 0 var(--edge) calc(var(--report-overhang) + var(--s-6) + env(safe-area-inset-bottom));
-  scroll-padding-bottom: calc(var(--report-overhang) + var(--s-2));
+  /* A sheet over the map already stops above the raised Report button (below), so this is only breathing room. */
+  padding: 0 var(--edge) calc(var(--s-6) + env(safe-area-inset-bottom));
+  scroll-padding-bottom: var(--s-2);
   /* Content scrolls at every height; a drag down from the top moves the sheet instead (useSheet). */
   touch-action: pan-x pan-y;
+}
+
+/*
+  Phones and tablets: a sheet over the map ends at the nav bar, and the raised Report button reaches --report-overhang
+  up over its foot. The body stops --map-foot above the foot, like the map's own buttons, so at every height the last
+  line in view (the note under the site's actions on a half sheet) stays readable above Report.
+*/
+@media (max-width: 1023px) {
+  .map-area > .sheet {
+    padding-bottom: var(--map-foot);
+  }
 }
 
 /* Content arrives a beat after the sheet, so the eye follows the sheet first. */

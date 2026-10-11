@@ -14,24 +14,34 @@ if TYPE_CHECKING:
     from mypy_boto3_rekognition import RekognitionClient
 
 MODEL = "DetectLabels"
-MAX_LABELS = 50
-MIN_CONFIDENCE = 50.0  # percent, Rekognition's unit
+MAX_LABELS = 50  # ML_REKOGNITION_MAX_LABELS
+MIN_CONFIDENCE = 0.5  # ML_REKOGNITION_MIN_CONFIDENCE, 0..1
+PERCENT = 100  # Rekognition's confidence unit
 
 
 class RekognitionLabelDetector(LabelDetector):
-    def __init__(self, client: "RekognitionClient") -> None:
+    def __init__(
+        self,
+        client: "RekognitionClient",
+        max_labels: int = MAX_LABELS,
+        min_confidence: float = MIN_CONFIDENCE,
+    ) -> None:
         self._client = client
+        self._max_labels = max_labels
+        self._min_percent = min_confidence * PERCENT
 
     def detect(self, image: BlurredImage) -> LabelSet:
         started = time.monotonic()
         try:
             response = self._client.detect_labels(
-                Image={"Bytes": image.data}, MaxLabels=MAX_LABELS, MinConfidence=MIN_CONFIDENCE
+                Image={"Bytes": image.data},
+                MaxLabels=self._max_labels,
+                MinConfidence=self._min_percent,
             )
         except (BotoCoreError, ClientError) as error:
             raise ExternalServiceError(f"rekognition DetectLabels: {error}") from error
         labels = tuple(
-            DetectedLabel(label["Name"], label.get("Confidence", 0.0) / 100)
+            DetectedLabel(label["Name"], label.get("Confidence", 0.0) / PERCENT)
             for label in response.get("Labels", [])
             if "Name" in label
         )

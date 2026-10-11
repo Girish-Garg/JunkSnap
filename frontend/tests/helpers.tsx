@@ -1,5 +1,6 @@
-import { render, screen, within, type RenderResult } from '@testing-library/react';
+import { render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { expect } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, MemoryRouter } from 'react-router';
 import { AppConfig } from '../src/app/AppConfig';
@@ -94,6 +95,13 @@ export async function renderApp(ui: ReactElement, options: RenderOptions = {}): 
 
 export function fixtureSite(siteId: string): Promise<SiteFeature> {
   return new MockApiClient(siteFixtureLoaders).getSite(siteId);
+}
+
+/** A button once it is natively enabled: a site's votes wait a moment on a fresh sheet while this person's reports load. */
+export async function findEnabledButton(name: string): Promise<HTMLElement> {
+  const button = await screen.findByRole('button', { name });
+  await waitFor(() => expect(button).toBeEnabled());
+  return button;
 }
 
 /** The value cell of the fact row labelled `label`. */

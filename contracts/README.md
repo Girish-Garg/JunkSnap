@@ -475,9 +475,29 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `VITE_SHARE_URL` | frontend | optional: the base of share links (`/share/sites/{id}`, `/share/areas/{kind}/{id}`), a host that serves the api's link previews; `deploy_web.py` sets it to the web app's own URL, whose Amplify rule proxies `/share/*` to the api, and the Android build reads it from the `<STAGE>_SHARE_URL` repository variable; unset, share links use the api's URL |
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
 | `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
+| `ML_AUTO_VERIFY_MIN`, `ML_COMMUNITY_CHECK_MIN` | ml | optional decision floors on the combined probability, defaults `0.85` and `0.5`; each 0 to 1, the community floor below the auto-verify floor. Every result records them in `thresholds` |
+| `ML_DISAGREEMENT_GAP` | ml | optional: two signal scores this far apart strongly disagree (community check); default `0.5`, above 0 and at most 1 |
+| `ML_YOLO_LIFT_MIN`, `ML_DETECTORS_VETO_MAX` | ml | optional report rules (decision 20261011-0305): YOLO at `0.5` or more lifts a judge "no" or an unusable photo to community check; every detector under `0.2`, with the judge under the community floor or absent, rejects (`detectors_veto:no_waste`); each 0 to 1 |
+| `ML_WEIGHT_REKOGNITION_LABELS`, `ML_WEIGHT_YOLO`, `ML_WEIGHT_EMBEDDING_CLASSIFIER`, `ML_WEIGHT_VISION_JUDGE` | ml | optional fixed-weight combiner (`fw-v0`) weights, defaults `0.4`, `0.3`, `0.3` and `0.6`; 0 or more, the judge's above 0. The meta-learner's weights come from its model file |
+| `ML_YOLO_MIN_CONFIDENCE`, `ML_YOLO_HAZARD_MIN` | ml | optional: YOLO boxes under `0.25` are dropped (meta-v2 was fitted on scores read at 0.25); a burning box at `0.5` or more is a hazard; each 0 to 1 |
+| `ML_YOLO_SIZE_BOX_MIN`, `ML_YOLO_SIZE_SMALL_MAX`, `ML_YOLO_SIZE_MEDIUM_MAX` | ml | optional size class from YOLO waste boxes at `0.4` or more: under `0.10` of the image small, under `0.35` medium, else large; small below medium |
+| `ML_YOLO_BIN_REACH`, `ML_YOLO_BIN_ALONE_WEIGHT` | ml | optional overflowing bin: waste within `0.5` of the bin's longer side is near it (0 to 5); a bin or waste alone counts `0.5` of its confidence (0 to 1) |
+| `ML_EMBEDDING_HAZARD_MIN`, `ML_LABEL_HAZARD_MIN`, `ML_JUDGE_HAZARD_MIN` | ml | optional hazard floors (0 to 1) for the embedding head (`0.5`), Rekognition labels (`0.6`) and the judge (`0.5`; a judge burning hazard at the floor sets burning yes) |
+| `ML_LABEL_WEAK_WEIGHT` | ml | optional: a weak keyword label counts `0.6` of its confidence (0 to 1) |
+| `ML_REKOGNITION_MAX_LABELS`, `ML_REKOGNITION_MIN_CONFIDENCE` | ml | optional DetectLabels query: `50` labels (1 to 1000) at `0.5` confidence or more (0 to 1, sent as a percent); meta-v2 was fitted on labels asked for this way |
+| `ML_JUDGE_MAX_TOKENS`, `ML_JUDGE_TEMPERATURE`, `ML_JUDGE_INVALID_ANSWER_RETRIES`, `ML_JUDGE_BRANDS_MAX` | ml | optional judge request and reading: `700` output tokens (1 to 8192), temperature `0.0` (0 to 1), an invalid answer asked again `1` time (0 to 3) before the next model, at most `20` readable brands (0 to 100) |
+| `ML_WORKER_BUDGET_S`, `ML_DETECTORS_BUDGET_S` | ml | optional: how long the worker waits for `/internal/verify` (`60`, keep it equal to the worker's `ML_VERIFY_TIMEOUT_S`) and the detectors' share (`10`); the judge gets the rest |
+| `ML_JUDGE_READ_TIMEOUT_S`, `ML_JUDGE_CONNECT_TIMEOUT_S`, `ML_JUDGE_ATTEMPTS` | ml | optional, for every Bedrock model call (judge, Titan) and OpenAI: read `8` s, connect `3` s, `2` attempts with the first; attempts x read must fit the judge's share |
+| `ML_AWS_READ_TIMEOUT_S`, `ML_AWS_CONNECT_TIMEOUT_S`, `ML_AWS_ATTEMPTS` | ml | optional, for Rekognition, S3 and Secrets Manager: read `4` s, connect `2` s, `2` attempts with the first; attempts x read must fit `ML_DETECTORS_BUDGET_S` |
+| `ML_MODEL_DOWNLOAD_READ_TIMEOUT_S`, `ML_MODEL_DOWNLOAD_CONNECT_TIMEOUT_S`, `ML_MODEL_DOWNLOAD_ATTEMPTS` | ml | optional, for model-file downloads at start: read `30` s, connect `5` s, `3` attempts with the first |
+| `ML_OFFLINE_READ_TIMEOUT_S`, `ML_OFFLINE_RETRIES` | ml offline scoring (`score_cli`, local, not a workload) | optional: read `120` s, `8` adaptive retries after the first call (0 to 20) |
+| `ML_IMAGE_MAX_SIDE_PX`, `ML_IMAGE_MAX_BYTES`, `ML_IMAGE_JPEG_QUALITIES` | ml | optional photo fit before any model sees it: longest side `2048` px (224 to 8000), under `3500000` bytes (100000 to 3750000, Bedrock's cap), JPEG qualities tried in order as a JSON list, `[90, 80, 70, 60, 50, 40]` (each 1 to 95) |
+| `UVICORN_HOST`, `UVICORN_PORT` | ml | set in the image: `0.0.0.0` and `8000`; a new port also needs the `containerPort` in `infra/k8s/base/ml.yaml` |
 | `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |
 
 Every tunable variable with a default above (the rule, limit, rate, timeout, retry, paging, cache and model-limit variables of `backend/server`) reads a blank or whitespace-only value as unset, so its default applies. `CORS_ORIGINS`, the table names and the other variables keep their own meaning of a blank value.
+
+Every `ML_*` tuning variable above is optional: unset, ml behaves as before they existed. Seconds are above 0 and at most 600, and attempts 1 to 10. A value out of bounds, or two that do not fit together, stops ml at startup with a config error. ml reads them once at startup (`backend/ml/src/ml/settings/tuning.py`).
 
 Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), which needs no place index, so there is no `PLACE_INDEX` variable; the worker's Pod Identity role gets that one action.
 

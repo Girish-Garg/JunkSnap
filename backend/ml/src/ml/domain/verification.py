@@ -117,8 +117,8 @@ class JudgeVerdict:
 
 @dataclass(frozen=True)
 class Thresholds:
-    auto_verify_min: float = 0.85
-    community_check_min: float = 0.5
+    auto_verify_min: float = 0.85  # ML_AUTO_VERIFY_MIN
+    community_check_min: float = 0.5  # ML_COMMUNITY_CHECK_MIN
 
     def is_unsure(self, probability: float) -> bool:
         return self.community_check_min <= probability < self.auto_verify_min

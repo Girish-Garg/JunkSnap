@@ -26,11 +26,16 @@ class EmbeddingSignal(Signal):
     MODEL = "embedding-type-classifier"
 
     def __init__(
-        self, embedder: ImageEmbedder, heads: EmbeddingHeads, sink: EmbeddingSink | None = None
+        self,
+        embedder: ImageEmbedder,
+        heads: EmbeddingHeads,
+        sink: EmbeddingSink | None = None,
+        hazard_min: float = HAZARD_MIN,  # ML_EMBEDDING_HAZARD_MIN
     ) -> None:
         self._embedder = embedder
         self._heads = heads
         self._sink = sink  # None in offline scoring, which stores nothing
+        self._hazard_min = hazard_min
 
     def measure(self, case: VerificationCase) -> SignalResult:
         embedding = self._embedder.embed(case.image)
@@ -69,6 +74,6 @@ class EmbeddingSignal(Signal):
         hazards = self._heads.probabilities("hazards", embedding.vector)
         return Insights(
             hazards=tuple(
-                HazardSighting(h, p, source) for h, p in hazards.items() if p >= HAZARD_MIN
+                HazardSighting(h, p, source) for h, p in hazards.items() if p >= self._hazard_min
             ),
         )
