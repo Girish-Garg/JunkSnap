@@ -27,6 +27,13 @@ export function waiting(reason: string): Blocked {
   return { enabled: false, reason, waiting: true };
 }
 
+/** The wait while something the decision rests on is still loading: this phone's reports, the sign-in, the first fix. */
+export const CHECKING = 'gate.checking';
+
+export function isChecking(availability: Availability): boolean {
+  return !availability.enabled && availability.waiting === true && availability.reason === CHECKING;
+}
+
 /** How a button shows its availability. */
 export interface ActionLook {
   /** Natively disabled: only while waiting for something that clears by itself. */

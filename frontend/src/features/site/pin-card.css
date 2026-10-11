@@ -130,6 +130,12 @@
   transform: scale(0.94);
 }
 
+/* A short wait (the first location fix): plainly off, as a disabled button. */
+.pin-card__round:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
 .pin-card__round[aria-disabled='true'] {
   border-style: dashed;
   background: var(--tile);

@@ -9,6 +9,10 @@ export class UnavailableAuthService implements AuthService {
 
   async restore(): Promise<void> {}
 
+  restoring(): boolean {
+    return false;
+  }
+
   async idToken(): Promise<null> {
     return null;
   }

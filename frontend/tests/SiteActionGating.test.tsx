@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
@@ -7,7 +7,7 @@ import type { SiteStatus } from '../src/domain/Site';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { SitePresenter } from '../src/features/site/SitePresenter';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
+import { findEnabledButton, fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
 import { testSite, type SitePatch } from './siteBuilder';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -76,13 +76,14 @@ describe('Letter waits for 10 people', () => {
   it('is off on an unverified site and says why', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
     expect(screen.getByRole('button', { name: 'Letter' })).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByText('Letters open once 10 people confirm this site.')).toBeInTheDocument();
+    // This phone's reports are read first, so the line says "Checking…" for a moment.
+    expect(await screen.findByText('Letters open once 10 people confirm this site.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
   });
 
   it('says it in Hindi too', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />, { language: 'hi' });
-    expect(screen.getByText('10 लोगों के पुष्टि करने के बाद इस स्थल का पत्र बन सकता है।')).toBeInTheDocument();
+    expect(await screen.findByText('10 लोगों के पुष्टि करने के बाद इस स्थल का पत्र बन सकता है।')).toBeInTheDocument();
   });
 });
 
@@ -91,8 +92,7 @@ describe('Me too', () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn(api) });
-    const actions = await screen.findByRole('list', { name: 'Site actions' });
-    await user.click(within(actions).getByRole('button', { name: 'Me too' }));
+    await user.click(await findEnabledButton('Me too'));
     expect(await screen.findByText('Thanks. Your yes vote backs this site.')).toBeInTheDocument();
     expect(api.calls).toHaveLength(1);
     expect(api.calls[0]).toMatchObject({ kind: 'vote', siteId: 'site_jpr_1', body: { vote: 'confirm' } });
@@ -103,7 +103,7 @@ describe('Me too', () => {
     const api = new FakeSiteActionsApi();
     api.failNext('vote', 403, 'own_site');
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn(api) });
-    await user.click(await screen.findByRole('button', { name: 'Me too' }));
+    await user.click(await findEnabledButton('Me too'));
     expect(await screen.findByText('You reported this site, so your vote is not counted here.')).toBeInTheDocument();
   });
 });
@@ -127,7 +127,7 @@ describe('site sheet wording', () => {
   it('counts "it\'s cleared now" votes in the thanks line', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn() });
-    await user.click(await screen.findByRole('button', { name: "It's cleared now" }));
+    await user.click(await findEnabledButton("It's cleared now"));
     expect(await screen.findByText('Thanks. Votes now: 3 yes, 1 no, 2 cleared.')).toBeInTheDocument();
   });
 });

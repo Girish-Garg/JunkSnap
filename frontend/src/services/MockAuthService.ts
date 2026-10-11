@@ -33,6 +33,10 @@ export class MockAuthService implements AuthService {
   // The constructor already read the saved session.
   async restore(): Promise<void> {}
 
+  restoring(): boolean {
+    return false;
+  }
+
   currentUser(): AuthUser | null {
     return this.#user;
   }
