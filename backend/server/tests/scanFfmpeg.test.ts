@@ -1,8 +1,9 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { FfmpegVideoFrameReader } from "../src/adapters/FfmpegVideoFrameReader.js";
@@ -43,13 +44,18 @@ const FULL_RANGE_PER_SECOND = (40 * 255) / 219;
 // Half of one 10 fps frame step, so passing proves the cut is the frame at exactly that time.
 const BRIGHTNESS_TOLERANCE = FULL_RANGE_PER_SECOND / 10 / 2;
 const ENCODE = ["-c:v", "libvpx-vp9", "-deadline", "realtime", "-cpu-used", "8", "-f", "webm", "-live", "1"];
+// These tests run the real ffmpeg binary: a cut or an encode takes 0.1 to 2.5 s on an idle machine and several
+// times that when other test runs share the CPU, so vitest's 5 s test and 10 s hook defaults are too tight.
+// The binary's own limit (FfmpegVideoFrameReader, 60 s) still stops a hung run.
+const FFMPEG_TIMEOUT_MS = 30_000;
 
 let dir: string;
 let clip: string;
 let ramp: string;
 
-function makeClip(source: string, path: string): void {
-  execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", source, "-t", "5", ...ENCODE, "-y", path]);
+// Async, so the worker stays responsive while ffmpeg encodes; both clips encode at once.
+async function makeClip(source: string, path: string): Promise<void> {
+  await promisify(execFile)("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", source, "-t", "5", ...ENCODE, "-y", path]);
 }
 
 beforeAll(async () => {
@@ -59,17 +65,17 @@ beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "junksnap-scan-test-"));
   clip = join(dir, "clip.webm");
   ramp = join(dir, "ramp.webm");
-  makeClip(MOVING_THEN_STILL, clip);
-  makeClip(BRIGHTNESS_RAMP, ramp);
-});
+  await Promise.all([makeClip(MOVING_THEN_STILL, clip), makeClip(BRIGHTNESS_RAMP, ramp)]);
+}, FFMPEG_TIMEOUT_MS);
 
+// Every test writes under dir. Retries cover Windows, where a just-killed ffmpeg can hold a file for a moment.
 afterAll(async () => {
   if (dir !== undefined) {
-    await rm(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true, maxRetries: 5 });
   }
 });
 
-describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, () => {
+describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, { timeout: FFMPEG_TIMEOUT_MS }, () => {
   const reader = new FfmpegVideoFrameReader();
   const hasher = new SharpFrameHasher();
 
