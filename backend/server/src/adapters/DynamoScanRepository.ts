@@ -56,4 +56,25 @@ export class DynamoScanRepository implements ScanRepository {
       throw new ExternalServiceError("Could not update the scan", { cause: error });
     }
   }
+
+  // Conditional, so a slower duplicate delivery can never undo a scan another delivery finished.
+  async recordReports(scanId: string, reportIds: readonly string[], updatedAt: string): Promise<boolean> {
+    const command = new UpdateCommand({
+      TableName: this.#table,
+      Key: { scan_id: scanId },
+      UpdateExpression: "SET report_ids = :ids, updated_at = :at",
+      ConditionExpression: "attribute_exists(scan_id) AND NOT (#status IN (:done, :failed))",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: { ":ids": reportIds, ":at": updatedAt, ":done": "done", ":failed": "failed" },
+    });
+    try {
+      await this.#client.send(command);
+      return true;
+    } catch (error) {
+      if (error instanceof ConditionalCheckFailedException) {
+        return false;
+      }
+      throw new ExternalServiceError("Could not record the scan's frame reports", { cause: error });
+    }
+  }
 }

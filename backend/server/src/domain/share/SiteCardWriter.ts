@@ -1,3 +1,4 @@
+import { ShareablePhotos } from "../sites/ShareablePhotos.js";
 import type { ReportType, SiteFeature, SiteLocation } from "../sites/SiteTypes.js";
 import type { ShareCard } from "./ShareCard.js";
 import type { ShareUrls } from "./ShareUrls.js";
@@ -28,7 +29,7 @@ export class SiteCardWriter {
     if (GONE.has(p.status) || p.verification === "rejected") {
       return this.gone(p.site_id);
     }
-    const photo = this.#urls.blurredPhoto(p.photo_urls);
+    const photo = this.#urls.blurredPhoto(new ShareablePhotos(p).urls());
     const title = [TYPE_LABELS[p.report_type], SiteCardWriter.#place(p.location)].filter(Boolean).join(SEPARATOR);
     const image = photo === null ? this.#urls.logo() : { url: photo, alt: "Blurred photo of the reported waste", large: true };
     return { ...this.#links(p.site_id), status: 200, title, description: this.#description(site), image };

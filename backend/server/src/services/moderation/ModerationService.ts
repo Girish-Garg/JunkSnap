@@ -36,7 +36,7 @@ interface ImageOutcome {
 const INVALID = "not run: the image is invalid";
 const GATE_FAILED = "not run: the image failed the moderation gate";
 
-// Gate, blur, the person_dumping check on the blurred copy, publish, then the authenticity chain.
+// Gate, blur, the person_dumping check on the blurred copy, the authenticity chain, then publish only a passed photo.
 export class ModerationService {
   readonly #steps: ModerationSteps;
   readonly #policy = new GatePolicy();
@@ -72,8 +72,12 @@ export class ModerationService {
     if (verdict.failed) {
       return this.#rejected(submission, photo, verdict);
     }
-    await blur.publish(blurred, submission.photoId);
+    // The checks need only the hash, fields and device, so a photo they reject never gets a public copy.
     const checks = await authenticity.verify({ submission, hash: photo.hash });
+    if (checks.reason !== null) {
+      return { hash: photo.hash, gate: verdict, blur: null, checks };
+    }
+    await blur.publish(blurred, submission.photoId);
     return { hash: photo.hash, gate: verdict, blur: blurred.record, checks };
   }
 

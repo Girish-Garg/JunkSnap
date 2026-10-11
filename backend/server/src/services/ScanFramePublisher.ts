@@ -35,6 +35,13 @@ export class ScanFramePublisher {
     return reportIds;
   }
 
+  // Ids of the frames whose report rows exist, written by this attempt or an earlier one, in frame order.
+  async writtenIds(scan: ScanSession, frames: readonly CandidateFrame[]): Promise<string[]> {
+    const ids = frames.map((frame) => ScanFrameId.of(scan.scan_id, frame.tMs).reportId);
+    const written = await Promise.all(ids.map((id) => this.#ports.reports.exists(id)));
+    return ids.filter((_id, i) => written[i] === true);
+  }
+
   // A retried scan keeps rows it already wrote but sends every message again; SQS is at least once anyway.
   async #publishOne(scan: ScanSession, frame: CandidateFrame, spot: number): Promise<string> {
     const id = ScanFrameId.of(scan.scan_id, frame.tMs);

@@ -41,7 +41,7 @@ export function CaptureStage({ flow, gps, preset = null }: CaptureStageProps) {
       )}
       {flow.mode === 'photo' && <CameraStage flow={flow} gps={gps} />}
       {flow.mode === 'video' && <ScanStage flow={flow} gps={gps} />}
-      {flow.mode === 'nobin' && <NoBinStage gps={gps} onPhoto={() => flow.photoFor('no_bin')} />}
+      {flow.mode === 'nobin' && <NoBinStage gps={gps} onPhoto={() => flow.photoFor('no_bin')} onSent={flow.noBinSent} />}
     </>
   );
 }

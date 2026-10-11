@@ -3,6 +3,7 @@ import { BinAccess } from '../src/domain/BinAccess';
 import type { AcceptedReport, NoBinUpload, PresignResponse, ReportUpload } from '../src/domain/ReportUpload';
 import type { ReportListPage } from '../src/domain/ReportList';
 import type { ReportStatusView } from '../src/domain/ReportStatus';
+import type { QueuedReport } from '../src/domain/QueuedReport';
 import { NoBinReporter } from '../src/services/NoBinReporter';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
 import ZonesLayer from '../src/layers/ZonesLayer';
@@ -65,7 +66,25 @@ describe('No bin here', () => {
     expect(api.sent).toEqual([]);
     expect(NoBinReporter.accurateEnough(null)).toBe(false);
   });
+});
 
+describe('No bin here in Activity', () => {
+  it('keeps the accepted report as a sent Activity row keyed by its report id, as the server list does', async () => {
+    const saved: QueuedReport[] = [];
+    const recorder = { save: async (item: QueuedReport) => void saved.push(item) };
+    const accepted = await new NoBinReporter(new RecordingReportApi(), signedIn, random, recorder).report({ lat: 26.3, lon: 73.03, accuracy_m: 12 }, new Date('2026-10-10T10:00:00Z'));
+    const [row] = saved;
+    expect(row?.id).toBe(accepted.report_id);
+    expect(row?.data).toMatchObject({ stage: 'sent', report_id: accepted.report_id, photo: null, saved_at: '2026-10-10T10:00:00.000Z' });
+    expect(row?.data.draft).toMatchObject({ report_type: 'no_bin', context: 'no_bin', captured_at: '2026-10-10T10:00:00Z' });
+    expect(row?.isPending()).toBe(false);
+  });
+
+  it('still reports the send when the phone cannot keep the row', async () => {
+    const recorder = { save: async () => Promise.reject(new Error('quota')) };
+    const accepted = await new NoBinReporter(new RecordingReportApi(), signedIn, random, recorder).report({ lat: 26.3, lon: 73.03, accuracy_m: 12 });
+    expect(accepted.status).toBe('queued');
+  });
 });
 
 describe('no-bin zones on the map and the sheet', () => {

@@ -10,6 +10,8 @@ interface NoBinStageProps {
   readonly gps: GpsState;
   /** The optional photo goes through the normal Photo flow with the No bin type. */
   readonly onPhoto: () => void;
+  /** The api took the report: the flow moves on to its sent screen. */
+  readonly onSent: (reportId: string) => void;
 }
 
 function locationKey(fix: GpsState['fix']): string {
@@ -18,10 +20,10 @@ function locationKey(fix: GpsState['fix']): string {
 }
 
 /** "There is no dustbin within 1 km of here": one tap from where you stand, GPS 50 m or better, online and signed in. */
-export function NoBinStage({ gps, onPhoto }: NoBinStageProps) {
+export function NoBinStage({ gps, onPhoto, onSent }: NoBinStageProps) {
   const { t } = useTranslation();
   const { fix } = gps;
-  const report = useNoBinReport(fix);
+  const report = useNoBinReport(fix, onSent);
   const { sendable } = report;
   return (
     <section className="nobin-stage" aria-labelledby="nobin-title">
@@ -34,7 +36,6 @@ export function NoBinStage({ gps, onPhoto }: NoBinStageProps) {
       <Button variant="text" onClick={onPhoto}>
         {t('nobin.photo')}
       </Button>
-      {report.state === 'sent' && <p role="status">{t('nobin.sent')}</p>}
       {report.problem && <p className="form__error" role="alert">{t(report.problem)}</p>}
     </section>
   );

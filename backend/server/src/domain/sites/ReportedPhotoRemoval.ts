@@ -21,12 +21,13 @@ export class ReportedPhotoRemoval {
     return { ...this.#state, feature: { ...feature, properties: { ...feature.properties, ...removed } } };
   }
 
-  // A verified site rests on 10 people, and a rejected or removed one is already off the map.
+  // A verified site rests on 10 people, a rejected or removed one is off the map, and withdrawn photos no longer count.
   #applies(): boolean {
     const { properties } = this.#state.feature;
-    const hidden = (properties.photo_flags ?? []).filter((entry) => entry.hidden);
-    const ids = new Set(hidden.map((entry) => entry.photo_id));
     const { reports } = this.#state.internals;
+    const held = new Set(reports.map((report) => report.reportId));
+    const hidden = (properties.photo_flags ?? []).filter((entry) => entry.hidden && held.has(entry.photo_id));
+    const ids = new Set(hidden.map((entry) => entry.photo_id));
     const allHidden = reports.length > 0 && reports.every((report) => ids.has(report.reportId));
     const reporters = Math.max(0, ...hidden.map((entry) => entry.count));
     return allHidden && ReportedPhotoRemoval.#open(properties) && this.#policy.removesSite(reporters, this.#backers());

@@ -9,7 +9,8 @@
 /* The legend sits behind a "Legend" chip at the map's lower left (LegendToggle); open, it rises above the chip. */
 .legend-toggle {
   position: absolute;
-  bottom: calc(var(--s-6) + var(--s-2));
+  /* The map foot clears MapLibre's credit button in the corner below. */
+  bottom: var(--map-foot);
   left: var(--edge);
   z-index: 2;
   display: flex;
@@ -94,9 +95,6 @@
   color: var(--text-secondary);
 }
 
-.boundary-legend__line {
-  margin: var(--s-1) 0 0;
-}
 
 /* Pins in the legend: the map's own images, with the sun "n/10" sticker under the dashed one. */
 .pin-key__pin {

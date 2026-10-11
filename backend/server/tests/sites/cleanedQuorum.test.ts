@@ -186,6 +186,22 @@ describe("clearing edge cases (decision 20261010-1855)", () => {
     expect(props()).toMatchObject({ status: "cleaned", cleaned_by: "votes" });
   });
 
+  it("keeps an after-photo checking when cleared votes clean the site and a new waste photo reopens it", async () => {
+    const { sites, intake, service, vote, props, wastePhoto } = setup();
+    const request = { upload_id: "upl_mid", device_token: "device-p1", sha256: "a".repeat(64), gps: { lat: BASE_LAT, lon: BASE_LON, accuracy_m: 8 }, captured_at: "2026-10-10T06:00:00Z" };
+    const { cleanup_id: id } = await intake.submit(SITE, request, "p1");
+    for (const person of ["p2", "p3", "p4"]) {
+      await vote(person, "cleaned");
+    }
+    expect(props()).toMatchObject({ status: "cleaned", cleaned_by: "votes", cleanup_status: "checking" });
+    await wastePhoto("jdh_1r", "2026-10-10T07:00:00Z");
+    expect(props()).toMatchObject({ status: "reopened", cleanup_status: "checking" });
+    const results = { moderation: { ...MODERATION, report_id: id }, verification: { ...VERIFICATION, report_id: id } };
+    expect(await service.apply(id, results)).toBe("accepted");
+    expect(sites.internals(SITE)?.cleanupPeople.map((entry) => entry.person)).toEqual(["p1"]);
+    expect(props()).toMatchObject({ status: "reopened", cleanup_status: "none", cleanup_photo_url: `${BASE_URL}/media/cleanups/cln_jdh_3c.jpg` });
+  });
+
   it("rejects an after-photo that finishes after the site expired", async () => {
     const { sites, intake, service, props } = setup();
     const request = { upload_id: "upl_late", device_token: "device-p1", sha256: "a".repeat(64), gps: { lat: BASE_LAT, lon: BASE_LON, accuracy_m: 8 }, captured_at: "2026-10-10T06:00:00Z" };

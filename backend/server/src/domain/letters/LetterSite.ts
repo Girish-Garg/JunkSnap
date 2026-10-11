@@ -1,5 +1,6 @@
 import type { Site } from "../../contracts/index.gen.js";
 import type { CommunitySignals } from "../notes/Community.js";
+import { ShareablePhotos } from "../sites/ShareablePhotos.js";
 import { SitePlace } from "./SitePlace.js";
 import { Situation } from "./Situation.js";
 import type { ReportType, SeatRef, SiteContext } from "./types.js";
@@ -112,7 +113,7 @@ export class LetterSite {
       reporters: facts.reporters ?? null,
       firstReportedAt: facts.first_reported_at,
       lastReportedAt: facts.last_reported_at,
-      photoUrls: facts.photo_urls,
+      photoUrls: new ShareablePhotos(facts).urls(),
       insights,
       nearestBin: insights?.nearest_bin ?? null,
       noBinWithin3km: insights?.no_bin_within_3km ?? null,

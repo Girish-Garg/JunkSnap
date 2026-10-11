@@ -113,8 +113,8 @@ Toolchain: Rust with the Android targets, JDK 17 or later, and the Android SDK w
 ## Release build (GitHub Actions)
 
 Workflow: `.github/workflows/android-release.yml`.
-- **Manual run:** Actions, then android-release, then Run workflow, then pick `demo` or `dev`. The version is `0.1.<run number>`. The APK is an artifact of the run.
-- **Release:** push a tag `app-v<major>.<minor>.<patch>`, for example `git tag app-v1.0.0` then `git push origin app-v1.0.0`. This builds `demo` with that version, and a separate release job publishes it as a GitHub Release. The release holds the APK, its `.sha256` and notes with the SHA-256 and the signing state. The build job can only read the repository. Only the release job can write, and it never sees the keystore.
+- **Manual run:** Actions, then android-release, then Run workflow, then pick `demo` or `dev`. The version is `0.0.<run number>`, so its versionCode (Tauri: major × 1000000 + minor × 1000 + patch) stays below every `app-v0.1.0`-or-later tag, and a phone with a manual build still takes the next release as an update. The APK is an artifact of the run.
+- **Release:** push a tag `app-v<major>.<minor>.<patch>` (`app-v0.1.0` or later; `0.0.x` is for manual runs), for example `git tag app-v1.0.0` then `git push origin app-v1.0.0`. This builds `demo` with that version, and a separate release job publishes it as a GitHub Release. The release holds the APK, its `.sha256` and notes with the SHA-256 and the signing state. The build job can only read the repository. Only the release job can write, and it never sees the keystore.
 
 The APK contains arm64-v8a and armeabi-v7a, which covers practically every Android phone.
 

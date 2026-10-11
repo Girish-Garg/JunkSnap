@@ -2,8 +2,8 @@
 .backers {
   display: grid;
   gap: var(--s-2);
-  margin-top: var(--s-4);
-  padding: var(--s-3) var(--s-4) var(--s-4);
+  margin-top: var(--section-gap);
+  padding: var(--card-pad);
   border-radius: var(--radius-l);
   background: var(--tile);
   animation: rise var(--dur-3) var(--ease-out);

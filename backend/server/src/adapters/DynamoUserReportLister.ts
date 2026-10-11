@@ -8,10 +8,22 @@ import type { UserReportLister, UserReportPage, UserReportPageRequest } from "..
 
 type StartKey = Record<string, unknown>;
 
-const KEY_NAMES = ["report_id", "user_id", "received_at"] as const;
+interface Listed {
+  readonly report: Report;
+  readonly key: StartKey;
+}
 
-// GET /me/reports on the reports by-user GSI (user_id, received_at), newest first. The cursor is the
-// GSI's LastEvaluatedKey as base64url JSON, and it must name the asking user, so it never opens another user's rows.
+interface Collected {
+  readonly listed: readonly Listed[];
+  readonly next: StartKey | undefined;
+}
+
+const KEY_NAMES = ["report_id", "user_id", "received_at"] as const;
+// Limit applies before the snap filter, so a recent scan's frames can fill whole rounds; this caps the reads per page.
+const MAX_ROUNDS = 10;
+
+// GET /me/reports on the reports by-user GSI (user_id, received_at), newest first. The cursor is a by-user key
+// (report_id, user_id, received_at) as base64url JSON, and it must name the asking user, so it never opens another user's rows.
 export class DynamoUserReportLister implements UserReportLister {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
@@ -25,10 +37,27 @@ export class DynamoUserReportLister implements UserReportLister {
 
   async page(userId: string, request: UserReportPageRequest): Promise<UserReportPage> {
     const start = request.cursor === null ? undefined : DynamoUserReportLister.#decode(request.cursor, userId);
-    const output = await this.#query(userId, request.limit, start);
-    const reports = (output.Items ?? []).flatMap((item) => this.#report(item, userId));
-    const last = output.LastEvaluatedKey;
-    return { reports, nextCursor: last === undefined ? null : Buffer.from(JSON.stringify(last)).toString("base64url") };
+    const { listed, next } = await this.#collect(userId, request.limit, start);
+    const shown = listed.slice(0, request.limit);
+    // After reading past the page, resume after the last report shown, never at DynamoDB's key.
+    const resume = listed.length > request.limit ? shown.at(-1)?.key : next;
+    const nextCursor = resume === undefined ? null : Buffer.from(JSON.stringify(resume)).toString("base64url");
+    return { reports: shown.map((each) => each.report), nextCursor };
+  }
+
+  // Queries until the page is full or by-user has no more rows, at most MAX_ROUNDS times.
+  async #collect(userId: string, limit: number, first: StartKey | undefined): Promise<Collected> {
+    const listed: Listed[] = [];
+    let next = first;
+    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+      const output = await this.#query(userId, limit, next);
+      listed.push(...(output.Items ?? []).flatMap((item) => this.#listed(item, userId)));
+      next = output.LastEvaluatedKey;
+      if (next === undefined || listed.length >= limit) {
+        break;
+      }
+    }
+    return { listed, next };
   }
 
   async #query(userId: string, limit: number, start: StartKey | undefined): Promise<QueryCommandOutput> {
@@ -67,10 +96,11 @@ export class DynamoUserReportLister implements UserReportLister {
 
   // The GSI holds only this user's rows. A malformed row, or one naming anyone else, is skipped with a
   // warning (never shown), so one bad row cannot hide the rest of the user's list.
-  #report(item: Record<string, unknown>, userId: string): Report[] {
+  #listed(item: Record<string, unknown>, userId: string): Listed[] {
     const valid = ReportId.isValid(item.report_id) && typeof item.status === "string" && Array.isArray(item.completed_steps);
     if (valid && item.user_id === userId) {
-      return [Report.fromRecord(item as unknown as ReportRecord)];
+      const key = { report_id: item.report_id, user_id: userId, received_at: item.received_at };
+      return [{ report: Report.fromRecord(item as unknown as ReportRecord), key }];
     }
     const reason = valid ? "another user's row" : "malformed row";
     this.#logger.warn({ report_id: String(item.report_id), index: "by-user", reason }, "skipped a listed report");

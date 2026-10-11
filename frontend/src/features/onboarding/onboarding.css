@@ -56,10 +56,6 @@
   text-align: center;
 }
 
-.onboarding-card .illustration {
-  margin-bottom: var(--s-2);
-}
-
 .onboarding-card--current .illustration {
   animation: chip-hop var(--dur-spring) var(--spring-bouncy);
 }
@@ -81,15 +77,11 @@
 
 .onboarding-card__note {
   max-width: 34em;
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-3) var(--card-pad);
   border-radius: var(--radius-m);
   background: var(--accent-tint);
   color: var(--accent-ink);
   font-weight: 600;
-}
-
-.onboarding-card .button--sun {
-  margin-top: var(--s-2);
 }
 
 .onboarding-steps {
@@ -133,7 +125,7 @@
   flex-direction: column;
   width: 100%;
   max-width: 26em;
-  margin: var(--s-2) 0;
+  margin: 0;
   padding: 0;
   list-style: none;
   text-align: left;

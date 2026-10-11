@@ -1,5 +1,6 @@
 import { extname, join } from "node:path";
 import { InternalDataError } from "../domain/errors.js";
+import type { CandidateFrame } from "../domain/ScanFrame.js";
 import type { ScanFailureReason, ScanFrameCounts, ScanRecord } from "../domain/ScanRecord.js";
 import { InvalidVideoError } from "../domain/scanErrors.js";
 import type { Logger } from "../ports/Logger.js";
@@ -69,8 +70,30 @@ export class VideoScanProcessor {
     const videoPath = join(workDir, `video${extname(scan.video_key)}`);
     const { lastFrameMs } = await this.#deps.loader.load(scan, videoPath);
     const sampled = await this.#deps.sampler.sample(scan, { path: videoPath, lastFrameMs }, workDir);
-    const reportIds = await this.#deps.publisher.publish(scan, sampled.frames);
+    const reportIds = await this.#publish(scan, sampled.frames);
     return { counts: sampled.counts, reportIds };
+  }
+
+  // Frames are queued one at a time, so a scan that ends failed still lists the frames written before the failure.
+  async #publish(scan: ScanRecord, frames: readonly CandidateFrame[]): Promise<readonly string[]> {
+    try {
+      return await this.#deps.publisher.publish(scan, frames);
+    } catch (error) {
+      await this.#keepWritten(scan, frames);
+      throw error;
+    }
+  }
+
+  // Best effort: SQS must see the publish error, not this one. A scan another delivery finished meanwhile stays as it is.
+  async #keepWritten(scan: ScanRecord, frames: readonly CandidateFrame[]): Promise<void> {
+    try {
+      const reportIds = await this.#deps.publisher.writtenIds(scan, frames);
+      if (!(await this.#deps.scans.recordReports(scan.scan_id, reportIds, this.#stamp()))) {
+        this.#deps.logger.info({ scan_id: scan.scan_id }, "scan already finished; its report_ids stay as they are");
+      }
+    } catch (error) {
+      this.#deps.logger.warn({ scan_id: scan.scan_id, error }, "could not record the frames already queued");
+    }
   }
 
   async #finish(scanId: string, { counts, reportIds }: ScanOutcome): Promise<void> {
@@ -79,6 +102,7 @@ export class VideoScanProcessor {
     this.#deps.logger.info({ scan_id: scanId, ...counts }, "scan processed");
   }
 
+  // Leaves report_ids as stored, so a failed scan still lists the frames an earlier attempt queued.
   async #fail(scanId: string, reason: ScanFailureReason, detail: string): Promise<void> {
     await this.#deps.scans.update(scanId, { status: "failed", reason, updated_at: this.#stamp() });
     this.#deps.logger.warn({ scan_id: scanId, reason, detail }, "scan failed");

@@ -24,7 +24,8 @@ export interface MapNoticeInput {
 export interface MapNoticeView {
   readonly icon: IconName;
   readonly key: string;
-  readonly tone: 'info' | 'alert';
+  /** warn: a state to wait out (offline), in the amber of the offline line; alert: something failed. */
+  readonly tone: 'info' | 'warn' | 'alert';
   /** A button beside the text: move to the nearest sites off screen. */
   readonly action?: 'nearest';
 }
@@ -33,7 +34,7 @@ type Rule = readonly [(input: MapNoticeInput) => boolean, MapNoticeView];
 
 // One banner at a time, in this order (frontend/DESIGN.md).
 const RULES: readonly Rule[] = [
-  [(s) => !s.online, { icon: 'offline', key: 'notice.offline', tone: 'alert' }],
+  [(s) => !s.online, { icon: 'offline', key: 'notice.offline', tone: 'warn' }],
   [(s) => s.failed, { icon: 'info', key: 'notice.loadFailed', tone: 'alert' }],
   [(s) => s.locationProblem === 'denied', { icon: 'locate', key: 'notice.locationDenied', tone: 'info' }],
   [(s) => s.locationProblem === 'unavailable', { icon: 'locate', key: 'notice.locationUnavailable', tone: 'info' }],

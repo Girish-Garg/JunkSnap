@@ -19,11 +19,6 @@ export function expiryAfter(activityAt: string): string {
   return new Date(Date.parse(activityAt) + SITE_TTL_DAYS * DAY_MS).toISOString();
 }
 
-// Activity before this time has lapsed by now.
-export function lapseCutoff(now: Date): string {
-  return new Date(now.getTime() - SITE_TTL_DAYS * DAY_MS).toISOString();
-}
-
 export function expiryOf(site: ExpiringSite): string {
   return site.expires_at ?? expiryAfter(site.last_reported_at);
 }

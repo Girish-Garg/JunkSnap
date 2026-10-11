@@ -84,7 +84,7 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: var(--s-1);
-  margin: var(--s-4) 0 0;
+  margin: var(--section-gap) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -152,6 +152,12 @@
   line-height: var(--leading-caption);
 }
 
+/* Empty, the live line takes no room, so the next section keeps its --section-gap and no more. */
+.action-row__note:empty {
+  min-height: 0;
+  margin-top: 0;
+}
+
 .photo-strip {
   margin: var(--s-4) 0 0;
   padding-top: var(--s-4);
@@ -161,12 +167,12 @@
 .photo-strip__list {
   display: flex;
   gap: var(--s-2);
-  margin: 0 calc(-1 * var(--edge));
-  padding: 0 var(--edge);
+  margin: 0 calc(-1 * var(--sheet-edge));
+  padding: 0 var(--sheet-edge);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  /* Snapping keeps the screen edge, so the first photo is never flush with it. */
-  scroll-padding-inline: var(--edge);
+  /* Snapping keeps the sheet edge, so the first photo is never flush with the screen. */
+  scroll-padding-inline: var(--sheet-edge);
   scrollbar-width: none;
   list-style: none;
 }
@@ -213,8 +219,8 @@
 .counts {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s-2);
-  margin: var(--s-4) 0 0;
+  gap: var(--inline-gap);
+  margin: var(--section-gap) 0 0;
 }
 
 .counts__item {
@@ -310,7 +316,7 @@
 
 /* The site's photos: the carousel with its count and Add a photo, under the actions and backers. */
 .site-photos {
-  margin-top: var(--s-4);
+  margin-top: var(--section-gap);
 }
 
 .site-photos .photo-strip {
@@ -396,8 +402,8 @@
 
 /* Each section below the actions is one card: who reported it, bins nearby, location, brands, history. */
 .site-panel > .facts {
-  margin-top: var(--s-3);
-  padding: var(--s-3) var(--s-4);
+  margin-top: var(--card-gap);
+  padding: var(--card-pad);
   border: var(--outline) solid var(--divider);
   border-radius: var(--radius-l);
 }
@@ -417,21 +423,21 @@
 }
 
 .site-panel > .site-notes {
-  margin-top: var(--s-3);
+  margin-top: var(--card-gap);
 }
 
 /* Preview card after tapping a pin: springs up from the bottom. */
 .preview-card {
   position: absolute;
   right: var(--edge);
-  bottom: var(--s-6);
+  bottom: var(--map-foot);
   left: var(--edge);
   z-index: 4;
   display: flex;
   gap: var(--s-3);
   /* Grows with the text (Hindi, larger fonts) so Details never spills out. */
   min-height: 112px;
-  padding: var(--s-3);
+  padding: var(--card-pad);
   border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: var(--shadow-float);
@@ -484,9 +490,7 @@
 
 /* 40 px to look at, 48 px to tap. */
 .preview-card .button--text::before {
-  content: '';
-  position: absolute;
-  inset: calc((40px - var(--target)) / 2) 0;
+  inset: calc((40px - var(--target)) / 2) calc(-1 * var(--text-bleed));
 }
 
 .preview-card > .icon-button {
@@ -595,7 +599,8 @@
 .withdraw-box__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
+  /* Text buttons reach --text-bleed past their label (DESIGN.md rule 4). */
+  gap: var(--inline-gap) var(--s-6);
 }
 
 /* A site off the map (removed, cleaned, rejected): what happened, in place of the votes and actions. */

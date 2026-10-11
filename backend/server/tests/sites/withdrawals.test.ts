@@ -159,6 +159,27 @@ describe("refusals", () => {
     const second = rig.service.withdraw(SITE, { userId: userOf(DEVICE_C), deviceToken: DEVICE_B });
     await expect(second).rejects.toThrow(RateLimitedError);
   });
+
+  it("answers a retried call the same way at the limit, without using up a slot", async () => {
+    const rig = withdrawalRig(undefined, 1);
+    seeded(rig, [neighbour()]);
+    const first = await rig.service.withdraw(SITE, requester(DEVICE_A));
+    expect(await rig.service.withdraw(SITE, requester(DEVICE_A))).toEqual(first);
+  });
+
+  it("takes the limit before saving, so two calls racing for the last slot never strand a withdrawn report", async () => {
+    const rig = withdrawalRig(undefined, 1);
+    seeded(rig);
+    const other = report({ id: "jdh_9", device: DEVICE_A, lat: 26.3 });
+    rig.sites.put(Site.found(other));
+    rig.rows.add("site_jdh_9", other);
+    const outcomes = await Promise.allSettled([SITE, "site_jdh_9"].map((id) => rig.service.withdraw(id, requester(DEVICE_A))));
+    expect(outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []))).toEqual([expect.any(RateLimitedError)]);
+    for (const [siteId, reportId] of [[SITE, "rpt_jdh_1"], ["site_jdh_9", "rpt_jdh_9"]] as const) {
+      const removed = rig.sites.feature(siteId).properties.status === "removed";
+      expect(rig.withdrawer.withdrawn.has(reportId)).toBe(removed);
+    }
+  });
 });
 
 describe("scores after removal", () => {

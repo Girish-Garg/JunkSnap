@@ -3,7 +3,7 @@ import { NotFoundError } from "../../domain/errors.js";
 import { OwnPhotoError, type FlagReason, type StoredPhotoFlag } from "../../domain/flags/PhotoFlag.js";
 import type { Requester } from "../../domain/letters/types.js";
 import type { Site } from "../../domain/sites/Site.js";
-import { FLAG_RADIUS_M, PHOTO_FLAG_WARN } from "../../domain/flags/PhotoFlagPolicy.js";
+import { FLAG_RADIUS_M } from "../../domain/flags/PhotoFlagPolicy.js";
 import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import { SiteNotFoundError, TooFarError } from "../../domain/sites/SiteErrors.js";
 import type { PhotoFlagCount } from "../../domain/sites/SitePhotoFlags.js";
@@ -50,6 +50,8 @@ interface FlaggedPhoto {
 interface Recorded {
   readonly photo: PhotoFlag["photo"];
   readonly status: PhotoFlag["site_status"];
+  // This save warned the photo: concurrent reports may jump its count past PHOTO_FLAG_WARN.
+  readonly firstWarned: boolean;
 }
 
 // Decision 20261011-0310-hem-photo-flags: records one person's report of a site photo, then recounts the photo.
@@ -68,15 +70,15 @@ export class PhotoFlagService {
     await this.#deps.flags.put(stored);
     const count = { photoId: request.photoId, photoUrl: photo.url, reporter: photo.reporter, at: stored.createdAt };
     const site = await this.#deps.retry.run(() => this.#record(request.siteId, count, now));
-    this.#tellCommunity(stored, site.photo);
+    this.#tellCommunity(stored, site);
     const { siteId, photoId, reason, textStatus, moderation, createdAt } = stored;
     const result = { site_id: siteId, photo_id: photoId, reason, text_status: textStatus, moderation, created_at: createdAt };
     return { ...result, photo: site.photo, site_status: site.status };
   }
 
   // Descriptions count as signals only once several people reported the photo: on a new one, or when it is first warned.
-  #tellCommunity(stored: StoredPhotoFlag, photo: PhotoFlag["photo"]): void {
-    if (photo.warned && (stored.textStatus === "shown" || photo.count === PHOTO_FLAG_WARN)) {
+  #tellCommunity(stored: StoredPhotoFlag, recorded: Recorded): void {
+    if (recorded.firstWarned || (recorded.photo.warned && stored.textStatus === "shown")) {
       this.#deps.community.textAccepted(stored.siteId);
     }
   }
@@ -114,9 +116,15 @@ export class PhotoFlagService {
   async #record(siteId: string, count: Omit<PhotoFlagCount, "authors">, now: Date): Promise<Recorded> {
     const site = await this.#load(siteId, now);
     const authors = await this.#deps.flags.authorsOf(siteId, count.photoId);
+    const wasWarned = PhotoFlagService.#warned(site, count.photoId);
     const photo = site.recordPhotoFlags({ ...count, authors });
     await this.#deps.sites.save(site);
-    return { photo, status: site.snapshot().feature.properties.status };
+    return { photo, status: site.snapshot().feature.properties.status, firstWarned: photo.warned && !wasWarned };
+  }
+
+  static #warned(site: Site, photoId: string): boolean {
+    const flags = site.snapshot().feature.properties.photo_flags ?? [];
+    return flags.some((entry) => entry.photo_id === photoId && entry.warned);
   }
 
   async #load(siteId: string, now: Date): Promise<Site> {

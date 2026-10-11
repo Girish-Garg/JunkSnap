@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { UnauthorizedError } from "../src/domain/errors.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ROUTE_BUILDERS } from "../src/handlers/routes.js";
 import { buildScanRoutes, scanRoutes } from "../src/handlers/scanRoutes.js";
 import { createApp } from "../src/handlers/web.js";
@@ -48,7 +49,7 @@ beforeEach(async () => {
   outcomes = new FakeFrameOutcomeReader();
   const findings = new ScanFindings(new PublicMedia("https://cdn.example"));
   const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), outcomes, findings, now });
-  const guard = new RouteGuard(new FakeAuthenticator());
+  const guard = new RouteGuard(new FakeAuthenticator(), new FakeUserStanding());
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(settings, [scanRoutes({ presigner, intake, guard })], logger);
@@ -209,6 +210,15 @@ describe("GET /scans/{id}", () => {
     });
   });
 
+  it("lists the frames a failed scan queued before it failed, for the phone to poll one by one", async () => {
+    await post("/scans", sampleSession());
+    await scans.recordReports("scn_jpr_1", ["rpt_a", "rpt_b"], NOW.toISOString());
+    await scans.update("scn_jpr_1", { status: "failed", reason: "retries_exhausted", updated_at: "2026-10-10T04:02:52Z" });
+    const response = await get("scn_jpr_1");
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ status: "failed", reason: "retries_exhausted", report_ids: ["rpt_a", "rpt_b"], found: null });
+  });
+
   it("has no found summary until the worker is done cutting frames", async () => {
     await post("/scans", sampleSession());
     expect((await get("scn_jpr_1")).json()).toMatchObject({ status: "queued", found: null });
@@ -262,7 +272,7 @@ describe("buildScanRoutes", () => {
     REPORTS_TABLE: "junksnap-dev-reports",
     PUBLIC_BASE_URL: "https://d111111abcdef8.cloudfront.net",
   };
-  const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1" };
+  const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1", USERS_TABLE: "junksnap-dev-users" };
 
   it("is registered with the api", () => {
     expect(ROUTE_BUILDERS).toContain(buildScanRoutes);

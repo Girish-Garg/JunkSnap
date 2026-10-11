@@ -64,15 +64,16 @@ export class SiteMerger {
     return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 
+  // The holder check runs first: a redelivered scan frame that joined a neighbour site must not join its spot's site too.
   async #attempt(report: MergeableReport): Promise<Merged> {
-    const spotSite = await this.#spotSite(report);
-    if (spotSite !== null) {
-      return this.#mergeInto(spotSite.siteId, report);
-    }
     const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType));
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
       return { site: holder, outcome: "unchanged" };
+    }
+    const spotSite = await this.#spotSite(report);
+    if (spotSite !== null) {
+      return this.#mergeInto(spotSite.siteId, report);
     }
     const target = await this.#deps.picker.pick(report, nearby);
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
