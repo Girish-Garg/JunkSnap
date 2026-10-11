@@ -4,7 +4,7 @@ from typing import Self
 
 from pydantic import Field, model_validator
 
-from ml.settings.base import Attempts, EnvSettings, Seconds
+from ml.settings.base import Attempts, Seconds, TunableSettings
 
 # The worker waits 60 s for /internal/verify. With every judge model hung at once,
 # Nova Lite 2 x 8 s + Nova Pro 2 x 8 s + OpenAI 8 s = 40 s, inside the 50 s left after
@@ -16,7 +16,7 @@ CONNECT_TIMEOUT_S = 3.0
 ATTEMPTS = 2  # the first call and 1 retry
 
 
-class TimingSettings(EnvSettings):
+class TimingSettings(TunableSettings):
     # Must match how long the worker waits for /internal/verify.
     worker_budget_s: Seconds = Field(default=WORKER_BUDGET_S, alias="ML_WORKER_BUDGET_S")
     detectors_budget_s: Seconds = Field(default=DETECTORS_S, alias="ML_DETECTORS_BUDGET_S")

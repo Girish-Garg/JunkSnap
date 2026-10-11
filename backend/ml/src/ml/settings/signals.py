@@ -4,10 +4,10 @@ from typing import Self
 
 from pydantic import Field, model_validator
 
-from ml.settings.base import EnvSettings, Probability
+from ml.settings.base import Probability, TunableSettings
 
 
-class SignalSettings(EnvSettings):
+class SignalSettings(TunableSettings):
     # YOLO boxes under this are dropped; meta-v2 was fitted on scores read at 0.25.
     yolo_min_confidence: Probability = Field(default=0.25, alias="ML_YOLO_MIN_CONFIDENCE")
     yolo_hazard_min: Probability = Field(default=0.5, alias="ML_YOLO_HAZARD_MIN")
@@ -16,7 +16,9 @@ class SignalSettings(EnvSettings):
     yolo_size_small_max: Probability = Field(default=0.10, alias="ML_YOLO_SIZE_SMALL_MAX")
     yolo_size_medium_max: Probability = Field(default=0.35, alias="ML_YOLO_SIZE_MEDIUM_MAX")
     # Overflowing bin: waste within this many of the bin's longer sides is near it.
-    yolo_bin_reach: float = Field(default=0.5, ge=0.0, le=5.0, alias="ML_YOLO_BIN_REACH")
+    yolo_bin_reach: float = Field(
+        default=0.5, ge=0.0, le=5.0, allow_inf_nan=False, alias="ML_YOLO_BIN_REACH"
+    )
     yolo_bin_alone_weight: Probability = Field(default=0.5, alias="ML_YOLO_BIN_ALONE_WEIGHT")
     embedding_hazard_min: Probability = Field(default=0.5, alias="ML_EMBEDDING_HAZARD_MIN")
     label_hazard_min: Probability = Field(default=0.6, alias="ML_LABEL_HAZARD_MIN")

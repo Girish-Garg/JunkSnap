@@ -2,13 +2,15 @@
 
 from pydantic import Field
 
-from ml.settings.base import EnvSettings, Probability
+from ml.settings.base import Probability, TunableSettings
 
 
-class JudgeSettings(EnvSettings):
+class JudgeSettings(TunableSettings):
     # A judge_v1 answer takes a few hundred tokens.
     max_tokens: int = Field(default=700, ge=1, le=8192, alias="ML_JUDGE_MAX_TOKENS")
-    temperature: float = Field(default=0.0, ge=0.0, le=1.0, alias="ML_JUDGE_TEMPERATURE")
+    temperature: float = Field(
+        default=0.0, ge=0.0, le=1.0, allow_inf_nan=False, alias="ML_JUDGE_TEMPERATURE"
+    )
     # An answer that fails validation is asked again this often before the next model.
     invalid_answer_retries: int = Field(
         default=1, ge=0, le=3, alias="ML_JUDGE_INVALID_ANSWER_RETRIES"

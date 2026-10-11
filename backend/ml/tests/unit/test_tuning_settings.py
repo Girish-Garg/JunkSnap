@@ -15,6 +15,9 @@ from ml.services.combiner import DISAGREEMENT_GAP, FIXED_WEIGHTS
 from ml.services.provider_router import AttemptPolicy
 from ml.services.vision_judge import JudgeOptions
 from ml.services.yolo_signal import YoloOptions
+from ml.settings.base import EnvSettings
+from ml.settings.core import CoreSettings
+from ml.settings.llm import LlmSettings
 from ml.settings.tuning import Tuning
 
 # Today's values; contracts/README.md lists the same.
@@ -104,7 +107,16 @@ def test_variables_are_read_by_their_exact_names(monkeypatch: pytest.MonkeyPatch
         ("ML_DISAGREEMENT_GAP", "0"),
         ("ML_YOLO_LIFT_MIN", "high"),  # not a number
         ("ML_WEIGHT_YOLO", "-1"),
+        ("ML_WEIGHT_YOLO", "101"),  # weights stay at 100 or less
+        ("ML_WEIGHT_YOLO", "inf"),  # an infinite weight makes the probability NaN
+        ("ML_WEIGHT_REKOGNITION_LABELS", "nan"),
+        ("ML_WEIGHT_VISION_JUDGE", "inf"),
         ("ML_WEIGHT_VISION_JUDGE", "0"),  # the judge must weigh something
+        ("ML_AUTO_VERIFY_MIN", "nan"),
+        ("ML_DISAGREEMENT_GAP", "nan"),
+        ("ML_YOLO_BIN_REACH", "inf"),
+        ("ML_JUDGE_TEMPERATURE", "nan"),
+        ("ML_WORKER_BUDGET_S", "inf"),
         ("ML_YOLO_SIZE_SMALL_MAX", "0.35"),  # not below medium
         ("ML_YOLO_BIN_REACH", "9"),
         ("ML_REKOGNITION_MAX_LABELS", "0"),
@@ -131,3 +143,24 @@ def test_a_bad_value_stops_startup(monkeypatch: pytest.MonkeyPatch, name: str, v
 
     with pytest.raises(ConfigError):
         Tuning.load()
+
+
+def test_an_empty_tuning_variable_means_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A ConfigMap literal such as `ML_AUTO_VERIFY_MIN=` must not crash-loop ml."""
+    for name in TODAY:
+        monkeypatch.setenv(name, "")
+
+    assert read(Tuning.load()) == TODAY
+
+
+@pytest.mark.parametrize(
+    ("settings", "name"), [(CoreSettings, "JUNKSNAP_STAGE"), (LlmSettings, "LLM_TASKS")]
+)
+def test_the_service_settings_still_refuse_an_empty_value(
+    monkeypatch: pytest.MonkeyPatch, settings: type[EnvSettings], name: str
+) -> None:
+    """Empty must not quietly mean dev, or the default judge order."""
+    monkeypatch.setenv(name, "")
+
+    with pytest.raises(ConfigError):
+        settings.load()
