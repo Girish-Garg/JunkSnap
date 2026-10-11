@@ -1,6 +1,6 @@
 import { blocked, type Availability, type Blocked } from '../../../domain/ActionAvailability';
 import { AreaStanding } from '../../../domain/AreaStanding';
-import type { AreaKind } from '../../../domain/AreaScores';
+import type { AreaKind, AreaScores } from '../../../domain/AreaScores';
 import type { SiteFeature } from '../../../domain/Site';
 import { decideAreaLetterRoute, decideSiteRoute, SITE_GATES } from '../../../domain/SiteActionGates';
 import { useAreaScores } from '../../areas/hooks/useAreaScores';
@@ -28,9 +28,13 @@ export function useSiteRouteGate(siteId: string, action: 'letter' | 'cleanup'): 
   return { locked: lockedBy(site ? decideSiteRoute(SITE_GATES[action], site.properties) : null), site, reload };
 }
 
+export interface AreaRouteGate extends RouteGate {
+  readonly scores: AreaScores | null;
+}
+
 /** An area letter sheet opened by link: loads the area's scores and checks AREA_LETTER_GATE for them. */
-export function useAreaLetterRouteGate(kind: AreaKind, areaId: string): RouteGate {
+export function useAreaLetterRouteGate(kind: AreaKind, areaId: string): AreaRouteGate {
   const { scores, missing } = useAreaScores(kind, areaId);
-  if (missing) return { locked: blocked('letter.errors.area_not_found') };
-  return { locked: lockedBy(scores ? decideAreaLetterRoute(new AreaStanding(scores).letterReady) : null) };
+  if (missing) return { locked: blocked('letter.errors.area_not_found'), scores };
+  return { locked: lockedBy(scores ? decideAreaLetterRoute(new AreaStanding(scores).letterReady) : null), scores };
 }

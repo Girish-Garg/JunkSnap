@@ -44,7 +44,8 @@ const withToasts = (ui: ReactElement) => (
 );
 
 async function signInThroughSheet(user: UserEvent) {
-  const sheet = screen.getByRole('complementary', { name: 'Sign in' });
+  // After a 401 the sheet opens only once the forced token refresh and the second call have failed.
+  const sheet = await screen.findByRole('complementary', { name: 'Sign in' });
   await user.type(within(sheet).getByLabelText('Email'), EMAIL);
   await user.type(within(sheet).getByLabelText('Password'), PASSWORD);
   await user.click(within(sheet).getByRole('button', { name: 'Sign in' }));
@@ -55,7 +56,7 @@ describe('a vote the person cannot make', () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ reports: [myReport('site_jpr_1')], api }) });
-    const yes = await screen.findByRole('button', { name: "Yes, it's waste" }, { timeout: 3000 });
+    const yes = await screen.findByRole('button', { name: "Yes, it's waste" });
     await waitFor(() => expect(yes).toHaveAttribute('aria-disabled', 'true'));
     expect(yes).toBeEnabled();
     await user.click(yes);
@@ -73,7 +74,7 @@ describe('a vote that needs a connection or a session', () => {
     const api = new FakeSiteActionsApi();
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
     expect(await screen.findByText(/You're offline\. Photos wait on this phone/)).toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }, { timeout: 3000 }));
+    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
     // The toast says it, not a line under another button.
     await waitFor(() => expect(document.querySelector('.app-toast')).toHaveTextContent("You're offline. Try again once you're connected."));
     expect(api.calls).toEqual([]);
@@ -83,7 +84,7 @@ describe('a vote that needs a connection or a session', () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ signedIn: false, api }) });
-    const yes = await screen.findByRole('button', { name: "Yes, it's waste" }, { timeout: 3000 });
+    const yes = await screen.findByRole('button', { name: "Yes, it's waste" });
     expect(yes).not.toHaveAttribute('aria-disabled');
     await user.click(yes);
     expect(screen.getByText('Sign in to vote.')).toBeInTheDocument();
@@ -98,7 +99,7 @@ describe('a vote the api rate-limited', () => {
     const api = new FakeSiteActionsApi();
     api.failNext('vote', 429, 'rate_limited', 'Rate limit exceeded');
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }, { timeout: 3000 }));
+    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many tries. Wait a little and try again.');
     expect(screen.queryByText('Rate limit exceeded')).not.toBeInTheDocument();
     const metoo = within(screen.getByRole('list', { name: 'Site actions' })).getByRole('button', { name: 'Me too' });
@@ -136,12 +137,17 @@ describe('a session the api ends twice', () => {
     // Each attempt gets one forced token refresh first, so two 401s end one attempt.
     for (let i = 0; i < 4; i += 1) api.failNext('note', 401, 'unauthorized');
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
-    await user.click(await screen.findByRole('button', { name: 'Add a note' }, { timeout: 3000 }));
+    await user.click(await screen.findByRole('button', { name: 'Add a note' }));
     await user.type(screen.getByLabelText('Your note'), 'Burnt again last night');
     await user.click(screen.getByRole('button', { name: 'Add note' }));
     await signInThroughSheet(user);
-    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('Sign in again to add a note.');
+    // The first attempt's line already shows under the sign-in sheet, so a wait for the line alone could end
+    // before sign-in finished. Wait for the sheet to close and the retry's two calls, then check it stayed shut.
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Sign in' })).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(api.calls.filter((call) => call.kind === 'note')).toHaveLength(4);
+      expect(screen.getByRole('alert')).toHaveTextContent('Sign in again to add a note.');
+    });
     expect(screen.queryByRole('complementary', { name: 'Sign in' })).not.toBeInTheDocument();
-    expect(api.calls.filter((call) => call.kind === 'note')).toHaveLength(4);
   });
 });

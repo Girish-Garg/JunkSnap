@@ -28,6 +28,16 @@
   background: var(--accent-tint);
 }
 
+.chip[aria-disabled='true'] {
+  border-style: dashed;
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.chip[aria-disabled='true']:active {
+  transform: none;
+}
+
 .action-row__button[aria-disabled='true'] {
   color: var(--text-secondary);
   cursor: not-allowed;
