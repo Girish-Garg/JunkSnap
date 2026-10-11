@@ -13,7 +13,7 @@ import httpx
 import pytest
 from botocore import UNSIGNED
 from botocore.config import Config
-from fakes import FIXED_NOW, JUDGE_JSON, FakeBuilder, FakeProvider
+from fakes import FIXED_NOW, JUDGE_JSON, FakeBuilder, FakeProvider, provider_error
 
 from ml.adapters.bedrock_converse import BedrockConverseProvider
 from ml.adapters.s3_model_store import S3ModelStore
@@ -30,7 +30,6 @@ from ml.handlers.judge_timeouts import (
 )
 from ml.handlers.verify_graph import VerifierBuilder
 from ml.ports.clock import Clock
-from ml.services.attempt_window import AttemptWindow
 from ml.services.judge_answer import JudgeAnswer
 from ml.services.provider_factory import ProviderFactory
 from ml.services.provider_router import JsonJob, ProviderRouter
@@ -40,6 +39,8 @@ from ml.settings.models import ModelSettings
 
 LITE = "apac.amazon.nova-lite-v1:0"
 PRO = "apac.amazon.nova-pro-v1:0"
+GPT = "gpt-5-mini"
+JOB = JsonJob("judge", LlmRequest("system", "judge"), JudgeAnswer)
 FAST = JudgeTimeouts(read_s=0.3, connect_s=0.3)
 
 
@@ -112,7 +113,10 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
         clients.append(real_http(self))
         return clients[-1]
 
+    store_reads: list[float] = []
+
     def refuse(self: S3ModelStore, model: PinnedModel) -> Path:
+        store_reads.append(self._client.meta.config.read_timeout)
         raise ExternalServiceError("offline test")  # after the Titan client is made
 
     monkeypatch.setattr(boto3.session.Session, "client", client)
@@ -126,6 +130,7 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
     assert all(c.read_timeout == 7.5 and c.connect_timeout == 2.5 for c in bedrock)
     assert all(c.retries["total_max_attempts"] == 2 for c in bedrock)
     assert [c.timeout.read for c in clients] == [7.5]
+    assert store_reads == [30.0]  # model files (SigLIP 371 MB) keep a long read timeout
 
 
 def test_the_detector_clients_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -148,12 +153,6 @@ def test_the_detector_clients_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None
         assert 2 * configs[name].read_timeout <= DETECTORS_S
 
 
-def test_the_last_judge_attempt_starts_in_time_to_end_inside_the_budget() -> None:
-    t = JudgeTimeouts()
-    assert t.last_start_s + t.attempts * t.read_s <= WORKER_BUDGET_S - DETECTORS_S
-    assert t.last_start_s > 2 * t.attempts * t.read_s  # Lite and Pro hung: OpenAI still runs
-
-
 class SteppingClock(Clock):
     def __init__(self) -> None:
         self.at = FIXED_NOW
@@ -161,32 +160,60 @@ class SteppingClock(Clock):
     def now(self) -> datetime:
         return self.at
 
+    def elapsed_s(self) -> float:
+        return (self.at - FIXED_NOW).total_seconds()
 
-class SlowInvalidProvider(FakeProvider):
-    """Answers invalid JSON as late as a resent Bedrock call can (2 x 8 s)."""
 
-    def __init__(self, name: str, clock: SteppingClock) -> None:
-        super().__init__(name, ["not json"] * 4)
+class TimedProvider(FakeProvider):
+    """Each call takes `seconds` on the clock, then answers or fails from its script."""
+
+    def __init__(
+        self, name: str, clock: SteppingClock, seconds: float, script: list[str | Exception]
+    ) -> None:
+        super().__init__(name, script)
         self._clock = clock
+        self._seconds = seconds
 
     def complete(self, request: LlmRequest) -> LlmResponse:
-        self._clock.at += timedelta(seconds=ATTEMPTS * READ_TIMEOUT_S)
+        self._clock.at += timedelta(seconds=self._seconds)
         return super().complete(request)
 
 
-def test_no_judge_attempt_starts_after_the_window_so_retries_fit_the_budget() -> None:
+def judge_router(clock: SteppingClock, lite: FakeProvider, pro: FakeProvider,
+                 gpt: FakeProvider) -> ProviderRouter:
+    task = TaskConfig("bedrock", LITE, (ModelChoice("bedrock", PRO), ModelChoice("openai", GPT)))
+    factory = ProviderFactory({"bedrock": FakeBuilder({LITE: lite, PRO: pro}),
+                               "openai": FakeBuilder({GPT: gpt})})
+    return ProviderRouter({"judge": task}, factory, PriceTable(), JudgeTimeouts().window(clock))
+
+
+def test_with_lite_and_pro_hung_openai_still_answers_in_the_budget() -> None:
+    """A hung Bedrock model: two 8 s reads plus 0.5 s of connect and backoff each, 17 s."""
     clock = SteppingClock()
-    lite, pro = SlowInvalidProvider(LITE, clock), SlowInvalidProvider(PRO, clock)
-    task = TaskConfig("bedrock", LITE, (ModelChoice("bedrock", PRO),))
-    factory = ProviderFactory({"bedrock": FakeBuilder({LITE: lite, PRO: pro})})
-    window = AttemptWindow(clock, JudgeTimeouts().last_start_s)
-    router = ProviderRouter({"judge": task}, factory, PriceTable(), window)
+    hung = 2 * (READ_TIMEOUT_S + 0.5)
+    lite = TimedProvider(LITE, clock, hung, [provider_error("read timeout")])
+    pro = TimedProvider(PRO, clock, hung, [provider_error("read timeout")])
+    gpt = TimedProvider(GPT, clock, 1.5, [JUDGE_JSON])
+
+    answer = judge_router(clock, lite, pro, gpt).complete_json(JOB)
+
+    assert answer.response.model == GPT
+    assert clock.elapsed_s() <= WORKER_BUDGET_S - DETECTORS_S
+
+
+def test_no_attempt_starts_unless_its_longest_run_ends_in_the_budget() -> None:
+    """Invalid answers as late as a resent Bedrock call can give (2 x 8 s) are retried only
+    while the retry still fits: Lite twice, Pro once (48 s), then OpenAI would end at 56 s."""
+    clock = SteppingClock()
+    slow = ATTEMPTS * READ_TIMEOUT_S
+    lite, pro = (TimedProvider(name, clock, slow, ["not json"] * 2) for name in (LITE, PRO))
+    gpt = TimedProvider(GPT, clock, 1.5, [JUDGE_JSON])
 
     with pytest.raises(NoProviderAnsweredError):
-        router.complete_json(JsonJob("judge", LlmRequest("system", "judge"), JudgeAnswer))
+        judge_router(clock, lite, pro, gpt).complete_json(JOB)
 
-    assert (len(lite.requests), len(pro.requests)) == (2, 1)
-    assert (clock.at - FIXED_NOW).total_seconds() <= WORKER_BUDGET_S - DETECTORS_S
+    assert [len(p.requests) for p in (lite, pro, gpt)] == [2, 1, 0]
+    assert clock.elapsed_s() <= WORKER_BUDGET_S - DETECTORS_S
 
 
 def test_a_hung_bedrock_model_is_retried_once_then_the_next_answers(hung: HungServer) -> None:

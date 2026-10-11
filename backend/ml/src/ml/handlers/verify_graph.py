@@ -25,7 +25,6 @@ from ml.handlers.trained_graph import TrainedModels
 from ml.ports.image_store import BlurredImageStore
 from ml.ports.llm_provider import ProviderBuilder
 from ml.ports.signal import Signal
-from ml.services.attempt_window import AttemptWindow
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
 from ml.services.judge_answer import PROMPT_VERSION
@@ -44,6 +43,10 @@ JUDGE_PROMPT = f"{PROMPT_VERSION}.txt"  # the version judge.attributes.prompt re
 # fails fast; Rekognition's 2 x 4 s fits the detectors' 10 s (judge_timeouts).
 AWS_CONFIG = Config(
     retries={"total_max_attempts": 2, "mode": "standard"}, connect_timeout=2.0, read_timeout=4.0
+)
+# Model files at app start (SigLIP 371 MB, YOLO 38 MB): a 4 s read could break a download.
+MODEL_FILES_CONFIG = Config(
+    retries={"total_max_attempts": 3, "mode": "standard"}, connect_timeout=5.0, read_timeout=30.0
 )
 
 logger = logging.getLogger(__name__)
@@ -94,7 +97,7 @@ class VerifierBuilder:
             reason = {"reason": "no ORIGINALS_BUCKET"}
             logger.warning("trained_models_off", extra={"fields": reason})
             return None
-        s3 = self._session.client("s3", config=AWS_CONFIG)
+        s3 = self._session.client("s3", config=MODEL_FILES_CONFIG)
         store = S3ModelStore(s3, self._models.originals_bucket, Path(self._models.model_dir))
         bedrock = self._session.client("bedrock-runtime", config=self._timeouts.aws_config())
         return TrainedModels(store, self._models.pins(), bedrock)
@@ -108,7 +111,7 @@ class VerifierBuilder:
 
     def provider_router(self) -> ProviderRouter:
         factory = ProviderFactory(self._provider_builders())
-        window = AttemptWindow(SystemClock(), self._timeouts.last_start_s)
+        window = self._timeouts.window(SystemClock())
         return ProviderRouter(self._llm.task_configs(), factory, PriceTable(), window)
 
     def _provider_builders(self) -> dict[str, ProviderBuilder]:

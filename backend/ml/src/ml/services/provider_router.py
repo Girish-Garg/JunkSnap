@@ -39,7 +39,7 @@ class JsonJob[M: BaseModel]:
 class ProviderRouter:
     """A call error moves on at once; an invalid answer is retried once, then moves on.
 
-    With a window, no attempt (first call or retry) starts after it closes.
+    With a window, an attempt (first call or retry) starts only if it still fits.
     """
 
     def __init__(
@@ -86,8 +86,8 @@ class ProviderRouter:
     ) -> RoutedAnswer[M] | None:
         request = job.request
         for _ in range(1 + RETRIES_ON_INVALID_JSON):
-            if window is not None and window.closed():
-                self._log("llm_out_of_time", job.task, choice, "the attempt window has closed")
+            if window is not None and not window.fits(choice.provider):
+                self._log("llm_out_of_time", job.task, choice, "its longest attempt would not fit")
                 return None
             try:
                 response = provider.complete(request)
