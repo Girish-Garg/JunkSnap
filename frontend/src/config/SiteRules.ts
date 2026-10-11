@@ -1,5 +1,5 @@
 import { EnvReader } from './EnvReader';
-import type { EnvVars } from './EnvVar';
+import type { EnvVars, GroupCheck } from './EnvVar';
 import { Vars } from './Vars';
 
 /**
@@ -46,5 +46,14 @@ export const SITE_RULE_VARS: EnvVars<SiteRules> = {
   zoneRadiusM: Vars.metres('VITE_ZONE_RADIUS_M', 1000, CITY_M),
   minVerifiedReports: Vars.count('VITE_MIN_VERIFIED_REPORTS', 10, 10_000),
 };
+
+/** An up-high photo keeps the margin clear of the api's cap, so the margin must leave some reach. */
+export const SITE_RULE_CHECKS: readonly GroupCheck<SiteRules>[] = [
+  {
+    fields: ['targetMarginM', 'targetMaxM'],
+    holds: ({ targetMarginM, targetMaxM }) => targetMarginM < targetMaxM,
+    says: 'VITE_TARGET_MARGIN_M must be below VITE_TARGET_MAX_M',
+  },
+];
 
 export const SITE_RULE_DEFAULTS: SiteRules = EnvReader.defaults(SITE_RULE_VARS);

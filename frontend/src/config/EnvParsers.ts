@@ -7,14 +7,16 @@ export interface NumberRange {
   readonly integer?: boolean;
 }
 
-const NUMBERS = /^-?\d+(\.\d+)?$/;
+// Digits with optional single _ between them (60_000), a sign and decimals; never a leading, trailing or double _,
+// an exponent, hex or a unit.
+const NUMBER = /^-?\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?$/;
 
 /** Text to value for the VITE_ variables; each returns null for text that is not a valid value. */
 export class EnvParsers {
-  /** A plain decimal number inside the range; "1e3", "0x10", "12px" and "" are not numbers here. */
+  /** A plain decimal number inside the range; "1e3", "0x10", "12px", "6__0" and "" are not numbers here. */
   static number(range: NumberRange): (text: string) => number | null {
     return (text) => {
-      const value = EnvParsers.#decimal(text.replaceAll('_', ''));
+      const value = EnvParsers.#decimal(text);
       if (value === null || value < range.min || value > range.max) return null;
       return range.integer && !Number.isInteger(value) ? null : value;
     };
@@ -45,17 +47,22 @@ export class EnvParsers {
     return EnvParsers.#onEarth(lon, lat) ? [lon, lat] : null;
   }
 
-  /** "minLon,minLat,maxLon,maxLat" in degrees, with the minimums below the maximums. */
-  static box(text: string): BBox | null {
+  /** "minLon,minLat,maxLon,maxLat" in degrees, with the minimums below the maximums and each side at most maxSpanDeg. */
+  static box(text: string, maxSpanDeg = Number.POSITIVE_INFINITY): BBox | null {
     const numbers = EnvParsers.#list(text, 4);
     const min = numbers && EnvParsers.lonLat(numbers.slice(0, 2).join(','));
     const max = numbers && EnvParsers.lonLat(numbers.slice(2).join(','));
-    if (!min || !max || min[0] >= max[0] || min[1] >= max[1]) return null;
-    return new BBox(min[0], min[1], max[0], max[1]);
+    const box = min && max && EnvParsers.#ordered(min, max);
+    return box && !box.isWiderThan(maxSpanDeg) ? box : null;
+  }
+
+  static #ordered([minLon, minLat]: LonLat, [maxLon, maxLat]: LonLat): BBox | null {
+    return minLon < maxLon && minLat < maxLat ? new BBox(minLon, minLat, maxLon, maxLat) : null;
   }
 
   static #decimal(text: string): number | null {
-    return NUMBERS.test(text.trim()) ? Number(text) : null;
+    const trimmed = text.trim();
+    return NUMBER.test(trimmed) ? Number(trimmed.replaceAll('_', '')) : null;
   }
 
   static #list(text: string, length: number): readonly number[] | null {

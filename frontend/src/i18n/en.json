@@ -112,7 +112,7 @@
   "explain": {
     "hint": "What does this mean?",
     "close": "Close",
-    "waiting": "10 different people must back this spot with a photo or a yes vote before it counts as verified. You can help by confirming if you're within 1 km.",
+    "waiting": "10 different people must back this spot with a photo or a yes vote before it counts as verified. You can help by confirming if you're within {{voteKm}} km.",
     "verified": "10 different people backed this spot with a photo or a yes vote. Residents can now draft a letter to the local body and file it themselves.",
     "verifiedClosed": "10 different people backed this spot with a photo or a yes vote before it left the map.",
     "clearing": "Someone says this spot is cleared. It leaves the map once {{needed}} different people say so; if you've seen it, say whether it's cleared or still there.",
@@ -257,7 +257,7 @@
       "photosReported": "Several people reported its photos, so this site left the map. It takes no more votes, photos or letters.",
       "expired": "This site expired and left the map. If the waste is still there, report it again with a new photo.",
       "rejected": "Neighbours said this is not a waste site, so it was hidden from the map. It takes no more votes or letters.",
-      "rejectedNoBin": "Neighbours said there is a bin within 1 km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",
+      "rejectedNoBin": "Neighbours said there is a bin within {{zoneKm}} km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",
       "cleaned": "It was cleared, so it left the map. If the waste is back, report it with a new photo.",
       "cleanedByVotes": "Neighbours said it's cleared now, so it left the map. If the waste is back, report it with a new photo.",
       "cleanedByPhoto": "Three people said it's cleared, at least one with a cleanup photo, so it left the map. If the waste is back, report it with a new photo.",
@@ -441,7 +441,7 @@
     "title": "Areas",
     "close": "Close areas",
     "closeArea": "Close area",
-    "intro": "Scores for wards, seats and districts. A score shows only after 10 verified reports.",
+    "intro": "Scores for wards, seats and districts. A score shows only after {{minReports}} verified reports.",
     "search": "Find an area",
     "none": "Wards and seats show here once someone reports a site in them.",
     "noMatch": "No area matches that name.",
@@ -665,14 +665,14 @@
   },
   "vote": {
     "title": "Is this a waste site?",
-    "text": "Neighbours confirm reports. Your vote counts when you are within 1 km of the site.",
+    "text": "Neighbours confirm reports. Your vote counts when you are within {{voteKm}} km of the site.",
     "yes": "Yes, it's waste",
     "no": "No",
     "thanks": "Thanks. Votes now: {{yes}} yes, {{no}} no, {{cleared}} cleared.",
     "errors": {
       "own_site": "You reported this site, so your vote is not counted here.",
       "site_rejected": "This site was hidden after a neighbour check, so it takes no more votes.",
-      "too_far": "Votes count only within 1 km of the site. Go closer and try again.",
+      "too_far": "Votes count only within {{voteKm}} km of the site. Go closer and try again.",
       "location": "Your location is needed to vote. Allow location in the browser settings.",
       "rate_limited": "Too many tries. Wait a little and try again.",
       "offline": "No connection. Try again when you are online.",
@@ -682,9 +682,9 @@
       "not_found": "This site was withdrawn by its reporter or expired after 90 days without activity, so it takes no more votes."
     },
     "noBin": {
-      "title": "Is there no dustbin within 1 km?",
-      "text": "Neighbours confirm no-bin zones. Your answer counts when you are within 1 km.",
-      "yes": "I confirm there's no bin within 1 km",
+      "title": "Is there no dustbin within {{zoneKm}} km?",
+      "text": "Neighbours confirm no-bin zones. Your answer counts when you are within {{voteKm}} km.",
+      "yes": "I confirm there's no bin within {{zoneKm}} km",
       "cleaned": "There's a bin here now",
       "thanks": "Thanks. Answers now: {{yes}} no bin, {{no}} no, {{cleared}} bin here now."
     },
@@ -694,7 +694,7 @@
     "title": "Report cleaned",
     "sentTitle": "Cleanup photo sent",
     "close": "Close cleanup",
-    "text": "Take a photo of the cleared place from where the waste was. It must be within 50 m of the site.",
+    "text": "Take a photo of the cleared place from where the waste was. It must be within {{cleanupM}} m of the site.",
     "photoAlt": "Your photo of the cleared place",
     "send": "Send cleanup photo",
     "sending": "Sending",
@@ -753,7 +753,7 @@
     },
     "errors": {
       "not_verified": "Letters open once the site is verified.",
-      "not_verified_area": "Letters open once this area has 10 verified reports for this issue.",
+      "not_verified_area": "Letters open once this area has {{minReports}} verified reports for this issue.",
       "no_local_body": "No local body is known for this place yet, so there is no one to address.",
       "rate_limited": "You can draft 5 letters an hour. Try again later.",
       "not_found": "This site was not found.",
@@ -761,8 +761,8 @@
       "failed": "The letter could not be drafted. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more.",
       "notEnough": "Not enough verified reports yet ({{n}} of {{min}}) for this issue in this area.",
-      "noBinLeftOut_one": "No-bin zones left out: fewer than 10 people have confirmed no dustbin within 1 km ({{count}} zone).",
-      "noBinLeftOut_other": "No-bin zones left out: fewer than 10 people have confirmed no dustbin within 1 km ({{count}} zones).",
+      "noBinLeftOut_one": "No-bin zones left out: fewer than 10 people have confirmed no dustbin within {{zoneKm}} km ({{count}} zone).",
+      "noBinLeftOut_other": "No-bin zones left out: fewer than 10 people have confirmed no dustbin within {{zoneKm}} km ({{count}} zones).",
       "area_not_found": "No reported sites in this area yet."
     },
     "copyFailed": "Could not copy. Select the letter text and copy it yourself.",
@@ -831,7 +831,7 @@
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats with 10+ verified reports are coloured by score instead.",
     "legendChip": "Legend",
-    "caveat": "Scores after 10 verified reports",
+    "caveat": "Scores after {{minReports}} verified reports",
     "outdated": "Dashed outline: seat boundary out of date",
     "tooltipScorePilot": "{{name}}: score {{n}} of 100, from {{reports}} verified reports. Pilot city",
     "keyPilot": "Flag: pilot city data",
@@ -842,7 +842,7 @@
     "open": "City ranking",
     "title": "{{city}} ranking",
     "close": "Close ranking",
-    "intro": "Areas worst first by the mean of their shown scores. A score shows only after 10 verified reports; areas without one come last, unranked.",
+    "intro": "Areas worst first by the mean of their shown scores. A score shows only after {{minReports}} verified reports; areas without one come last, unranked.",
     "cityLabel": "City",
     "kindLabel": "Area type",
     "city": {
@@ -882,8 +882,8 @@
       "overflowing_bin": "Overflowing or broken bins",
       "all": "All issues"
     },
-    "locked": "Letters open once this area has 10 verified reports.",
-    "lockedShort": "Opens at 10 verified reports",
+    "locked": "Letters open once this area has {{minReports}} verified reports.",
+    "lockedShort": "Opens at {{minReports}} verified reports",
     "tooFew": {
       "waste_dump": "{{n}} of {{min}} verified waste-dump reports. A letter needs {{min}}.",
       "no_bin": "{{n}} of {{min}} verified no-bin reports. A letter needs {{min}}.",
@@ -961,7 +961,7 @@
     },
     "start": {
       "title": "Fair scores, open to everyone",
-      "scores": "Every area score shows its counts, and appears only after 10 verified reports. Jodhpur is the pilot city, so its data goes deepest.",
+      "scores": "Every area score shows its counts, and appears only after {{minReports}} verified reports. Jodhpur is the pilot city, so its data goes deepest.",
       "text": "Anyone can explore the map and the areas. To snap, scan, confirm or draft a letter, sign in first."
     }
   },
@@ -1027,9 +1027,9 @@
     }
   },
   "nobin": {
-    "title": "No dustbin within 1 km of here?",
+    "title": "No dustbin within {{zoneKm}} km of here?",
     "text": "Report it from where you stand. 10 different people make it a verified no-bin zone.",
-    "send": "There is no dustbin within 1 km of here",
+    "send": "There is no dustbin within {{zoneKm}} km of here",
     "accuracy": "Location accurate to {{metres}} m",
     "tooVague": "Location is only accurate to {{metres}} m; move into the open until it is 50 m or better.",
     "waiting": "Finding your location",
@@ -1234,7 +1234,7 @@
     "busy": "One moment, it is on its way.",
     "checking": "Checking…",
     "offline": "You're offline. Try again once you're connected.",
-    "tooFarCleanup": "Go within 50 m of the site to send a cleanup photo.",
+    "tooFarCleanup": "Go within {{cleanupM}} m of the site to send a cleanup photo.",
     "noteEmpty": "Write your note first.",
     "pickPlace": "Pick where it is first.",
     "sessionExpired": "Your sign-in has expired. Sign in again and we'll finish what you started.",
@@ -1248,7 +1248,7 @@
     },
     "siteClosed": "This site is off the map, so it takes no more letters or cleanup photos.",
     "back": "Back",
-    "tooFarReport": "Move within 1 km of the site to report a photo."
+    "tooFarReport": "Move within {{flagKm}} km of the site to report a photo."
   },
   "toast": {
     "dismiss": "Dismiss"
@@ -1293,7 +1293,7 @@
       "failed": "The report did not go through. Try again.",
       "sign_in": "Your sign-in has expired. Sign in again and try once more.",
       "location": "Your location is needed to report a photo. Allow location in the browser settings.",
-      "too_far": "Photo reports count only within 1 km of the site. Go closer and try again."
+      "too_far": "Photo reports count only within {{flagKm}} km of the site. Go closer and try again."
     }
   },
   "browse": {

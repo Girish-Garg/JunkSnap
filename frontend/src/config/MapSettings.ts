@@ -1,7 +1,7 @@
 import { BBox } from '../domain/BBox';
 import type { LonLat } from '../domain/Site';
 import { EnvReader } from './EnvReader';
-import type { EnvVars } from './EnvVar';
+import type { EnvVars, GroupCheck } from './EnvVar';
 import { Vars } from './Vars';
 
 /** The basemap, the opening view on the pilot city, how a view loads its sites, and the map's own timings. */
@@ -50,12 +50,14 @@ export interface MapSettings {
 }
 
 const zoom = (name: string, fallback: number) => Vars.number(name, fallback, { min: 0, max: 22 });
+// One GET /sites over the pilot city loads it all: the api allows 1 by 1 degree, less the query's rounding.
+const ONE_QUERY_DEG = 0.99;
 
 export const MAP_VARS: EnvVars<MapSettings> = {
   styleUrl: Vars.url('VITE_MAP_STYLE_URL', 'https://tiles.openfreemap.org/styles/positron'),
   boundariesPath: Vars.folder('VITE_BOUNDARIES_PATH', 'boundaries/'),
   pilotCentre: Vars.lonLat('VITE_PILOT_CENTRE', [73.02, 26.27]),
-  pilotBounds: Vars.box('VITE_PILOT_BOUNDS', new BBox(72.96, 26.22, 73.08, 26.36)),
+  pilotBounds: Vars.box('VITE_PILOT_BOUNDS', new BBox(72.96, 26.22, 73.08, 26.36), ONE_QUERY_DEG),
   pilotZoom: zoom('VITE_PILOT_ZOOM', 12),
   siteZoom: zoom('VITE_MAP_SITE_ZOOM', 14),
   minZoom: zoom('VITE_MAP_MIN_ZOOM', 4),
@@ -74,5 +76,14 @@ export const MAP_VARS: EnvVars<MapSettings> = {
   pinStackRadiusM: Vars.number('VITE_PIN_STACK_RADIUS_M', 20, { min: 0, max: 1000 }),
   pinStackOverlapPx: Vars.count('VITE_PIN_STACK_OVERLAP_PX', 40, 500, 0),
 };
+
+/** The map opens on the pilot city, so its centre lies inside its bounds. */
+export const MAP_CHECKS: readonly GroupCheck<MapSettings>[] = [
+  {
+    fields: ['pilotCentre', 'pilotBounds'],
+    holds: ({ pilotCentre, pilotBounds }) => pilotBounds.contains(pilotCentre),
+    says: 'VITE_PILOT_CENTRE must lie inside VITE_PILOT_BOUNDS',
+  },
+];
 
 export const MAP_DEFAULTS: MapSettings = EnvReader.defaults(MAP_VARS);

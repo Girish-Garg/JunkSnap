@@ -6,7 +6,8 @@ Stack: React 19.3, Vite 8.3, TypeScript 6.0.3 (`strict: true`; not 7, because ty
 
 ## Layout (docs/working.md section 1)
 
-- `src/app/`: `App.tsx`, routes and the `ServiceContainer` (the one place that builds services).
+- `src/app/`: `App.tsx`, routes and the `ServiceContainer` (the one place that builds services), `AppConfig` (reads the build's `VITE_` variables once) and `useConfig()`.
+- `src/config/`: the tunables in groups (site rules, map, capture, network, caches, UI timing, limits), each with its default and range; documented in `.env.example`.
 - `src/domain/`: types that mirror `contracts/schemas/`, plus small domain classes.
 - `src/services/`: classes such as `ApiClient`, `UploadQueue`, `CameraCapture`, `GeoLocator`, `CapabilityProbe`, `ScanController`, `EdgeDetector`.
 - `src/features/<name>/`: `snap`, `scan`, `map`, `site`, `community`, `area`, `letters`, each with `components/` and `hooks/`.

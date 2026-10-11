@@ -1,4 +1,5 @@
 import { LanguagePreference, type KeyValueStore } from '../i18n/LanguagePreference';
+import { CopyNumbers } from '../i18n/CopyNumbers';
 import { Localization } from '../i18n/Localization';
 import { LayerRegistry } from '../layers/LayerRegistry';
 import type { ApiClient } from '../services/ApiClient';
@@ -145,7 +146,7 @@ export class ServiceContainer implements Services {
       api: API_CLIENT_BUILDERS[config.apiMode](config, siteCaches),
       areas: new CachedAreaApi(AREA_BUILDERS[config.apiMode](config), new ExpiringCache(CachedAreaApi.policy(config.cache), clock)),
       auth,
-      localization: new Localization(new LanguagePreference(browser.store)),
+      localization: new Localization(new LanguagePreference(browser.store), CopyNumbers.of(config.site)),
       ...ServiceContainer.#map(config, clock),
       locator: new GeoLocator(browser.geolocation, browser.permissions, config.capture),
       sharer: new Sharer(browser.share),

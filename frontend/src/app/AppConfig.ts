@@ -2,9 +2,9 @@ import { CACHE_VARS, type CacheSettings } from '../config/CacheSettings';
 import { CAPTURE_VARS, type CaptureSettings } from '../config/CaptureSettings';
 import { EnvReader, type EnvSource, type Warn } from '../config/EnvReader';
 import { LIMIT_VARS, type ListLimits } from '../config/ListLimits';
-import { MAP_VARS, type MapSettings } from '../config/MapSettings';
+import { MAP_CHECKS, MAP_VARS, type MapSettings } from '../config/MapSettings';
 import { NETWORK_VARS, type NetworkSettings } from '../config/NetworkSettings';
-import { SITE_RULE_VARS, type SiteRules } from '../config/SiteRules';
+import { SITE_RULE_CHECKS, SITE_RULE_VARS, type SiteRules } from '../config/SiteRules';
 import { UI_VARS, type UiTimings } from '../config/UiTimings';
 import { ConfigError } from '../domain/ConfigError';
 import { PilotCity } from '../domain/PilotCity';
@@ -109,8 +109,8 @@ export class AppConfig implements Tuning {
 
   static #tuning(reader: EnvReader): Tuning {
     return {
-      site: reader.group(SITE_RULE_VARS),
-      map: reader.group(MAP_VARS),
+      site: reader.group(SITE_RULE_VARS, SITE_RULE_CHECKS),
+      map: reader.group(MAP_VARS, MAP_CHECKS),
       capture: reader.group(CAPTURE_VARS),
       network: reader.group(NETWORK_VARS),
       cache: reader.group(CACHE_VARS),

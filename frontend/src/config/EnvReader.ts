@@ -1,5 +1,5 @@
 import { BBox } from '../domain/BBox';
-import type { EnvVar, EnvVars } from './EnvVar';
+import type { EnvVar, EnvVars, GroupCheck } from './EnvVar';
 
 /** The variables Vite baked into the build (import.meta.env), or a plain object in tests. */
 export type EnvSource = Readonly<Record<string, unknown>>;
@@ -35,14 +35,23 @@ export class EnvReader {
     return variable.fallback;
   }
 
-  /** Every variable of a group, as one frozen settings object. */
-  group<T>(vars: EnvVars<T>): T {
-    return EnvReader.#build(vars, (variable) => this.read(variable));
+  /** Every variable of a group, as one frozen settings object; a combination a check refuses takes its defaults. */
+  group<T>(vars: EnvVars<T>, checks: readonly GroupCheck<T>[] = []): T {
+    const group = EnvReader.#build(vars, (variable) => this.read(variable));
+    return checks.reduce((current, check) => this.#checked(current, vars, check), group);
   }
 
   /** A group's defaults, as if no variable were set. */
   static defaults<T>(vars: EnvVars<T>): T {
     return EnvReader.#build(vars, (variable) => variable.fallback);
+  }
+
+  #checked<T>(group: T, vars: EnvVars<T>, check: GroupCheck<T>): T {
+    if (check.holds(group)) return group;
+    const names = check.fields.map((field) => vars[field].name).join(' and ');
+    this.#warn(`[config] ${check.says}; using the defaults for ${names}`);
+    const defaults = Object.fromEntries(check.fields.map((field) => [field, vars[field].fallback]));
+    return Object.freeze({ ...group, ...defaults });
   }
 
   static #build<T>(vars: EnvVars<T>, value: (variable: EnvVar<unknown>) => unknown): T {

@@ -38,14 +38,26 @@ describe('AppConfig defaults', () => {
     expect(warnings).toEqual([]);
     expect(config.site).toMatchObject({ voteRadiusM: 1000, flagRadiusM: 1000, cleanupRadiusM: 50, targetGroundMaxM: 300, targetMaxM: 500, minVerifiedReports: 10 });
     expect(config.map).toMatchObject({ styleUrl: 'https://tiles.openfreemap.org/styles/positron', boundariesPath: 'boundaries/', pilotZoom: 12, thinMax: 2 });
+    expect(config.map).toMatchObject({ loadingAfterMs: 600, slowAfterMs: 8000, pinStackOverlapPx: 40 });
     expect(config.map.tileSpanDeg * config.map.tilesPerSide).toBeCloseTo(3.96);
     expect(config.pilot.centre).toEqual([73.02, 26.27]);
     expect(config.pilot.bounds).toEqual(new BBox(72.96, 26.22, 73.08, 26.36));
-    expect(config.capture).toMatchObject({ fixMaxAgeMs: 10_000, staleFixFallbackMs: 15_000, gpsMaxAgeMs: 5_000, scanMaxDurationMs: 60_000, scanMaxBytes: 40 * 1024 * 1024, warmupBudgetMs: 150 });
-    expect(config.network).toMatchObject({ requestTimeoutMs: 75_000, putBaseTimeoutMs: 30_000, putMaxTimeoutMs: 900_000, retryFirstMs: 30_000, retryMaxMs: 600_000, presignReuseMs: 240_000 });
     expect(config.cache).toMatchObject({ areaListTtlMs: 300_000, boundaryIndexTtlMs: 600_000, activityTtlMs: 60_000, activitySyncMs: 15_000, reportPollMs: 4_000 });
-    expect(config.ui).toMatchObject({ toastMs: 4_500, copiedMs: 2_500 });
+    expect(config.ui).toMatchObject({ toastMs: 4_500, copiedMs: 2_500, checkLimitMs: 8_000 });
     expect(config.limits).toEqual({ mailtoMaxLength: 1800, searchResults: 6, listPageSize: 30 });
+  });
+
+  it('keeps the capture and network timings the app had', () => {
+    const { capture, network } = read({}).config;
+    expect(capture).toMatchObject({ fixMaxAgeMs: 10_000, staleFixFallbackMs: 15_000, gpsMaxAgeMs: 5_000, gpsTimeoutMs: 30_000, freshFixMs: 120_000 });
+    expect(capture).toMatchObject({ currentFixMaxAgeMs: 10_000, currentFixTimeoutMs: 20_000, locateMaxAgeMs: 60_000, locateTimeoutMs: 10_000 });
+    expect(capture).toMatchObject({ scanMaxDurationMs: 60_000, scanMaxBytes: 40 * 1024 * 1024, warmupBudgetMs: 150 });
+    expect(network).toMatchObject({ requestTimeoutMs: 75_000, putBaseTimeoutMs: 30_000, putMaxTimeoutMs: 900_000, presignReuseMs: 240_000 });
+    expect(network).toMatchObject({ retryOfflineMs: 30_000, retryRateLimitedMs: 300_000, retryFirstMs: 30_000, retryMaxMs: 600_000 });
+  });
+
+  it('stacks pins within 20 m, as the human asked (it was 15 m)', () => {
+    expect(read({}).config.map.pinStackRadiusM).toBe(20);
   });
 });
 
@@ -96,6 +108,9 @@ const BAD_VALUES: readonly (readonly [string, string])[] = [
   ['VITE_TOAST_MS', '-5'],
   ['VITE_TOAST_MS', '1e3'],
   ['VITE_TOAST_MS', '12.5'],
+  ['VITE_TOAST_MS', '4__500'],
+  ['VITE_TOAST_MS', '_4500'],
+  ['VITE_TOAST_MS', '4500_'],
   ['VITE_SCAN_MAX_DURATION_MS', '90000'],
   ['VITE_SITE_TILE_DEG', '1.5'],
   ['VITE_PHOTO_JPEG_QUALITY', '2'],
@@ -107,6 +122,7 @@ const BAD_VALUES: readonly (readonly [string, string])[] = [
   ['VITE_PILOT_CENTRE', '200,26'],
   ['VITE_PILOT_BOUNDS', '73.08,26.22,72.96,26.36'],
   ['VITE_PILOT_BOUNDS', '72.96,26.22,73.08'],
+  ['VITE_PILOT_BOUNDS', '72.5,26,73.6,26.5'],
 ];
 
 describe('AppConfig bad values', () => {
@@ -119,6 +135,19 @@ describe('AppConfig bad values', () => {
     expect(config.ui).toEqual(defaults.ui);
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain(`${name}="${value}" is not valid; using the default`);
+  });
+
+  it.each([
+    [{ VITE_PILOT_CENTRE: '75.79,26.91' }, 'VITE_PILOT_CENTRE must lie inside VITE_PILOT_BOUNDS'],
+    [{ VITE_PILOT_BOUNDS: '75.7,26.8,75.9,27.0' }, 'VITE_PILOT_CENTRE must lie inside VITE_PILOT_BOUNDS'],
+    [{ VITE_TARGET_MARGIN_M: '500' }, 'VITE_TARGET_MARGIN_M must be below VITE_TARGET_MAX_M'],
+    [{ VITE_TARGET_MAX_M: '8', VITE_TARGET_MARGIN_M: '10' }, 'VITE_TARGET_MARGIN_M must be below VITE_TARGET_MAX_M'],
+  ])('a combination that cannot work (%o) warns and takes the defaults of both', (env, says) => {
+    const { config, warnings } = read(env);
+    const defaults = read({}).config;
+    expect(config.pilot).toEqual(defaults.pilot);
+    expect(config.site).toEqual(defaults.site);
+    expect(warnings).toEqual([expect.stringContaining(`${says}; using the defaults for`)]);
   });
 
   it('still refuses endpoints that cannot work, since live mode cannot guess them', () => {

@@ -44,7 +44,8 @@ export class Vars {
     return { name, fallback, parse: (text) => EnvParsers.lonLat(text) };
   }
 
-  static box(name: string, fallback: BBox): EnvVar<BBox> {
-    return { name, fallback, parse: (text) => EnvParsers.box(text) };
+  /** A box, each side at most maxSpanDeg degrees. */
+  static box(name: string, fallback: BBox, maxSpanDeg?: number): EnvVar<BBox> {
+    return { name, fallback, parse: (text) => EnvParsers.box(text, maxSpanDeg) };
   }
 }
