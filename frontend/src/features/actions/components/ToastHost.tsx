@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '../../../ui/Button';
 import { Icon } from '../../../ui/Icon';
 import { IconButton } from '../../../ui/IconButton';
 import { ToastSlot } from '../../../ui/ToastSlot';
@@ -13,7 +14,7 @@ import '../actions.css';
  */
 export function ToastHost() {
   const { t } = useTranslation();
-  const { current, dismiss } = useToast();
+  const { current, dismiss, act } = useToast();
   const order = useToastOrder(current?.id ?? null);
   return (
     <ToastSlot>
@@ -23,7 +24,17 @@ export function ToastHost() {
             <span className="app-toast__icon">
               <Icon name="info" size={20} />
             </span>
-            <p className="app-toast__text">{t(current.key, current.params)}</p>
+            <div className="app-toast__body">
+              <p className="app-toast__text">
+                {t(current.key, current.params)}
+                {current.detail && ` ${t(current.detail)}`}
+              </p>
+              {current.action && (
+                <Button variant="text" size="small" onClick={act}>
+                  {t(current.action.key)}
+                </Button>
+              )}
+            </div>
             <IconButton icon="close" label={t('toast.dismiss')} onClick={dismiss} />
           </div>
         )}

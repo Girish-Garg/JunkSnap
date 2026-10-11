@@ -1,7 +1,8 @@
-import { LocationError } from '../domain/LocationError';
+import { LocationError, type LocationProblem } from '../domain/LocationError';
 import type { LonLat } from '../domain/Site';
 
-const PERMISSION_DENIED = 1;
+// GeolocationPositionError codes: PERMISSION_DENIED 1, POSITION_UNAVAILABLE 2 (the phone's location is off), TIMEOUT 3.
+const PROBLEMS: Readonly<Partial<Record<number, LocationProblem>>> = { 1: 'denied', 3: 'timeout' };
 const TIMEOUT_MS = 10_000;
 
 /** The one Permissions API call the quiet locate needs; absent in old browsers and in tests. */
@@ -14,6 +15,11 @@ export class GeoLocator {
   constructor(geolocation: Geolocation | undefined, permissions?: PermissionQuery) {
     this.#geolocation = geolocation;
     this.#permissions = permissions;
+  }
+
+  /** Whether this browser has the location API at all. */
+  canLocate(): boolean {
+    return this.#geolocation !== undefined;
   }
 
   /** Whether locateIfAllowed can ever find a fix: it needs both the location and the Permissions APIs. */
@@ -47,7 +53,6 @@ export class GeoLocator {
   }
 
   static #translate(error: GeolocationPositionError): LocationError {
-    const problem = error.code === PERMISSION_DENIED ? 'denied' : 'unavailable';
-    return new LocationError(problem, error.message);
+    return new LocationError(PROBLEMS[error.code] ?? 'unavailable', error.message);
   }
 }

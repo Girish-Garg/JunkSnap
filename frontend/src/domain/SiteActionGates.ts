@@ -20,7 +20,7 @@ export interface SiteActionFacts extends SessionFacts {
   readonly distanceM: number | null;
   /** The first fix is on its way, so a null distanceM means not known yet rather than none to be had. */
   readonly locating?: boolean;
-  /** The browser said no to location, and a vote sends a fresh fix. */
+  /** Location is blocked for the web page or the Android app, so no distance can be checked (LocationAccess). */
   readonly locationDenied: boolean;
   /** The farthest a photo can still join this site from, up high (SitePhotoPreset.limitM); Send checks the photo's own fix. */
   readonly addPhotoLimitM: number;
@@ -44,6 +44,15 @@ const tooFar = (limit: Limit, reason: string): Rule => (facts) => {
 };
 const within = (metres: number): Limit => () => metres;
 
+// Right after "too far": with location blocked no distance can be checked, so the tap says how to allow it.
+const locationOff = (limit: Limit, reason: string): Rule => (facts) =>
+  facts.locationDenied ? blocked(reason, { limit: limit(facts) }, 'allowLocation') : null;
+
+const located = (limit: Limit, tooFarReason: string, offReason: string): readonly Rule[] => [
+  tooFar(limit, tooFarReason),
+  locationOff(limit, offReason),
+];
+
 // A deep link can open a letter or cleanup sheet for a site that already left the map.
 const offMap = (reason = 'gate.siteClosed'): Rule => GateRules.when((facts) => !SiteListing.onMap(facts.site), reason);
 
@@ -51,8 +60,7 @@ const VOTE: readonly Rule[] = [
   GateRules.busy(),
   GateRules.when((facts) => facts.ownSite, 'vote.errors.own_site'),
   GateRules.waitWhile((facts) => facts.checkingOwner === true, CHECKING),
-  tooFar(within(VOTE_RADIUS_M), 'vote.errors.too_far'),
-  GateRules.when((facts) => facts.locationDenied, 'vote.errors.location'),
+  ...located(within(VOTE_RADIUS_M), 'vote.errors.too_far', 'gate.locationOff.vote'),
   GateRules.cooling('vote', 'vote.errors.rate_limited'),
   GateRules.offline(),
   GateRules.signIn('gate.signIn.vote'),
@@ -68,7 +76,7 @@ export const SITE_GATES = {
     GateRules.busy(),
     offMap(),
     GateRules.when((facts) => facts.site.cleanup_status === 'checking', 'cleanup.errors.cleanup_pending'),
-    tooFar(within(CLEANUP_RADIUS_M), 'gate.tooFarCleanup'),
+    ...located(within(CLEANUP_RADIUS_M), 'gate.tooFarCleanup', 'gate.locationOff.cleanup'),
     GateRules.cooling('cleanup', 'cleanup.errors.rate_limited'),
     GateRules.offline(),
     GateRules.signIn('gate.signIn.cleanup'),
@@ -85,13 +93,13 @@ export const SITE_GATES = {
   // No offline rule: Snap saves the photo on the phone and sends it later, so blocking offline would lose reports.
   addPhoto: new ActionGate<SiteActionFacts>([
     offMap('addPhoto.closed'),
-    tooFar((facts) => facts.addPhotoLimitM, 'addPhoto.tooFar'),
+    ...located((facts) => facts.addPhotoLimitM, 'addPhoto.tooFar', 'gate.locationOff.addPhoto'),
     GateRules.signIn('addPhoto.signIn'),
   ]),
   // "Report this photo" (#133): within 1 km of the site, by the same fresh-fix rule as a vote, and signed in.
   reportPhoto: new ActionGate<SiteActionFacts>([
     offMap(),
-    tooFar(within(VOTE_RADIUS_M), 'gate.tooFarReport'),
+    ...located(within(VOTE_RADIUS_M), 'gate.tooFarReport', 'gate.locationOff.reportPhoto'),
     GateRules.cooling('reportPhoto', 'photoReport.errors.rate_limited'),
     GateRules.signIn('gate.signIn.reportPhoto'),
   ]),
@@ -105,6 +113,14 @@ export const SITE_GATES = {
   // Writing needs neither a connection nor a session; Send asks for both, and what was typed stays.
   note: new ActionGate<SiteActionFacts>([GateRules.cooling('note', 'notes.errors.rate_limited')]),
 } as const;
+
+/** The actions that rest on where the person is: a tap without a fresh fix takes one first (it may ask for location). */
+export const LOCATED_GATES: ReadonlySet<ActionGate<SiteActionFacts>> = new Set([
+  SITE_GATES.vote,
+  SITE_GATES.cleanup,
+  SITE_GATES.addPhoto,
+  SITE_GATES.reportPhoto,
+]);
 
 export interface NoteFacts extends SessionFacts {
   readonly empty: boolean;

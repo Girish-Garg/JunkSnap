@@ -1,8 +1,9 @@
 /**
  * signIn: the reason goes away after sign-in, so a tap opens it and then runs the action.
  * relocate: the reason rests on a location fix, so a tap takes a fresh one and runs the action if it is in range.
+ * allowLocation: location is blocked, so a tap says where to allow it (the app's settings, or the browser's and Try again).
  */
-export type Remedy = 'signIn' | 'relocate';
+export type Remedy = 'signIn' | 'relocate' | 'allowLocation';
 
 export interface Blocked {
   readonly enabled: false;

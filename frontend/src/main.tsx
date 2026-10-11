@@ -26,6 +26,7 @@ const services = ServiceContainer.build(AppConfig.fromEnv(import.meta.env), {
   root: document.documentElement,
   geolocation: navigator.geolocation,
   permissions: navigator.permissions,
+  host: window,
   share: navigator,
   mediaDevices: navigator.mediaDevices,
   crypto: window.crypto,
