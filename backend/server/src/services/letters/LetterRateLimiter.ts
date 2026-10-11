@@ -1,6 +1,7 @@
 import { RateLimitedError } from "../../domain/letters/errors.js";
 import type { Requester } from "../../domain/letters/types.js";
 import type { LetterCounter } from "../../ports/letters/LetterCounter.js";
+import type { Logger } from "../../ports/Logger.js";
 
 const LETTERS_PER_HOUR = 5;
 const HOUR_MS = 3_600_000;
@@ -14,9 +15,11 @@ export class LetterRateLimiter {
   readonly #counters: LetterCounters;
   readonly #limit: number;
   readonly #noun: string;
+  readonly #logger: Logger;
 
-  constructor(counters: LetterCounters, limit: number = LETTERS_PER_HOUR, noun = "letters") {
+  constructor(counters: LetterCounters, logger: Logger, limit: number = LETTERS_PER_HOUR, noun = "letters") {
     this.#counters = counters;
+    this.#logger = logger;
     this.#limit = limit;
     this.#noun = noun;
   }
@@ -30,13 +33,29 @@ export class LetterRateLimiter {
     }
   }
 
-  // Checks every counter before recording in any, so a refused letter uses up nothing.
+  // All counters or none: a counter that fills or fails meanwhile gives back the ones already taken, so a refusal uses up nothing.
   async take(requester: Requester, now: Date): Promise<void> {
     await this.fits(requester, now);
-    const request = (key: string) => this.#request(key, now);
-    for (const [counter, key] of this.#counted(requester)) {
-      if (!(await counter.take(request(key)))) {
-        this.#refuse();
+    const taken: (readonly [LetterCounter, string])[] = [];
+    try {
+      for (const [counter, key] of this.#counted(requester)) {
+        if (!(await counter.take(this.#request(key, now)))) {
+          this.#refuse();
+        }
+        taken.push([counter, key]);
+      }
+    } catch (error) {
+      await this.#giveBack(taken, now);
+      throw error;
+    }
+  }
+
+  // A slot that cannot be given back stays spent until its window ends; the caller still gets the original error.
+  async #giveBack(taken: readonly (readonly [LetterCounter, string])[], now: Date): Promise<void> {
+    const results = await Promise.allSettled(taken.map(([counter, key]) => counter.release(this.#request(key, now))));
+    for (const result of results) {
+      if (result.status === "rejected") {
+        this.#logger.warn({ error: result.reason, limit: this.#noun }, "could not give back a rate-limit slot");
       }
     }
   }

@@ -209,13 +209,15 @@ describe("DynamoScoreLister", () => {
     const row = rowOf(sample);
     return { area_kind: row.area.kind, area_id: row.area.id, within: ["rajasthan-jodhpur", "jodhpur-mc"], ...row };
   };
+  const sink = new LogSink();
+  const logger = new JsonLoggerFactory(sink).create({ service: "api", stage: "dev" });
 
   it("queries the kind's partition filtered on within, reads every page and strips the table fields", async () => {
     const fake = new FakeDocumentClient([
       { Items: [itemOf("jdh-1")], LastEvaluatedKey: { area_kind: "assembly", area_id: "s20-ac-128" } },
       { Items: [itemOf("jpr-1")] },
     ]);
-    const rows = await new DynamoScoreLister(fake.asClient(), "junksnap-dev-scores").listWithin("assembly", "rajasthan-jodhpur");
+    const rows = await new DynamoScoreLister(fake.asClient(), "junksnap-dev-scores", logger).listWithin("assembly", "rajasthan-jodhpur");
     expect(rows).toEqual([rowOf("jdh-1"), rowOf("jpr-1")]);
     expect(fake.sent.every((command) => command instanceof QueryCommand)).toBe(true);
     expect((fake.sent[0] as QueryCommand).input).toEqual({
@@ -231,13 +233,19 @@ describe("DynamoScoreLister", () => {
 
   it("returns an empty list when nothing matches", async () => {
     const fake = new FakeDocumentClient([{ Items: [] }]);
-    expect(await new DynamoScoreLister(fake.asClient(), "t").listWithin("ward", "jodhpur-mc")).toEqual([]);
+    expect(await new DynamoScoreLister(fake.asClient(), "t", logger).listWithin("ward", "jodhpur-mc")).toEqual([]);
   });
 
-  it("throws InternalDataError for a stored row that breaks the contract, ExternalServiceError when the SDK fails", async () => {
-    const fake = new FakeDocumentClient([{ Items: [{ area_kind: "ward", area_id: "x", within: [], area: WARD }] }]);
-    await expect(new DynamoScoreLister(fake.asClient(), "t").listWithin("ward", "jodhpur-mc")).rejects.toThrow(InternalDataError);
+  it("skips a stored row that breaks the contract with a warning and lists the rest", async () => {
+    const broken = { area_kind: "ward", area_id: "x", within: [], area: WARD };
+    const fake = new FakeDocumentClient([{ Items: [broken, itemOf("jdh-1")] }]);
+    expect(await new DynamoScoreLister(fake.asClient(), "t", logger).listWithin("ward", "jodhpur-mc")).toEqual([rowOf("jdh-1")]);
+    const warned = sink.records().filter((record) => record.message === "skipped a malformed scores row");
+    expect(warned.map((record) => [record.level, record.area_kind, record.area_id])).toEqual([["WARN", "ward", "x"]]);
+  });
+
+  it("throws ExternalServiceError when the SDK fails", async () => {
     const failing = { send: async () => Promise.reject(new Error("AccessDenied")) } as unknown as DynamoDBDocumentClient;
-    await expect(new DynamoScoreLister(failing, "t").listWithin("ward", "jodhpur-mc")).rejects.toThrow(ExternalServiceError);
+    await expect(new DynamoScoreLister(failing, "t", logger).listWithin("ward", "jodhpur-mc")).rejects.toThrow(ExternalServiceError);
   });
 });

@@ -255,8 +255,15 @@ describe("VideoScanProcessor", () => {
   });
 
   it("marks the scan failed with retries_exhausted when the worker gives up", async () => {
-    await processor().markExhausted("scn_jpr_1");
+    expect(await processor().markExhausted("scn_jpr_1")).toBe(true);
     expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "failed", reason: "retries_exhausted" });
+  });
+
+  it("never fails a scan that a duplicate delivery finished meanwhile", async () => {
+    const scanProcessor = processor({ video: VIDEO });
+    await scanProcessor.process("scn_jpr_1");
+    expect(await scanProcessor.markExhausted("scn_jpr_1")).toBe(false);
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "done", reason: null });
   });
 
   it("still lists the frames it queued when the scan ends failed with retries_exhausted", async () => {

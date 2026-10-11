@@ -17,7 +17,7 @@ import { ReportStatusReader } from "../src/services/ReportStatusReader.js";
 import { SnapLimit } from "../src/services/SnapLimit.js";
 import { UploadPresigner } from "../src/services/UploadPresigner.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
-import { memoryCounters } from "./letters/support.js";
+import { memoryCounters, RecordingLogger } from "./letters/support.js";
 import { LogSink } from "./LogSink.js";
 import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, fixture, FixedClock, moderation, OTHER_DEVICE, upload } from "./reportFakes.js";
@@ -56,7 +56,7 @@ beforeEach(async () => {
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue, clock });
   const statuses = new ReportStatusReader(reports, BASE_URL, clock);
-  const limiter = new LetterRateLimiter(counters, 20, "confirmations");
+  const limiter = new LetterRateLimiter(counters, new RecordingLogger(), 20, "confirmations");
   const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: BASE_URL });
   const mine = fakeMine(reports, BASE_URL, clock);
   const plugins = [new ReportEndpoints({ presigner, intake, statuses, mine }, guard).plugin(), new ReportConfirmEndpoint(confirmer, guard).plugin()];

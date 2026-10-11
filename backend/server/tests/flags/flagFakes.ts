@@ -9,7 +9,7 @@ import type { NoteModerator } from "../../src/ports/moderation/NoteModerator.js"
 import { PhotoFlagService, type FlagRequest } from "../../src/services/flags/PhotoFlagService.js";
 import { LetterRateLimiter } from "../../src/services/letters/LetterRateLimiter.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
-import { memoryCounters } from "../letters/support.js";
+import { memoryCounters, RecordingLogger } from "../letters/support.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report } from "../sites/builders.js";
 import { FakeSiteRepository, FixedClock } from "../sites/fakes.js";
 import { FakeSiteReports } from "../sites/withdrawalFakes.js";
@@ -72,7 +72,7 @@ export interface FlagRig {
 export function flagRig(limit = 10, flags = new MemoryFlags()): FlagRig {
   const parts = { sites: new FakeSiteRepository(), rows: new FakeSiteReports(), flags };
   const checks = { moderator: new FakeModerator(), community: new RecordingTrigger() };
-  const limiter = new LetterRateLimiter(memoryCounters(), limit, "photo reports");
+  const limiter = new LetterRateLimiter(memoryCounters(), new RecordingLogger(), limit, "photo reports");
   const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry() });
   return { service, ...parts, ...checks };
 }

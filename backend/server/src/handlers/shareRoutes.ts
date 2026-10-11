@@ -16,13 +16,14 @@ import { AppHandoff } from "./share/AppHandoff.js";
 import { CheckedSiteSource } from "./share/CheckedSiteSource.js";
 import { ShareRoutes } from "./share/ShareRoutes.js";
 import { SiteServiceFactory } from "./sites/SiteServiceFactory.js";
+import { awsClientConfig } from "./utils.js";
 
 // Link previews for shared site and area links; open, read-only, and the same reads as GET /sites/{id} and area scores.
 export function buildShareRoutes(context: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const urls = new ShareUrls(ShareSettings.fromEnv(context.env, context.core));
     const sites = SiteServiceFactory.fromEnv(context.core, context.env, app.log).finder();
-    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
     const scores = new DynamoScoreRepository(client, AreaScoresSettings.fromEnv(context.env).scoresTable);
     const cards = new ShareCardService({
       sites: new CheckedSiteSource(sites),

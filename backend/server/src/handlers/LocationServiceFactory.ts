@@ -10,6 +10,7 @@ import { SeatResolver } from "../services/location/SeatResolver.js";
 import { AssetSettings } from "../settings/AssetSettings.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import type { Env } from "../settings/utils.js";
+import { awsClientConfig } from "./utils.js";
 
 // create() loads and indexes about 2 MB of boundaries: call it once per process and keep the service.
 export class LocationServiceFactory {
@@ -41,6 +42,6 @@ export class LocationServiceFactory {
   }
 
   #amazonLocation(): ReverseGeocoder {
-    return new GeoPlacesReverseGeocoder(new GeoPlacesClient({ region: this.#core.awsRegion }));
+    return new GeoPlacesReverseGeocoder(new GeoPlacesClient(awsClientConfig(this.#core.awsRegion)));
   }
 }

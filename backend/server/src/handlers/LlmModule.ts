@@ -10,6 +10,7 @@ import { ProviderRouter, type RouterOptions } from "../services/llm/ProviderRout
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import { LlmSettings } from "../settings/LlmSettings.js";
 import type { Env } from "../settings/utils.js";
+import { awsClientConfig } from "./utils.js";
 
 // Per attempt; the router's overall budget (45 s by default) caps the whole chain.
 const CALL_TIMEOUT_MS = 25_000;
@@ -20,7 +21,8 @@ export function buildProviderRouter(env: Env, core: CoreSettings, logger: Logger
   const settings = LlmSettings.fromEnv(env, core.stage);
   const prices = new PriceTable();
   const bedrock = new BedrockRuntimeClient({ region: core.awsRegion });
-  const secretsClient = new SecretsManagerClient({ region: core.awsRegion, requestHandler: { requestTimeout: SECRET_TIMEOUT_MS } });
+  const secretTimeouts = { requestTimeout: SECRET_TIMEOUT_MS, socketTimeout: SECRET_TIMEOUT_MS };
+  const secretsClient = new SecretsManagerClient(awsClientConfig(core.awsRegion, secretTimeouts));
   const factory = new ProviderFactory([
     new BedrockProviderBuilder(bedrock, prices, CALL_TIMEOUT_MS),
     new OpenAiProviderBuilder({
