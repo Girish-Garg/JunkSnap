@@ -86,7 +86,8 @@ spec:
     kind: Deployment
     name: ml
   minReplicas: 1
-  maxReplicas: 4
+  # Each pod requests 1792Mi and downloads about 420 MB of models; two are enough for the pilot.
+  maxReplicas: 2
   metrics:
     - type: Resource
       resource:

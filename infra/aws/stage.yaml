@@ -23,9 +23,14 @@ Conditions:
   IsDev: !Equals [!Ref Stage, dev]
 
 Resources:
+  # The field-audit data (KMS key, both buckets, every table, the user pool) is Retain: deleting or replacing the
+  # stack never deletes it. Outside dev the tables also have deletion protection; after judging, the human
+  # turns it off and deletes the retained resources by hand.
   # ---------- Encryption and storage ----------
   DataKey:
     Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: !Sub JunkSnap ${Stage} originals
       EnableKeyRotation: true
@@ -47,6 +52,8 @@ Resources:
 
   OriginalsBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub junksnap-${Stage}-originals-${AWS::AccountId}
       BucketEncryption:
@@ -84,6 +91,8 @@ Resources:
 
   PublicBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub junksnap-${Stage}-public-${AWS::AccountId}
       PublicAccessBlockConfiguration:
@@ -116,9 +125,12 @@ Resources:
   # ---------- DynamoDB (on demand) ----------
   ReportsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-reports
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: report_id, AttributeType: S }
         - { AttributeName: site_id, AttributeType: S }
@@ -147,9 +159,12 @@ Resources:
 
   CleanupsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-cleanups
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: cleanup_id, AttributeType: S }
       KeySchema:
@@ -157,9 +172,12 @@ Resources:
 
   ScansTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-scans
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: scan_id, AttributeType: S }
       KeySchema:
@@ -167,9 +185,12 @@ Resources:
 
   UsersTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-users
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: user_id, AttributeType: S }
       KeySchema:
@@ -177,9 +198,12 @@ Resources:
 
   SitesTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-sites
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: site_id, AttributeType: S }
         - { AttributeName: geohash4, AttributeType: S }
@@ -195,9 +219,12 @@ Resources:
 
   VotesTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-votes
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: site_id, AttributeType: S }
         - { AttributeName: device_token, AttributeType: S }
@@ -207,9 +234,12 @@ Resources:
 
   DevicesTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-devices
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: device_token, AttributeType: S }
       KeySchema:
@@ -217,9 +247,12 @@ Resources:
 
   ScoresTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-scores
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: area_kind, AttributeType: S }
         - { AttributeName: area_id, AttributeType: S }
@@ -230,9 +263,12 @@ Resources:
   # Residents' notes on sites: author hash only, never the author (decision 20261010-1630).
   NotesTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-notes
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: site_id, AttributeType: S }
         - { AttributeName: note_id, AttributeType: S }
@@ -243,9 +279,12 @@ Resources:
   # One row per district: the worker queues it, the crawler CronJob runs it (contracts README).
   CrawlsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub junksnap-${Stage}-crawls
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [IsDev, false, true]
       AttributeDefinitions:
         - { AttributeName: district_id, AttributeType: S }
       KeySchema:
@@ -288,6 +327,8 @@ Resources:
   # ---------- Accounts (the api checks JWTs against the public JWKS; no IAM needed) ----------
   UserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: !Sub junksnap-${Stage}-users
       UserPoolTier: LITE
@@ -388,6 +429,11 @@ Resources:
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
+              # POST /areas/{kind}/{id}/letters reads an area's sites with a filtered scan (DynamoAreaLetterSites).
+              - Sid: ScanSitesForAreaLetters
+                Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt SitesTable.Arn
               # POST /sites/{id}/notes writes one note and reads a site's notes; nothing else.
               - Sid: Notes
                 Effect: Allow

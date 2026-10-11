@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.example
+# Android signing keys (docs/android.md): never committed
+*.jks
+*.keystore
+*.p12
 
 # Node
 node_modules/

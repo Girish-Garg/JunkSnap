@@ -44,6 +44,9 @@ jobs:
         with:
           persist-credentials: false
 
+      # Tauri derives versionCode as major*1000000 + minor*1000 + patch, and Android never updates an app to a
+      # lower one. Manual runs are 0.0.<run> (versionCode <run>), tags app-v0.1.0 and up (1000 and up), so a
+      # manual build can never block the next tag release.
       - name: Version
         id: version
         shell: bash
@@ -53,8 +56,14 @@ jobs:
             if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo "::error::tag $GITHUB_REF_NAME must look like app-v1.2.3"; exit 1
             fi
+            if [[ "$version" == 0.0.* ]]; then
+              echo "::error::0.0.x is kept for manual builds; tag app-v0.1.0 or later"; exit 1
+            fi
           else
-            version="0.1.${GITHUB_RUN_NUMBER}"
+            if (( GITHUB_RUN_NUMBER > 999 )); then
+              echo "::error::run $GITHUB_RUN_NUMBER would reach versionCode 1000 (app-v0.1.0)"; exit 1
+            fi
+            version="0.0.${GITHUB_RUN_NUMBER}"
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Building $STAGE version $version"
