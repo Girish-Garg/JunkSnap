@@ -33,7 +33,7 @@ export function useMapPage(basemap: BasemapPhase) {
   const [mode, setMode] = useState<MapMode>('auto');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { loaded, sites, counts, partial } = useSiteData(view, filter);
-  const selection = useMapSelection(loaded.sites);
+  const selection = useMapSelection(loaded.sites, filtersOpen);
   const location = useLocate();
   const flash = useMapFlash();
   const { boundary, areaCard, layerBindings } = useMapLayers(mode, selection, location.position);

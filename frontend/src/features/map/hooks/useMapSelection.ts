@@ -1,17 +1,45 @@
 import { useCallback, useState } from 'react';
-import { useMatch } from 'react-router';
+import { useLocation, useMatch } from 'react-router';
 import { SITE_PATH, sitePath } from '../../../app/paths';
-import { useSheetNavigation } from '../../../app/useSheetNavigation';
+import { useSheetNavigation, type SheetNavigation } from '../../../app/useSheetNavigation';
+import { WorkSheets } from '../../../app/WorkSheets';
 import type { Place } from '../../../domain/PlaceSearch';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
+import { TopLayer } from '../../../ui/TopLayer';
 import { PlaceCamera, type CameraRequest } from '../CameraRequest';
 import { usePinPick } from './usePinPick';
 
+type StackPick = Pick<ReturnType<typeof usePinPick>, 'stack' | 'pickStack'>;
+
+/**
+ * A stack pin's list takes the place of whatever is open (a site, a tab, Filters): it shows only on the bare map
+ * with Filters closed, and a pick made with one of those open first closes it (back to the map, or Filters' own
+ * close). The list waits for that, so its history entry is never pushed while a step back is on its way, and it is
+ * never a level over or under another sheet: closing it, or the site picked from it, ends on the map. A sheet that
+ * holds work in progress (WorkSheets) is left alone: there the pick does nothing.
+ */
+function useStackOnMap({ stack, pickStack }: StackPick, sheets: SheetNavigation, filtersOpen: boolean): StackPick {
+  const { pathname } = useLocation();
+  const onMap = pathname === '/';
+  const listStack = useCallback(
+    (siteIds: readonly string[]) => {
+      if (WorkSheets.holds(pathname)) return;
+      pickStack(siteIds);
+      if (!onMap) sheets.up('/');
+      // Filters is the top layer whenever it is open beside the map (desktop); on phones the tap closed it already.
+      else if (filtersOpen) TopLayer.dismiss();
+    },
+    [pickStack, pathname, onMap, sheets, filtersOpen],
+  );
+  return { stack: onMap && !filtersOpen ? stack : null, pickStack: listStack };
+}
+
 /** Which site is previewed or open, which stack pin is listed, and where the camera should go. */
-export function useMapSelection(loaded: readonly SiteFeature[]) {
+export function useMapSelection(loaded: readonly SiteFeature[], filtersOpen = false) {
   const sheets = useSheetNavigation();
   const openId = useMatch(SITE_PATH)?.params.siteId ?? null;
-  const { preview, stack, setPreview, pick, pickStack } = usePinPick(loaded);
+  const { preview, setPreview, pick, ...stacks } = usePinPick(loaded);
+  const { stack, pickStack } = useStackOnMap(stacks, sheets, filtersOpen);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const showSite = useCallback((site: SiteFeature) => setCamera({ points: [site.geometry.coordinates] }), []);
   const openDetails = useCallback(
