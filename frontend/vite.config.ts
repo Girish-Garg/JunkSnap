@@ -26,5 +26,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],
+    // Above tests/setup.ts's 10 s wait bound, so a stuck wait fails with what it looked for, not a timeout.
+    // Whole-app flows (sign in, type, send) take 1 to 2 s idle and up to 9 s with three suites sharing the CPU.
+    testTimeout: 30_000,
   },
 });
