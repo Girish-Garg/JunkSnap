@@ -5,7 +5,7 @@ import logging
 from ml.domain.case import VerificationCase
 from ml.domain.embedding import Embedding
 from ml.domain.errors import ConfigError, ExternalServiceError
-from ml.domain.insights import HazardSighting, Insights, InsightSource
+from ml.domain.insights import HAZARD_MIN, HazardSighting, Insights, InsightSource
 from ml.domain.linear import EmbeddingHeads
 from ml.domain.verification import SignalResult
 from ml.ports.embedding_sink import EmbeddingSink
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 # overflowing_bin stays out: the head never saw a bin, and a damaged bin may show no waste.
 WASTE_CLAIMS = frozenset({"waste_dump", "no_bin"})
 NEUTRAL = 0.5
-HAZARD_MIN = 0.5
 
 
 class EmbeddingSignal(Signal):

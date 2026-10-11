@@ -22,6 +22,7 @@ from ml.domain.insights import (
 )
 from ml.domain.judge_attributes import TYPE_EVIDENCE, JudgeAttributes, TriState
 from ml.domain.verification import NOT_WASTE, REPORT_CONTEXTS, JudgeVerdict
+from ml.services.judge_fields import JudgeInsightFields
 
 RATIONALE_MAX = 500
 UNSURE_CONFIDENCE = 0.5
@@ -44,6 +45,7 @@ MaterialName = Literal[
     "e_waste", "medical",
 ]
 HazardName = Literal["burning", "medical_waste", "e_waste", "dead_animal", "chemicals"]
+SizeName = Literal["small", "medium", "large"]
 
 
 def tri_state(value: object) -> TriState:
@@ -108,10 +110,13 @@ class JudgeAnswer(BaseModel):
     reasoning: Annotated[str, BeforeValidator(plain_text)] = Field(
         default="", validation_alias=AliasChoices("reasoning", "rationale")
     )
-    readable_brands: tuple[str, ...] = Field(default=(), max_length=20)
-    composition: tuple[MaterialAnswer, ...] = Field(default=(), max_length=9)
-    size_class: Literal["small", "medium", "large"] | None = None
-    hazards: tuple[HazardAnswer, ...] = Field(default=(), max_length=5)
+    # Insight fields are read leniently (judge_fields): a bad item is dropped, not the answer.
+    readable_brands: Annotated[tuple[str, ...], BeforeValidator(JudgeInsightFields.brands)] = ()
+    composition: Annotated[
+        tuple[MaterialAnswer, ...], BeforeValidator(JudgeInsightFields.composition)
+    ] = ()
+    size_class: Annotated[SizeName | None, BeforeValidator(JudgeInsightFields.size_class)] = None
+    hazards: Annotated[tuple[HazardAnswer, ...], BeforeValidator(JudgeInsightFields.hazards)] = ()
     scene_fits_site: bool | None = None
 
     def attributes(self, prompt: str = PROMPT_VERSION) -> JudgeAttributes:
@@ -133,7 +138,7 @@ class JudgeAnswer(BaseModel):
             report_type=report_type,
             context=self.context if self.context in allowed else None,
             burning=found.burning is TriState.YES,
-            readable_brands=tuple(brand.strip() for brand in self.readable_brands if brand.strip()),
+            readable_brands=self.readable_brands,
             rationale=self.reasoning,
             confidence=self.user_verdict_confidence,
             scene_fits_site=self.scene_fits_site,
@@ -149,7 +154,8 @@ class JudgeAnswer(BaseModel):
             composition=MaterialShare.from_weights(weights, source),
             size_class=size,
             hazards=self._sightings(source),
-            decides_burning=True,
+            # Only a yes or no replaces the detectors' burning; an unsure judge keeps theirs.
+            decides_burning=self.burning in (TriState.YES, TriState.NO),
         )
 
     @model_validator(mode="before")
@@ -157,16 +163,13 @@ class JudgeAnswer(BaseModel):
     def _normalised(cls, raw: Any) -> Any:
         """An object that judges nothing is no answer; the router moves to the next model.
 
-        Every hazard confidence is the judge's own: a burning hazard means burning yes, and
-        burning "yes" without a listed hazard has no confidence, so it becomes uncertain.
+        Every hazard confidence is the judge's own: a burning hazard at HAZARD_MIN or more
+        means burning yes; a weaker one is dropped and never overrides a "no". Burning "yes"
+        without such a hazard has no confidence, so it becomes uncertain.
         """
         if not isinstance(raw, dict) or not JUDGED_FIELDS & raw.keys():
             raise ValueError("not a structured judge answer")
-        hazards = raw.get("hazards")
-        listed = isinstance(hazards, list) and any(
-            isinstance(item, dict) and item.get("hazard") == "burning" for item in hazards
-        )
-        if listed:
+        if "burning" in JudgeInsightFields.sure(raw.get("hazards")):
             return {**raw, "burning": "yes"}
         if tri_state(raw.get("burning")) is TriState.YES:
             return {**raw, "burning": "uncertain"}

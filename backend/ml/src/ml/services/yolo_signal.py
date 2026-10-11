@@ -6,7 +6,13 @@ from types import MappingProxyType
 from ml.domain.case import VerificationCase
 from ml.domain.detection_evidence import AnyClassEvidence, BinWithWasteEvidence, DetectionEvidence
 from ml.domain.detections import DetectionSet
-from ml.domain.insights import HazardSighting, Insights, InsightSource, SizeEstimate
+from ml.domain.insights import (
+    HAZARD_MIN,
+    HazardSighting,
+    Insights,
+    InsightSource,
+    SizeEstimate,
+)
 from ml.domain.verification import SignalResult
 from ml.ports.object_detector import ObjectDetector
 from ml.ports.signal import Signal
@@ -24,7 +30,6 @@ CLAIM_EVIDENCE: Mapping[str, DetectionEvidence] = MappingProxyType(
 )
 # A claim the detector cannot see gets this score, flagged neutral so combiners skip it.
 NEUTRAL = 0.5
-BURNING_MIN = 0.5
 SIZE_BOX_MIN = 0.4
 # Share of the image under waste boxes: below 10% small, below 35% medium, else large.
 SIZE_BANDS = ((0.10, "small"), (0.35, "medium"))
@@ -67,6 +72,6 @@ class YoloSignal(Signal):
     @staticmethod
     def _fire(found: DetectionSet, source: InsightSource) -> tuple[HazardSighting, ...]:
         confidence = found.best({"burning"})
-        if confidence < BURNING_MIN:
+        if confidence < HAZARD_MIN:
             return ()
         return (HazardSighting("burning", confidence, source),)

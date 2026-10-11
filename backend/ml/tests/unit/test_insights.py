@@ -3,7 +3,6 @@ import json
 import fakes
 import pytest
 from fakes import FakeDetector, make_case
-from pydantic import ValidationError
 
 from ml.domain.insights import HazardSighting, Insights, InsightSource, MaterialShare
 from ml.domain.label_insights import LabelInsights
@@ -74,9 +73,12 @@ def test_judge_burning_comes_with_its_own_confidence() -> None:
 
 
 @pytest.mark.parametrize("hazards", ['[{"hazard": "e_waste"}]', '["e_waste"]'])
-def test_judge_hazards_without_their_own_confidence_are_invalid(hazards: str) -> None:
-    with pytest.raises(ValidationError):
-        JudgeAnswer.model_validate_json(judge_json(hazards))
+def test_judge_hazards_without_their_own_confidence_are_dropped(hazards: str) -> None:
+    """No confidence is ever made up; the rest of the answer stands (judge_fields)."""
+    answer = JudgeAnswer.model_validate_json(judge_json(hazards))
+
+    assert answer.hazards == ()
+    assert answer.to_insights(JUDGE).hazards == ()
 
 
 @pytest.mark.parametrize(
