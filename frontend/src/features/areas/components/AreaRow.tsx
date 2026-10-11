@@ -1,5 +1,6 @@
 import { areaPath } from '../../../app/paths';
 import { SheetLink } from '../../../app/SheetLink';
+import { useConfig } from '../../../app/useConfig';
 import { AreaProgress } from '../../../domain/AreaProgress';
 import { Icon } from '../../../ui/Icon';
 import { TintSwatch } from '../../../ui/TintSwatch';
@@ -18,7 +19,7 @@ interface AreaRowProps {
  * list failed it says so instead of showing counts, so a failure never reads as "No reports yet".
  */
 export function AreaRow({ entry: { area, row, unloaded }, tint }: AreaRowProps) {
-  const progress = AreaProgress.of(row);
+  const progress = AreaProgress.of(row, useConfig().site.minVerifiedReports);
   const stage = unloaded ? 'unloaded' : progress.stage;
   return (
     <li>

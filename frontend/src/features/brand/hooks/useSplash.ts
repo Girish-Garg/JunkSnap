@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { InertOutside } from '../../../ui/InertOutside';
 
-// The parts play for 800 ms (splash.css), then the mark flies into the logo's place in 350 ms.
+// The parts play for 800 ms (splash.css, so it stays here), then the mark flies into the logo's place in ui.splashFlyMs.
 const PARTS_MS = 800;
-const FLY_MS = 350;
-const STATIC_MS = 450;
 const TARGETS = '.searchbar__lead .logo__mark, .nav-bar__brand .logo__mark';
 
 function moving(): boolean {
@@ -17,21 +16,22 @@ function target(): DOMRect | null {
   return found?.getBoundingClientRect() ?? null;
 }
 
-function fly(mark: SVGSVGElement, screen: HTMLElement): Animation {
+function fly(mark: SVGSVGElement, screen: HTMLElement, duration: number): Animation {
   const from = mark.getBoundingClientRect();
   const to = target() ?? from;
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
   const dy = to.top + to.height / 2 - (from.top + from.height / 2);
   const move = [{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${to.width / from.width})` }];
   screen.animate([{ backgroundColor: getComputedStyle(screen).backgroundColor }, { backgroundColor: 'transparent' }], {
-    duration: FLY_MS,
+    duration,
     fill: 'forwards',
   });
-  return mark.animate(move, { duration: FLY_MS, easing: 'cubic-bezier(0.55, 0, 0.2, 1)', fill: 'forwards' });
+  return mark.animate(move, { duration, easing: 'cubic-bezier(0.55, 0, 0.2, 1)', fill: 'forwards' });
 }
 
-/** Runs the start-up splash once; a tap or key skips it. Reduced motion shows the mark still, briefly. */
+/** Runs the start-up splash once; a tap or key skips it. Reduced motion shows the mark still, briefly (ui.splashStillMs). */
 export function useSplash(screen: RefObject<HTMLElement | null>, mark: RefObject<SVGSVGElement | null>, onDone: () => void) {
+  const { splashFlyMs, splashStillMs } = useConfig().ui;
   const done = useRef(false);
   const finish = useCallback(() => {
     if (done.current) return;
@@ -41,8 +41,8 @@ export function useSplash(screen: RefObject<HTMLElement | null>, mark: RefObject
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (!moving() || !mark.current || !screen.current) return finish();
-      fly(mark.current, screen.current).finished.then(finish, finish);
-    }, moving() ? PARTS_MS : STATIC_MS);
+      fly(mark.current, screen.current, splashFlyMs).finished.then(finish, finish);
+    }, moving() ? PARTS_MS : splashStillMs);
     window.addEventListener('keydown', finish);
     // While it plays, the app underneath cannot take focus.
     const release = screen.current ? InertOutside.mark(screen.current) : undefined;
@@ -51,6 +51,6 @@ export function useSplash(screen: RefObject<HTMLElement | null>, mark: RefObject
       window.clearTimeout(timer);
       window.removeEventListener('keydown', finish);
     };
-  }, [finish, mark, screen]);
+  }, [finish, mark, screen, splashFlyMs, splashStillMs]);
   return finish;
 }

@@ -8,6 +8,7 @@ import { SiteEvidenceView } from '../src/features/site/SiteEvidenceView';
 import { MockApiClient } from '../src/services/MockApiClient';
 import { MockSiteActionsApi } from '../src/services/MockSiteActionsApi';
 import { sampleLetterLoader, siteFixtureLoaders } from '../src/services/siteFixtures';
+import { DEFAULTS } from './config';
 import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -22,7 +23,7 @@ async function signedIn(): Promise<ServiceContainer> {
 describe('bin access and reporters', () => {
   it('reads the reporters and the nearest bin of a no-bin zone; its n of 10 is the backers bar', async () => {
     const site = (await fixtureSite('site_jdh_2')).properties;
-    expect(SiteEvidenceView.lines(site)).toEqual([
+    expect(SiteEvidenceView.lines(site, DEFAULTS.site.zoneRadiusM)).toEqual([
       { key: 'reporters', count: 3 },
       { key: 'bin.nearest', metres: 4210 },
     ]);

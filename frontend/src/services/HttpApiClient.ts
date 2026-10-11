@@ -16,8 +16,9 @@ export class HttpApiClient implements ApiClient {
     baseUrl: string,
     fetchImpl: Fetch = (input, init) => fetch(input, init),
     caches: SiteCaches = SiteCaches.standard(new SystemClock()),
+    timeoutMs?: number,
   ) {
-    this.#http = new ConditionalFetch(baseUrl, fetchImpl);
+    this.#http = new ConditionalFetch(baseUrl, fetchImpl, timeoutMs);
     this.#caches = caches;
   }
 

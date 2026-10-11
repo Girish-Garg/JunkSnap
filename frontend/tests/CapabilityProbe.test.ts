@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CapabilityProbe, WARMUP_BUDGET_MS, type DeviceCapabilities } from '../src/services/CapabilityProbe';
+import { CapabilityProbe, type DeviceCapabilities } from '../src/services/CapabilityProbe';
+import { DEFAULTS } from './config';
+
+const { warmupBudgetMs } = DEFAULTS.capture;
 
 const PHONE: DeviceCapabilities = {
   wasmSimd: true,
@@ -43,8 +46,8 @@ describe('CapabilityProbe at startup', () => {
 describe('CapabilityProbe after the warm-up', () => {
   it('keeps edge mode only when the warm inference beats the budget', () => {
     const probe = new CapabilityProbe(PHONE);
-    expect(probe.afterWarmup(WARMUP_BUDGET_MS - 1).ok).toBe(true);
-    expect(probe.afterWarmup(WARMUP_BUDGET_MS)).toEqual({ ok: false, reason: 'too_slow' });
+    expect(probe.afterWarmup(warmupBudgetMs - 1).ok).toBe(true);
+    expect(probe.afterWarmup(warmupBudgetMs)).toEqual({ ok: false, reason: 'too_slow' });
   });
 
   it('never lets a fast warm-up override a failed startup check', () => {

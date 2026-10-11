@@ -2,14 +2,17 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ServiceContainer } from '../src/app/ServiceContainer';
-import { FRESH_FIX_MS, FreshFix } from '../src/domain/FreshFix';
+import { FreshFix } from '../src/domain/FreshFix';
 import type { LonLat } from '../src/domain/Site';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { GeoLocator } from '../src/services/GeoLocator';
+import { DEFAULTS } from './config';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
 import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
 import { FakeGeolocation } from './snapFakes';
+
+const FRESH_FIX_MS = DEFAULTS.capture.freshFixMs;
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
@@ -70,7 +73,7 @@ describe('too far rests on a fresh fix', () => {
 
 describe('FreshFix', () => {
   it('measures only while under 2 minutes old', () => {
-    const fix = new FreshFix(JODHPUR, 1_000);
+    const fix = new FreshFix(JODHPUR, 1_000, FRESH_FIX_MS);
     expect(fix.metresTo([73.02, 26.28], 1_000 + FRESH_FIX_MS - 1)).toBeCloseTo(1112, -1);
     expect(fix.metresTo([73.02, 26.28], 1_000 + FRESH_FIX_MS)).toBeNull();
     expect(fix.msLeft(1_000 + FRESH_FIX_MS + 5)).toBe(0);

@@ -1,11 +1,25 @@
 import { GeoBearing } from './GeoBearing';
 import type { LatLon } from './ReportUpload';
 
-/** Closer than this, GPS cannot tell the waste from the reporter, so the pin counts as "right here". */
-export const HERE_RADIUS_M = 10;
-/** How far the pin reaches from the ground, and from a rooftop or upper floor (decision 20261011-0400). */
-export const GROUND_CAP_M = 300;
-export const HIGH_CAP_M = 500;
+/**
+ * How far the pin reaches (decision 20261011-0400), from the config's SiteRules: closer than targetHereM, GPS cannot
+ * tell the waste from the reporter, so the pin counts as "right here"; targetGroundMaxM from the ground and
+ * targetMaxM from a rooftop or upper floor (the api's cap).
+ */
+export interface TargetReach {
+  readonly targetHereM: number;
+  readonly targetGroundMaxM: number;
+  readonly targetMaxM: number;
+}
+
+interface Pin {
+  /** Null while the waste is right here. */
+  readonly target: LatLon | null;
+  readonly high: boolean;
+  /** The last move went past the cap and was pulled back to it. */
+  readonly capped: boolean;
+}
+
 // Coordinates sent with 6 decimals: about 0.1 m.
 const DECIMALS = 1e6;
 // Shown distances are rounded to 5 m; GPS is not finer than that.
@@ -22,20 +36,22 @@ export class TargetPlacement {
   readonly high: boolean;
   /** The last move went past the cap and was pulled back to it. */
   readonly capped: boolean;
+  readonly #reach: TargetReach;
 
-  private constructor(origin: LatLon, target: LatLon | null, high: boolean, capped: boolean) {
+  private constructor(reach: TargetReach, origin: LatLon, pin: Pin) {
+    this.#reach = reach;
     this.origin = origin;
-    this.target = target;
-    this.high = high;
-    this.capped = capped;
+    this.target = pin.target;
+    this.high = pin.high;
+    this.capped = pin.capped;
   }
 
-  static here(origin: LatLon): TargetPlacement {
-    return new TargetPlacement({ lat: origin.lat, lon: origin.lon }, null, false, false);
+  static here(origin: LatLon, reach: TargetReach): TargetPlacement {
+    return new TargetPlacement(reach, { lat: origin.lat, lon: origin.lon }, { target: null, high: false, capped: false });
   }
 
   get capM(): number {
-    return this.high ? HIGH_CAP_M : GROUND_CAP_M;
+    return this.high ? this.#reach.targetMaxM : this.#reach.targetGroundMaxM;
   }
 
   /** Where the pin stands: the target, else the reporter. */
@@ -56,20 +72,28 @@ export class TargetPlacement {
   moveTo(point: LatLon): TargetPlacement {
     const metres = GeoBearing.metres(this.origin, point);
     // A fresh origin object, so the map sees a new spot and puts the dropped pin back on the reporter.
-    if (metres <= HERE_RADIUS_M) return new TargetPlacement({ ...this.origin }, null, this.high, false);
-    if (metres <= this.capM) return new TargetPlacement(this.origin, TargetPlacement.#round(point), this.high, false);
+    if (metres <= this.#reach.targetHereM) return new TargetPlacement(this.#reach, { ...this.origin }, this.#pin(null, false));
+    if (metres <= this.capM) return this.#with(this.#pin(TargetPlacement.#round(point), false));
     const capped = GeoBearing.offset(this.origin, GeoBearing.between(this.origin, point), this.capM);
-    return new TargetPlacement(this.origin, TargetPlacement.#round(capped), this.high, true);
+    return this.#with(this.#pin(TargetPlacement.#round(capped), true));
   }
 
-  /** Up high reaches 500 m; back on the ground a farther pin is pulled in to 300 m. */
+  /** Up high reaches targetMaxM; back on the ground a farther pin is pulled in to targetGroundMaxM. */
   withHighView(high: boolean): TargetPlacement {
-    const moved = new TargetPlacement(this.origin, null, high, false);
+    const moved = this.#with({ target: null, high, capped: false });
     return this.target ? moved.moveTo(this.target) : moved;
   }
 
   reset(): TargetPlacement {
-    return new TargetPlacement(this.origin, null, this.high, false);
+    return this.#with(this.#pin(null, false));
+  }
+
+  #pin(target: LatLon | null, capped: boolean): Pin {
+    return { target, high: this.high, capped };
+  }
+
+  #with(pin: Pin): TargetPlacement {
+    return new TargetPlacement(this.#reach, this.origin, pin);
   }
 
   static #round(point: LatLon): LatLon {

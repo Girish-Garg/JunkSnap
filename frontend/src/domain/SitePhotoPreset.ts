@@ -1,16 +1,19 @@
 import type { ReportType } from './ReportType';
 import type { LatLon, ReportDraft } from './ReportUpload';
 import type { LonLat, SiteContext, SiteFeature } from './Site';
-import { GROUND_CAP_M, HIGH_CAP_M } from './TargetPlacement';
+import type { TargetReach } from './TargetPlacement';
 import { metresBetween } from './utils';
 
-/** The api merges a report into a site within this distance of its point (backend NoBinZone, SITE_MERGE_RADIUS_M). */
-export const SITE_MERGE_RADIUS_M = 40;
-/** The api refuses a target farther than HIGH_CAP_M from gps (422 target_too_far); this keeps a photo clear of that edge. */
-export const SERVER_CAP_MARGIN_M = 10;
-/** Decision 20261011-0400: 300 m from the ground; up high (rooftop or upper floor), up to the server cap less the margin. */
-export const GROUND_LIMIT_M = GROUND_CAP_M;
-export const HIGH_LIMIT_M = HIGH_CAP_M - SERVER_CAP_MARGIN_M;
+/**
+ * The config's SiteRules a photo for a site needs: the api merges a report into a site within siteMergeRadiusM of
+ * its point (backend SITE_MERGE_RADIUS_M), and refuses a target farther than targetMaxM from gps (422
+ * target_too_far), so an up-high photo keeps targetMarginM clear of that edge. From the ground the reach is
+ * targetGroundMaxM (decision 20261011-0400).
+ */
+export interface SitePhotoRules extends Omit<TargetReach, 'targetHereM'> {
+  readonly siteMergeRadiusM: number;
+  readonly targetMarginM: number;
+}
 
 /** Where a photo for the site stands: close enough as it is, marked on the site from afar, or too far. */
 export type PhotoReach =
@@ -31,17 +34,18 @@ export class SitePhotoPreset {
   readonly reportType: ReportType;
   readonly context: SiteContext;
   readonly point: LonLat;
+  readonly #rules: SitePhotoRules;
 
-  private constructor(siteId: string, reportType: ReportType, context: SiteContext, point: LonLat) {
-    this.siteId = siteId;
-    this.reportType = reportType;
-    this.context = context;
-    this.point = point;
+  private constructor(site: SiteFeature, rules: SitePhotoRules) {
+    this.siteId = site.properties.site_id;
+    this.reportType = site.properties.report_type;
+    this.context = site.properties.context;
+    this.point = site.geometry.coordinates;
+    this.#rules = rules;
   }
 
-  static of(site: SiteFeature): SitePhotoPreset {
-    const { site_id: siteId, report_type: type, context } = site.properties;
-    return new SitePhotoPreset(siteId, type, context, site.geometry.coordinates);
+  static of(site: SiteFeature, rules: SitePhotoRules): SitePhotoPreset {
+    return new SitePhotoPreset(site, rules);
   }
 
   /** A no-bin zone has no long range, so "I'm up high" means nothing there. */
@@ -51,13 +55,14 @@ export class SitePhotoPreset {
 
   /** The farthest a photo can be taken from the site and still be sent to it; up high reaches farther. */
   limitM(high = false): number {
-    if (!this.takesTarget) return SITE_MERGE_RADIUS_M;
-    return high ? HIGH_LIMIT_M : GROUND_LIMIT_M;
+    const { siteMergeRadiusM, targetGroundMaxM, targetMaxM, targetMarginM } = this.#rules;
+    if (!this.takesTarget) return siteMergeRadiusM;
+    return high ? targetMaxM - targetMarginM : targetGroundMaxM;
   }
 
   reach(gps: LatLon, high = false): PhotoReach {
     const metres = metresBetween([gps.lon, gps.lat], this.point);
-    if (metres <= SITE_MERGE_RADIUS_M) return { kind: 'here', metres };
+    if (metres <= this.#rules.siteMergeRadiusM) return { kind: 'here', metres };
     const limit = this.limitM(high);
     if (metres > limit) return { kind: 'tooFar', metres, limit };
     const [lon, lat] = this.point;

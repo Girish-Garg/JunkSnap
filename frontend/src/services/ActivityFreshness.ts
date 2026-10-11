@@ -1,8 +1,8 @@
+import { CACHE_DEFAULTS } from '../config/CacheSettings';
 import type { Clock } from './Clock';
 import type { MetaStore } from './ReportStore';
 
 const KEY = 'activity.token';
-export const ACTIVITY_TTL_MS = 60_000;
 
 /** The list-level token: whose list this phone holds, when it was last synced, and the newest updated_at seen. */
 export interface ActivityToken {
@@ -20,7 +20,7 @@ export class ActivityFreshness {
   readonly #clock: Clock;
   readonly #ttlMs: number;
 
-  constructor(store: MetaStore, clock: Clock, ttlMs = ACTIVITY_TTL_MS) {
+  constructor(store: MetaStore, clock: Clock, ttlMs = CACHE_DEFAULTS.activityTtlMs) {
     this.#store = store;
     this.#clock = clock;
     this.#ttlMs = ttlMs;

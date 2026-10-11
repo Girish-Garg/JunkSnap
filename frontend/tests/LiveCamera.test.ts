@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
 import { CaptureError } from '../src/domain/CaptureError';
 import { FrameCounter } from '../src/services/FrameCounter';
-import { LiveCamera, MAX_RESTARTS, type CameraEvent, type CameraState } from '../src/services/LiveCamera';
+import { LiveCamera, type CameraEvent, type CameraState } from '../src/services/LiveCamera';
+import { DEFAULTS } from './config';
 import { FakePage, FakeScreen, ManualTimer, fakeStream, settle } from './cameraFakes';
 
 type Opening = MediaStream | CaptureError;
@@ -112,7 +113,7 @@ it('LiveCamera: keeps trying while another app holds the camera, backing off, th
     if (test.calls() > before) restartsAt.push(test.timer.now);
   }
   expect(restartsAt).toEqual([2_000, 6_000, 14_000, 30_000, 46_000]);
-  expect(test.events).toEqual([...Array(MAX_RESTARTS).fill('stalled'), 'gave_up']);
+  expect(test.events).toEqual([...Array(DEFAULTS.capture.cameraMaxRestarts).fill('stalled'), 'gave_up']);
   expect(test.states.at(-1)).toBe('camera_unavailable');
 });
 

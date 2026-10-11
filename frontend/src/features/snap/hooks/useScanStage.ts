@@ -1,4 +1,5 @@
 import { useRef, type RefObject } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { CAPTURE_GATES } from '../../../domain/CaptureGates';
 import { EDGE_MODEL } from '../../../domain/EdgeModel';
 import type { CaptureProblem } from '../../../domain/CaptureError';
@@ -24,6 +25,7 @@ export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: Sn
   // once the clip is saved (phase back to idle), never while the recording is being finished.
   const camera = useCamera(video, 'video', { holding: () => recorder.phase !== 'idle', onLost: recorder.cut });
   const report = useScanChoice();
+  const { hintMinScore } = useConfig().capture;
   // Edge mode only: the strongest waste box of each analysed frame goes with the scan as a hint.
   const hintLog = useRef<ScanHintLog | null>(null);
   const hints = useEdgeHints(video, camera.state === 'live', (frame) => hintLog.current?.add(frame));
@@ -39,7 +41,7 @@ export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: Sn
   }));
   const start = () => {
     if (!choice || !gps.fix) return;
-    hintLog.current = hints.state === 'live' ? new ScanHintLog(EDGE_MODEL.version) : null;
+    hintLog.current = hints.state === 'live' ? new ScanHintLog(EDGE_MODEL.version, hintMinScore) : null;
     recorder.start(choice, { fix: gps.fix, takenAtMs: gps.takenAtMs }, hintLog.current);
   };
   const problem: CaptureProblem | null = recorder.problem ?? (recorder.supported ? null : 'recorder_unsupported');

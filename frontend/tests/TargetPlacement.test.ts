@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { GeoBearing } from '../src/domain/GeoBearing';
-import { GROUND_CAP_M, HIGH_CAP_M, TargetPlacement } from '../src/domain/TargetPlacement';
+import { TargetPlacement } from '../src/domain/TargetPlacement';
 import { CompassHeading } from '../src/services/CompassHeading';
+import { DEFAULTS } from './config';
+
+const { targetGroundMaxM: GROUND_CAP_M, targetMaxM: HIGH_CAP_M } = DEFAULTS.site;
 
 const ORIGIN = { lat: 26.26183, lon: 73.00352 };
 const at = (bearing: number, metres: number) => GeoBearing.offset(ORIGIN, bearing, metres);
@@ -17,7 +20,7 @@ describe('GeoBearing', () => {
 
 describe('TargetPlacement moves', () => {
   it('starts right here, with nothing to send', () => {
-    const placement = TargetPlacement.here(ORIGIN);
+    const placement = TargetPlacement.here(ORIGIN, DEFAULTS.site);
     expect(placement.target).toBeNull();
     expect(placement.spot).toEqual(ORIGIN);
     expect(placement.distanceM).toBe(0);
@@ -25,7 +28,7 @@ describe('TargetPlacement moves', () => {
   });
 
   it('moves the pin where it was dropped or tapped, and shows the distance to 5 m', () => {
-    const placement = TargetPlacement.here(ORIGIN).moveTo(at(40, 122));
+    const placement = TargetPlacement.here(ORIGIN, DEFAULTS.site).moveTo(at(40, 122));
     expect(placement.target).not.toBeNull();
     expect(placement.distanceM).toBe(122);
     expect(placement.shownM).toBe(120);
@@ -33,7 +36,7 @@ describe('TargetPlacement moves', () => {
   });
 
   it('treats a pin within 10 m of the reporter as right here', () => {
-    const here = TargetPlacement.here(ORIGIN);
+    const here = TargetPlacement.here(ORIGIN, DEFAULTS.site);
     const dropped = here.moveTo(at(200, 8));
     expect(dropped.target).toBeNull();
     // A new spot object, so the map puts the dropped pin back on the reporter.
@@ -44,7 +47,7 @@ describe('TargetPlacement moves', () => {
 
 describe('TargetPlacement cap', () => {
   it('stops a pin dragged past 300 m at 300 m on the same line, and says so', () => {
-    const placement = TargetPlacement.here(ORIGIN).moveTo(at(135, 800));
+    const placement = TargetPlacement.here(ORIGIN, DEFAULTS.site).moveTo(at(135, 800));
     expect(placement.capped).toBe(true);
     expect(placement.distanceM).toBe(GROUND_CAP_M);
     expect(GeoBearing.between(ORIGIN, placement.spot)).toBeCloseTo(135, 1);
@@ -52,7 +55,7 @@ describe('TargetPlacement cap', () => {
   });
 
   it('reaches 500 m from up high and pulls the pin back in on the ground', () => {
-    const high = TargetPlacement.here(ORIGIN).withHighView(true).moveTo(at(0, 450));
+    const high = TargetPlacement.here(ORIGIN, DEFAULTS.site).withHighView(true).moveTo(at(0, 450));
     expect(high).toMatchObject({ capped: false, distanceM: 450, capM: HIGH_CAP_M });
     expect(high.moveTo(at(0, 900)).distanceM).toBe(HIGH_CAP_M);
     const ground = high.withHighView(false);
@@ -60,13 +63,13 @@ describe('TargetPlacement cap', () => {
   });
 
   it('keeps sent coordinates to 6 decimals, inside the server cap of 500 m', () => {
-    const { target } = TargetPlacement.here(ORIGIN).withHighView(true).moveTo(at(77, 5000));
+    const { target } = TargetPlacement.here(ORIGIN, DEFAULTS.site).withHighView(true).moveTo(at(77, 5000));
     expect(target?.lat.toString().split('.')[1]?.length ?? 0).toBeLessThanOrEqual(6);
     expect(GeoBearing.metres(ORIGIN, target ?? ORIGIN)).toBeLessThan(HIGH_CAP_M + 0.5);
   });
 
   it('forgets the pin on reset but keeps the high view', () => {
-    const reset = TargetPlacement.here(ORIGIN).withHighView(true).moveTo(at(90, 200)).reset();
+    const reset = TargetPlacement.here(ORIGIN, DEFAULTS.site).withHighView(true).moveTo(at(90, 200)).reset();
     expect(reset).toMatchObject({ target: null, high: true, capped: false });
   });
 });

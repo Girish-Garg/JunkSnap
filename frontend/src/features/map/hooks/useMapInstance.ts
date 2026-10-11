@@ -23,7 +23,7 @@ function tryCreate(options: SiteMapOptions, onFail: (error: unknown) => void): S
 
 /** Creates one SiteMap for the container and removes it on unmount. */
 export function useMapInstance(container: RefObject<HTMLDivElement | null>, callbacks: MapCallbacks) {
-  const { layers, localization, boundaries } = useServices();
+  const { layers, localization, boundaries, config } = useServices();
   const mapRef = useRef<SiteMap | null>(null);
   const onPick = useEffectEvent(callbacks.onPick);
   const onPickStack = useEffectEvent(callbacks.onPickStack);
@@ -41,6 +41,7 @@ export function useMapInstance(container: RefObject<HTMLDivElement | null>, call
       onPickStack: (ids) => onPickStack(ids),
       onPickArea: (area) => onPickArea(area),
       onViewChange: (view) => onViewChange(view),
+      settings: config.map,
     };
     const map = tryCreate(options, (error) => onFail(error));
     mapRef.current = map;
@@ -48,6 +49,6 @@ export function useMapInstance(container: RefObject<HTMLDivElement | null>, call
       map?.destroy();
       mapRef.current = null;
     };
-  }, [container, layers, localization, boundaries]);
+  }, [container, layers, localization, boundaries, config]);
   return mapRef;
 }

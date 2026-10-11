@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { AreaProgress } from '../../../domain/AreaProgress';
 import type { AreaScoresState } from '../../areas/hooks/useAreaScores';
 import { useAreaProgressText } from '../../areas/hooks/useAreaProgressText';
@@ -7,10 +8,11 @@ import { useAreaProgressText } from '../../areas/hooks/useAreaProgressText';
 export function AreaCardLines({ state }: { readonly state: AreaScoresState }) {
   const { t } = useTranslation();
   const text = useAreaProgressText();
+  const { minVerifiedReports } = useConfig().site;
   if (!state.scores && !state.missing) {
     return <p className="area-card__lines">{t(state.failed ? 'areas.loadFailed' : 'areas.loading')}</p>;
   }
-  const lines = text.lines(AreaProgress.of(state.scores));
+  const lines = text.lines(AreaProgress.of(state.scores, minVerifiedReports));
   return (
     <p className="area-card__lines">
       <span>{lines.counts}</span>

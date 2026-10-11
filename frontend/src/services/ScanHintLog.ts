@@ -1,8 +1,8 @@
+import { CAPTURE_DEFAULTS } from '../config/CaptureSettings';
 import { WASTE_CLASSES, type FrameDetections } from '../domain/EdgeModel';
 import { SCAN_LIMITS, type ScanHintDetection, type ScanHints } from '../domain/ScanUpload';
 
-/** A frame counts as a hint only when the model is at least this sure there is waste. */
-export const HINT_MIN_SCORE = 0.35;
+// scan_session.schema.json: at most 600 hints.
 const MAX_HINTS = 600;
 // Three decimals keep the body small; the server only uses the time and the score.
 const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -13,11 +13,14 @@ const round = (value: number) => Math.round(value * 1000) / 1000;
  */
 export class ScanHintLog {
   readonly #model: string;
+  readonly #minScore: number;
   readonly #items: ScanHintDetection[] = [];
   #startedAtMs: number | null = null;
 
-  constructor(model: string) {
+  /** A frame counts as a hint only when the model is at least minScore (capture.hintMinScore) sure there is waste. */
+  constructor(model: string, minScore: number = CAPTURE_DEFAULTS.hintMinScore) {
     this.#model = model;
+    this.#minScore = minScore;
   }
 
   begin(startedAtMs: number): void {
@@ -27,7 +30,7 @@ export class ScanHintLog {
   add(frame: FrameDetections): void {
     if (this.#startedAtMs === null) return;
     const tMs = Math.round(frame.capturedAtMs - this.#startedAtMs);
-    const best = frame.detections.find((found) => WASTE_CLASSES.has(found.label) && found.score >= HINT_MIN_SCORE);
+    const best = frame.detections.find((found) => WASTE_CLASSES.has(found.label) && found.score >= this.#minScore);
     if (!best || tMs < 0 || tMs > SCAN_LIMITS.maxDurationMs) return;
     const { left, top, width, height } = best.box;
     this.#items.push({ t_ms: tMs, score: round(best.score), box: { left: round(left), top: round(top), width: round(width), height: round(height) } });

@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import type { ServiceContainer } from '../src/app/ServiceContainer';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
-import { LetterMailto, MAX_MAILTO_LENGTH, NO_KNOWN_ADDRESSES } from '../src/features/letters/LetterMailto';
+import { LetterMailto, NO_KNOWN_ADDRESSES } from '../src/features/letters/LetterMailto';
+import { DEFAULTS } from './config';
 import { MemoryStore, renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -42,7 +43,7 @@ describe('send by email', () => {
   it('sends a short body for a letter too long for the link', () => {
     const mail = new LetterMailto(NO_KNOWN_ADDRESSES).compose('Subject', 'A long letter. '.repeat(200), SHORT);
     expect(mail.long).toBe(true);
-    expect(mail.url.length).toBeLessThanOrEqual(MAX_MAILTO_LENGTH);
+    expect(mail.url.length).toBeLessThanOrEqual(DEFAULTS.limits.mailtoMaxLength);
     expect(bodyOf(mail.url)).toBe(SHORT);
   });
 

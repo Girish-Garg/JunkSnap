@@ -32,8 +32,6 @@ export interface QueuedReportData {
   readonly synced_at?: string;
 }
 
-// Presigned URLs live PRESIGN_TTL_SECONDS (300 s); re-presign a little before that.
-const UPLOAD_URL_LIFETIME_MS = 240_000;
 const CLEAR_WAIT = { problem: null, retry_at: null } as const;
 
 export class QueuedReport {
@@ -87,11 +85,14 @@ export class QueuedReport {
     return this.data.retry_at === null || Date.parse(this.data.retry_at) <= now.getTime();
   }
 
-  /** The photo still needs a fresh presigned URL before its PUT. */
-  needsPresign(now: Date): boolean {
+  /**
+   * The photo still needs a fresh presigned URL before its PUT. Presigned URLs live PRESIGN_TTL_SECONDS (300 s), so
+   * one older than reuseMs (network.presignReuseMs, 240 s) is presigned again a little before that.
+   */
+  needsPresign(now: Date, reuseMs: number): boolean {
     const upload = this.data.upload;
     if (this.data.stage !== 'saved') return false;
-    return upload === null || now.getTime() - Date.parse(upload.presigned_at) > UPLOAD_URL_LIFETIME_MS;
+    return upload === null || now.getTime() - Date.parse(upload.presigned_at) > reuseMs;
   }
 
   toUpload(deviceToken: string): ReportUpload {

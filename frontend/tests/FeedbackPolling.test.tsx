@@ -6,10 +6,11 @@ import { ApiError } from '../src/domain/ApiError';
 import type { ReportStatus, ReportStatusView } from '../src/domain/ReportStatus';
 import { FeedbackPolling } from '../src/features/activity/FeedbackPolling';
 import { useReportFeedback } from '../src/features/activity/hooks/useReportFeedback';
+import { DEFAULTS } from './config';
 import { FakeReportApi } from './FakeReportApi';
 import { MemoryStore, testServices } from './helpers';
 
-const STEP = FeedbackPolling.INTERVAL_MS;
+const STEP = DEFAULTS.cache.feedbackPollMs;
 
 /** Answers each GET /reports/{id} with the next scripted status or error; the last one repeats. */
 class ScriptedApi extends FakeReportApi {

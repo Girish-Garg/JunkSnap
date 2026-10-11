@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
-import { PilotCity } from '../../../domain/PilotCity';
+import type { PilotCity } from '../../../domain/PilotCity';
 import type { SiteFeature } from '../../../domain/Site';
 import type { AroundSites } from './useNearbySites';
 
@@ -18,14 +19,14 @@ export interface PilotLoad {
 }
 
 // The search around the view, when it took in the whole city and did not fail.
-function sharedFrom(around: AroundSites | null): AroundSites | null {
-  return around && !around.failed && PilotCity.within(around.box) ? around : null;
+function sharedFrom(around: AroundSites | null, city: PilotCity): AroundSites | null {
+  return around && !around.failed && city.within(around.box) ? around : null;
 }
 
 // The shared answer to keep: the city's part of it, once it is in and nothing better is kept.
-function adopt(wanted: boolean, loaded: Loaded | null, shared: AroundSites | null): Loaded | null {
+function adopt(wanted: boolean, loaded: Loaded | null, shared: AroundSites | null, city: PilotCity): Loaded | null {
   if (!wanted || loaded?.sites || !shared?.sites) return null;
-  return { sites: PilotCity.sitesOf(shared.sites), failed: false };
+  return { sites: city.sitesOf(shared.sites), failed: false };
 }
 
 /**
@@ -35,17 +36,18 @@ function adopt(wanted: boolean, loaded: Loaded | null, shared: AroundSites | nul
  */
 export function usePilotSites(wanted: boolean, around: AroundSites | null): PilotLoad {
   const { api } = useServices();
+  const { pilot: city } = useConfig();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const shared = sharedFrom(around);
-  const adopted = adopt(wanted, loaded, shared);
+  const shared = sharedFrom(around, city);
+  const adopted = adopt(wanted, loaded, shared, city);
   if (adopted) setLoaded(adopted);
   const need = wanted && loaded === null && shared === null;
   useEffect(() => {
     if (!need) return undefined;
     let current = true;
-    api.listSites(PilotCity.bounds).then(
-      (found) => current && setLoaded({ sites: PilotCity.sitesOf(found), failed: false }),
+    api.listSites(city.bounds).then(
+      (found) => current && setLoaded({ sites: city.sitesOf(found), failed: false }),
       (error: unknown) => {
         console.error('Could not load the pilot city sites', error);
         if (current) setLoaded({ sites: null, failed: true });
@@ -54,7 +56,7 @@ export function usePilotSites(wanted: boolean, around: AroundSites | null): Pilo
     return () => {
       current = false;
     };
-  }, [api, need, attempt]);
+  }, [api, need, attempt, city]);
   const retry = useCallback(() => {
     setLoaded(null);
     setAttempt((count) => count + 1);

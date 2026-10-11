@@ -23,7 +23,7 @@ class FakeClock implements Clock {
 
 function cachedWith(api: TaggedAreaApi) {
   const clock = new FakeClock();
-  return { clock, cached: new CachedAreaApi(api, new ExpiringCache(CachedAreaApi.POLICY, clock)) };
+  return { clock, cached: new CachedAreaApi(api, new ExpiringCache(CachedAreaApi.policy(), clock)) };
 }
 
 describe('CachedAreaApi', () => {

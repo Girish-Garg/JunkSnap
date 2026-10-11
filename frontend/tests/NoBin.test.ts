@@ -7,6 +7,7 @@ import type { QueuedReport } from '../src/domain/QueuedReport';
 import { NoBinReporter } from '../src/services/NoBinReporter';
 import type { ReportApi, RequestIdentity } from '../src/services/ReportApi';
 import ZonesLayer from '../src/layers/ZonesLayer';
+import { DEFAULTS } from './config';
 
 class RecordingReportApi implements ReportApi {
   readonly sent: (ReportUpload | NoBinUpload)[] = [];
@@ -100,9 +101,10 @@ describe('No bin here in Activity', () => {
 
 describe('no-bin zones on the map and the sheet', () => {
   it('shows a mapped bin within 1 km of a zone as evidence, and a far one as the nearest bin', () => {
-    expect(BinAccess.zoneLine({ distance_m: 420 }, false)).toEqual({ key: 'mappedNear', metres: 420 });
-    expect(BinAccess.zoneLine({ distance_m: 4210 }, true)).toEqual({ key: 'nearest', metres: 4210 });
-    expect(BinAccess.zoneLine(null, null)).toEqual({ key: 'notMapped' });
+    const { zoneRadiusM } = DEFAULTS.site;
+    expect(BinAccess.zoneLine({ distance_m: 420 }, false, zoneRadiusM)).toEqual({ key: 'mappedNear', metres: 420 });
+    expect(BinAccess.zoneLine({ distance_m: 4210 }, true, zoneRadiusM)).toEqual({ key: 'nearest', metres: 4210 });
+    expect(BinAccess.zoneLine(null, null, zoneRadiusM)).toEqual({ key: 'notMapped' });
   });
 
   it('draws only no-bin zones, as a 1 km circle that grows with the zoom', () => {

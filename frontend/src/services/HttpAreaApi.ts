@@ -11,8 +11,8 @@ type Fetch = typeof fetch;
 export class HttpAreaApi implements TaggedAreaApi {
   readonly #http: ConditionalFetch;
 
-  constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init)) {
-    this.#http = new ConditionalFetch(baseUrl, fetchImpl);
+  constructor(baseUrl: string, fetchImpl: Fetch = (input, init) => fetch(input, init), timeoutMs?: number) {
+    this.#http = new ConditionalFetch(baseUrl, fetchImpl, timeoutMs);
   }
 
   async scores(kind: AreaKind, id: string): Promise<AreaScores> {

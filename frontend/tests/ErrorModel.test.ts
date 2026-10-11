@@ -5,7 +5,8 @@ import { CaptureError } from '../src/domain/CaptureError';
 import { ErrorClassifier, type ErrorCategory } from '../src/domain/ErrorClassifier';
 import { LocationError } from '../src/domain/LocationError';
 import { ActionProblem } from '../src/features/site/ActionProblem';
-import { ActionCooldowns, COOLDOWN_MS } from '../src/services/ActionCooldowns';
+import { ActionCooldowns } from '../src/services/ActionCooldowns';
+import { DEFAULTS } from './config';
 import { ERROR_TAG, ErrorReporter } from '../src/services/ErrorReporter';
 import { HttpErrors } from '../src/services/HttpErrors';
 import { Notifier } from '../src/services/Notifier';
@@ -149,7 +150,7 @@ describe('ActionCooldowns', () => {
     cooldowns.hold('letter');
     expect(cooldowns.active()).toEqual(new Set(['letter']));
     const held = cooldowns.active();
-    now += COOLDOWN_MS - 1;
+    now += DEFAULTS.ui.cooldownMs - 1;
     timers[0]?.();
     expect(cooldowns.active()).toBe(held);
     now += 1;

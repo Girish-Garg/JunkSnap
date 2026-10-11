@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import { AuthError } from '../domain/AuthError';
 import type { KeyValueStore } from '../i18n/LanguagePreference';
 import type { AuthService, AuthUser } from './AuthService';
@@ -19,7 +20,7 @@ export class MockAuthService implements AuthService {
   readonly #listeners = new Set<() => void>();
   #user: AuthUser | null;
 
-  constructor(store: KeyValueStore, delayMs = 400) {
+  constructor(store: KeyValueStore, delayMs = NETWORK_DEFAULTS.mockDelayMs) {
     this.#store = store;
     this.#delayMs = delayMs;
     const saved = store.getItem(SESSION_KEY);

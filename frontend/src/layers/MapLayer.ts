@@ -11,6 +11,13 @@ export interface LayerContext {
   readonly selectedId: string | null;
 }
 
+/** What layers draw at a fixed size on the ground: a no-bin zone's radius, near the pilot city's latitude. */
+export interface LayerSettings {
+  readonly zoneRadiusM: number;
+  /** Degrees north where metres turn into pixels for the zone circles. */
+  readonly latitude: number;
+}
+
 export interface MapLayer {
   readonly id: string;
   /** Lower draws first. */

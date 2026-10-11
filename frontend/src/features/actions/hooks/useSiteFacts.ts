@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import type { SiteActionFacts } from '../../../domain/SiteActionGates';
 import { SiteListing } from '../../../domain/SiteListing';
@@ -18,16 +19,17 @@ export interface SiteFacts {
 /** Everything the site gates read: the session, the site, this phone's reports on it and a fresh distance to it. */
 export function useSiteFacts(site: SiteFeature, mapLocation: LonLat | null): SiteFacts {
   const session = useSessionFacts();
+  const { site: rules } = useConfig();
   const ownSite = SiteListing.reportedHere(useQueue(), site.properties.site_id).length > 0;
   const locationDenied = usePermissionState('geolocation') === 'denied';
   const { fix, relocate } = useFreshFix(mapLocation);
   const point = site.geometry.coordinates;
   const distanceM = fix ? metresBetween(fix.at, point) : null;
   const { properties } = site;
-  const addPhotoLimitM = useMemo(() => SitePhotoPreset.of(site).limitM(true), [site]);
+  const addPhotoLimitM = useMemo(() => SitePhotoPreset.of(site, rules).limitM(true), [site, rules]);
   const facts = useMemo(
-    () => ({ ...session, site: properties, ownSite, distanceM, locationDenied, addPhotoLimitM }),
-    [session, properties, ownSite, distanceM, locationDenied, addPhotoLimitM],
+    () => ({ ...session, site: properties, ownSite, distanceM, locationDenied, addPhotoLimitM, reach: rules }),
+    [session, properties, ownSite, distanceM, locationDenied, addPhotoLimitM, rules],
   );
   const remeasure = useCallback(() => relocate().then((fresh) => (fresh ? metresBetween(fresh.at, point) : null)), [relocate, point]);
   return { facts, remeasure };

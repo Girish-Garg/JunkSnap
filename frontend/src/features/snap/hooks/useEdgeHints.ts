@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
+import type { CaptureSettings } from '../../../config/CaptureSettings';
 import type { FrameDetections } from '../../../domain/EdgeModel';
 import type { EdgeHints, EdgeReady } from '../../../services/EdgeHints';
 import { EdgeHintLoop } from '../../../services/EdgeHintLoop';
@@ -17,10 +19,11 @@ interface Run {
   readonly video: RefObject<HTMLVideoElement | null>;
   readonly onReady: (ready: EdgeReady | null) => void;
   readonly onFrame: (frame: FrameDetections) => void;
+  readonly intervalMs: number;
 }
 
 // Loads the detector (first time only) and runs the loop on new frames of a visible page; the returned function stops it.
-function runHints({ edge, video, onReady, onFrame }: Run): () => void {
+function runHints({ edge, video, onReady, onFrame, intervalMs }: Run): () => void {
   let loop: EdgeHintLoop | null = null;
   let cancelled = false;
   const counter = video.current ? FrameCounter.for(video.current) : null;
@@ -30,7 +33,7 @@ function runHints({ edge, video, onReady, onFrame }: Run): () => void {
   void edge.open().then((loaded) => {
     if (cancelled) return;
     onReady(loaded);
-    if (loaded) loop = new EdgeHintLoop({ detector: loaded.detector, video: () => video.current, onFrame, timer: WINDOW_TIMER, frames, visible: () => page.visible() });
+    if (loaded) loop = new EdgeHintLoop({ detector: loaded.detector, video: () => video.current, onFrame, timer: WINDOW_TIMER, frames, visible: () => page.visible() }, intervalMs);
     loop?.start();
   });
   return () => {
@@ -46,8 +49,8 @@ function edgeState(active: boolean, ready: EdgeReady | null | undefined): EdgeSt
 }
 
 // "Waste spotted" needs the streak: one frame with a waste box is not enough.
-function overlayFor(frame: FrameDetections, element: HTMLVideoElement, streak: SpottedStreak): OverlayView {
-  const view = EdgeOverlayView.from(frame, { width: element.videoWidth, height: element.videoHeight }, { width: element.clientWidth, height: element.clientHeight });
+function overlayFor(frame: FrameDetections, element: HTMLVideoElement, streak: SpottedStreak, capture: CaptureSettings): OverlayView {
+  const view = EdgeOverlayView.from(frame, { width: element.videoWidth, height: element.videoHeight }, { width: element.clientWidth, height: element.clientHeight }, capture);
   return { ...view, spotted: streak.next(view.spotted) };
 }
 
@@ -57,6 +60,7 @@ function overlayFor(frame: FrameDetections, element: HTMLVideoElement, streak: S
  */
 export function useEdgeHints(video: RefObject<HTMLVideoElement | null>, live: boolean, onFrame?: (frame: FrameDetections) => void) {
   const { edge } = useServices();
+  const { capture } = useConfig();
   const setting = useEdgeHintsSetting();
   const active = live && setting.supported && setting.on;
   const [ready, setReady] = useState<EdgeReady | null | undefined>(undefined);
@@ -67,17 +71,17 @@ export function useEdgeHints(video: RefObject<HTMLVideoElement | null>, live: bo
   }, [onFrame]);
   useEffect(() => {
     if (!active) return undefined;
-    const streak = new SpottedStreak();
+    const streak = new SpottedStreak(capture.spottedFrames);
     const show = (frame: FrameDetections) => {
-      if (video.current) setView(overlayFor(frame, video.current, streak));
+      if (video.current) setView(overlayFor(frame, video.current, streak, capture));
       listener.current?.(frame);
     };
-    const stop = runHints({ edge, video, onReady: setReady, onFrame: show });
+    const stop = runHints({ edge, video, onReady: setReady, onFrame: show, intervalMs: capture.hintIntervalMs });
     return () => {
       stop();
       setView(EMPTY_OVERLAY); // no stale boxes when the camera comes back
     };
-  }, [active, edge, video]);
+  }, [active, edge, video, capture]);
   const state = edgeState(active, ready);
   return { state, view: state === 'live' ? view : EMPTY_OVERLAY, warmMs: ready?.warmMs ?? null };
 }

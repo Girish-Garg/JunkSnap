@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import type { SiteFeature } from '../../../domain/Site';
 import { ThinView, type ThinState } from '../../../domain/ThinView';
 import type { CameraRequest } from '../CameraRequest';
@@ -47,11 +48,12 @@ function useHeld(next: ThinState | null | undefined): ThinState | null {
  */
 export function useThinView(sources: ThinSources): ThinState | null {
   const { view, loaded, partial, nearest, pilot } = sources;
+  const { map } = useConfig();
   const waiting = useMoving(sources.camera, view) || fitComing(sources) || !loaded.loaded || loaded.pending;
   const next = useMemo(() => {
     if (loaded.failed || partial) return null;
     const input = { view: view?.bbox ?? null, settled: !waiting, sites: loaded.sites, known: nearest === null ? null : [...nearest, ...(pilot ?? [])] };
-    return ThinView.ready(input) ? ThinView.of(input) : undefined;
-  }, [view, waiting, loaded.failed, loaded.sites, partial, nearest, pilot]);
+    return ThinView.ready(input) ? ThinView.of(input, map) : undefined;
+  }, [view, waiting, loaded.failed, loaded.sites, partial, nearest, pilot, map]);
   return useHeld(next);
 }

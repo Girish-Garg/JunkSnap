@@ -32,6 +32,7 @@ npm run build
 - One class or component per file, named after it. Hooks are `useX`. Readonly value types; no `any`.
 - ESLint enforces the limits: `max-lines` 250 (`.tsx` 150), `max-lines-per-function` 30, `complexity` 8, `max-params` 4, `max-depth` 3. `scripts/check_limits.py` checks file sizes too.
 - Mock mode reads `contracts/fixtures/`; live mode calls the API through CloudFront. Keep mock mode working until the end. Environment variable names are listed in `contracts/README.md`.
+- Tunables (radii, zooms, timeouts, polls, toasts, limits) are `VITE_` variables baked at build, never fetched: each has its default in `src/config/`, a line in `.env.example` and in `src/vite-env.d.ts`. Only `AppConfig` reads `import.meta.env`; the `ServiceContainer` passes values to services, hooks and components read `useConfig()`, and `domain/` takes them as parameters (it never imports `src/config`).
 - Shapes and routes come from `contracts/`. If the app needs a new field, raise it on the contracts issue first.
 - Capture is the in-app camera only (no gallery upload). Hash the original with SHA-256 on the phone, then upload with the presigned PUT and submit the report.
 - Scan records video (at most 60 s, 720p, 40 MB) and a GPS track from `watchPosition`, at least one fix per second, both timed from the start of recording; then it presigns, PUTs the video and posts a `scan_session` (decision 20261010-0203).

@@ -1,8 +1,11 @@
+import { CAPTURE_DEFAULTS, type CaptureSettings } from '../config/CaptureSettings';
 import { LocationError } from '../domain/LocationError';
 import type { LonLat } from '../domain/Site';
 
 const PERMISSION_DENIED = 1;
-const TIMEOUT_MS = 10_000;
+
+/** The map's "where am I" fix: getCurrentPosition maximumAge and timeout. */
+export type LocateTimings = Pick<CaptureSettings, 'locateMaxAgeMs' | 'locateTimeoutMs'>;
 
 /** The one Permissions API call the quiet locate needs; absent in old browsers and in tests. */
 export type PermissionQuery = Pick<Permissions, 'query'>;
@@ -10,10 +13,12 @@ export type PermissionQuery = Pick<Permissions, 'query'>;
 export class GeoLocator {
   readonly #geolocation: Geolocation | undefined;
   readonly #permissions: PermissionQuery | undefined;
+  readonly #timings: LocateTimings;
 
-  constructor(geolocation: Geolocation | undefined, permissions?: PermissionQuery) {
+  constructor(geolocation: Geolocation | undefined, permissions?: PermissionQuery, timings: LocateTimings = CAPTURE_DEFAULTS) {
     this.#geolocation = geolocation;
     this.#permissions = permissions;
+    this.#timings = timings;
   }
 
   /**
@@ -36,7 +41,7 @@ export class GeoLocator {
       geolocation.getCurrentPosition(
         ({ coords }) => resolve([coords.longitude, coords.latitude]),
         (error) => reject(GeoLocator.#translate(error)),
-        { enableHighAccuracy: true, timeout: TIMEOUT_MS, maximumAge: 60_000 },
+        { enableHighAccuracy: true, timeout: this.#timings.locateTimeoutMs, maximumAge: this.#timings.locateMaxAgeMs },
       );
     });
   }

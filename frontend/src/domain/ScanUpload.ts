@@ -3,9 +3,11 @@ import type { BoxFraction } from './EdgeModel';
 import type { ReportType } from './ReportType';
 import type { SiteContext } from './Site';
 
-/** The scan video limit (contracts/README.md Limits): 60 s, 1280 by 720, 40 MB. */
+/**
+ * The scan_session schema's bounds: t_ms and duration_ms at most 60 s, at most 600 track fixes and hints. The
+ * recording's own stop (60 s and 40 MB, contracts/README.md Limits) is the config's capture settings.
+ */
 export const SCAN_LIMITS = {
-  maxBytes: 40 * 1024 * 1024,
   maxDurationMs: 60_000,
   minDurationMs: 1_000,
   maxFixes: 600,

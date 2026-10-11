@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import { FreshFix } from '../../../domain/FreshFix';
 import type { LonLat } from '../../../domain/Site';
@@ -17,22 +18,23 @@ export interface FreshLocation {
  */
 export function useFreshFix(mapLocation: LonLat | null): FreshLocation {
   const { locator } = useServices();
+  const { freshFixMs } = useConfig().capture;
   const allowed = usePermissionState('geolocation') === 'granted';
   // The map's fix counts from when it arrived here: at once on the first render, later ones on the next tick.
-  const [fix, setFix] = useState<FreshFix | null>(() => (mapLocation ? new FreshFix(mapLocation, Date.now()) : null));
+  const [fix, setFix] = useState<FreshFix | null>(() => (mapLocation ? new FreshFix(mapLocation, Date.now(), freshFixMs) : null));
   useEffect(() => {
     if (!mapLocation) return undefined;
-    const stamp = () => setFix((current) => (current?.at === mapLocation ? current : new FreshFix(mapLocation, Date.now())));
+    const stamp = () => setFix((current) => (current?.at === mapLocation ? current : new FreshFix(mapLocation, Date.now(), freshFixMs)));
     const timer = window.setTimeout(stamp, 0);
     return () => window.clearTimeout(timer);
-  }, [mapLocation]);
+  }, [mapLocation, freshFixMs]);
   const relocate = useCallback(
     () => locator.locate().then((at) => {
-      const fresh = new FreshFix(at, Date.now());
+      const fresh = new FreshFix(at, Date.now(), freshFixMs);
       setFix(fresh);
       return fresh;
     }, () => null),
-    [locator],
+    [locator, freshFixMs],
   );
   useEffect(() => {
     if (allowed) void relocate();

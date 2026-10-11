@@ -1,3 +1,4 @@
+import { CAPTURE_DEFAULTS, type CaptureSettings } from '../config/CaptureSettings';
 import { LocationError, type LocationProblem } from '../domain/LocationError';
 import type { GpsFix } from '../domain/ReportUpload';
 import type { Clock } from './Clock';
@@ -5,8 +6,9 @@ import { SystemClock } from './SystemClock';
 
 const PERMISSION_DENIED = 1;
 const POSITION_UNAVAILABLE = 2;
-// maximumAge stays well under the 10 s capture limit (CaptureFix), so a cached fix the browser hands out first passes.
-const OPTIONS: PositionOptions = { enableHighAccuracy: true, maximumAge: 5_000, timeout: 30_000 };
+
+/** watchPosition and getCurrentPosition timings; gpsMaxAgeMs stays well under the capture limit (CaptureFix). */
+export type GpsTimings = Pick<CaptureSettings, 'gpsMaxAgeMs' | 'gpsTimeoutMs' | 'currentFixMaxAgeMs' | 'currentFixTimeoutMs'>;
 
 export interface GpsListener {
   /** takenAtMs is when the GPS took the fix (coords timestamp), mapped onto the given clock. */
@@ -18,10 +20,12 @@ export interface GpsListener {
 export class GpsWatcher {
   readonly #geolocation: Geolocation | undefined;
   readonly #clock: Clock;
+  readonly #timings: GpsTimings;
 
-  constructor(geolocation: Geolocation | undefined, clock: Clock = new SystemClock()) {
+  constructor(geolocation: Geolocation | undefined, clock: Clock = new SystemClock(), timings: GpsTimings = CAPTURE_DEFAULTS) {
     this.#geolocation = geolocation;
     this.#clock = clock;
+    this.#timings = timings;
   }
 
   /** Returns a function that stops watching. */
@@ -37,7 +41,7 @@ export class GpsWatcher {
         if (error.code === PERMISSION_DENIED) onProblem('denied');
         else if (error.code === POSITION_UNAVAILABLE) onProblem('unavailable');
       },
-      OPTIONS,
+      { enableHighAccuracy: true, maximumAge: this.#timings.gpsMaxAgeMs, timeout: this.#timings.gpsTimeoutMs },
     );
     return () => geolocation.clearWatch(id);
   }
@@ -55,7 +59,7 @@ export class GpsWatcher {
       geolocation.getCurrentPosition(
         (position) => resolve(GpsWatcher.#fix(position.coords)),
         (error) => reject(new LocationError(error.code === PERMISSION_DENIED ? 'denied' : 'unavailable', error.message)),
-        { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
+        { enableHighAccuracy: true, maximumAge: this.#timings.currentFixMaxAgeMs, timeout: this.#timings.currentFixTimeoutMs },
       );
     });
   }

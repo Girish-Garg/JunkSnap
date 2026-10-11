@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { LocationProblem } from '../../../domain/LocationError';
 import type { GpsFix } from '../../../domain/ReportUpload';
@@ -20,10 +21,11 @@ const NONE: GpsState = { fix: null, problem: null };
  */
 export function useGpsFix(active: boolean): GpsState {
   const { snap } = useServices();
+  const { capture } = useConfig();
   const [state, setState] = useState<GpsState>(NONE);
   useEffect(() => {
     if (!active) return undefined;
-    const unwatch = new CaptureFixWatch(snap.gps, WINDOW_TIMER).watch({
+    const unwatch = new CaptureFixWatch(snap.gps, WINDOW_TIMER, capture).watch({
       onFix: (fix, takenAtMs) => setState({ fix, problem: null, takenAtMs }),
       onProblem: (problem) => setState((previous) => ({ ...previous, problem })),
     });
@@ -31,6 +33,6 @@ export function useGpsFix(active: boolean): GpsState {
       unwatch();
       setState(NONE);
     };
-  }, [active, snap.gps]);
+  }, [active, snap.gps, capture]);
   return state;
 }

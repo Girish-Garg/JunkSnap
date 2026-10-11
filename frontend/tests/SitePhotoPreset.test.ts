@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { SITE_GATES, type SiteActionFacts } from '../src/domain/SiteActionGates';
 import { SitePhotoPreset } from '../src/domain/SitePhotoPreset';
+import { DEFAULTS } from './config';
 import { testSite } from './siteBuilder';
 
 // testSite stands at 73.0035 E, 26.2618 N; 0.001 degrees of latitude is about 111 m.
 const SITE = testSite({ coordinates: [73.0035, 26.2618] });
-const preset = SitePhotoPreset.of(SITE);
+const preset = SitePhotoPreset.of(SITE, DEFAULTS.site);
 const at = (metresNorth: number) => ({ lat: 26.2618 + metresNorth / 111_195, lon: 73.0035 });
 
 describe('SitePhotoPreset', () => {
@@ -40,7 +41,7 @@ describe('SitePhotoPreset limits', () => {
   });
 
   it('keeps a no-bin zone to 40 m with no target, up high or not', () => {
-    const zone = SitePhotoPreset.of(testSite({ report_type: 'no_bin', context: 'no_bin', coordinates: [73.0035, 26.2618] }));
+    const zone = SitePhotoPreset.of(testSite({ report_type: 'no_bin', context: 'no_bin', coordinates: [73.0035, 26.2618] }), DEFAULTS.site);
     expect(zone.takesTarget).toBe(false);
     expect(zone.limitM(true)).toBe(40);
     expect(zone.choice(at(100), '', true)).toBeNull();
@@ -58,6 +59,7 @@ const FACTS: SiteActionFacts = {
   distanceM: 100,
   locationDenied: false,
   addPhotoLimitM: 500,
+  reach: DEFAULTS.site,
 };
 const decide = (patch: Partial<SiteActionFacts>) => SITE_GATES.addPhoto.decide({ ...FACTS, ...patch });
 

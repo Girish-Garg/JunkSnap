@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { BBox } from '../src/domain/BBox';
-import { PilotCity } from '../src/domain/PilotCity';
 import type { SiteFeature } from '../src/domain/Site';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import type { MapView } from '../src/features/map/SiteMap';
+import { DEFAULTS } from './config';
 import { renderApp, testServices } from './helpers';
 import { ListApi } from './listApi';
 import { testSite } from './siteBuilder';
@@ -33,7 +33,7 @@ class CountingApi extends ListApi {
 
   override async listSites(bbox: BBox): Promise<readonly SiteFeature[]> {
     this.boxes.push(bbox);
-    const pilot = bbox.toQuery() === PilotCity.bounds.toQuery();
+    const pilot = bbox.toQuery() === DEFAULTS.pilot.bounds.toQuery();
     if (pilot && this.#failures > 0) {
       this.#failures -= 1;
       throw new Error('network down');
@@ -42,7 +42,7 @@ class CountingApi extends ListApi {
   }
 
   pilotRequests(): number {
-    return this.boxes.filter((box) => box.toQuery() === PilotCity.bounds.toQuery()).length;
+    return this.boxes.filter((box) => box.toQuery() === DEFAULTS.pilot.bounds.toQuery()).length;
   }
 }
 

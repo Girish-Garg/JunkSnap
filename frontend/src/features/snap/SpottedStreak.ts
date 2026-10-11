@@ -1,12 +1,14 @@
-/** Frames in a row with a waste box before the hint says "Waste spotted", so one stray guess never does. */
-export const SPOTTED_FRAMES = 2;
+import { CAPTURE_DEFAULTS } from '../../config/CaptureSettings';
 
-/** Counts consecutive frames with waste on screen; any frame without it starts the count again. */
+/**
+ * Counts consecutive frames with waste on screen; any frame without it starts the count again. The hint says
+ * "Waste spotted" only after `needed` such frames (capture.spottedFrames), so one stray guess never does.
+ */
 export class SpottedStreak {
   readonly #needed: number;
   #run = 0;
 
-  constructor(needed: number = SPOTTED_FRAMES) {
+  constructor(needed: number = CAPTURE_DEFAULTS.spottedFrames) {
     this.#needed = needed;
   }
 

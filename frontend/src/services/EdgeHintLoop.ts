@@ -1,11 +1,9 @@
+import { CAPTURE_DEFAULTS } from '../config/CaptureSettings';
 import type { FrameDetections } from '../domain/EdgeModel';
 import type { EdgeDetector } from './EdgeDetector';
 import type { Timer } from './Timer';
 
 export type { Timer };
-
-/** About 4 frames a second: enough for live boxes, light on a phone's battery. */
-export const HINT_INTERVAL_MS = 250;
 
 export interface LoopPorts {
   readonly detector: Pick<EdgeDetector, 'detect'>;
@@ -30,7 +28,8 @@ export class EdgeHintLoop {
   #running = false;
   #analysed = 0; // frame 0 is "nothing presented yet"
 
-  constructor(ports: LoopPorts, intervalMs = HINT_INTERVAL_MS) {
+  // capture.hintIntervalMs: 250 ms is about 4 frames a second, enough for live boxes and light on a phone's battery.
+  constructor(ports: LoopPorts, intervalMs = CAPTURE_DEFAULTS.hintIntervalMs) {
     this.#ports = ports;
     this.#intervalMs = intervalMs;
   }

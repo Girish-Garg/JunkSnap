@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { PilotCity } from '../../../domain/PilotCity';
+import { useConfig } from '../../../app/useConfig';
 import { SiteBrowse, type BrowseRows, type BrowseSource } from '../../../domain/SiteBrowse';
 import type { SiteFilter } from '../../../domain/SiteFilter';
 import { SiteOrder, type SiteSort } from '../../../domain/SiteOrder';
@@ -22,12 +22,6 @@ export interface BrowserInput {
 }
 
 export type SiteBrowser = ReturnType<typeof useSiteBrowser>;
-
-// Points that frame the whole pilot city.
-const CITY_FRAME: readonly LonLat[] = [
-  [PilotCity.bounds.minLon, PilotCity.bounds.minLat],
-  [PilotCity.bounds.maxLon, PilotCity.bounds.maxLat],
-];
 
 /**
  * The list view: whether it is open, its rows (filtered and sorted), and stepping through them on the map.
@@ -61,23 +55,25 @@ export function useSiteBrowser(input: BrowserInput) {
 // The source follows the loaded view until frozen. Only a list with no rows of its own asks for the pilot city.
 function useBrowseRows(input: BrowserInput, frozen: BrowseSource | null, sort: SiteSort, open: boolean) {
   const { loaded, view, filter, position } = input;
-  const live = useMemo(() => SiteBrowse.source(loaded, view?.bbox ?? null), [loaded, view]);
+  const { pilot: city } = useConfig();
+  const live = useMemo(() => SiteBrowse.source(loaded, view?.bbox ?? null, city), [loaded, view, city]);
   const source = frozen ?? live;
   const own = useMemo(() => SiteBrowse.own({ source, loaded, filter }, sort, position), [source, loaded, filter, sort, position]);
   const pilot = usePilotSites(input.openingWants || (open && own.length === 0), input.around);
   const rows = useMemo(
-    (): BrowseRows => (own.length > 0 ? { sites: own, fallback: false } : { sites: SiteBrowse.city({ pilot: pilot.sites, loaded, filter }, sort, position), fallback: true }),
-    [own, pilot.sites, loaded, filter, sort, position],
+    (): BrowseRows => (own.length > 0 ? { sites: own, fallback: false } : { sites: SiteBrowse.city({ pilot: pilot.sites, city, loaded, filter }, sort, position), fallback: true }),
+    [own, pilot.sites, city, loaded, filter, sort, position],
   );
   return { source, rows, pilot };
 }
 
 // Fits the city's sites (the whole city while they load, or when it has none); the list follows the map there.
 function useShowCity(follow: () => void, frame: (points: readonly LonLat[]) => void, pilot: readonly SiteFeature[] | null) {
+  const { pilot: city } = useConfig();
   return useCallback(() => {
     follow();
-    frame(pilot && pilot.length > 0 ? pilot.map((site) => site.geometry.coordinates) : CITY_FRAME);
-  }, [follow, frame, pilot]);
+    frame(pilot && pilot.length > 0 ? pilot.map((site) => site.geometry.coordinates) : city.frame());
+  }, [follow, frame, pilot, city]);
 }
 
 // Opening starts a fresh list on the view; a move the person makes while the list is up refreshes it.

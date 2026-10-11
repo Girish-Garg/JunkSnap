@@ -1,6 +1,10 @@
-import type { MapLayer } from './MapLayer';
+import { MAP_DEFAULTS } from '../config/MapSettings';
+import { SITE_RULE_DEFAULTS } from '../config/SiteRules';
+import type { LayerSettings, MapLayer } from './MapLayer';
 
-type LayerClass = new () => MapLayer;
+type LayerClass = new (settings: LayerSettings) => MapLayer;
+
+const DEFAULT_SETTINGS: LayerSettings = { zoneRadiusM: SITE_RULE_DEFAULTS.zoneRadiusM, latitude: MAP_DEFAULTS.pilotCentre[1] };
 
 // Adding a layer = adding a *Layer.ts file that default-exports its class.
 const layerModules = import.meta.glob<LayerClass>(['./*Layer.ts', '!./MapLayer.ts'], {
@@ -11,8 +15,8 @@ const layerModules = import.meta.glob<LayerClass>(['./*Layer.ts', '!./MapLayer.t
 export class LayerRegistry {
   readonly #layers: readonly MapLayer[];
 
-  constructor(classes: readonly LayerClass[] = Object.values(layerModules)) {
-    this.#layers = classes.map((LayerType) => new LayerType()).sort((a, b) => a.order - b.order);
+  constructor(classes: readonly LayerClass[] = Object.values(layerModules), settings: LayerSettings = DEFAULT_SETTINGS) {
+    this.#layers = classes.map((LayerType) => new LayerType(settings)).sort((a, b) => a.order - b.order);
   }
 
   all(): readonly MapLayer[] {

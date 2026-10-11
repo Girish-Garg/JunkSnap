@@ -1,15 +1,15 @@
 import type { NoteRequest, SiteNote } from '../domain/Community';
 import type { PhotoFlagRequest, PhotoFlagResult } from '../domain/PhotoFlag';
 import type { CleanupAccepted, CleanupRequest, LetterDraft, LetterRequest, VoteRequest, VoteResult, WithdrawalResult } from '../domain/SiteActions';
-import { HttpTransport } from './HttpTransport';
+import { HttpTransport, type HttpTimeouts } from './HttpTransport';
 import type { RequestIdentity } from './ReportApi';
 import type { SiteActionsApi } from './SiteActionsApi';
 
 export class HttpSiteActionsApi implements SiteActionsApi {
   readonly #http: HttpTransport;
 
-  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch) {
-    this.#http = new HttpTransport(baseUrl, identity, fetchImpl);
+  constructor(baseUrl: string, identity: RequestIdentity, fetchImpl?: typeof fetch, timeouts?: HttpTimeouts) {
+    this.#http = new HttpTransport(baseUrl, identity, fetchImpl, timeouts);
   }
 
   vote(siteId: string, request: VoteRequest): Promise<VoteResult> {

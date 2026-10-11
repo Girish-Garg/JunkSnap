@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { NOTE_MAX_LENGTH } from '../../../domain/ReportUpload';
-import { HIGH_LIMIT_M, type SitePhotoPreset } from '../../../domain/SitePhotoPreset';
+import type { SitePhotoPreset } from '../../../domain/SitePhotoPreset';
 import { Checkbox } from '../../../ui/Checkbox';
 import { TextArea } from '../../../ui/TextArea';
 import type { CapturedPhoto } from '../hooks/usePhotoCapture';
@@ -34,7 +34,7 @@ export function SitePhotoReview({ photo, flow, preset }: SitePhotoReviewProps) {
         {report.where && ` ${report.where}`}
       </p>
       {report.offerHigh && (
-        <Checkbox id="site-photo-high" label={t('longRange.high', { metres: HIGH_LIMIT_M })} checked={report.high} onChange={report.setHigh} />
+        <Checkbox id="site-photo-high" label={t('longRange.high', { metres: preset.limitM(true) })} checked={report.high} onChange={report.setHigh} />
       )}
       <TextArea id="snap-note" label={t('snap.note')} value={report.note} onChange={report.setNote} maxLength={NOTE_MAX_LENGTH} hint={t('snap.noteHint', { left: report.noteLeft })} />
       <SendActions send={sendable} saveFailed={flow.saveFailed} notice={report.notice} onSend={send} onRetake={flow.retake} />

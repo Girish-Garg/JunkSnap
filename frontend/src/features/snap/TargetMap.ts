@@ -1,12 +1,8 @@
 import { AttributionControl, Map as MapLibreMap, Marker, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import type { Feature, LineString } from 'geojson';
+import type { MapSettings } from '../../config/MapSettings';
 import type { LatLon } from '../../domain/ReportUpload';
 
-// The same keyless basemap as the main map (SiteMap).
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
-// About 400 m across a phone-width map, so a 300 m reach fits after a small zoom-out.
-const START_ZOOM = 16;
-const MAX_ZOOM = 18;
 const LINE_ID = 'target-line';
 const HEADING_ID = 'heading-line';
 
@@ -17,6 +13,11 @@ export interface TargetMapOptions {
   readonly labels: TargetMapLabels;
   /** The pin was dropped after a drag, or the map was tapped; the point is raw, before any cap. */
   readonly onMove: (point: LatLon) => void;
+  /**
+   * The same keyless basemap as the main map (SiteMap), opening at targetZoom: about 400 m across a phone-width map, so
+   * a 300 m reach fits after a small zoom-out.
+   */
+  readonly settings: Pick<MapSettings, 'styleUrl' | 'targetZoom' | 'maxZoom'>;
 }
 
 export interface TargetMapLabels {
@@ -45,16 +46,16 @@ export class TargetMap {
   #drawn: Drawn;
 
   constructor(options: TargetMapOptions) {
-    const { container, origin, labels, onMove } = options;
+    const { container, origin, labels, onMove, settings } = options;
     const center: [number, number] = [origin.lon, origin.lat];
     this.#origin = origin;
     this.#drawn = { spot: origin, headingEnd: null };
     this.#map = new MapLibreMap({
       container,
-      style: STYLE_URL,
+      style: settings.styleUrl,
       center,
-      zoom: START_ZOOM,
-      maxZoom: MAX_ZOOM,
+      zoom: settings.targetZoom,
+      maxZoom: settings.maxZoom,
       // The map sits in a scrolling sheet: one finger scrolls the sheet, two move the map. Pin drags and taps still work.
       cooperativeGestures: true,
       attributionControl: false,

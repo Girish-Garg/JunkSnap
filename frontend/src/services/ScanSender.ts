@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import { ApiError } from '../domain/ApiError';
 import { JunkSnapError } from '../domain/JunkSnapError';
 import type { QueuedScan } from '../domain/QueuedScan';
@@ -14,12 +15,15 @@ export class ScanSender {
   readonly #api: ScanApi;
   readonly #identity: RequestIdentity;
   readonly #clock: Clock;
+  readonly #presignReuseMs: number;
   readonly #signedIn: SignedInStep;
 
-  constructor(api: ScanApi, identity: RequestIdentity, clock: Clock) {
+  /** presignReuseMs: how long a presigned URL is reused (network.presignReuseMs, under the api's PRESIGN_TTL_SECONDS). */
+  constructor(api: ScanApi, identity: RequestIdentity, clock: Clock, presignReuseMs: number = NETWORK_DEFAULTS.presignReuseMs) {
     this.#api = api;
     this.#identity = identity;
     this.#clock = clock;
+    this.#presignReuseMs = presignReuseMs;
     this.#signedIn = new SignedInStep(identity);
   }
 
@@ -29,7 +33,7 @@ export class ScanSender {
 
   async #advance(scan: QueuedScan): Promise<QueuedScan> {
     const now = this.#clock.now();
-    if (scan.needsPresign(now)) return scan.presigned(await this.#presign(scan), now);
+    if (scan.needsPresign(now, this.#presignReuseMs)) return scan.presigned(await this.#presign(scan), now);
     if (scan.data.stage === 'saved') return this.#put(scan);
     const accepted = await this.#api.submit(scan.toSession(await this.#identity.deviceToken()));
     return scan.sent(accepted.scan_id);

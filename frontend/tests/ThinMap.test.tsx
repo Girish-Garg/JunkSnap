@@ -8,6 +8,7 @@ import type { SiteFeature } from '../src/domain/Site';
 import { ThinView } from '../src/domain/ThinView';
 import { FitPadding } from '../src/features/map/FitPadding';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
+import { DEFAULTS } from './config';
 import { MemoryStore, renderApp, testServices } from './helpers';
 import { ListApi } from './listApi';
 import { testSite } from './siteBuilder';
@@ -200,20 +201,20 @@ describe('ThinView', () => {
   const view = ONE;
   const far = testSite({ site_id: 'site_far', coordinates: [80, 20] });
   it('waits for a settled view, and for the search around an empty one', () => {
-    expect(ThinView.of({ view, settled: false, sites: [], known: [] })).toBeNull();
-    expect(ThinView.of({ view, settled: true, sites: [], known: null })).toBeNull();
-    expect(ThinView.of({ view, settled: true, sites: SITES, known: [] })).toBeNull();
-    expect(ThinView.of({ view, settled: true, sites: SITES.slice(0, 2), known: [] })).toEqual({ count: 2, zoomOut: [] });
+    expect(ThinView.of({ view, settled: false, sites: [], known: [] }, DEFAULTS.map)).toBeNull();
+    expect(ThinView.of({ view, settled: true, sites: [], known: null }, DEFAULTS.map)).toBeNull();
+    expect(ThinView.of({ view, settled: true, sites: SITES, known: [] }, DEFAULTS.map)).toBeNull();
+    expect(ThinView.of({ view, settled: true, sites: SITES.slice(0, 2), known: [] }, DEFAULTS.map)).toEqual({ count: 2, zoomOut: [] });
   });
 
   it('offers Zoom out only to a view that still loads whole', () => {
-    expect(ThinView.of({ view, settled: true, sites: [], known: [far] })?.zoomOut).toEqual([]);
-    expect(ThinView.of({ view, settled: true, sites: [], known: [SITES[2] as SiteFeature] })?.zoomOut).toHaveLength(3);
+    expect(ThinView.of({ view, settled: true, sites: [], known: [far] }, DEFAULTS.map)?.zoomOut).toEqual([]);
+    expect(ThinView.of({ view, settled: true, sites: [], known: [SITES[2] as SiteFeature] }, DEFAULTS.map)?.zoomOut).toHaveLength(3);
   });
 
   it("never shows the list note over Jodhpur's rows or a filtered list", () => {
-    expect(ThinView.listShows({ rows: 1, fallback: true, filtered: false })).toBe(false);
-    expect(ThinView.listShows({ rows: 1, fallback: false, filtered: true })).toBe(false);
+    expect(ThinView.listShows({ rows: 1, fallback: true, filtered: false }, DEFAULTS.map.thinMax)).toBe(false);
+    expect(ThinView.listShows({ rows: 1, fallback: false, filtered: true }, DEFAULTS.map.thinMax)).toBe(false);
   });
 });
 

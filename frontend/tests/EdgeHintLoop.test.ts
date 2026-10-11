@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type { FrameDetections } from '../src/domain/EdgeModel';
-import { EdgeHintLoop, HINT_INTERVAL_MS } from '../src/services/EdgeHintLoop';
+import { EdgeHintLoop } from '../src/services/EdgeHintLoop';
+import { DEFAULTS } from './config';
+
+const HINT_INTERVAL_MS = DEFAULTS.capture.hintIntervalMs;
 import { ManualTimer, settle } from './cameraFakes';
 
 const RESULT: FrameDetections = { detections: [], capturedAtMs: 0, inferenceMs: 40 };

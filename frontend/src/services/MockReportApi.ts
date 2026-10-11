@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import { ApiError } from '../domain/ApiError';
 import type { ConfirmRequest } from '../domain/ReportConfirmation';
 import type { ReportListPage } from '../domain/ReportList';
@@ -25,7 +26,7 @@ export class MockReportApi implements ReportApi {
    * evidence: the fixtures behind the "What we checked" view; null leaves statuses bare, as tests expect.
    * confirmations: reports the check was unsure about; null never asks.
    */
-  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = 400, evidence: MockReportEvidence | null = null, confirmations: MockConfirmations | null = null) {
+  constructor(sampleSite: () => Promise<SiteFeature>, delayMs = NETWORK_DEFAULTS.mockDelayMs, evidence: MockReportEvidence | null = null, confirmations: MockConfirmations | null = null) {
     this.#sampleSite = sampleSite;
     this.#delayMs = delayMs;
     this.#evidence = evidence;

@@ -1,5 +1,5 @@
 import type { BBox } from './BBox';
-import { PilotCity } from './PilotCity';
+import type { PilotCity } from './PilotCity';
 import type { LonLat, SiteFeature } from './Site';
 import type { SiteFilter } from './SiteFilter';
 import { SiteListing } from './SiteListing';
@@ -18,6 +18,8 @@ export interface BrowseInput {
   readonly loaded: readonly SiteFeature[];
   /** The pilot city's sites, or null while they load; listed when the view has none. */
   readonly pilot: readonly SiteFeature[] | null;
+  /** The pilot city itself (the config's VITE_PILOT_*). */
+  readonly city: PilotCity;
   readonly filter: SiteFilter;
 }
 
@@ -35,20 +37,20 @@ export class SiteBrowse {
   }
 
   /** The view's own rows; when there are none, the list falls back to the pilot city (and only then loads it). */
-  static own(input: Omit<BrowseInput, 'pilot'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
+  static own(input: Omit<BrowseInput, 'pilot' | 'city'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
     const own = input.filter.apply(SiteBrowse.#fresh(input.source.sites, input.loaded));
     return SiteOrder.sort(own, sort, from ?? input.source.middle);
   }
 
   /** The pilot city's rows, through the same filters and order. */
-  static city(input: Pick<BrowseInput, 'pilot' | 'loaded' | 'filter'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
-    const city = input.filter.apply(PilotCity.sitesOf(SiteBrowse.#fresh(input.pilot ?? [], input.loaded)));
-    return SiteOrder.sort(city, sort, from ?? PilotCity.centre);
+  static city(input: Pick<BrowseInput, 'pilot' | 'city' | 'loaded' | 'filter'>, sort: SiteSort, from: LonLat | null): readonly SiteFeature[] {
+    const city = input.filter.apply(input.city.sitesOf(SiteBrowse.#fresh(input.pilot ?? [], input.loaded)));
+    return SiteOrder.sort(city, sort, from ?? input.city.centre);
   }
 
-  /** The source for a view: its loaded sites and its middle. */
-  static source(sites: readonly SiteFeature[], view: BBox | null): BrowseSource {
-    return { sites, middle: view?.center() ?? PilotCity.centre };
+  /** The source for a view: its loaded sites and its middle (the pilot city's while there is no view). */
+  static source(sites: readonly SiteFeature[], view: BBox | null, city: PilotCity): BrowseSource {
+    return { sites, middle: view?.center() ?? city.centre };
   }
 
   // Removed, cleaned and expired sites never show, even from a list frozen before they left the map.

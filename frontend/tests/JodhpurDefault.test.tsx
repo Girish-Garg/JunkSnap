@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { BBox } from '../src/domain/BBox';
-import { PilotCity } from '../src/domain/PilotCity';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import type { MapView } from '../src/features/map/SiteMap';
 import { GeoLocator, type PermissionQuery } from '../src/services/GeoLocator';
+import { DEFAULTS } from './config';
 import { renderApp, testServices } from './helpers';
 
 const seen = vi.hoisted(() => ({ last: null as SiteMapBindings | null }));
@@ -20,7 +20,7 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({
 }));
 
 // The phone's opening view: the middle of Jodhpur, with jdh-1 and jdh-4 in it.
-const OPENING = BBox.around(PilotCity.centre, 0.06);
+const OPENING = BBox.around(DEFAULTS.pilot.centre, 0.06);
 const DELHI = [77.21, 28.61] as const;
 
 function located(state: PermissionState) {

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
+import { useConfig } from '../../../app/useConfig';
 import { lookOf } from '../../../domain/ActionAvailability';
-import { AUTO_STOP_MS } from '../../../services/RecordingSession';
+import { RecordingSession } from '../../../services/RecordingSession';
 import '../../../ui/blocked.css';
 import type { GatedAction } from '../../actions/GatedAction';
 import type { RecorderPhase } from '../hooks/useScanRecorder';
@@ -22,6 +23,7 @@ const clock = (ms: number) => {
 /** A red record button; while recording, the timer against the 1-minute cap and a stop button. */
 export function RecordControls({ phase, elapsedMs, start, onStart, onStop }: RecordControlsProps) {
   const { t } = useTranslation();
+  const limitMs = RecordingSession.autoStopMs(useConfig().capture);
   if (phase === 'idle') {
     const look = lookOf(start.availability);
     return (
@@ -34,7 +36,7 @@ export function RecordControls({ phase, elapsedMs, start, onStart, onStop }: Rec
     <div className="snap-camera__controls">
       <p className="record-timer" role="timer" aria-live="off">
         <span className="record-timer__dot" aria-hidden="true" />
-        {t('scan.timer', { elapsed: clock(elapsedMs), limit: clock(AUTO_STOP_MS) })}
+        {t('scan.timer', { elapsed: clock(elapsedMs), limit: clock(limitMs) })}
       </p>
       <button type="button" className="stop-button" aria-label={t('scan.stop')} disabled={phase === 'saving'} onClick={onStop} />
       {phase === 'saving' && <p className="form__note">{t('scan.saving')}</p>}

@@ -1,3 +1,4 @@
+import { NETWORK_DEFAULTS } from '../config/NetworkSettings';
 import { ApiError } from '../domain/ApiError';
 import type { NoteRequest, SiteNote } from '../domain/Community';
 import type { PhotoFlagRequest, PhotoFlagResult } from '../domain/PhotoFlag';
@@ -16,7 +17,7 @@ export class MockSiteActionsApi implements SiteActionsApi {
   readonly #sources: MockSiteSources;
   readonly #delayMs: number;
 
-  constructor(sources: MockSiteSources, delayMs = 400) {
+  constructor(sources: MockSiteSources, delayMs = NETWORK_DEFAULTS.mockDelayMs) {
     this.#sources = sources;
     this.#delayMs = delayMs;
   }

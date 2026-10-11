@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import labelsText from '../public/boundaries/areas_labels.geojson?raw';
 import { PlaceSearch, type SeatLabel } from '../src/domain/PlaceSearch';
 import type { LabelPoints } from '../src/services/BoundaryCatalog';
+import { DEFAULTS } from './config';
 import { testSite } from './siteBuilder';
+
+const MAX = DEFAULTS.limits.searchResults;
 
 const sites = [
   testSite({ site_id: 'site_a' }),
@@ -12,7 +15,7 @@ const sites = [
     location: { state: 'Assam', town: 'Guwahati', ward: null, assembly_seat: null, local_body: null },
   }),
 ];
-const search = new PlaceSearch(sites);
+const search = new PlaceSearch(sites, [], MAX);
 
 describe('PlaceSearch', () => {
   it('finds a ward by name with its sites', () => {
@@ -41,7 +44,7 @@ const SEATS: readonly SeatLabel[] = [
 ];
 
 describe('PlaceSearch with the shipped seat names', () => {
-  const withSeats = new PlaceSearch(sites, SEATS);
+  const withSeats = new PlaceSearch(sites, SEATS, MAX);
 
   it('finds a seat with no site on screen and gives its middle to fly to', () => {
     const [luni] = withSeats.find('lun');
@@ -59,12 +62,12 @@ describe('PlaceSearch with the shipped seat names', () => {
     const twins = new PlaceSearch([], [
       { id: 's01-pc-1', name: 'Twin', kind: 'loksabha', point: [77, 12] },
       { id: 's02-pc-9', name: 'Twin', kind: 'loksabha', point: [88, 22] },
-    ]).find('twin');
+    ], MAX).find('twin');
     expect(twins.map((place) => place.point)).toEqual([[77, 12], [88, 22]]);
   });
 
   it('puts names that start with the text first', () => {
-    const names = new PlaceSearch([], [...SEATS, { id: 's20-ac-124', name: 'Bilara', kind: 'assembly', point: [73.7, 26.2] }]).find('l');
+    const names = new PlaceSearch([], [...SEATS, { id: 's20-ac-124', name: 'Bilara', kind: 'assembly', point: [73.7, 26.2] }], MAX).find('l');
     expect(names[0]?.name).toBe('Luni');
   });
 });
@@ -78,7 +81,7 @@ const SHIPPED = (JSON.parse(labelsText) as LabelPoints).features.map(({ properti
 }));
 
 describe('PlaceSearch in Hindi', () => {
-  const shipped = new PlaceSearch(sites, SHIPPED);
+  const shipped = new PlaceSearch(sites, SHIPPED, MAX);
 
   it.each([
     ['सूरसागर', 'Soorsagar'],
@@ -107,7 +110,7 @@ describe('PlaceSearch in Hindi', () => {
 });
 
 describe('PlaceSearch in Hindi, सिंह names', () => {
-  const shipped = new PlaceSearch(sites, SHIPPED);
+  const shipped = new PlaceSearch(sites, SHIPPED, MAX);
 
   it.each([
     ['रायसिंहनगर', 'Raisinghnagar'],

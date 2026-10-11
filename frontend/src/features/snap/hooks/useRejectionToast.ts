@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import type { RejectionReason } from '../../../domain/ReportRejection';
 import { RejectionWatcher } from '../RejectionWatcher';
 
-const SHOW_MS = 12_000;
-
-/** Raises the toast when one of this phone's reports comes back turned down; null while hidden. */
+/** Raises the toast (for ui.rejectionToastMs) when one of this phone's reports comes back turned down; null while hidden. */
 export function useRejectionToast(): { readonly reason: RejectionReason | null; readonly dismiss: () => void } {
   const { snap } = useServices();
+  const { rejectionToastMs } = useConfig().ui;
   const [reason, setReason] = useState<RejectionReason | null>(null);
   useEffect(() => {
     const watcher = new RejectionWatcher();
@@ -20,9 +20,9 @@ export function useRejectionToast(): { readonly reason: RejectionReason | null; 
   }, [snap.queue]);
   useEffect(() => {
     if (reason === null) return undefined;
-    const timer = window.setTimeout(() => setReason(null), SHOW_MS);
+    const timer = window.setTimeout(() => setReason(null), rejectionToastMs);
     return () => window.clearTimeout(timer);
-  }, [reason]);
+  }, [reason, rejectionToastMs]);
   const dismiss = useCallback(() => setReason(null), []);
   return { reason, dismiss };
 }

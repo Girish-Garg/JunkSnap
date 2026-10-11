@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SCAN_LIMITS } from '../src/domain/ScanUpload';
-import { AUTO_STOP_MS } from '../src/services/RecordingSession';
-import { VIDEO_BITS_PER_SECOND, VideoRecorder } from '../src/services/VideoRecorder';
+import { RecordingSession } from '../src/services/RecordingSession';
+import { VideoRecorder } from '../src/services/VideoRecorder';
+import { DEFAULTS } from './config';
 import { FakeMediaRecorder, fakeRecorderFactory } from './scanFakes';
 import { FakeClock } from './snapFakes';
+
+const { scanVideoBitsPerSecond: VIDEO_BITS_PER_SECOND, scanMaxDurationMs, scanMaxBytes } = DEFAULTS.capture;
+const AUTO_STOP_MS = RecordingSession.autoStopMs(DEFAULTS.capture);
 
 const STREAM = {} as MediaStream;
 
@@ -23,7 +26,7 @@ describe('VideoRecorder type and bitrate', () => {
   });
 
   it('keeps a full minute well under 40 MB', () => {
-    expect((VIDEO_BITS_PER_SECOND / 8) * (SCAN_LIMITS.maxDurationMs / 1000)).toBeLessThan(SCAN_LIMITS.maxBytes / 2);
+    expect((VIDEO_BITS_PER_SECOND / 8) * (scanMaxDurationMs / 1000)).toBeLessThan(scanMaxBytes / 2);
   });
 
   it('says when the browser cannot record', () => {
