@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ModerationResult, VerificationResult } from "../../src/contracts/index.gen.js";
 import { InternalDataError, ValidationError } from "../../src/domain/errors.js";
-import type { CleanupRequest } from "../../src/domain/sites/Cleanup.js";
+import type { CleanupRecord, CleanupRequest } from "../../src/domain/sites/Cleanup.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import { AlreadyCleanedError, CleanupPendingError, SiteNotFoundError } from "../../src/domain/sites/SiteErrors.js";
@@ -22,6 +22,32 @@ const MODERATION = fixture<ModerationResult>("moderation_result.jdh-3.json");
 const VERIFICATION = fixture<VerificationResult>("verification_result.jdh-3.json");
 const PASSED = { moderation: MODERATION, verification: VERIFICATION };
 const USER = "user-cleaner";
+
+// SQS refuses the first send, then recovers.
+class FlakyQueue extends FakeQueue {
+  #failed = false;
+
+  override async send(record: CleanupRecord): Promise<void> {
+    if (!this.#failed) {
+      this.#failed = true;
+      throw new Error("queue unreachable");
+    }
+    await super.send(record);
+  }
+}
+
+// The cleanups table refuses the first write, then recovers.
+class FlakyCleanups extends FakeCleanups {
+  #failed = false;
+
+  override async create(record: CleanupRecord): Promise<void> {
+    if (!this.#failed) {
+      this.#failed = true;
+      throw new Error("cleanups table unreachable");
+    }
+    await super.create(record);
+  }
+}
 
 function setup() {
   const sites = new FakeSiteRepository();
@@ -73,6 +99,33 @@ describe("CleanupIntake", () => {
     }
     await intake.submit("site_jdh_1", REQUEST, USER);
     expect(cleanups.records.has("cln_jdh_3c")).toBe(true);
+    expect(queue.sent).toHaveLength(1);
+  });
+
+  it("leaves the site free when queueing fails, and a retried POST marks it and queues the photo", async () => {
+    const { sites, cleanups } = setup();
+    const queue = new FlakyQueue();
+    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow("queue unreachable");
+    expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("none");
+    expect(await intake.submit("site_jdh_1", REQUEST, USER)).toMatchObject({ cleanup_id: "cln_jdh_3c", status: "checking" });
+    expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("checking");
+    expect(queue.sent).toHaveLength(1);
+  });
+
+  it("leaves the site free for the next after-photo when storing the record fails", async () => {
+    const { sites, queue } = setup();
+    const intake = new CleanupIntake({ sites, cleanups: new FlakyCleanups(), queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow("cleanups table unreachable");
+    expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("none");
+    await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_other" }, USER)).resolves.toMatchObject({ status: "checking" });
+  });
+
+  it("refuses a second after-photo while one is checking before storing or queueing it", async () => {
+    const { intake, cleanups, queue } = setup();
+    await intake.submit("site_jdh_1", REQUEST, USER);
+    await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_other" }, USER)).rejects.toThrow(CleanupPendingError);
+    expect(cleanups.records.has("cln_other")).toBe(false);
     expect(queue.sent).toHaveLength(1);
   });
 
