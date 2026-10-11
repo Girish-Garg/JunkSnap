@@ -13,7 +13,7 @@ export class HttpMlVerifyClient implements MlVerifyClient {
   readonly #fetch: FetchFunction;
   readonly #timeoutMs: number;
 
-  // timeoutMs: ML_VERIFY_TIMEOUT_MS.
+  // timeoutMs: ML_VERIFY_TIMEOUT_S in ms, equal to ml's ML_WORKER_BUDGET_S.
   constructor(baseUrl: string, timeoutMs: number, fetchFunction: FetchFunction = fetch) {
     this.#url = `${baseUrl.replace(/\/+$/, "")}${PATH}`;
     this.#fetch = fetchFunction;

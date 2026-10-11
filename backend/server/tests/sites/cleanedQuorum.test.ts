@@ -25,7 +25,7 @@ import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const MODERATION = fixture<ModerationResult>("moderation_result.jdh-3.json");
 const VERIFICATION = fixture<VerificationResult>("verification_result.jdh-3.json");
 

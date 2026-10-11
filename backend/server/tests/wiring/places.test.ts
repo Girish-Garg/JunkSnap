@@ -35,7 +35,7 @@ describe("NearPlacesFinder", () => {
   ];
 
   it("keeps places within 100 m, nearest first, measuring to the nearest vertex or edge", () => {
-    const near = new NearPlacesFinder(layers).near(SITE.lat, SITE.lon);
+    const near = new NearPlacesFinder(layers, RULES.nearPlacesRadiusM).near(SITE.lat, SITE.lon);
     expect(near.map((place) => [place.kind, place.ref, place.distance_m])).toEqual([
       ["drain", "osm:way/3", 0],
       ["water", "osm:way/4", 60],
@@ -45,7 +45,7 @@ describe("NearPlacesFinder", () => {
   });
 
   it("finds nothing without layers", () => {
-    expect(new NearPlacesFinder([]).near(SITE.lat, SITE.lon)).toEqual([]);
+    expect(new NearPlacesFinder([], RULES.nearPlacesRadiusM).near(SITE.lat, SITE.lon)).toEqual([]);
   });
 });
 

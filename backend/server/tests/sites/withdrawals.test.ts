@@ -19,7 +19,7 @@ import { PAGING, RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const LATER = "2026-10-10T03:00:00Z";
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const requester = (device: string) => ({ userId: userOf(device), deviceToken: device });
 
 // Founds site_jdh_1 from DEVICE_A's photo and merges one more photo per extra report.

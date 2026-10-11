@@ -10,6 +10,7 @@ const PagingEnv = z.object({
   // DynamoDB BatchGetItem takes at most 100 keys.
   BATCH_GET_SIZE: pages(100, 100),
   MAP_MAX_SITES: pages(10_000, 500),
+  BBOX_MAX_DEGREES: z.coerce.number().gt(0).max(10).default(1),
 });
 
 // Caps on how much one request reads, so a large table never turns one answer into an unbounded scan.
@@ -23,6 +24,8 @@ export class PagingSettings {
   readonly batchGetSize: number;
   // Sites GET /sites?bbox returns at most, newest first.
   readonly mapMaxSites: number;
+  // GET /sites?bbox covers at most this many degrees of longitude and of latitude, else 400 bbox_too_large.
+  readonly bboxMaxDegrees: number;
 
   private constructor(values: z.output<typeof PagingEnv>) {
     this.areaLetterMaxPages = values.AREA_LETTER_MAX_PAGES;
@@ -30,6 +33,7 @@ export class PagingSettings {
     this.myReportsMaxRounds = values.MY_REPORTS_MAX_ROUNDS;
     this.batchGetSize = values.BATCH_GET_SIZE;
     this.mapMaxSites = values.MAP_MAX_SITES;
+    this.bboxMaxDegrees = values.BBOX_MAX_DEGREES;
     Object.freeze(this);
   }
 

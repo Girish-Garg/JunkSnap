@@ -136,7 +136,7 @@ describe("SiteReportMerger", () => {
     const sites = { merge: async (evidence: MergeEvidence) => (seen.push(evidence), result) };
     const bin = { point: new GeoPoint(26.2702, 73.0035), ref: "osm:node/2", source: layer.source };
     const bins = new BinLocator({ bins: [bin], mappedTowns: ["jodhpur"] }, 3000);
-    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer]), bins) };
+    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer], RULES.nearPlacesRadiusM), bins) };
   }
 
   it("hands over the evidence with nearby places and the nearest bin, and follows the site's status", async () => {

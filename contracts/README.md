@@ -95,8 +95,8 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 
 | Rule | Value | Enforced by |
 |---|---|---|
-| Fresh timestamp | `captured_at` at most 72 h before `received_at` (room for the offline queue), at most 5 min after it | worker |
-| Duplicate | pHash Hamming distance 8 or less to an earlier photo within 100 m | worker |
+| Fresh timestamp | `captured_at` at most `PHOTO_MAX_AGE_HOURS` (72 h) before `received_at` (room for the offline queue), at most `PHOTO_MAX_AHEAD_MINUTES` (5 min) after it | worker |
+| Duplicate | pHash Hamming distance `DUPLICATE_MAX_BITS` (8) or less to an earlier photo within `DUPLICATE_RADIUS_M` (100 m) | worker |
 | Rate limit | Each counted per user and per device; the stricter one applies. Snap: `SNAP_PER_HOUR` photos per hour (default 20), counted on `reports` through `by-user` and `by-device` over the last hour of `received_at` (scan frames excluded). Scan: 1 frame per `SCAN_FRAME_INTERVAL_MS` (a second) of video, which the frame sampler enforces; frames never count toward the Snap limit. Letters: `LETTERS_PER_HOUR` per hour (default 5), counted with a windowed counter (`letter_window_start`, `letter_count`) on the `users` row and on the `devices` row, reset once an hour has passed since `letter_window_start` and updated with a conditional write | api (presign) and worker for photos; worker for frames; api for letters |
 | Scan video | `video/webm` or `video/mp4`, at most `SCAN_MAX_SECONDS` (60 s), `SCAN_MAX_LONG_SIDE_PX` by `SCAN_MAX_SHORT_SIDE_PX` (1280 by 720) and `SCAN_MAX_MB` (40 MB); else 400 `scan_too_large` at presign, or scan `failed` with `invalid_video` | api (presign), worker |
 | Scan frames | 1 per `SCAN_FRAME_INTERVAL_MS` (1 per second); a phone-hinted frame replaces the plain one in its second, keeping the `SCAN_MAX_HINT_FRAMES` (60) strongest hints. Drop a frame when the nearest GPS fix is more than `SCAN_MAX_FIX_GAP_MS` (3 s) away or its `accuracy_m` is over `SCAN_MAX_ACCURACY_M` (50). A session needs `SCAN_MIN_FIXES_PER_SECOND` (1) fixes per second of video. Keep one frame per view: drop a frame whose 64-bit difference hash is within `SCAN_DUPLICATE_BITS` (5) bits of the last kept frame, or within `SCAN_SIMILAR_BITS` (20) bits of a kept frame less than `SCAN_SAME_SPOT_M` (10 m) away (the better hinted of the two stays) | worker (api checks the fix count) |
@@ -106,10 +106,10 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 | Withdrawals | `WITHDRAWALS_PER_HOUR` per hour (default 10), per user and per device, windowed like letters on `withdraw_window_start` and `withdraw_count` (users and devices rows); 429 `rate_limited` | api |
 | Confirmations | `CONFIRMATIONS_PER_HOUR` per hour (default 20), per user and per device, windowed like letters on `confirm_window_start` and `confirm_count` (users and devices rows); 429 `rate_limited`, checked before the report is read | api |
 | Confirmation window | `CONFIRM_TTL_HOURS` (24) after the verify step asked (`confirmation.expires_at`); later answers get 409 `confirmation_closed` | worker sets it, api enforces it |
-| Cleanup photo | GPS within 50 m of the site (`near_site` check) | worker |
+| Cleanup photo | GPS within `CLEANUP_NEAR_SITE_M` (50 m) of the site (`near_site` check) | worker |
 | Long-range target | `report_upload.target` at most `TARGET_MAX_M` (500 m) from `gps` (haversine), else 422 `target_too_far`; not allowed on `no_bin` or scan frames (the schema forbids it) | api (`POST /reports`) |
 | Brand label | readable text and confidence 0.8 or more | worker |
-| Nearby places | within 100 m of the site | worker |
+| Nearby places | within `NEAR_PLACES_RADIUS_M` (100 m, the schema's cap) of the site | worker |
 | Area score and area shares | at least `MIN_VERIFIED_REPORTS` (10) verified reports (`min_verified_reports`) | scores |
 
 ## Routes
@@ -126,7 +126,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 | `POST /scans/presign` | api | scan presign request | 200 scan presign response | 400 `scan_too_large` over the scan video limit |
 | `POST /scans` | api | `scan_session` | 202 `{"scan_id", "status": "queued"}` | stores `received_at` and `user_id`, sends `kind: scan` to SQS |
 | `GET /scans/{id}` | api | `Authorization` | 200 scan status | 404 unless the user owns the scan |
-| `GET /sites?bbox=minLon,minLat,maxLon,maxLat` | api | none | 200 FeatureCollection of `site` | bbox up to 1 by 1 degree; at most `MAP_MAX_SITES` (500) sites, newest first; `rejected`, `removed`, `cleaned` and `expired` sites left out (the active map; decisions 20261010-1700 and 20261010-1855); a site past `expires_at` is left out before the CronJob marks it |
+| `GET /sites?bbox=minLon,minLat,maxLon,maxLat` | api | none | 200 FeatureCollection of `site` | bbox up to `BBOX_MAX_DEGREES` by `BBOX_MAX_DEGREES` (1 by 1) degree; at most `MAP_MAX_SITES` (500) sites, newest first; `rejected`, `removed`, `cleaned` and `expired` sites left out (the active map; decisions 20261010-1700 and 20261010-1855); a site past `expires_at` is left out before the CronJob marks it |
 | `GET /sites/{id}` | api | none | 200 `site` | every status, so a link to a removed, cleared or expired site still opens (a site past `expires_at` reads as `expired`); a removed site shows `photo_urls: []` and `cleanup_photo_url: null` (the sites row keeps the URLs for the audit trail) |
 | `POST /sites/{id}/votes` | api | vote | 200 vote result | api records the vote and recounts the backers; see below; 404 `not_found` for a removed or expired site |
 | `POST /sites/{id}/cleanup` | api | cleanup | 202 cleanup accepted | poll `site.cleanup_status`; 409 `cleanup_pending` (another after-photo is still being checked) or `already_cleaned`; 404 `not_found` for a removed or expired site |
@@ -145,7 +145,7 @@ There is one base URL: CloudFront, then the ALB, then EKS. The ALB sends every p
 
 **Link previews** (issue 127). Crawlers do not run the app's script, so share links point at the api: `PUBLIC_BASE_URL/share/sites/{id}` and `PUBLIC_BASE_URL/share/areas/{kind}/{id}`. Each answers minimal `text/html` with Open Graph and Twitter card tags, and one inline script (allowed by its hash in the `Content-Security-Policy`) that sends a person on to the web app page (`WEB_URL/sites/{id}` or `WEB_URL/areas/{kind}/{id}`), with a plain link for no script. A site card shows the report type and place (ward or assembly seat, then town or district), "n of 10 people confirmed" or "Verified by 10 people" (or "Reported cleared"), and the first report's date, with the first photo that is a blurred report copy and is not warned or hidden by photo flags (`PUBLIC_BASE_URL/media/reports/rpt_*.jpg`); never an original or any other URL. A removed, expired or rejected site gets a generic card with no photo and no place. Area cards show the area name and kind, the verified report and site counts (or "Not enough verified reports yet (n of 10)") and the pilot flag. Cards without a photo use the logo at `WEB_URL/brand/icon-512.png`. Text is English, names no person, and is HTML-escaped; `Cache-Control: public, max-age=300` (`SHARE_CACHE_MAX_AGE_SECONDS`). No schema changes.
 
-**Open in the app** (issue 136). For an Android browser (a user agent with `Android`, not an app WebView `; wv)`, not a crawler) the script first tries the Android app through `intent://sites/{id}#Intent;scheme=junksnap;package=com.junksnap.app;S.browser_fallback_url=<encoded WEB_URL page>;end` (areas: `intent://areas/{kind}/{id}...`). The browser opens the app when it is installed and the web app page when it is not; if the browser ignores the intent, the script opens the web app page after 2 s unless the page was hidden by the app. The page then also links "Open in the JunkSnap app" (the intent) and "Open in the browser". Every other reader, and a 404 card, keeps the plain redirect. The tags are the same for every reader; the response carries `Vary: User-Agent`. The app's own links: `junksnap://sites/{id}[/letter]`, `junksnap://areas/{kind}/{id}[/letter]`, `junksnap://activity/reports/{id}` (docs/android.md).
+**Open in the app** (issue 136). For an Android browser (a user agent with `Android`, not an app WebView `; wv)`, not a crawler) the script first tries the Android app through `intent://sites/{id}#Intent;scheme=junksnap;package=com.junksnap.app;S.browser_fallback_url=<encoded WEB_URL page>;end` (areas: `intent://areas/{kind}/{id}...`). The browser opens the app when it is installed and the web app page when it is not; if the browser ignores the intent, the script opens the web app page after `ANDROID_HANDOFF_WAIT_MS` (2 s) unless the page was hidden by the app. The page then also links "Open in the JunkSnap app" (the intent) and "Open in the browser". Every other reader, and a 404 card, keeps the plain redirect. The tags are the same for every reader; the response carries `Vary: User-Agent`. The app's own links: `junksnap://sites/{id}[/letter]`, `junksnap://areas/{kind}/{id}[/letter]`, `junksnap://activity/reports/{id}` (docs/android.md).
 
 **Conditional reads** (issue 126). `GET /sites?bbox`, `GET /sites/{id}`, `GET /areas/{kind}?within`, `GET /areas/{kind}/{id}/scores`, `GET /reports/{id}` and `GET /scans/{id}` answer 200 with an `ETag` header: a strong tag, the first 27 base64url characters of SHA-256 of the response body, quoted. A request whose `If-None-Match` matches it (weak comparison, so `W/"x"` matches `"x"`; `*` matches any) gets 304 with no body and the same `ETag`; any change to the body changes the tag. Open routes send `Cache-Control: no-cache`; the owner-only `GET /reports/{id}` and `GET /scans/{id}` send `Cache-Control: private, no-cache`. The tag is computed after the route's own checks, so a 401 or a 404 for someone else's report never carries one and never answers 304. Errors and other routes carry no `ETag`. The app keeps each body with its tag and sends `If-None-Match` on the next read; this is additive, and a client that sends no `If-None-Match` sees no change. CloudFront forwards `If-None-Match` and passes `ETag` and 304 through for every non-`/media/*` path (`Managed-CachingDisabled` with `AllViewerExceptHostHeader`).
 
@@ -354,7 +354,7 @@ For a bbox query, compute the geohash4 cells that cover the bbox, query `by-geoh
 | `junksnap-<stage>-public-<account_id>` (read through CloudFront) | `media/reports/{report_id}.jpg` | blurred report copies |
 | same | `media/cleanups/{cleanup_id}.jpg` | blurred cleanup after-photos |
 
-A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from the public bucket, so `PUBLIC_BASE_URL` is the same base URL as the API. Photos are JPEG only, and the worker rejects files over 8 MB (`invalid_image`); scan videos follow the scan video limit. Originals never become public; they go only to Rekognition, and only blurred images go to any other model.
+A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from the public bucket, so `PUBLIC_BASE_URL` is the same base URL as the API. Photos are JPEG only, and the worker rejects files over `PHOTO_MAX_MB` (8 MB) (`invalid_image`); scan videos follow the scan video limit. Originals never become public; they go only to Rekognition, and only blurred images go to any other model.
 
 ## SQS
 
@@ -413,7 +413,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `SECRET_TIMEOUT_MS` | api, worker | `5000`, under 6000: request and idle timeouts of the Secrets Manager client (the OpenAI key) |
 | `LLM_CALL_TIMEOUT_MS`, `LLM_BUDGET_MS` | api (letters), worker (brand judge) | `25000` and `45000`: one model call, and the whole fallback chain; the budget leaves letters time for the template inside CloudFront's 60 s |
 | `NOTE_LLM_CALL_TIMEOUT_MS`, `NOTE_LLM_BUDGET_MS` | api, worker | `15000` and `30000`: the same for the Bedrock-only note router (note moderation and analysis) |
-| `ML_VERIFY_TIMEOUT_MS` | worker | `60000`: one `POST /internal/verify` call to `ml` |
+| `ML_VERIFY_TIMEOUT_S` | worker | `60` (1 to 600): seconds the worker waits for one `POST /internal/verify` call to `ml`; must equal `ML_WORKER_BUDGET_S` on the ml workload, so both sides give up together |
 | `FFMPEG_TIMEOUT_MS` | worker | `60000`: one ffmpeg run on a scan video |
 | `SAVE_ATTEMPTS` | api, worker | `3`: tries of a conditional save that lost to a concurrent one (votes, cleanups, withdrawals, photo reports, confirmations); the site merge uses `WORKER_BATCH_SIZE` plus one instead |
 | `COUNTER_ATTEMPTS`, `COUNTER_JITTER_MS` | api | `5` and `25`: tries of a windowed rate-limit counter that lost a conditional write, with a random pause of up to this many milliseconds between them |
@@ -433,6 +433,15 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `LETTER_TEMPERATURE` | api | `0` (0 to 1): sampling temperature of the letter models; copying quotes word for word matters more than varied prose |
 | `BRAND_JUDGE_MAX_TOKENS` | worker | `600`: the longest brand judge answer |
 | `NOTE_MODERATION_MAX_TOKENS`, `NOTE_ANALYSIS_MAX_TOKENS` | api, worker | `60` and `500`: the longest note moderation and note analysis answers |
+| `PHOTO_MAX_AGE_HOURS`, `PHOTO_MAX_AHEAD_MINUTES` | worker | `72` and `5`: the fresh-timestamp check; `captured_at` at most this long before, or after, `received_at` |
+| `DUPLICATE_RADIUS_M`, `DUPLICATE_MAX_BITS` | worker | `100` and `8` (bits of 64): a photo within this pHash distance of an earlier photo this near is a duplicate |
+| `CLEANUP_NEAR_SITE_M` | worker | `50`: a cleanup after-photo's GPS must be within this many metres of the site |
+| `PHOTO_MAX_MB` | worker | `8`: a larger original is `invalid_image` |
+| `INDIA_BUFFER_DEG` | worker | `0.02` (about 2 km): margin around the India outline for the inside-India check |
+| `NEAR_PLACES_RADIUS_M` | worker | `100`, at most 100 (the site schema): OpenStreetMap places within this many metres become `site.insights.near` |
+| `BBOX_MAX_DEGREES` | api | `1` (above 0, at most 10): `GET /sites?bbox` covers at most this many degrees each way, else 400 `bbox_too_large` |
+| `CRAWL_EXPECTED_HOURS` | worker | `2`: a queued district's `expected_by` is this many hours after it was queued |
+| `ANDROID_HANDOFF_WAIT_MS` | api | `2000`: how long a share page waits for the Android app before it opens the web app |
 | `CRAWL_ACTIVATE_AFTER` | worker | model-passed photos merged into sites in a district before it is queued for a crawl; default `1` |
 | `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
 | `CRAWL_SOURCES_DIR`, `CRAWL_SCHEMA` | crawler | optional: the `sources/` folder and the `ward_record` schema file; the image sets both |

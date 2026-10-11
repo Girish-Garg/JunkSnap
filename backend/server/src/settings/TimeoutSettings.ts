@@ -37,7 +37,8 @@ const TimeoutEnv = z.object({
   LLM_BUDGET_MS: ms(1_000, 600_000, 45_000),
   NOTE_LLM_CALL_TIMEOUT_MS: ms(1_000, 300_000, 15_000),
   NOTE_LLM_BUDGET_MS: ms(1_000, 600_000, 30_000),
-  ML_VERIFY_TIMEOUT_MS: ms(1_000, 600_000, 60_000),
+  // Must equal ML_WORKER_BUDGET_S on the ml workload.
+  ML_VERIFY_TIMEOUT_S: z.coerce.number().int().min(1).max(600).default(60),
   FFMPEG_TIMEOUT_MS: ms(1_000, 600_000, 60_000),
 });
 
@@ -63,7 +64,7 @@ export class TimeoutSettings {
     this.aws = TimeoutSettings.#aws(values);
     this.llm = Object.freeze({ callMs: values.LLM_CALL_TIMEOUT_MS, budgetMs: values.LLM_BUDGET_MS });
     this.notes = Object.freeze({ callMs: values.NOTE_LLM_CALL_TIMEOUT_MS, budgetMs: values.NOTE_LLM_BUDGET_MS });
-    this.mlVerifyMs = values.ML_VERIFY_TIMEOUT_MS;
+    this.mlVerifyMs = values.ML_VERIFY_TIMEOUT_S * 1_000;
     this.ffmpegMs = values.FFMPEG_TIMEOUT_MS;
     Object.freeze(this);
   }

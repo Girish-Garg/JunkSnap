@@ -20,8 +20,8 @@ import { type ModerationResult, validateModerationResult } from "../src/contract
 import { GeoPoint } from "../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
-import { INDIA_BUFFER_DEG } from "../src/handlers/moderation/ModerationServiceFactory.js";
 import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
+import { ModerationRuleSettings } from "../src/settings/ModerationRuleSettings.js";
 import { RateLimitSettings } from "../src/settings/RateLimitSettings.js";
 import { NoteRouterBuilder } from "../src/handlers/moderation/NoteRouterBuilder.js";
 import { AuthenticityService } from "../src/services/moderation/AuthenticityService.js";
@@ -51,9 +51,10 @@ class PhotoRun {
   constructor(outDir: string, outlinePath: string) {
     this.#store = new LocalImageStore(outDir);
     const rekognition = new RekognitionClient({ region: process.env.AWS_REGION ?? "ap-south-1" });
-    const india = TurfGeofence.fromFile(outlinePath, INDIA_BUFFER_DEG);
+    const rules = ModerationRuleSettings.fromEnv(process.env);
+    const india = TurfGeofence.fromFile(outlinePath, rules.indiaBufferDeg);
     this.#service = new ModerationService({
-      loader: new PhotoLoader(this.#store, new SharpImageCodec()),
+      loader: new PhotoLoader(this.#store, new SharpImageCodec(), rules.maxUploadBytes),
       gate: new RekognitionImageModerator(rekognition),
       waste: new NoWasteLocator(),
       blur: new PrivacyBlur({
@@ -64,7 +65,7 @@ class PhotoRun {
         store: this.#store,
       }),
       authenticity: new AuthenticityService(
-        new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices, snapPerHour: RateLimitSettings.fromEnv(process.env).snapPerHour }),
+        new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices, snapPerHour: RateLimitSettings.fromEnv(process.env).snapPerHour, rules }),
       ),
       notes: new LlmNoteModerator(PhotoRun.#noteRouter(), ModelLimitSettings.fromEnv(process.env).noteModerationMaxTokens),
       clock: new SystemClock(),

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ConfigError } from "../src/domain/errors.js";
 import { AreaListSettings } from "../src/settings/AreaListSettings.js";
 import { CacheSettings } from "../src/settings/CacheSettings.js";
+import { AndroidAppSettings } from "../src/settings/AndroidAppSettings.js";
+import { CrawlSettings } from "../src/settings/CrawlSettings.js";
 import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
+import { ModerationRuleSettings } from "../src/settings/ModerationRuleSettings.js";
 import { NotesSettings } from "../src/settings/NotesSettings.js";
 import { PagingSettings } from "../src/settings/PagingSettings.js";
 import { QueueSettings } from "../src/settings/QueueSettings.js";
@@ -93,7 +96,7 @@ const TIMEOUT_TUNABLES: readonly Tunable[] = [
   { name: "LLM_BUDGET_MS", read: (env) => timeouts(env).llm.budgetMs, fallback: 45_000, good: ["50000", 50_000], bad: MS_BAD },
   { name: "NOTE_LLM_CALL_TIMEOUT_MS", read: (env) => timeouts(env).notes.callMs, fallback: 15_000, good: ["10000", 10_000], bad: MS_BAD },
   { name: "NOTE_LLM_BUDGET_MS", read: (env) => timeouts(env).notes.budgetMs, fallback: 30_000, good: ["20000", 20_000], bad: MS_BAD },
-  { name: "ML_VERIFY_TIMEOUT_MS", read: (env) => timeouts(env).mlVerifyMs, fallback: 60_000, good: ["90000", 90_000], bad: MS_BAD },
+  { name: "ML_VERIFY_TIMEOUT_S", read: (env) => timeouts(env).mlVerifyMs, fallback: 60_000, good: ["90", 90_000], bad: ["0", "1.5", "601", "slow"] },
   { name: "FFMPEG_TIMEOUT_MS", read: (env) => timeouts(env).ffmpegMs, fallback: 60_000, good: ["30000", 30_000], bad: MS_BAD },
 ];
 
@@ -126,6 +129,22 @@ const OPERATIONAL_TUNABLES: readonly Tunable[] = [
   { name: "NOTE_ANALYSIS_MAX_TOKENS", read: (env) => models(env).noteAnalysisMaxTokens, fallback: 500, good: ["700", 700], bad: ["0", "x"] },
 ];
 
+const moderation = (env: Env) => ModerationRuleSettings.fromEnv(env);
+
+const CHECK_TUNABLES: readonly Tunable[] = [
+  { name: "PHOTO_MAX_AGE_HOURS", read: (env) => moderation(env).maxAgeS, fallback: 259_200, good: ["24", 86_400], bad: ["0", "721", "x"] },
+  { name: "PHOTO_MAX_AHEAD_MINUTES", read: (env) => moderation(env).maxAheadS, fallback: 300, good: ["0", 0], bad: ["-1", "1441"] },
+  { name: "DUPLICATE_RADIUS_M", read: (env) => moderation(env).duplicateRadiusM, fallback: 100, good: ["60", 60], bad: ["0", "1001"] },
+  { name: "DUPLICATE_MAX_BITS", read: (env) => moderation(env).duplicateMaxBits, fallback: 8, good: ["6", 6], bad: ["-1", "65"] },
+  { name: "CLEANUP_NEAR_SITE_M", read: (env) => moderation(env).nearSiteM, fallback: 50, good: ["75", 75], bad: ["0", "1.5"] },
+  { name: "PHOTO_MAX_MB", read: (env) => moderation(env).maxUploadBytes, fallback: 8 * 1024 * 1024, good: ["10", 10 * 1024 * 1024], bad: ["0", "51"] },
+  { name: "INDIA_BUFFER_DEG", read: (env) => moderation(env).indiaBufferDeg, fallback: 0.02, good: ["0.05", 0.05], bad: ["-0.1", "2"] },
+  { name: "NEAR_PLACES_RADIUS_M", read: (env) => rules(env).nearPlacesRadiusM, fallback: 100, good: ["80", 80], bad: ["0", "101"] },
+  { name: "BBOX_MAX_DEGREES", read: (env) => PagingSettings.fromEnv(env).bboxMaxDegrees, fallback: 1, good: ["0.5", 0.5], bad: ["0", "11"] },
+  { name: "CRAWL_EXPECTED_HOURS", read: (env) => CrawlSettings.fromEnv(env).expectedWithinMs, fallback: 7_200_000, good: ["3", 10_800_000], bad: ["0", "1.5"] },
+  { name: "ANDROID_HANDOFF_WAIT_MS", read: (env) => AndroidAppSettings.fromEnv(env).handoffWaitMs, fallback: 2_000, good: ["1500", 1_500], bad: ["-1", "30001"] },
+];
+
 function describeTunables(title: string, tunables: readonly Tunable[]): void {
   describe(title, () => {
     describe.each(tunables)("$name", ({ name, read, fallback, good, bad }) => {
@@ -148,6 +167,7 @@ describeTunables("site, score, area list, notes and queue variables", RULE_TUNAB
 describeTunables("scan variables", SCAN_TUNABLES);
 describeTunables("timeout variables", TIMEOUT_TUNABLES);
 describeTunables("retry, paging, cache and model limit variables", OPERATIONAL_TUNABLES);
+describeTunables("photo check, nearby place, bbox, crawl and handoff variables", CHECK_TUNABLES);
 
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {

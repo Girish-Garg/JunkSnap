@@ -23,6 +23,8 @@ const SiteRuleEnv = z
     PHOTO_FLAG_HIDE_EARLY: people(5),
     PHOTO_FLAG_SURPLUS: people(5),
     FLAG_RADIUS_M: metres(1_000),
+    // The site schema caps insights.near distance_m at 100.
+    NEAR_PLACES_RADIUS_M: z.coerce.number().int().min(1).max(100).default(100),
   })
   .refine((values) => values.PHOTO_FLAG_WARN <= values.PHOTO_FLAG_HIDE && values.PHOTO_FLAG_HIDE_EARLY <= values.PHOTO_FLAG_HIDE, {
     message: "PHOTO_FLAG_WARN and PHOTO_FLAG_HIDE_EARLY must not exceed PHOTO_FLAG_HIDE",
@@ -43,6 +45,8 @@ export class SiteRuleSettings implements SiteRules {
   readonly targetMaxM: number;
   // Cosine at or above which a long-range report's embedding matches a site's.
   readonly mergeMinCosine: number;
+  // OpenStreetMap places within this many metres become site.insights.near.
+  readonly nearPlacesRadiusM: number;
 
   private constructor(values: SiteRuleValues) {
     this.rejectMargin = values.REJECT_MARGIN;
@@ -54,6 +58,7 @@ export class SiteRuleSettings implements SiteRules {
     this.zoneMergeRadiusM = values.ZONE_MERGE_RADIUS_M;
     this.targetMaxM = values.TARGET_MAX_M;
     this.mergeMinCosine = values.MERGE_MIN_COSINE;
+    this.nearPlacesRadiusM = values.NEAR_PLACES_RADIUS_M;
     this.flags = Object.freeze({
       warn: values.PHOTO_FLAG_WARN,
       hide: values.PHOTO_FLAG_HIDE,

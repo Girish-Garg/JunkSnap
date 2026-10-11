@@ -74,7 +74,7 @@ function siteMerger(): ReportMerger {
     rules: RULES,
     minVerifiedReports: SCORES.minVerifiedReports,
   });
-  return new SiteReportMerger(merger, new NearPlacesFinder([]), new BinLocator({ bins: [], mappedTowns: [] }, 3000));
+  return new SiteReportMerger(merger, new NearPlacesFinder([], RULES.nearPlacesRadiusM), new BinLocator({ bins: [], mappedTowns: [] }, 3000));
 }
 
 function pipeline(merge: PipelineStep = new MergeStep(siteMerger())): ReportPipeline {

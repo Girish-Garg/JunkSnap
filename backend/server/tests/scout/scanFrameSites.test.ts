@@ -105,7 +105,7 @@ function pipeline(verifier: MlVerifyClient): ReportPipeline {
     new ModerateStep(new FakeModerator(journal)),
     new VerifyStep(verifier, new ReporterReputation(new FakeReputationReader()), new FakeNearbyCounter(), confirmWindow()),
     new LocateStep(new FakeLocator(journal)),
-    new MergeStep(new SiteReportMerger(merger, new NearPlacesFinder([]), bins)),
+    new MergeStep(new SiteReportMerger(merger, new NearPlacesFinder([], RULES.nearPlacesRadiusM), bins)),
   ];
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage: "dev" });
   return new ReportPipeline({ steps, reports, clock: new FixedClock("2026-10-10T05:12:00Z"), logger });

@@ -26,6 +26,7 @@ import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
 import { CacheSettings } from "../../settings/CacheSettings.js";
 import { ModelLimitSettings } from "../../settings/ModelLimitSettings.js";
+import { ModerationRuleSettings } from "../../settings/ModerationRuleSettings.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
@@ -34,9 +35,6 @@ import type { Env } from "../../settings/utils.js";
 import type { EntryContext } from "../EntryPoint.js";
 import { awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
-
-// About 2 km: absorbs the outline's 500 m simplification and GPS drift at coasts and borders.
-export const INDIA_BUFFER_DEG = 0.02;
 
 export interface ModerationWiring {
   readonly devices: DeviceRegistry;
@@ -53,6 +51,7 @@ export interface ModerationTunables {
   readonly timeouts: TimeoutSettings;
   readonly models: ModelLimitSettings;
   readonly caches: CacheSettings;
+  readonly moderation: ModerationRuleSettings;
 }
 
 // Builds the moderation object graph once per worker process.
@@ -72,6 +71,7 @@ export class ModerationServiceFactory {
       timeouts: TimeoutSettings.fromEnv(env),
       models: ModelLimitSettings.fromEnv(env),
       caches: CacheSettings.fromEnv(env),
+      moderation: ModerationRuleSettings.fromEnv(env),
     };
   }
 
@@ -90,7 +90,7 @@ export class ModerationServiceFactory {
     const buckets = { originals: settings.originalsBucket, public: settings.publicBucket };
     const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, aws.transfer)), buckets, this.#tunables.caches.mediaMaxAgeSeconds);
     return new ModerationService({
-      loader: new PhotoLoader(store, new SharpImageCodec()),
+      loader: new PhotoLoader(store, new SharpImageCodec(), this.#tunables.moderation.maxUploadBytes),
       gate: new RekognitionImageModerator(rekognition),
       waste: wiring.waste ?? new NoWasteLocator(),
       blur: new PrivacyBlur({
@@ -108,15 +108,16 @@ export class ModerationServiceFactory {
 
   #checks(devices: DeviceRegistry): CheckFactory {
     const settings = this.#settings;
-    const { limits, rules, timeouts } = this.#tunables;
+    const { limits, rules, timeouts, moderation } = this.#tunables;
     const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion, timeouts.aws.quick))));
     const tables = { reports: settings.reportsTable, sites: settings.sitesTable };
     return new CheckFactory({
-      india: TurfGeofence.fromFile(settings.indiaOutlinePath(), INDIA_BUFFER_DEG),
+      india: TurfGeofence.fromFile(settings.indiaOutlinePath(), moderation.indiaBufferDeg),
       reportHashes: new DynamoHashIndex(reader, tables, rules.siteMergeRadiusM + rules.targetMaxM),
       cleanupHashes: new DynamoCleanupHashIndex(reader, settings.cleanupsTable),
       devices,
       snapPerHour: limits.snapPerHour,
+      rules: moderation,
     });
   }
 }

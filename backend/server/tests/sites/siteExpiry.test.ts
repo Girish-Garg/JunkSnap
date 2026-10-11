@@ -29,7 +29,7 @@ import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 const SITE = "site_jdh_1";
 // The jdh-1 report's capture time, the site's last activity.
 const FOUNDED = Date.parse("2026-10-10T02:14:05Z");
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
 const day = (days: number, from = FOUNDED) => new Date(from + days * 86_400_000);
 

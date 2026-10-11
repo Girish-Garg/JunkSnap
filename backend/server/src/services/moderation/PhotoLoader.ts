@@ -6,7 +6,7 @@ import type { PhotoSubmission } from "../../domain/moderation/PhotoSubmission.js
 import type { ImageCodec } from "../../ports/moderation/ImageCodec.js";
 import type { ImageStore } from "../../ports/moderation/ImageStore.js";
 
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MEBIBYTE = 1024 * 1024;
 // Rekognition's 5 MB image limit, read as decimal to be safe.
 const MAX_UPRIGHT_BYTES = 5_000_000;
 const JPEG_MAGIC = [0xff, 0xd8, 0xff];
@@ -17,16 +17,19 @@ export type PhotoLoad = { readonly photo: LoadedPhoto } | { readonly invalid: st
 export class PhotoLoader {
   readonly #store: ImageStore;
   readonly #codec: ImageCodec;
+  readonly #maxUploadBytes: number;
 
-  constructor(store: ImageStore, codec: ImageCodec) {
+  // maxUploadBytes: PHOTO_MAX_MB in bytes.
+  constructor(store: ImageStore, codec: ImageCodec, maxUploadBytes: number) {
     this.#store = store;
     this.#codec = codec;
+    this.#maxUploadBytes = maxUploadBytes;
   }
 
   async load(submission: PhotoSubmission): Promise<PhotoLoad> {
-    const original = await this.#store.readOriginal(submission.photoId.privateOriginalKey(), MAX_UPLOAD_BYTES);
+    const original = await this.#store.readOriginal(submission.photoId.privateOriginalKey(), this.#maxUploadBytes);
     if (original === null) {
-      return { invalid: "over_8_mb" };
+      return { invalid: `over_${Math.round(this.#maxUploadBytes / MEBIBYTE)}_mb` };
     }
     if (!this.#isJpeg(original)) {
       return { invalid: "not_jpeg" };

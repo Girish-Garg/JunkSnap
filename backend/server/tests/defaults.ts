@@ -1,6 +1,7 @@
 import { AreaListSettings } from "../src/settings/AreaListSettings.js";
 import { CacheSettings } from "../src/settings/CacheSettings.js";
 import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
+import { ModerationRuleSettings } from "../src/settings/ModerationRuleSettings.js";
 import { PagingSettings } from "../src/settings/PagingSettings.js";
 import { QueueSettings } from "../src/settings/QueueSettings.js";
 import { RetrySettings } from "../src/settings/RetrySettings.js";
@@ -20,3 +21,4 @@ export const RETRY = RetrySettings.fromEnv({});
 export const PAGING = PagingSettings.fromEnv({});
 export const CACHE = CacheSettings.fromEnv({});
 export const MODELS = ModelLimitSettings.fromEnv({});
+export const MODERATION = ModerationRuleSettings.fromEnv({});

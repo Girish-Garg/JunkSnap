@@ -33,7 +33,8 @@ export function buildShareRoutes(context: RouteContext): FastifyPluginAsync {
       siteCards: new SiteCardWriter(urls),
       areaCards: new AreaCardWriter(urls),
     });
-    const handoff = new AppHandoff(new AppIntentUrl(AndroidAppSettings.fromEnv(context.env).packageName));
+    const android = AndroidAppSettings.fromEnv(context.env);
+    const handoff = new AppHandoff(new AppIntentUrl(android.packageName), android.handoffWaitMs);
     await app.register(new ShareRoutes(cards, handoff, CacheSettings.fromEnv(context.env).shareMaxAgeSeconds).plugin());
   };
 }

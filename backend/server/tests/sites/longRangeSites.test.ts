@@ -98,7 +98,7 @@ describe("worker steps that use the target", () => {
     const bins = new BinLocator({ bins: [{ point: new GeoPoint(northOf(30), BASE_LON), ref: "osm:node/2", source }], mappedTowns: ["jodhpur"] }, 3000);
     const seen: MergeEvidence[] = [];
     const sites = { merge: async (e: MergeEvidence) => (seen.push(e), { siteId: "site_far_1", outcome: "founded", reportStatus: "unverified" }) };
-    const subject = new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([school]), bins);
+    const subject = new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([school], RULES.nearPlacesRadiusM), bins);
     const e = longRange("far_1", DEVICE_B, REPORTER, WASTE);
     const record = { ...Report.receive(e.upload, "2026-10-10T02:14:52Z").toRecord(), moderation_result: e.moderation ?? undefined, verification_result: e.verification ?? undefined, location: e.location };
     await subject.merge(record);
