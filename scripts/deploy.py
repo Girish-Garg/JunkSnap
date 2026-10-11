@@ -20,6 +20,8 @@ REGION = "ap-south-1"
 CLUSTER = "junksnap"
 SHARED_STACK = "junksnap-shared"
 ALB_WAIT_SECONDS = 600
+# Stages whose stack holds the real field-audit data: CloudFormation refuses to delete them.
+PROTECTED_STAGES = ("demo",)
 # ml downloads and checks about 420 MB of trained models before it serves (startup probe: 5 min).
 ROLLOUT_WAIT_SECONDS = {"api": 300, "ml": 600, "worker": 300}
 # image -> (build folders, first with a Dockerfile wins; backend/agent until backend/ml exists)
@@ -81,6 +83,14 @@ def deploy_stack(stack: str, template: str, extra: list[str]) -> dict[str, str]:
     return {item["OutputKey"]: item["OutputValue"] for item in json.loads(raw)}
 
 
+def protect_stack(stage: str, stack: str) -> None:
+    """Turn on termination protection for a protected stage's stack; it is idempotent."""
+    if stage not in PROTECTED_STAGES:
+        return
+    flag = "--enable-termination-protection"
+    aws("cloudformation", "update-termination-protection", flag, "--stack-name", stack)
+
+
 def build_image(name: str, folders: tuple[str, ...], image: str) -> None:
     """Build one image for linux/amd64 with its named build contexts."""
     folder = next(f for f in folders if (ROOT / f / "Dockerfile").is_file())
@@ -105,6 +115,7 @@ class StageDeployer:
         repos = deploy_stack(SHARED_STACK, "infra/aws/shared.yaml", shared_tags)
         origins = [f"UploadOrigins={self._origins}"] if self._origins else []
         outputs = self._deploy_stage_stack(origins)
+        protect_stack(self._stage, self._namespace)
         tag = self._push_images(repos)
         self._write_layer(repos, tag, outputs)
         aws("eks", "update-kubeconfig", "--name", CLUSTER, "--kubeconfig", self._kubeconfig)

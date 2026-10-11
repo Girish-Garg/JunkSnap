@@ -31,7 +31,7 @@ aws cloudformation validate-template --template-body file://infra/aws/stage.yaml
 kubectl kustomize infra/k8s/overlays/dev
 ```
 
-`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA and `stage-<stage>` (never expired by ECR; the server image gets `data/` at `/app/data` through the named build context `data`), writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. `--origins` sets the browser origins for S3 uploads and API CORS; demo requires it. The ALB accepts traffic only from CloudFront's origin-facing prefix list.
+`deploy.py` deploys both stacks, pushes both images tagged with the git short SHA and `stage-<stage>` (never expired by ECR; the server image gets `data/` at `/app/data` through the named build context `data`), writes and applies `k8s/deploy/<stage>/`, and points CloudFront at the ALB. For `demo` it also turns on the stack's termination protection. `--origins` sets the browser origins for S3 uploads and API CORS; demo requires it. The ALB accepts traffic only from CloudFront's origin-facing prefix list.
 
 Render with `kubectl kustomize` and read the output before every apply.
 
@@ -54,4 +54,4 @@ Render with `kubectl kustomize` and read the output before every apply.
 
 - Deploy, apply or change anything in `demo`. The human deploys `demo` from a clean `main`. Agents are denied commands that mention it.
 - Type or commit credentials, kubeconfig files or `.env` files.
-- Leave resources running after judging: the human tears down both stacks and the cluster.
+- Leave resources running after judging: the human tears down both stacks and the cluster. The KMS key, both buckets, every table and the user pool are `Retain`, so they outlive a deleted stack and are deleted by hand; in `demo` turn off the stack's termination protection and the tables' and user pool's deletion protection first.
