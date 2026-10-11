@@ -1,7 +1,6 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { DirectoryWardFiles } from "../../src/adapters/wards/DirectoryWardFiles.js";
 import { FileMapLayerSource } from "../../src/adapters/FileMapLayerSource.js";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
@@ -17,6 +16,7 @@ import type { VideoScanProcessor } from "../../src/services/VideoScanProcessor.j
 import { ScanMessageHandler } from "../../src/services/wiring/ScanMessageHandler.js";
 import { SiteNearbyCounter } from "../../src/services/wiring/SiteNearbyCounter.js";
 import { LogSink } from "../LogSink.js";
+import { TempDirs } from "../TempDirs.js";
 import { upload } from "../reportFakes.js";
 import { siteFixture } from "../sites/builders.js";
 
@@ -49,8 +49,11 @@ describe("NearPlacesFinder", () => {
 });
 
 describe("FileMapLayerSource", () => {
+  const temp = new TempDirs();
+  afterAll(() => temp.removeAll());
+
   function assets(cities: Record<string, unknown>): string {
-    const root = mkdtempSync(join(tmpdir(), "junksnap-layers-"));
+    const root = temp.make("junksnap-layers-");
     mkdirSync(join(root, "wards"));
     for (const [name, body] of Object.entries(cities)) {
       writeFileSync(join(root, "wards", name), JSON.stringify(body));
@@ -72,7 +75,7 @@ describe("FileMapLayerSource", () => {
   });
 
   it("has no layers without a wards folder", async () => {
-    const root = mkdtempSync(join(tmpdir(), "junksnap-empty-"));
+    const root = temp.make("junksnap-empty-");
     expect(await new FileMapLayerSource(new DirectoryWardFiles(join(root, "wards"))).layers()).toEqual([]);
   });
 });

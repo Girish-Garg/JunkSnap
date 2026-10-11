@@ -1,8 +1,8 @@
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { S3Client } from "@aws-sdk/client-s3";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { DirectoryWardFiles } from "../../src/adapters/wards/DirectoryWardFiles.js";
 import { NewestWardFiles } from "../../src/adapters/wards/NewestWardFiles.js";
@@ -12,12 +12,15 @@ import { WardFilesFactory } from "../../src/handlers/WardFilesFactory.js";
 import type { WardFile, WardFileSource } from "../../src/ports/WardFileSource.js";
 import { CrawledWardSettings } from "../../src/settings/CrawledWardSettings.js";
 import { LogSink } from "../LogSink.js";
+import { TempDirs } from "../TempDirs.js";
 import { failure, ScriptedClient, type SentCommand } from "../sites/ScriptedClient.js";
 
 const BUCKET = "junksnap-dev-originals-123456789012";
+const temp = new TempDirs();
+afterAll(() => temp.removeAll());
 
 function folder(files: Record<string, unknown>): string {
-  const dir = mkdtempSync(join(tmpdir(), "junksnap-wards-"));
+  const dir = temp.make("junksnap-wards-");
   for (const [name, body] of Object.entries(files)) {
     writeFileSync(join(dir, name), typeof body === "string" ? body : JSON.stringify(body));
   }
@@ -63,7 +66,7 @@ describe("S3CrawledWardFiles", () => {
 
   it("lists every page of crawl/wards/ and downloads each city file", async () => {
     const client = new ScriptedClient([], answer);
-    const dir = mkdtempSync(join(tmpdir(), "junksnap-crawled-"));
+    const dir = temp.make("junksnap-crawled-");
     const files = await new S3CrawledWardFiles(client.as<S3Client>(), BUCKET, join(dir, "wards"), logger(new LogSink())).files();
     expect(files).toEqual([
       { city: "jaipur", path: join(dir, "wards", "jaipur.json") },
@@ -81,7 +84,7 @@ describe("S3CrawledWardFiles", () => {
     const sink = new LogSink();
     const list = () => ({ Contents: [{ Key: "crawl/wards/jodhpur.json" }] });
     const client = new ScriptedClient([list, () => bytes(body)]);
-    const files = await new S3CrawledWardFiles(client.as<S3Client>(), BUCKET, mkdtempSync(join(tmpdir(), "junksnap-bad-")), logger(sink)).files();
+    const files = await new S3CrawledWardFiles(client.as<S3Client>(), BUCKET, temp.make("junksnap-bad-"), logger(sink)).files();
     expect(files).toEqual([]);
     expect(sink.records()).toEqual([expect.objectContaining({ level: "WARN", key: "crawl/wards/jodhpur.json" })]);
   });
