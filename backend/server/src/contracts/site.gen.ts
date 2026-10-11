@@ -31,7 +31,7 @@ export interface Site {
      */
     site_id: string;
     /**
-     * no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430).
+     * no_bin is a resident's report of no bin within 1 km, a zone verified by 10 people (decision 20261010-1630); a site letter needs no count (decision 20261011-1750), and an area letter counts only verified zones.
      */
     report_type:
       "waste_dump" | "no_bin" | "contaminated_water" | "open_construction" | "overflowing_bin";
@@ -1150,7 +1150,7 @@ export const siteSchema = {
             "open_construction",
             "overflowing_bin"
           ],
-          "description": "no_bin is a resident's report of no bin; a letter needs at least NO_BIN_MIN_REPORTERS distinct reporters and insights.no_bin_within_3km true (decision 20261010-1430)."
+          "description": "no_bin is a resident's report of no bin within 1 km, a zone verified by 10 people (decision 20261010-1630); a site letter needs no count (decision 20261011-1750), and an area letter counts only verified zones."
         },
         "context": {
           "enum": [

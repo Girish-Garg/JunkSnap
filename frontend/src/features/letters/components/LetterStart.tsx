@@ -6,7 +6,7 @@ import { LetterChooser } from './LetterChooser';
 
 interface LetterStartProps {
   readonly flow: LetterRequestFlow;
-  /** Why this letter cannot be drafted (a link to a site not verified or off the map); null when it can. */
+  /** Why this letter cannot be drafted (a link to a site off the map); null when it can. */
   readonly locked: Blocked | null;
   readonly onBack: () => void;
 }
