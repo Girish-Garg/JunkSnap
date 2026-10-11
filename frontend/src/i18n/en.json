@@ -352,7 +352,11 @@
     "close": "Close account",
     "signedInAs": "Signed in as {{email}}",
     "signOut": "Sign out",
-    "howItWorks": "How JunkSnap works"
+    "howItWorks": "How JunkSnap works",
+    "join": {
+      "title": "Sign in or create an account",
+      "text": "Sign in to report waste, vote on reports and send letters."
+    }
   },
   "auth": {
     "close": "Close",

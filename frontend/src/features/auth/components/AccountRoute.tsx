@@ -5,6 +5,7 @@ import { BottomSheet } from '../../../ui/BottomSheet';
 import { Logo } from '../../../ui/Logo';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { AccountActions } from './AccountActions';
+import { AccountJoinCard } from './AccountJoinCard';
 import { AppearanceSetting } from './AppearanceSetting';
 import { SignOutButton } from './SignOutButton';
 
@@ -20,11 +21,15 @@ export function AccountRoute() {
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('account.title')}
       </h2>
-      <div className="account-card">
-        <Logo markOnly size={48} />
-        <p>{user ? t('account.signedInAs', { email: user.email }) : t('auth.signIn.text')}</p>
-      </div>
-      <AccountActions signedIn={Boolean(user)} />
+      {user ? (
+        <div className="account-card">
+          <Logo markOnly size={48} />
+          <p>{t('account.signedInAs', { email: user.email })}</p>
+        </div>
+      ) : (
+        <AccountJoinCard />
+      )}
+      <AccountActions />
       <AppearanceSetting />
       {user && <SignOutButton onSignedOut={close} />}
     </BottomSheet>
