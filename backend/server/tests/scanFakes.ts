@@ -71,18 +71,30 @@ export class FakeScanRepository implements ScanRepository {
     this.rows.set(scanId, { ...row, ...update });
     this.updates.push(update);
   }
+
+  async recordReports(scanId: string, reportIds: readonly string[], updatedAt: string): Promise<boolean> {
+    const row = this.rows.get(scanId);
+    if (row === undefined || row.status === "done" || row.status === "failed") {
+      return false;
+    }
+    this.rows.set(scanId, { ...row, report_ids: reportIds, updated_at: updatedAt });
+    return true;
+  }
 }
 
 export class FakeScanQueue implements ScanQueue {
   readonly messages: Record<string, string>[] = [];
   failReports = false;
+  // Sends this many report messages, then fails like failReports.
+  reportsBeforeFailure = Number.POSITIVE_INFINITY;
 
   async sendScan(scanId: string): Promise<void> {
     this.messages.push({ kind: "scan", scan_id: scanId });
   }
 
   async sendReport(reportId: string): Promise<void> {
-    if (this.failReports) {
+    const sent = this.messages.filter((message) => message.kind === "report").length;
+    if (this.failReports || sent >= this.reportsBeforeFailure) {
       throw new Error("queue unreachable");
     }
     this.messages.push({ kind: "report", report_id: reportId });

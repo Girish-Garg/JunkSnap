@@ -29,6 +29,31 @@ import {
   USER_ID,
 } from "./scanFakes.js";
 
+// The reports table becomes unreachable right after the first row is written.
+class ReportsLostAfterFirstWrite extends FakeFrameReportRepository {
+  override async exists(reportId: string): Promise<boolean> {
+    if (this.rows.size > 0) {
+      throw new ExternalServiceError("Could not read the report");
+    }
+    return super.exists(reportId);
+  }
+}
+
+// A duplicate delivery of the same scan finishes it while this delivery's frame message fails.
+class FinishedElsewhereQueue extends FakeScanQueue {
+  readonly #elsewhere: () => Promise<void>;
+
+  constructor(elsewhere: () => Promise<void>) {
+    super();
+    this.#elsewhere = elsewhere;
+  }
+
+  override async sendReport(): Promise<void> {
+    await this.#elsewhere();
+    throw new Error("queue unreachable");
+  }
+}
+
 interface Setup {
   readonly session?: ScanSession;
   readonly video?: DownloadedVideo | null;
@@ -232,6 +257,46 @@ describe("VideoScanProcessor", () => {
   it("marks the scan failed with retries_exhausted when the worker gives up", async () => {
     await processor().markExhausted("scn_jpr_1");
     expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "failed", reason: "retries_exhausted" });
+  });
+
+  it("still lists the frames it queued when the scan ends failed with retries_exhausted", async () => {
+    const scanProcessor = processor({ video: VIDEO });
+    queue.reportsBeforeFailure = 3;
+    await expect(scanProcessor.process("scn_jpr_1")).rejects.toThrow("queue unreachable");
+    await scanProcessor.markExhausted("scn_jpr_1");
+    // The fourth frame's row was written before its message failed, so it is listed too.
+    const written = [0, 1000, 2000, 3600].map((tMs) => ScanFrameId.of("scn_jpr_1", tMs).reportId);
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "failed", reason: "retries_exhausted", report_ids: written });
+  });
+
+  it("keeps listing the frames an earlier attempt wrote when a later attempt fails sooner", async () => {
+    const scanProcessor = processor({ video: VIDEO });
+    queue.reportsBeforeFailure = 4;
+    await expect(scanProcessor.process("scn_jpr_1")).rejects.toThrow("queue unreachable");
+    queue.failReports = true;
+    await expect(scanProcessor.process("scn_jpr_1")).rejects.toThrow("queue unreachable");
+    const written = [0, 1000, 2000, 3600, 4000].map((tMs) => ScanFrameId.of("scn_jpr_1", tMs).reportId);
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "processing", report_ids: written });
+  });
+
+  it("leaves a scan that another delivery finished meanwhile done when this delivery's publish fails", async () => {
+    const ids = [0, 1000, 2000, 3600, 4000, 5000, 6000, 7000].map((tMs) => ScanFrameId.of("scn_jpr_1", tMs).reportId);
+    const frames = { sampled: 9, kept: 8, dropped_no_fix: 0 };
+    const finished = { status: "done", reason: null, frames, report_ids: ids, updated_at: "2026-10-10T04:03:00Z" } as const;
+    queue = new FinishedElsewhereQueue(() => scans.update("scn_jpr_1", finished));
+    await expect(processor({ video: VIDEO }).process("scn_jpr_1")).rejects.toThrow("queue unreachable");
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject(finished);
+    expect(sink.records().some((record) => record.message === "scan already finished; its report_ids stay as they are")).toBe(true);
+  });
+
+  it("still rethrows the publish error when it cannot record the frames already queued", async () => {
+    reports = new ReportsLostAfterFirstWrite();
+    const scanProcessor = processor({ video: VIDEO });
+    queue.failReports = true;
+    await expect(scanProcessor.process("scn_jpr_1")).rejects.toThrow("queue unreachable");
+    expect(scans.rows.get("scn_jpr_1")).toMatchObject({ status: "processing", report_ids: [] });
+    const warning = sink.records().find((record) => record.message === "could not record the frames already queued");
+    expect(warning).toMatchObject({ level: "WARN", scan_id: "scn_jpr_1" });
   });
 
   it("throws for a scan id that is not in the table", async () => {

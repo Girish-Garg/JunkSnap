@@ -209,6 +209,15 @@ describe("GET /scans/{id}", () => {
     });
   });
 
+  it("lists the frames a failed scan queued before it failed, for the phone to poll one by one", async () => {
+    await post("/scans", sampleSession());
+    await scans.recordReports("scn_jpr_1", ["rpt_a", "rpt_b"], NOW.toISOString());
+    await scans.update("scn_jpr_1", { status: "failed", reason: "retries_exhausted", updated_at: "2026-10-10T04:02:52Z" });
+    const response = await get("scn_jpr_1");
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ status: "failed", reason: "retries_exhausted", report_ids: ["rpt_a", "rpt_b"], found: null });
+  });
+
   it("has no found summary until the worker is done cutting frames", async () => {
     await post("/scans", sampleSession());
     expect((await get("scn_jpr_1")).json()).toMatchObject({ status: "queued", found: null });
