@@ -16,7 +16,7 @@ export interface ChipView {
 }
 
 // clearance and expires_at are optional in the contract, so callers without them still fit.
-export type ChipFields = Pick<SiteProperties, 'status' | 'verification' | 'backers' | 'clearance' | 'expires_at'>;
+export type ChipFields = Pick<SiteProperties, 'status' | 'verification' | 'backers' | 'clearance' | 'expires_at' | 'removed_reason'>;
 
 const BY_STATUS: Readonly<Record<string, ChipView>> = {
   cleaned: { key: 'chip.cleared', tone: 'cleared' },
@@ -34,6 +34,8 @@ export class SiteStatusChip {
     // People say it is cleared and it waits for enough of them (decision 20261010-1855): "1 of 3 say cleared".
     const clearing = new SiteLifecycle(site).pendingClearance();
     if (clearing) return { key: 'chip.clearing', params: { count: clearing.count, needed: clearing.needed }, tone: 'cleared' };
+    // Removed because people reported its photos, not withdrawn by its reporter (removed_reason).
+    if (site.status === 'removed' && site.removed_reason === 'photos_reported') return { key: 'chip.removedReported', tone: 'closed' };
     const byStatus = BY_STATUS[site.status];
     if (byStatus) return byStatus;
     if (site.verification === 'rejected') return { key: 'chip.rejected', tone: 'closed' };

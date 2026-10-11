@@ -3,6 +3,7 @@ import type { QueuedReport } from '../../../domain/QueuedReport';
 import { TypeIcon } from '../../../ui/TypeIcon';
 import { ProgressBadge } from '../../snap/components/ProgressBadge';
 import { ReportThumb } from '../../snap/components/ReportThumb';
+import { ActivityRow } from '../ActivityRow';
 import { ActivityActions } from './ActivityActions';
 import { ActivityMeta } from './ActivityMeta';
 import { ReportNotices } from './ReportNotices';
@@ -35,7 +36,7 @@ export function ActivityItem({ report, onOpen }: ActivityItemProps) {
             {t(`reportType.${draft.report_type}`)}
           </p>
           <ActivityMeta place={t(`context.${draft.context}`)} at={draft.captured_at} />
-          <ProgressBadge report={report} />
+          {ActivityRow.showsProgress(report) && <ProgressBadge report={report} />}
         </div>
       </div>
       <ReportNotices report={report} />

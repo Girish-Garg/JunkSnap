@@ -96,6 +96,7 @@
     "cleared": "Cleared",
     "reopened": "Reopened",
     "removed": "Withdrawn",
+    "removedReported": "Removed after reports",
     "expired": "Expired",
     "rejected": "Rejected",
     "clearing": "{{count}} of {{needed}} say cleared"
@@ -1041,7 +1042,14 @@
     "progress": "{{count}} of {{needed}} people say it's cleared",
     "text": "The site leaves the map once {{needed}} different people say it is cleared. Have you seen it?",
     "cleared": "It's cleared now",
-    "stillThere": "Still there"
+    "stillThere": "Still there",
+    "noBin": {
+      "title": "Reported: a bin is here now",
+      "progress": "{{count}} of {{needed}} people say there's a bin here now",
+      "text": "This no-bin zone leaves the map once {{needed}} different people say there is a bin here now. Have you seen it?",
+      "cleared": "There's a bin here now",
+      "stillThere": "Still no bin"
+    }
   },
   "expiry": {
     "left_one": "Expires in {{count}} day unless someone confirms it",

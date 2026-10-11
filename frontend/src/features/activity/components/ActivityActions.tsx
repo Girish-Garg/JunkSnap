@@ -4,6 +4,7 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useServices } from '../../../app/useServices';
 import type { QueuedReport } from '../../../domain/QueuedReport';
 import { Button } from '../../../ui/Button';
+import { ActivityRow } from '../ActivityRow';
 import { ActivityDelete } from './ActivityDelete';
 
 /**
@@ -15,7 +16,8 @@ export function ActivityActions({ report }: { readonly report: QueuedReport }) {
   const sheets = useSheetNavigation();
   const { snap } = useServices();
   const siteId = report.data.status?.site_id;
-  const reportId = report.data.stage === 'sent' ? report.data.report_id : null;
+  // A no-bin report has no photo check to show.
+  const reportId = report.data.stage === 'sent' && !ActivityRow.isNoBin(report) ? report.data.report_id : null;
   const waiting = report.data.problem !== null;
   return (
     <div className="activity-card__actions">

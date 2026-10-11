@@ -21,15 +21,17 @@ export function SiteClearance({ site, vote, onChanged }: SiteClearanceProps) {
   const pending = new SiteLifecycle(site).pendingClearance();
   if (!pending) return null;
   const { count, needed } = pending;
+  const noBin = site.report_type === 'no_bin';
+  const words = noBin ? 'clearance.noBin' : 'clearance';
   return (
     <section className="clearance" aria-labelledby={TITLE_ID}>
       <div className="clearance__head">
-        <h3 id={TITLE_ID} className="clearance__title">{t('clearance.title')}</h3>
-        <span className="clearance__progress">{t('clearance.progress', { count, needed })}</span>
+        <h3 id={TITLE_ID} className="clearance__title">{t(`${words}.title`)}</h3>
+        <span className="clearance__progress">{t(`${words}.progress`, { count, needed })}</span>
       </div>
-      <progress className="clearance__bar" max={needed} value={Math.min(count, needed)} aria-label={t('clearance.progress', { count, needed })} />
-      <p className="clearance__text">{t('clearance.text', { needed })}</p>
-      <ClearanceVotes siteId={site.site_id} gated={vote} onChanged={onChanged} />
+      <progress className="clearance__bar" max={needed} value={Math.min(count, needed)} aria-label={t(`${words}.progress`, { count, needed })} />
+      <p className="clearance__text">{t(`${words}.text`, { needed })}</p>
+      <ClearanceVotes siteId={site.site_id} gated={vote} onChanged={onChanged} noBin={noBin} />
     </section>
   );
 }

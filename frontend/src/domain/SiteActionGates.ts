@@ -86,6 +86,7 @@ export const SITE_GATES = {
   reportPhoto: new ActionGate<SiteActionFacts>([
     offMap(),
     tooFar(within(VOTE_RADIUS_M), 'gate.tooFarReport'),
+    GateRules.cooling('reportPhoto', 'photoReport.errors.rate_limited'),
     GateRules.signIn('gate.signIn.reportPhoto'),
   ]),
   withdraw: new ActionGate<SiteActionFacts>([

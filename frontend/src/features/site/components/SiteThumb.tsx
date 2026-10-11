@@ -9,10 +9,11 @@ interface SiteThumbProps {
 
 /** A site's newest blurred photo as a small rounded tile; a missing or broken photo shows the photo icon. */
 export function SiteThumb({ url, className }: SiteThumbProps) {
-  const [broken, setBroken] = useState(false);
+  // The URL that failed, so stepping to another site's photo tries that one afresh.
+  const [broken, setBroken] = useState<string | null>(null);
   return (
     <span className={className} aria-hidden="true">
-      {url && !broken ? <img src={url} alt="" loading="lazy" draggable={false} onError={() => setBroken(true)} /> : <Icon name="photo" size={20} />}
+      {url && url !== broken ? <img src={url} alt="" loading="lazy" draggable={false} onError={() => setBroken(url)} /> : <Icon name="photo" size={20} />}
     </span>
   );
 }

@@ -117,6 +117,22 @@ describe('Reporter confirmation in Activity, while sending', () => {
   });
 });
 
+describe('Reporter confirmation in Activity, after a closed question', () => {
+  it('reads the report again after a closed question, so the answers stop being live', async () => {
+    const user = userEvent.setup();
+    const api = new AskingApi();
+    api.failNext('confirm', 409, 'confirmation_closed');
+    const services = await render(api);
+    const read = vi.spyOn(services.snap.tracker, 'read');
+    const sure = await screen.findByRole('button', { name: "Yes, I'm sure" });
+    api.answered = true;
+    api.status_ = 'not_confirmed';
+    await user.click(sure);
+    await waitFor(() => expect(read).toHaveBeenCalledWith('rpt_mine'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: "Yes, I'm sure" })).not.toBeInTheDocument());
+  });
+});
+
 describe('Reporter confirmation in Activity, closed or in Hindi', () => {
   it('says why a report with no answer never reached the map', async () => {
     const api = new AskingApi();

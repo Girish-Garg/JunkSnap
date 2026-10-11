@@ -108,6 +108,19 @@ describe('when a photo report cannot go through', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('You took this photo, so a neighbour has to report it.');
   });
 
+  it('holds photo reports for a while after a 429, like every other action', async () => {
+    const user = userEvent.setup();
+    const api = new FakeSiteActionsApi();
+    api.failNext('flagPhoto', 429, 'rate_limited');
+    const built = await services(true, api);
+    await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1', services: built });
+    await user.click(await screen.findByRole('button', { name: 'Report photo 1' }));
+    await user.click(await screen.findByRole('radio', { name: 'Duplicate' }));
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('At most 10 photo reports an hour.');
+    expect(built.cooldowns.active().has('reportPhoto')).toBe(true);
+  });
+
 });
 
 describe('when a photo report comes from too far', () => {

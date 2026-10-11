@@ -19,6 +19,9 @@ describe('SiteStatusChip', () => {
     expect(chip('reopened', 'verified')).toMatchObject({ key: 'chip.reopened', tone: 'reopened' });
     expect(chip('expired', 'unverified')).toMatchObject({ key: 'chip.expired', tone: 'closed' });
     expect(chip('open', 'rejected')).toMatchObject({ key: 'chip.rejected', tone: 'closed' });
+    expect(chip('removed', 'unverified')).toMatchObject({ key: 'chip.removed', tone: 'closed' });
+    const reported = { status: 'removed', verification: 'unverified', backers: BACKERS, removed_reason: 'photos_reported' } as const;
+    expect(SiteStatusChip.of(reported)).toEqual({ key: 'chip.removedReported', tone: 'closed' });
   });
 
   it('says cleared with the count while people confirm a clearing, on an active site only', () => {
