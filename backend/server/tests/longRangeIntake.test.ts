@@ -4,7 +4,7 @@ import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { validateReportUpload, type ReportUpload } from "../src/contracts/index.gen.js";
 import { ValidationError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
-import { ReportPlacement, TARGET_MAX_M } from "../src/domain/ReportPlacement.js";
+import { ReportPlacement } from "../src/domain/ReportPlacement.js";
 import { TargetTooFarError } from "../src/domain/TargetTooFarError.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
 import { FakeUserStanding } from "./auth/FakeUserStanding.js";
@@ -19,6 +19,7 @@ import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
 import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, FixedClock, fixture } from "./reportFakes.js";
+import { QUEUE, RULES } from "./defaults.js";
 
 const NOW = "2026-10-11T03:40:30Z";
 const USER = "5e2b8c41-7a3d-4f19-b6e0-93c1d2a4f8b7";
@@ -70,8 +71,8 @@ describe("ReportPlacement", () => {
   });
 
   it("allows exactly the cap and refuses anything past it", () => {
-    expect(() => ReportPlacement.of(northBy(TARGET_MAX_M)).assertWithinCap()).not.toThrow();
-    expect(() => ReportPlacement.of(northBy(TARGET_MAX_M + 2)).assertWithinCap()).toThrow(TargetTooFarError);
+    expect(() => ReportPlacement.of(northBy(RULES.targetMaxM)).assertWithinCap(RULES.targetMaxM)).not.toThrow();
+    expect(() => ReportPlacement.of(northBy(RULES.targetMaxM + 2)).assertWithinCap(RULES.targetMaxM)).toThrow(TargetTooFarError);
   });
 });
 
@@ -92,7 +93,7 @@ describe("POST /reports with a long-range target", () => {
     queue = new FakeReportQueue();
     const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
     const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
-    const intake = new ReportIntake({ reports, snapLimit, queue, clock });
+    const intake = new ReportIntake({ reports, snapLimit, queue, clock }, { targetMaxM: RULES.targetMaxM, requeueAfterMs: QUEUE.visibilityMs });
     const statuses = new ReportStatusReader(reports, "https://cdn.example", clock);
     const mine = fakeMine(reports, "https://cdn.example", clock);
     const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new AnyUser(), new FakeUserStanding())).plugin();
@@ -116,7 +117,7 @@ describe("POST /reports with a long-range target", () => {
   });
 
   it("rejects a target past the cap with 422 target_too_far, before storing anything", async () => {
-    const response = await post(northBy(TARGET_MAX_M + 100));
+    const response = await post(northBy(RULES.targetMaxM + 100));
     expect(response.statusCode).toBe(422);
     expect(response.json()).toEqual({ error: "target_too_far", message: expect.stringContaining("within 500 m") });
     expect(reports.records.size).toBe(0);

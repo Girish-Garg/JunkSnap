@@ -10,6 +10,7 @@ import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { BASE_URL, DEVICE_B, fixture, report } from "./builders.js";
 import { FakeCleanups, FakeQueue, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
+import { RULES } from "../defaults.js";
 
 const REQUEST: CleanupRequest = {
   upload_id: "upl_jdh_3c",
@@ -63,7 +64,7 @@ class EagerWorkerQueue extends FakeQueue {
 
 function setup() {
   const sites = new FakeSiteRepository();
-  sites.put(Site.found(report()));
+  sites.put(Site.found(report(), RULES));
   const cleanups = new FakeCleanups();
   const queue = new FakeQueue();
   const retry = new ConflictRetry();
@@ -173,7 +174,7 @@ describe("CleanupIntake", () => {
   it("refuses an unknown site and an upload already used for another site", async () => {
     const { intake, sites } = setup();
     await expect(intake.submit("site_nope", REQUEST, USER)).rejects.toThrow(SiteNotFoundError);
-    sites.put(Site.found(report({ id: "jdh_9", lat: 26.3 })));
+    sites.put(Site.found(report({ id: "jdh_9", lat: 26.3 }), RULES));
     await intake.submit("site_jdh_9", REQUEST, USER);
     await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow(ValidationError);
   });

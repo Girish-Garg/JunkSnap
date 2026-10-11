@@ -22,6 +22,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { ModerationSettings } from "../../src/settings/ModerationSettings.js";
 import { LogSink } from "../LogSink.js";
 import { FakeDeviceRegistry, JODHPUR, RECEIVED_AT, reportSubmission } from "./fakes.js";
+import { RULES } from "../defaults.js";
 
 interface SentCommand {
   readonly constructor: { readonly name: string };
@@ -179,7 +180,7 @@ describe("DynamoHashIndex", () => {
         ? { Items: [{ report_id: "rpt_a", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon }, moderation_result: { phash: "c4e1b3a59d0f2687" } }], LastEvaluatedKey: { report_id: "rpt_a" } }
         : { Items: [{ report_id: "rpt_b", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon } }] };
     });
-    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" });
+    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" }, RULES.siteMergeRadiusM + RULES.targetMaxM);
     const photos = await index.earlierPhotos(reportSubmission(new Uint8Array()), 100);
     expect(photos.map((photo) => [photo.photoId, photo.hash.toHex()])).toEqual([["rpt_a", "c4e1b3a59d0f2687"]]);
     const siteQueries = sent.filter((command) => command.input.IndexName === "by-site");
@@ -195,7 +196,7 @@ describe("DynamoHashIndex on bad rows", () => {
         ? { Items: [{ site_id: "site_near", lat: JODHPUR.lat, lon: JODHPUR.lon }] }
         : { Items: [{ report_id: "rpt_a", gps: { lat: JODHPUR.lat, lon: JODHPUR.lon }, moderation_result: { phash: "zz" } }] },
     );
-    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" });
+    const index = new DynamoHashIndex(new DynamoReader(client), { reports: "reports-table", sites: "sites-table" }, RULES.siteMergeRadiusM + RULES.targetMaxM);
     await expect(index.earlierPhotos(reportSubmission(new Uint8Array()), 100)).rejects.toThrow(InternalDataError);
   });
 });

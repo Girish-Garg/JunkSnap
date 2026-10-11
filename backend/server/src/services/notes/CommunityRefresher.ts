@@ -4,10 +4,9 @@ import type { SiteReader } from "../../ports/letters/SiteReader.js";
 import type { CommunityWriter, NoteStore, ReportNoteReader, Scheduler } from "../../ports/notes/NoteStore.js";
 import type { NoteAnalyzer } from "./NoteAnalyzer.js";
 
-// At most one analysis per site in this window; a note inside it schedules one run at its end.
-export const REFRESH_WINDOW_MS = 10 * 60 * 1000;
-
 export interface RefresherParts {
+  // At most one analysis per site in this window (NOTE_ANALYSIS_INTERVAL_MINUTES); a note inside it schedules one run at its end.
+  readonly windowMs: number;
   readonly notes: NoteStore;
   readonly reportNotes: ReportNoteReader;
   // Shown photo report descriptions: read only alongside notes, as neutral signals.
@@ -101,7 +100,7 @@ export class CommunityRefresher {
     const site = await this.#parts.sites.find(siteId);
     const saved = site?.properties.community?.updated_at;
     const last = Math.max(saved === undefined ? 0 : Date.parse(saved), this.#lastAttempt.get(siteId) ?? 0);
-    return last === 0 ? 0 : last + REFRESH_WINDOW_MS - this.#parts.now().getTime();
+    return last === 0 ? 0 : last + this.#parts.windowMs - this.#parts.now().getTime();
   }
 
   // One person's several notes count once.

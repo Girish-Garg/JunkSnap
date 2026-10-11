@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { validateWardScores, type WardScores } from "../../src/contracts/index.gen.js";
 import { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
-import { DEFAULT_MIN_COSINE } from "../../src/services/sites/MergeTargetPicker.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
@@ -12,6 +11,7 @@ import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_URL, clearByPhotos, DEVICE_B, evidence, fixture, northOf, report } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
+import { RULES, SCORES } from "../defaults.js";
 
 // A geohash index that has not caught up with the table yet.
 class LaggingIndexSites extends FakeSiteRepository {
@@ -28,12 +28,14 @@ function setup(sites = new FakeSiteRepository()) {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings),
+    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
     reports,
     scores,
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
     retry: new ConflictRetry(),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   return { sites, reports, scores, embeddings, merger };
 }
@@ -110,7 +112,7 @@ describe("SiteMerger merging", () => {
 
   it("skips rejected sites", async () => {
     const { merger, sites } = setup();
-    const rejected = Site.found(report({ decision: "community_check" }));
+    const rejected = Site.found(report({ decision: "community_check" }), RULES);
     const rejectVote = (n: number) => ({ siteId: "s", deviceToken: `d${n}`, userId: null, choice: "reject" as const, votedAt: NOW });
     rejected.recordVotes(VoteTally.of([1, 2, 3, 4].map(rejectVote)));
     sites.put(rejected);
@@ -119,7 +121,7 @@ describe("SiteMerger merging", () => {
 
   it("lets a passed photo into a cleaned site, which reopens it", async () => {
     const { merger, sites } = setup();
-    const cleaned = Site.found(report());
+    const cleaned = Site.found(report(), RULES);
     clearByPhotos(cleaned, NOW);
     sites.put(cleaned);
     const later = evidence({ id: "jdh_3", decision: "community_check", capturedAt: "2026-10-10T07:00:00Z" });
@@ -129,8 +131,8 @@ describe("SiteMerger merging", () => {
 
   it("prefers the Me too site over a nearer one when both qualify", async () => {
     const { merger, sites } = setup();
-    sites.put(Site.found(report({ id: "far", lat: northOf(30) })));
-    sites.put(Site.found(report({ id: "near", lat: northOf(-2) })));
+    sites.put(Site.found(report({ id: "far", lat: northOf(30) }), RULES));
+    sites.put(Site.found(report({ id: "near", lat: northOf(-2) }), RULES));
     expect((await merger.merge(evidence({ id: "a", meToo: "site_far", device: DEVICE_B }))).siteId).toBe("site_far");
     expect((await merger.merge(evidence({ id: "b" }))).siteId).toBe("site_near");
     expect(sites.feature("site_far").properties.corroborations).toBe(1);
@@ -161,7 +163,7 @@ describe("SiteMerger embeddings", () => {
   });
 
   it("keeps two piles apart below the SigLIP threshold of 0.88", async () => {
-    expect(DEFAULT_MIN_COSINE).toBe(0.88);
+    expect(RULES.mergeMinCosine).toBe(0.88);
     const { result } = await withVectors([1, 0, 0], [0.85, Math.sqrt(1 - 0.85 ** 2), 0]);
     expect(result).toMatchObject({ siteId: "site_jdh_2", outcome: "founded" });
   });

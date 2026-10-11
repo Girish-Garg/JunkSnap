@@ -3,9 +3,8 @@ import type { AreaSites } from "../domain/AreaSites.js";
 import type { DataWindow } from "../domain/DataWindow.js";
 import { complement, DAY_MS, mean, median, percent } from "../domain/scoreUtils.js";
 
+// Fixed by the metric's name in the ward_scores contract (cleared_within_7_days_pct).
 const CLEAR_WITHIN_DAYS = 7;
-// Bin service needs this many verified overflowing_bin sites, so one bin never sways the city score (decision 20261010-1645).
-export const MIN_BIN_SERVICE_SITES = 3;
 
 export interface CityMeasure {
   readonly medianDaysToClear: number | null;
@@ -18,13 +17,20 @@ export interface CityMeasure {
 
 // scores-v3 city: how fast and how lastingly the city clears verified sites, and whether it services bad-state bins.
 export class CityScore {
+  readonly #minBinServiceSites: number;
+
+  // Bin service needs MIN_BIN_SERVICE_SITES verified overflowing_bin sites, so one bin never sways the score (decision 20261010-1645).
+  constructor(minBinServiceSites: number) {
+    this.#minBinServiceSites = minBinServiceSites;
+  }
+
   measure(sites: AreaSites, window: DataWindow): CityMeasure {
     const verified = sites.verified();
     const medianDaysToClear = median(verified.map((site) => site.daysToClear(window.toMs)));
     const clearedWithin7DaysPct = this.#clearedWithin7Days(verified, window);
     const redumpedPct = this.#redumped(verified);
     const noBinResponsePct = CityScore.#clearedShare(verified, "no_bin");
-    const binServicePct = CityScore.#binService(verified);
+    const binServicePct = this.#binService(verified);
     const speed = medianDaysToClear === null ? null : Math.max(0, 100 - 10 * medianDaysToClear);
     const value = mean([speed, clearedWithin7DaysPct, complement(redumpedPct), noBinResponsePct, binServicePct]);
     return { medianDaysToClear, clearedWithin7DaysPct, redumpedPct, noBinResponsePct, binServicePct, value };
@@ -42,9 +48,9 @@ export class CityScore {
   }
 
   // Null below MIN_BIN_SERVICE_SITES, so it feeds neither the mean nor the city_response diagnosis.
-  static #binService(verified: readonly AreaSite[]): number | null {
+  #binService(verified: readonly AreaSite[]): number | null {
     const bins = verified.filter((site) => site.isType("overflowing_bin")).length;
-    return bins < MIN_BIN_SERVICE_SITES ? null : CityScore.#clearedShare(verified, "overflowing_bin");
+    return bins < this.#minBinServiceSites ? null : CityScore.#clearedShare(verified, "overflowing_bin");
   }
 
   // no_bin response and bin service: sites of one type ever cleared or served, over all of them.

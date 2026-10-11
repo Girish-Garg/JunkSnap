@@ -1,6 +1,7 @@
 import type { FlagText } from "../../domain/flags/PhotoFlag.js";
-import { PHOTO_FLAG_WARN, PhotoFlagPolicy } from "../../domain/flags/PhotoFlagPolicy.js";
+import { PhotoFlagPolicy } from "../../domain/flags/PhotoFlagPolicy.js";
 import type { ShownNote } from "../../domain/notes/Community.js";
+import type { PhotoFlagRules } from "../../domain/sites/SiteRules.js";
 import type { PhotoFlagStore } from "../../ports/flags/PhotoFlagStore.js";
 import type { ReportNoteReader } from "../../ports/notes/NoteStore.js";
 
@@ -8,10 +9,11 @@ import type { ReportNoteReader } from "../../ports/notes/NoteStore.js";
 // only once several people reported that photo; one person's word about a photo is never a signal.
 export class WarnedPhotoTexts implements ReportNoteReader {
   readonly #store: Pick<PhotoFlagStore, "textsFor">;
-  readonly #policy = new PhotoFlagPolicy();
+  readonly #policy: PhotoFlagPolicy;
 
-  constructor(store: Pick<PhotoFlagStore, "textsFor">) {
+  constructor(store: Pick<PhotoFlagStore, "textsFor">, rules: PhotoFlagRules) {
     this.#store = store;
+    this.#policy = new PhotoFlagPolicy(rules);
   }
 
   async shownFor(siteId: string): Promise<ShownNote[]> {
@@ -25,6 +27,6 @@ export class WarnedPhotoTexts implements ReportNoteReader {
   #warnedPhotos(rows: readonly FlagText[]): Set<string> {
     const photos = new Set(rows.map((row) => row.photoId));
     const authorsOf = (photoId: string) => rows.filter((row) => row.photoId === photoId).map((row) => row.author);
-    return new Set([...photos].filter((photoId) => this.#policy.people(authorsOf(photoId)) >= PHOTO_FLAG_WARN));
+    return new Set([...photos].filter((photoId) => this.#policy.warns(this.#policy.people(authorsOf(photoId)))));
   }
 }

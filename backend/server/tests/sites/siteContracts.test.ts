@@ -19,10 +19,11 @@ import { VoteTally } from "../../src/domain/sites/VoteTally.js";
 import { ZeroScoreRows } from "../../src/domain/sites/ZeroScoreRows.js";
 import { BASE_URL, DEVICE_A, fixture, shown, siteFixture, userOf } from "./builders.js";
 import { NOW, RecordingLogger } from "./fakes.js";
+import { RULES, SCORES } from "../defaults.js";
 
 const SAMPLES = ["jdh-1", "jdh-2", "jdh-3", "jpr-1"];
 const cells = new NgeohashCells();
-const mapper = new SiteItemMapper(cells, new RecordingLogger());
+const mapper = new SiteItemMapper(cells, new RecordingLogger(), RULES);
 
 function itemOf(feature: SiteFeature): SiteItem {
   const [lon, lat] = feature.geometry.coordinates;
@@ -98,7 +99,7 @@ describe("merging the jpr-1 report fixtures", () => {
         near: [],
         bin: { nearest_bin: fixtureBin?.nearest_bin ?? null, no_bin_within_3km: fixtureBin?.no_bin_within_3km ?? null },
         brands: [],
-      }),
+      }), RULES,
     );
     // Cast at the report's own time, so the expiry stays 90 days after the last report, as in the fixture.
     const vote = { siteId: "site_jpr_1", deviceToken: "d", userId: null, choice: "confirm" as const, weight: 1, votedAt: "2026-10-10T04:02:10Z" };
@@ -114,7 +115,7 @@ describe("merging the jpr-1 report fixtures", () => {
 describe("zero scores rows", () => {
   it.each(SAMPLES)("every area of site.%s gets a valid ward_scores row", (sample) => {
     const feature = siteFixture(sample);
-    const rows = new ZeroScoreRows(feature).rows(NOW);
+    const rows = new ZeroScoreRows(feature, SCORES.minVerifiedReports).rows(NOW);
     const { ward, assembly_seat } = feature.properties.location;
     expect(rows).toHaveLength(2 + (ward === null ? 0 : 1) + (assembly_seat === null ? 0 : 1));
     for (const row of rows) {
@@ -126,6 +127,6 @@ describe("zero scores rows", () => {
   it.each(SAMPLES)("site.%s places its rows within its district and local body", (sample) => {
     const { district, local_body } = siteFixture(sample).properties.location;
     const expected = local_body === null ? [district.id] : [district.id, local_body.id];
-    expect(new ZeroScoreRows(siteFixture(sample)).within()).toEqual(expected);
+    expect(new ZeroScoreRows(siteFixture(sample), SCORES.minVerifiedReports).within()).toEqual(expected);
   });
 });

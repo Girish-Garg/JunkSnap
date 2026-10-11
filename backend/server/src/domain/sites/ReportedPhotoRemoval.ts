@@ -1,4 +1,5 @@
 import { PhotoFlagPolicy } from "../flags/PhotoFlagPolicy.js";
+import type { PhotoFlagRules } from "./SiteRules.js";
 import type { SiteProperties, SiteState } from "./SiteTypes.js";
 
 // Decision 20261011-0310-hem-photo-flags: an unverified site whose every remaining report is a hidden photo leaves the
@@ -6,10 +7,11 @@ import type { SiteProperties, SiteState } from "./SiteTypes.js";
 // Checked after a photo report and after a withdrawal.
 export class ReportedPhotoRemoval {
   readonly #state: SiteState;
-  readonly #policy = new PhotoFlagPolicy();
+  readonly #policy: PhotoFlagPolicy;
 
-  constructor(state: SiteState) {
+  constructor(state: SiteState, rules: PhotoFlagRules) {
     this.#state = state;
+    this.#policy = new PhotoFlagPolicy(rules);
   }
 
   apply(at: string): SiteState {

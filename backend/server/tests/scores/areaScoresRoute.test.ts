@@ -13,6 +13,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { InMemoryScores } from "./InMemoryScores.js";
 import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
+import { AREA_LIST, SCORES } from "../defaults.js";
 
 const fixture = (sample: string) => readContract<WardScores>(`fixtures/ward_scores.${sample}.json`);
 const urlOf = (row: Pick<WardScores, "area">) => `/areas/${row.area.kind}/${row.area.id}/scores`;
@@ -31,7 +32,7 @@ async function startWithRows(rows: readonly (ComputedAreaScores | WardScores)[])
   for (const row of rows) {
     await scores.save(row);
   }
-  return start(areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores) }));
+  return start(areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores, AREA_LIST) }));
 }
 
 afterEach(async () => {
@@ -59,7 +60,7 @@ describe("GET /areas/{kind}/{id}/scores", () => {
   });
 
   it("returns a computed row with its insights", async () => {
-    const row = ScoreCalculator.standard().calculate({ area: WARD, sites: [site()], facts: NO_FACTS, now: NOW });
+    const row = ScoreCalculator.standard(SCORES).calculate({ area: WARD, sites: [site()], facts: NO_FACTS, now: NOW });
     const response = await (await startWithRows([row])).inject({ url: urlOf(row) });
     expect(response.json()).toMatchObject({ insights: { repeat_spots: { value: [], count: 0, reason: null } } });
   });

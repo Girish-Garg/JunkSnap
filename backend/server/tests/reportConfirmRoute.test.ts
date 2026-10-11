@@ -21,6 +21,7 @@ import { memoryCounters, RecordingLogger } from "./letters/support.js";
 import { LogSink } from "./LogSink.js";
 import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, fixture, FixedClock, moderation, OTHER_DEVICE, upload } from "./reportFakes.js";
+import { QUEUE, RULES } from "./defaults.js";
 
 const RECEIVED = "2026-10-11T09:39:50Z";
 const ASKED = "2026-10-11T09:40:14Z";
@@ -54,7 +55,7 @@ beforeEach(async () => {
   const guard = new RouteGuard(new AnyUser(), new FakeUserStanding());
   const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
-  const intake = new ReportIntake({ reports, snapLimit, queue, clock });
+  const intake = new ReportIntake({ reports, snapLimit, queue, clock }, { targetMaxM: RULES.targetMaxM, requeueAfterMs: QUEUE.visibilityMs });
   const statuses = new ReportStatusReader(reports, BASE_URL, clock);
   const limiter = new LetterRateLimiter(counters, new RecordingLogger(), 20, "confirmations");
   const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: BASE_URL });

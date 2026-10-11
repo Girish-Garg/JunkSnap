@@ -1,15 +1,13 @@
 import { GeoPoint } from "./GeoPoint.js";
+import type { MergeRadii } from "./SiteRules.js";
 import type { MergedReport, ReportType, SiteProperties } from "./SiteTypes.js";
 
-const SITE_MERGE_RADIUS_M = 40;
-// Decision 20261010-1630: a no-bin report joins the nearest open zone whose centre is within 500 m.
-const ZONE_MERGE_RADIUS_M = 500;
-// Each no-bin report says there is no dustbin within this radius of where the reporter stood.
+// Each no-bin report says there is no dustbin within this radius; fixed by the site contract (zone_radius_m const 1000).
 export const ZONE_RADIUS_M = 1000;
-export const MAX_MERGE_RADIUS_M = ZONE_MERGE_RADIUS_M;
 
-export function mergeRadiusM(type: ReportType): number {
-  return type === "no_bin" ? ZONE_MERGE_RADIUS_M : SITE_MERGE_RADIUS_M;
+// Decision 20261010-1630: a no-bin report joins the nearest open zone within ZONE_MERGE_RADIUS_M of its centre.
+export function mergeRadiusM(type: ReportType, radii: MergeRadii): number {
+  return type === "no_bin" ? radii.zoneMergeRadiusM : radii.siteMergeRadiusM;
 }
 
 // A zone's centre is the mean of its reports' points; a report stored before points were kept counts at the old centre.

@@ -26,6 +26,8 @@ import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import type { Env } from "../../settings/utils.js";
 import type { EntryContext } from "../EntryPoint.js";
 import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
@@ -41,19 +43,29 @@ export interface ModerationWiring {
   readonly waste?: WasteLocator;
 }
 
+// The tunable numbers moderation takes, each read once from its variable.
+export interface ModerationTunables {
+  readonly limits: RateLimitSettings;
+  readonly rules: SiteRuleSettings;
+}
+
 // Builds the moderation object graph once per worker process.
 export class ModerationServiceFactory {
   readonly #settings: ModerationSettings;
-  readonly #limits: RateLimitSettings;
+  readonly #tunables: ModerationTunables;
 
-  constructor(settings: ModerationSettings, limits: RateLimitSettings) {
+  constructor(settings: ModerationSettings, tunables: ModerationTunables) {
     this.#settings = settings;
-    this.#limits = limits;
+    this.#tunables = tunables;
+  }
+
+  static tunables(env: Env): ModerationTunables {
+    return { limits: RateLimitSettings.fromEnv(env), rules: SiteRuleSettings.fromEnv(env) };
   }
 
   // For the worker's entry point: reads settings when called, never at import.
   static forWorker(context: EntryContext, devices: DeviceRegistry): ModerationService {
-    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), RateLimitSettings.fromEnv(context.env));
+    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), ModerationServiceFactory.tunables(context.env));
     const bedrock = new BedrockRuntimeClient({ region: context.settings.awsRegion });
     return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock).build(context.logger) });
   }
@@ -84,13 +96,15 @@ export class ModerationServiceFactory {
 
   #checks(devices: DeviceRegistry): CheckFactory {
     const settings = this.#settings;
+    const { limits, rules } = this.#tunables;
     const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion))));
+    const tables = { reports: settings.reportsTable, sites: settings.sitesTable };
     return new CheckFactory({
       india: TurfGeofence.fromFile(settings.indiaOutlinePath(), INDIA_BUFFER_DEG),
-      reportHashes: new DynamoHashIndex(reader, { reports: settings.reportsTable, sites: settings.sitesTable }),
+      reportHashes: new DynamoHashIndex(reader, tables, rules.siteMergeRadiusM + rules.targetMaxM),
       cleanupHashes: new DynamoCleanupHashIndex(reader, settings.cleanupsTable),
       devices,
-      snapPerHour: this.#limits.snapPerHour,
+      snapPerHour: limits.snapPerHour,
     });
   }
 }

@@ -17,6 +17,7 @@ import { NoteRouterBuilder } from "../../src/handlers/moderation/NoteRouterBuild
 import { LlmNoteModerator } from "../../src/services/moderation/LlmNoteModerator.js";
 import { LogSink } from "../LogSink.js";
 import { reportSubmission, testJpeg } from "./fakes.js";
+import { RULES } from "../defaults.js";
 
 // Thin read-only checks against the real services: RUN_AWS_TESTS=1 with AWS_PROFILE set.
 const region = "ap-south-1";
@@ -39,7 +40,7 @@ describe.skipIf(process.env.RUN_AWS_TESTS !== "1")("moderation adapters on AWS",
   it("queries the stage's sites and reports indexes", async () => {
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
     const reader = new DynamoReader(client);
-    const index = new DynamoHashIndex(reader, { reports: `junksnap-${stage}-reports`, sites: `junksnap-${stage}-sites` });
+    const index = new DynamoHashIndex(reader, { reports: `junksnap-${stage}-reports`, sites: `junksnap-${stage}-sites` }, RULES.siteMergeRadiusM + RULES.targetMaxM);
     expect(Array.isArray(await index.earlierPhotos(reportSubmission(new Uint8Array()), 100))).toBe(true);
   });
 

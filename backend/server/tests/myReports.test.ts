@@ -20,6 +20,7 @@ import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
 import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, FixedClock, upload } from "./reportFakes.js";
+import { QUEUE, RULES } from "./defaults.js";
 
 const NOW = "2026-10-10T02:14:52Z";
 const BASE = "https://cdn.example";
@@ -40,7 +41,7 @@ beforeEach(async () => {
   reports = new FakeReportRepository();
   const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
-  const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock });
+  const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock }, { targetMaxM: RULES.targetMaxM, requeueAfterMs: QUEUE.visibilityMs });
   const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE, clock), mine: fakeMine(reports, BASE, clock) };
   const plugin = new ReportEndpoints(services, new RouteGuard(new TokenIsUser(), new FakeUserStanding())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });

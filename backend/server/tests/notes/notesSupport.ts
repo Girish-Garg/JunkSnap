@@ -124,7 +124,7 @@ export function notesWorld(sites: readonly Site[] = [siteWithoutCommunity()], re
     model: new FakeAnalysisModel(),
     logger: new RecordingLogger(),
   };
-  const service = new NotesAssembly(10, world.logger).service({
+  const service = new NotesAssembly(10, world.logger, 10 * 60_000).service({
     sites: new FakeSites(sites),
     notes: world.notes,
     reportNotes: new FixedReportNotes(reportNotes),

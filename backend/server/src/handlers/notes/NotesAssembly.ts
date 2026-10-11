@@ -41,16 +41,19 @@ export class TimerScheduler implements Scheduler {
 export class NotesAssembly {
   readonly #notesPerHour: number;
   readonly #logger: Logger;
+  readonly #analysisWindowMs: number;
 
-  constructor(notesPerHour: number, logger: Logger) {
+  // NOTES_PER_HOUR, and NOTE_ANALYSIS_INTERVAL_MINUTES in ms.
+  constructor(notesPerHour: number, logger: Logger, analysisWindowMs: number) {
     this.#notesPerHour = notesPerHour;
     this.#logger = logger;
+    this.#analysisWindowMs = analysisWindowMs;
   }
 
   // One refresher per process, shared by notes and photo reports, so its per-site debounce holds for both.
   refresher(adapters: NotesAdapters): CommunityRefresher {
     const analyzer = new NoteAnalyzer(adapters.router, new WordingCheck(), this.#logger);
-    return new CommunityRefresher({ ...adapters, analyzer, logger: this.#logger });
+    return new CommunityRefresher({ ...adapters, analyzer, logger: this.#logger, windowMs: this.#analysisWindowMs });
   }
 
   service(adapters: NotesAdapters, refresher: CommunityRefresher = this.refresher(adapters)): NoteService {

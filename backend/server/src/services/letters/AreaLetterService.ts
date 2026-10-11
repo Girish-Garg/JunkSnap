@@ -19,8 +19,6 @@ import type { LetterRateLimiter } from "./LetterRateLimiter.js";
 import type { DraftedProse, ProseDrafter } from "./ProseDrafter.js";
 import type { QuoteVerifier } from "./QuoteVerifier.js";
 
-// The area page's guardrail (ward_scores.min_verified_reports).
-const MIN_VERIFIED_REPORTS = 10;
 const MAX_CLAUSES = 4;
 
 export interface AreaLetterRequest {
@@ -40,7 +38,14 @@ export interface AreaLetterParts {
   readonly drafter: ProseDrafter<AreaLetterBrief>;
   readonly stamp: LetterStamp;
   readonly logger: Logger;
-  // NO_BIN_MIN_REPORTERS: a no-bin site counts only with this many distinct reporters.
+  readonly rules: AreaLetterRules;
+}
+
+export interface AreaLetterRules {
+  // The area page's guardrail (ward_scores.min_verified_reports): MIN_VERIFIED_REPORTS.
+  readonly minVerifiedReports: number;
+  // SITE_TTL_DAYS: expired sites leave area letters.
+  readonly ttlDays: number;
 }
 
 type NonEmpty<T> = [T, ...T[]];
@@ -96,16 +101,17 @@ export class AreaLetterService {
     }
     // Decision 20261010-1855: expired sites leave area letters, even before the CronJob marks them.
     const now = this.#parts.stamp.now();
-    const current = batch.sites.filter((stored) => !isLapsed(stored.site.properties, now));
+    const { minVerifiedReports, ttlDays } = this.#parts.rules;
+    const current = batch.sites.filter((stored) => !isLapsed(stored.site.properties, now, ttlDays));
     const sites = new AreaIssueSites(request.area, request.issue, current);
     if (!sites.hasSites()) {
       throw new AreaNotFoundError(`No reported sites in ${request.area.kind} ${request.area.id} yet`);
     }
     const verified = sites.verifiedReports();
-    if (verified < MIN_VERIFIED_REPORTS) {
+    if (verified < minVerifiedReports) {
       const left = sites.noBinExclusions();
       const why = left.length === 0 ? "" : ` No-bin sites left out: ${left.join("; ")}.`;
-      throw new NotVerifiedError(`Not enough verified reports yet (${verified} of ${MIN_VERIFIED_REPORTS}) for this issue in this area.${why}`);
+      throw new NotVerifiedError(`Not enough verified reports yet (${verified} of ${minVerifiedReports}) for this issue in this area.${why}`);
     }
     return sites;
   }

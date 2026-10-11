@@ -26,18 +26,27 @@ import { CleanupService } from "../../services/sites/CleanupService.js";
 import { ConflictRetry } from "../../services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../services/sites/MergeTargetPicker.js";
 import { SiteFinder } from "../../services/sites/SiteFinder.js";
-import { MERGE_ATTEMPTS, SiteMerger } from "../../services/sites/SiteMerger.js";
+import { SiteMerger } from "../../services/sites/SiteMerger.js";
 import { VoteService } from "../../services/sites/VoteService.js";
 import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
-import { SitesSettings } from "../../settings/SitesSettings.js";
+import { QueueSettings } from "../../settings/QueueSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
+import { ScoreSettings } from "../../settings/ScoreSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import { SitesSettings } from "../../settings/SitesSettings.js";
 import type { Env } from "../../settings/utils.js";
 import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 
-// Decision 20261010-1700: withdrawals an hour, per user and per device.
+export type FlagSiteParts = Pick<PhotoFlagServiceDeps, "sites" | "rows" | "clock" | "retry" | "radiusM">;
 
-export type FlagSiteParts = Pick<PhotoFlagServiceDeps, "sites" | "rows" | "clock" | "retry">;
+// The tunable numbers the site services take, each read once from its variable.
+export interface SiteTunables {
+  readonly limits: RateLimitSettings;
+  readonly rules: SiteRuleSettings;
+  readonly scores: ScoreSettings;
+  readonly queue: QueueSettings;
+}
 
 export interface SiteClients {
   readonly dynamo: DynamoDBDocumentClient;
@@ -55,14 +64,23 @@ export class SiteServiceFactory {
   readonly #calls = new AwsCalls();
   readonly #retry = new ConflictRetry();
   readonly #logger: Logger;
-  readonly #limits: RateLimitSettings;
+  readonly #tunables: SiteTunables;
 
-  constructor(settings: SitesSettings, clients: SiteClients, logger: Logger, limits = RateLimitSettings.fromEnv({})) {
+  constructor(settings: SitesSettings, clients: SiteClients, logger: Logger, tunables = SiteServiceFactory.tunables({})) {
     this.#settings = settings;
     this.#clients = clients;
     this.#logger = logger;
-    this.#limits = limits;
-    this.#mapper = new SiteItemMapper(this.#cells, logger);
+    this.#tunables = tunables;
+    this.#mapper = new SiteItemMapper(this.#cells, logger, tunables.rules);
+  }
+
+  static tunables(env: Env): SiteTunables {
+    return {
+      limits: RateLimitSettings.fromEnv(env),
+      rules: SiteRuleSettings.fromEnv(env),
+      scores: ScoreSettings.fromEnv(env),
+      queue: QueueSettings.fromEnv(env),
+    };
   }
 
   static fromEnv(core: CoreSettings, env: Env, logger: Logger): SiteServiceFactory {
@@ -71,7 +89,7 @@ export class SiteServiceFactory {
     const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
     const s3 = new S3Client(awsClientConfig(region, AWS_TIMEOUTS.transfer));
     const clients = { dynamo, s3, sqs: new SQSClient(awsClientConfig(region)) };
-    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger, RateLimitSettings.fromEnv(env));
+    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger, SiteServiceFactory.tunables(env));
   }
 
   // The worker reads site positions and kinds for cleanup moderation and recording.
@@ -102,16 +120,19 @@ export class SiteServiceFactory {
   merger(): SiteMerger {
     const { dynamo, s3 } = this.#clients;
     const embeddings = new S3EmbeddingStore(s3, this.#settings.originalsBucket, this.#calls);
+    const { rules, scores, queue } = this.#tunables;
     return new SiteMerger({
       sites: this.#sites(),
       votes: this.#votes(),
       cells: this.#cells,
-      picker: new MergeTargetPicker(embeddings),
+      picker: new MergeTargetPicker(embeddings, rules.mergeMinCosine),
       reports: this.#reports(),
       scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,
       reportFactory: new MergeableReportFactory(this.#media()),
-      retry: new ConflictRetry(MERGE_ATTEMPTS),
+      retry: new ConflictRetry(queue.mergeAttempts),
+      rules,
+      minVerifiedReports: scores.minVerifiedReports,
     });
   }
 
@@ -125,7 +146,7 @@ export class SiteServiceFactory {
       rows: new DynamoSiteReportReader(dynamo, tables.reports, this.#media(), this.#calls),
       withdrawer: new DynamoReportWithdrawer(dynamo, tables.reports, this.#calls),
       reports: this.#reports(),
-      limiter: new LetterRateLimiter(counters, this.#logger, this.#limits.withdrawalsPerHour, "withdrawals"),
+      limiter: new LetterRateLimiter(counters, this.#logger, this.#tunables.limits.withdrawalsPerHour, "withdrawals"),
       clock: this.#clock,
       retry: this.#retry,
     });
@@ -134,7 +155,7 @@ export class SiteServiceFactory {
   // Photo reports (decision 20261011-0310-hem-photo-flags) read and save sites like votes do.
   flagSiteParts(): FlagSiteParts {
     const rows = new DynamoSiteReportReader(this.#clients.dynamo, this.#settings.tables.reports, this.#media(), this.#calls);
-    return { sites: this.#sites(), rows, clock: this.#clock, retry: this.#retry };
+    return { sites: this.#sites(), rows, clock: this.#clock, retry: this.#retry, radiusM: this.#tunables.rules.flags.radiusM };
   }
 
   cleanupService(): CleanupService {

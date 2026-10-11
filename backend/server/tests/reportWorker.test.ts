@@ -8,6 +8,7 @@ import type { QueueMessage } from "../src/domain/QueueMessage.js";
 import { buildReportQueuePoller } from "../src/handlers/reportWorker.js";
 import type { MessageHandler } from "../src/ports/MessageHandler.js";
 import { CoreSettings } from "../src/settings/CoreSettings.js";
+import { QUEUE } from "./defaults.js";
 import { LogSink } from "./LogSink.js";
 
 const QUEUE_URL = "https://sqs.ap-south-1.amazonaws.com/123456789012/junksnap-dev-reports";
@@ -60,8 +61,9 @@ const sqsMessage = (id: string, body: string, receiveCount = "1"): Message => ({
   Attributes: { ApproximateReceiveCount: receiveCount },
 });
 
-function poller(sqs: FakeSqs, handler: MessageHandler = new KindRecorder(), sink = new LogSink(), messageDeadlineMs?: number) {
-  return new SqsQueuePoller(sqs.client(), { queueUrl: QUEUE_URL, maxReceiveCount: 3, messageDeadlineMs }, handler, logger(sink));
+function poller(sqs: FakeSqs, handler: MessageHandler = new KindRecorder(), sink = new LogSink(), messageDeadlineMs = QUEUE.messageDeadlineMs) {
+  const { maxReceiveCount, waitSeconds, batchSize } = QUEUE;
+  return new SqsQueuePoller(sqs.client(), { queueUrl: QUEUE_URL, maxReceiveCount, messageDeadlineMs, waitSeconds, batchSize }, handler, logger(sink));
 }
 
 // Never settles for report rpt_hung; records the rest.

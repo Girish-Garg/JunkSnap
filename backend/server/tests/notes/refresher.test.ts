@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Community } from "../../src/domain/notes/Community.js";
 import { TimerScheduler } from "../../src/handlers/notes/NotesAssembly.js";
 import { WordingCheck } from "../../src/services/letters/WordingCheck.js";
-import { CommunityRefresher, REFRESH_WINDOW_MS } from "../../src/services/notes/CommunityRefresher.js";
+import { CommunityRefresher } from "../../src/services/notes/CommunityRefresher.js";
+
+// NOTE_ANALYSIS_INTERVAL_MINUTES at its default, 10.
+const REFRESH_WINDOW_MS = 10 * 60 * 1000;
 import { NoteAnalyzer } from "../../src/services/notes/NoteAnalyzer.js";
 import { FakeSites, RecordingLogger } from "../letters/support.js";
 import { CLEAN, FakeAnalysisModel, FixedReportNotes, GOOD_READING, ManualScheduler, MemoryCommunity, MemoryNotes, siteWithoutCommunity } from "./notesSupport.js";
@@ -27,6 +30,7 @@ function refresher(writer: { save(siteId: string, community: Community): Promise
     writer,
     scheduler,
     now: () => NOW,
+    windowMs: REFRESH_WINDOW_MS,
     logger,
   };
   return { refresher: new CommunityRefresher(parts), model, scheduler, logger, writer };

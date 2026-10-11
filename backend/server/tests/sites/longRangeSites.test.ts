@@ -18,6 +18,7 @@ import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, DEVICE_C, evidence, fixture, northOf } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock } from "./fakes.js";
+import { RULES, SCORES } from "../defaults.js";
 
 // The first reporter stood about 128 m from the waste (100 m north, 80 m east) and marked it at BASE.
 const REPORTER = { lat: 26.26273, lon: 73.00432, accuracy_m: 6 };
@@ -36,12 +37,14 @@ function setup() {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
     retry: new ConflictRetry(),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   return { sites, merger, finder: new SiteFinder(sites, new NgeohashCells(), new FixedClock()) };
 }

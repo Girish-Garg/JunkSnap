@@ -42,6 +42,7 @@ import {
 } from "./reportFakes.js";
 import { evidence } from "./sites/builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock as SiteClock } from "./sites/fakes.js";
+import { RULES, SCORES } from "./defaults.js";
 
 const RECEIVED = "2026-10-10T02:14:52Z";
 const ASKED = "2026-10-10T02:15:10Z";
@@ -64,12 +65,14 @@ function siteMerger(): ReportMerger {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia("https://cdn.example")),
     retry: new ConflictRetry(),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   return new SiteReportMerger(merger, new NearPlacesFinder([]), new BinLocator({ bins: [], mappedTowns: [] }, 3000));
 }

@@ -8,8 +8,6 @@ import { ModelAreaLetterWriter } from "../adapters/letters/ModelAreaLetterWriter
 import { ModelLetterWriter } from "../adapters/letters/ModelLetterWriter.js";
 import { SystemLetterStamp } from "../adapters/letters/SystemLetterStamp.js";
 import { AreaScoresSettings } from "../settings/AreaScoresSettings.js";
-import { BinSettings } from "../settings/BinSettings.js";
-import { RateLimitSettings } from "../settings/RateLimitSettings.js";
 import { LettersSettings } from "../settings/LettersSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { AreaLettersEndpoint } from "./letters/AreaLettersEndpoint.js";
@@ -31,7 +29,7 @@ export const buildLettersRoutes: RouteBuilder = (context) => async (app) => {
     devices: new DynamoLetterCounter(client, { name: devices, keyName: "device_token" }),
     users: new DynamoLetterCounter(client, { name: users, keyName: "user_id" }),
   };
-  const assembly = new LettersAssembly(settings.rulesDir, app.log, BinSettings.fromEnv(context.env), RateLimitSettings.fromEnv(context.env).lettersPerHour);
+  const assembly = new LettersAssembly(settings.rulesDir, app.log, LettersAssembly.tunables(context.env));
   const stamp = new SystemLetterStamp();
   const siteLetters = await assembly.service({
     sites: new DynamoSiteReader(client, sites),

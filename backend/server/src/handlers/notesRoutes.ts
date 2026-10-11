@@ -11,6 +11,7 @@ import { WarnedPhotoTexts } from "../services/flags/WarnedPhotoTexts.js";
 import { ScheduledCommunityRefresh } from "../services/notes/ScheduledCommunityRefresh.js";
 import { NotesSettings } from "../settings/NotesSettings.js";
 import { RateLimitSettings } from "../settings/RateLimitSettings.js";
+import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { PhotoFlagsAssembly } from "./flags/PhotoFlagsAssembly.js";
 import { PhotoFlagsEndpoint } from "./flags/PhotoFlagsEndpoint.js";
@@ -30,12 +31,12 @@ export const buildNotesRoutes: RouteBuilder = (context) => async (app) => {
   const flags = new PhotoFlagsAssembly(settings, client, app.log, RateLimitSettings.fromEnv(context.env).flagsPerHour);
   const moderator = new LlmNoteModerator(router);
   const scheduler = new TimerScheduler(app.log);
-  const assembly = new NotesAssembly(settings.notesPerHour, app.log);
+  const assembly = new NotesAssembly(settings.notesPerHour, app.log, settings.analysisIntervalMs);
   const adapters = {
     sites: new DynamoSiteReader(client, settings.sitesTable),
     notes: new DynamoNoteStore(client, settings.notesTable),
     reportNotes: new DynamoReportNotes(client, settings.reportsTable),
-    photoReports: new WarnedPhotoTexts(flags.store()),
+    photoReports: new WarnedPhotoTexts(flags.store(), SiteRuleSettings.fromEnv(context.env).flags),
     writer: new DynamoCommunityWriter(client, settings.sitesTable),
     counters: {
       devices: new DynamoLetterCounter(client, { name: settings.devicesTable, keyName: "device_token", prefix: "note" }),

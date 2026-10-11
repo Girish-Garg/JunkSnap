@@ -24,6 +24,7 @@ import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js"
 import { fixture, upload } from "../reportFakes.js";
 import { report as mergeable } from "../sites/builders.js";
 import { FakeSiteRepository } from "../sites/fakes.js";
+import { RULES } from "../defaults.js";
 
 const RECEIVED = "2026-10-10T02:14:52Z";
 const moderation = () => fixture<ModerationResult>("moderation_result.jdh-1");
@@ -45,7 +46,7 @@ class FakeModerationService {
 
 async function siteRepository(): Promise<{ sites: FakeSiteRepository; site: Site }> {
   const sites = new FakeSiteRepository();
-  const site = Site.found(mergeable());
+  const site = Site.found(mergeable(), RULES);
   await sites.create(site);
   return { sites, site };
 }

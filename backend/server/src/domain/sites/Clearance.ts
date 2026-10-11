@@ -1,11 +1,7 @@
+import type { ClearanceRules } from "./SiteRules.js";
 import type { CleanupConfirmation, SiteProperties } from "./SiteTypes.js";
 import type { VoteTally } from "./VoteTally.js";
 import { personOf } from "./utils.js";
-
-// Decision 20261010-1855: at least this many different people must say a site is cleared.
-export const CLEANED_QUORUM = 3;
-// Decision 20261010-1700: and they must outnumber the people saying still there by this many.
-const CLEARED_MARGIN = 3;
 
 export type ClearanceView = NonNullable<SiteProperties["clearance"]>;
 
@@ -20,11 +16,15 @@ interface Word {
 }
 
 // Counts who says the site is cleared since its newest photo; each person once, by their latest word.
+// Decision 20261010-1855: at least cleanedQuorum people (CLEANED_QUORUM), and clearedMargin (CLEARED_MARGIN) more
+// than the people saying still there (decision 20261010-1700).
 export class Clearance {
   readonly #cleared: readonly Word[];
   readonly #stillThere: number;
+  readonly #rules: ClearanceRules;
 
-  private constructor(words: readonly Word[], since: string) {
+  private constructor(words: readonly Word[], since: string, rules: ClearanceRules) {
+    this.#rules = rules;
     const after = Date.parse(since);
     this.#cleared = words.filter((word) => word.cleared && word.at > after).sort((a, b) => a.at - b.at);
     const first = this.#cleared[0]?.at ?? Infinity;
@@ -32,7 +32,7 @@ export class Clearance {
   }
 
   // since is the site's last_reported_at: a reopened site needs fresh words.
-  static of(tally: VoteTally, photos: readonly CleanupConfirmation[], since: string): Clearance {
+  static of(tally: VoteTally, photos: readonly CleanupConfirmation[], since: string, rules: ClearanceRules): Clearance {
     const votes = tally.latest().map((vote) => ({
       person: personOf(vote),
       cleared: vote.choice === "cleaned",
@@ -41,7 +41,7 @@ export class Clearance {
       at: Date.parse(vote.votedAt),
     }));
     const shots = photos.map((photo) => ({ person: photo.person, cleared: true, stillThere: false, photo: true, at: Date.parse(photo.at) }));
-    return new Clearance(Clearance.#latestPerPerson([...votes, ...shots]), since);
+    return new Clearance(Clearance.#latestPerPerson([...votes, ...shots]), since, rules);
   }
 
   get count(): number {
@@ -49,7 +49,7 @@ export class Clearance {
   }
 
   view(): ClearanceView {
-    const needed = Math.max(CLEANED_QUORUM, this.#stillThere + CLEARED_MARGIN);
+    const needed = Math.max(this.#rules.cleanedQuorum, this.#stillThere + this.#rules.clearedMargin);
     return { count: this.count, needed, still_there: this.#stillThere };
   }
 

@@ -29,6 +29,7 @@ import {
   report,
   userOf,
 } from "./builders.js";
+import { RULES } from "../defaults.js";
 
 const CLEANED_AT = "2026-10-10T05:00:00.000Z";
 const AT = new Date(CLEANED_AT);
@@ -41,7 +42,7 @@ function verified(site: Site): Site {
 }
 
 function cleanedSite(): Site {
-  const site = Site.found(report());
+  const site = Site.found(report(), RULES);
   clearByPhotos(site, CLEANED_AT);
   return site;
 }
@@ -60,7 +61,7 @@ function tally(...choices: ("confirm" | "reject")[]): VoteTally {
 
 describe("Site.found", () => {
   it("takes its id, place and evidence from the founding report", () => {
-    const site = verified(Site.found(report()));
+    const site = verified(Site.found(report(), RULES));
     const { properties, geometry } = validateSite(site.toFeature());
     expect(geometry.coordinates).toEqual([BASE_LON, BASE_LAT]);
     expect(properties).toMatchObject({
@@ -89,7 +90,7 @@ describe("Site.found", () => {
   });
 
   it("starts unverified, with no insights from unverified photos", () => {
-    const site = Site.found(report({ decision: "community_check" }));
+    const site = Site.found(report({ decision: "community_check" }), RULES);
     expect(site.verification).toBe("unverified");
     expect(site.toFeature().properties).toMatchObject({
       verified_count: 0,
@@ -100,7 +101,7 @@ describe("Site.found", () => {
 
 describe("Site.merge", () => {
   it("accepts the same type within 40 m only", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     expect(site.accepts(report({ id: "jdh_2", lat: northOf(39) }))).toBe(true);
     expect(site.accepts(report({ id: "jdh_2", lat: northOf(41) }))).toBe(false);
     expect(site.accepts(report({ id: "jdh_2", reportType: "no_bin", context: "no_pickup" }))).toBe(false);
@@ -108,14 +109,14 @@ describe("Site.merge", () => {
 
   it("merges overflowing or broken bins like any other type: same type within 40 m", () => {
     const bin = { reportType: "overflowing_bin", context: "overflowing" } as const;
-    const site = Site.found(report(bin));
+    const site = Site.found(report(bin), RULES);
     expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(39), context: "damaged" }))).toBe(true);
     expect(site.accepts(report({ ...bin, id: "jdh_2", lat: northOf(41) }))).toBe(false);
     expect(site.accepts(report({ id: "jdh_2" }))).toBe(false);
   });
 
   it("counts reports, photos (newest first, at most 6) and time span", () => {
-    const site = Site.found(report({ decision: "community_check" }));
+    const site = Site.found(report({ decision: "community_check" }), RULES);
     for (let n = 2; n <= 8; n += 1) {
       site.merge(report({ id: `jdh_${n}`, capturedAt: `2026-10-10T0${n}:00:00Z`, device: DEVICE_B }));
     }
@@ -130,13 +131,13 @@ describe("Site.merge", () => {
   });
 
   it("is idempotent per report id", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     site.merge(report());
     expect(site.toFeature().properties.report_count).toBe(1);
   });
 
   it("counts a Me too from another device as a corroboration, once per device", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     site.merge(report({ id: "jdh_2", device: DEVICE_B, meToo: "site_jdh_1" }));
     site.merge(report({ id: "jdh_3", device: DEVICE_B, meToo: "site_jdh_1" }));
     site.merge(report({ id: "jdh_4", device: DEVICE_A, meToo: "site_jdh_1" }));
@@ -146,7 +147,7 @@ describe("Site.merge", () => {
   });
 
   it("marks burning exactly when a verified site's reports list it as a hazard", () => {
-    const site = Site.found(report({ burning: true }));
+    const site = Site.found(report({ burning: true }), RULES);
     expect(site.toFeature().properties).toMatchObject({ burning: false, insights: { hazards: [] } });
     verified(site);
     expect(site.toFeature().properties).toMatchObject({
@@ -156,13 +157,13 @@ describe("Site.merge", () => {
   });
 
   it("counts a report merged into a verified site as verified", () => {
-    const site = verified(Site.found(report()));
+    const site = verified(Site.found(report(), RULES));
     site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B }));
     expect(site.toFeature().properties).toMatchObject({ report_count: 2, verified_count: 2, insights: { reports: 2 } });
   });
 
   it("never verifies a site from a confident model alone", () => {
-    const site = Site.found(report({ decision: "community_check" }));
+    const site = Site.found(report({ decision: "community_check" }), RULES);
     site.merge(report({ id: "jdh_2", device: DEVICE_B, decision: "auto_verified" }));
     expect(site.verification).toBe("unverified");
   });
@@ -179,7 +180,7 @@ describe("Site.merge", () => {
   });
 
   it("never takes reports into a rejected site", () => {
-    const site = Site.found(report({ decision: "community_check" }));
+    const site = Site.found(report({ decision: "community_check" }), RULES);
     site.recordVotes(tally("reject", "reject", "reject", "reject"));
     expect(site.isListed()).toBe(false);
     expect(site.accepts(report({ id: "jdh_2" }))).toBe(false);
@@ -188,7 +189,7 @@ describe("Site.merge", () => {
 
 describe("Site votes", () => {
   it("refuses the reporter before checking distance, then voters beyond 1 km", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     const far = new GeoPoint(BASE_LAT + 0.02, BASE_LON);
     const voter = (deviceToken: string, userId: string | null) => ({ deviceToken, userId });
     expect(() => site.admitVoter(voter(DEVICE_A, null), far, "confirm", AT)).toThrow(OwnSiteError);
@@ -198,7 +199,7 @@ describe("Site votes", () => {
   });
 
   it("counts every waiting report as verified once votes confirm the site, and merges their insights", () => {
-    const site = Site.found(report({ decision: "community_check" }));
+    const site = Site.found(report({ decision: "community_check" }), RULES);
     site.merge(report({ id: "jdh_2", decision: "community_check", device: DEVICE_B, burning: true }));
     site.recordVotes(tally(...Array.from({ length: 8 }, () => "confirm" as const)));
     expect(site.toFeature().properties).toMatchObject({
@@ -211,7 +212,7 @@ describe("Site votes", () => {
   });
 
   it("settles only while unverified and always counts the votes", () => {
-    const site = verified(Site.found(report({ decision: "community_check" })));
+    const site = verified(Site.found(report({ decision: "community_check" }), RULES));
     expect(site.voteResult()).toEqual({
       site_id: "site_jdh_1",
       votes: { confirm: 9, reject: 0, cleaned: 0 },
@@ -237,7 +238,7 @@ describe("Site cleanup", () => {
   });
 
   it("allows one after-photo at a time and repeats the same one quietly", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     site.startCleanup("cln_x", AT);
     expect(() => site.startCleanup("cln_x", AT)).not.toThrow();
     expect(() => site.startCleanup("cln_y", AT)).toThrow(CleanupPendingError);
@@ -247,7 +248,7 @@ describe("Site cleanup", () => {
   });
 
   it("refuses to settle a cleanup it is not waiting for", () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     expect(() => site.acceptCleanup(afterPhoto("cleaner-1", CLEANED_AT, "cln_x"), NO_VOTES)).toThrow(InvalidTransitionError);
     site.startCleanup("cln_x", AT);
     expect(() => site.rejectCleanup("cln_other")).toThrow(InvalidTransitionError);

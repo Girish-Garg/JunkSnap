@@ -10,7 +10,9 @@ import { AreaGrouper } from "../services/AreaGrouper.js";
 import { ScoreCalculator } from "../services/ScoreCalculator.js";
 import { ScoresJob } from "../services/ScoresJob.js";
 import { CrawledWardSettings } from "../settings/CrawledWardSettings.js";
+import { ScoreSettings } from "../settings/ScoreSettings.js";
 import { ScoresSettings } from "../settings/ScoresSettings.js";
+import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import type { EntryContext } from "./EntryPoint.js";
 import { awsClientConfig } from "./utils.js";
 import { WardFilesFactory } from "./WardFilesFactory.js";
@@ -20,15 +22,16 @@ export class ScoresJobFactory {
   async create(context: EntryContext): Promise<ScoresJob> {
     const { settings: core, env, logger } = context;
     const settings = ScoresSettings.fromEnv(env);
+    const { ttlDays } = SiteRuleSettings.fromEnv(env);
     const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(core.awsRegion)));
     const ports = {
-      sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser()),
+      sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser(ttlDays)),
       reports: new DynamoAreaReportReader(client, settings.reportsTable, logger),
       facts: await ScoresJobFactory.#facts(context, settings.assetsDir),
       scores: new DynamoScoreRepository(client, settings.scoresTable),
-      expirer: new DynamoSiteExpirer(client, settings.sitesTable),
+      expirer: new DynamoSiteExpirer(client, settings.sitesTable, ttlDays),
     };
-    return new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger);
+    return new ScoresJob(ports, ScoreCalculator.standard(ScoreSettings.fromEnv(env)), new AreaGrouper(), logger);
   }
 
   // Without ASSETS_DIR there are no local bodies to match ward files to, so neither source is read.

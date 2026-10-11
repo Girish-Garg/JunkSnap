@@ -11,6 +11,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { InMemoryScores } from "./InMemoryScores.js";
 import { readContract } from "./siteBuilder.js";
+import { AREA_LIST } from "../defaults.js";
 
 const JODHPUR = ["rajasthan-jodhpur", "jodhpur-mc"];
 const JAIPUR = ["rajasthan-jaipur", "jaipur-mc"];
@@ -40,7 +41,7 @@ async function startWith(rows: readonly (readonly [WardScores, readonly string[]
     await scores.save(stored, within);
   }
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
-  const routes = areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores) });
+  const routes = areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores, AREA_LIST) });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [routes], logger);
   return { app, scores };
 }

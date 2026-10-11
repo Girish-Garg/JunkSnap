@@ -15,13 +15,15 @@ import type { Logger } from "../ports/Logger.js";
 import { LetterRateLimiter } from "../services/letters/LetterRateLimiter.js";
 import { ReportConfirmer } from "../services/ReportConfirmer.js";
 import { MyReportsQuery } from "../services/MyReportsQuery.js";
-import { ReportIntake } from "../services/ReportIntake.js";
+import { ReportIntake, type IntakeLimits } from "../services/ReportIntake.js";
 import { ReportStatusReader } from "../services/ReportStatusReader.js";
 import { SnapLimit } from "../services/SnapLimit.js";
 import { UploadPresigner } from "../services/UploadPresigner.js";
 import { ConfirmSettings } from "../settings/ConfirmSettings.js";
 import { IntakeSettings } from "../settings/IntakeSettings.js";
+import { QueueSettings } from "../settings/QueueSettings.js";
 import { RateLimitSettings } from "../settings/RateLimitSettings.js";
+import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import type { Env } from "../settings/utils.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { ReportConfirmEndpoint } from "./ReportConfirmEndpoint.js";
@@ -43,7 +45,7 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const signer = new S3UploadSigner(new S3Client(awsClientConfig(region)), settings.originalsBucket);
     const presigner = new UploadPresigner({ signer, ids: new UlidIdGenerator(), clock, snapLimit }, settings.presignTtlSeconds);
     const queue = new SqsReportQueue(new SQSClient(awsClientConfig(region)), settings.reportsQueueUrl);
-    const intake = new ReportIntake({ reports, snapLimit, queue, clock });
+    const intake = new ReportIntake({ reports, snapLimit, queue, clock }, intakeLimits(env));
     const statuses = new ReportStatusReader(reports, settings.publicBaseUrl, clock);
     const lister = new DynamoUserReportLister(documents, settings.reportsTable, app.log);
     const mine = new MyReportsQuery(lister, settings.publicBaseUrl, clock);
@@ -53,6 +55,11 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: settings.publicBaseUrl });
     await app.register(new ReportConfirmEndpoint(confirmer, guard).plugin());
   };
+}
+
+// TARGET_MAX_M, and the queue's visibility timeout before a lost message is sent again.
+function intakeLimits(env: Env): IntakeLimits {
+  return { targetMaxM: SiteRuleSettings.fromEnv(env).targetMaxM, requeueAfterMs: QueueSettings.fromEnv(env).visibilityMs };
 }
 
 // Windowed counters on confirm_window_start and confirm_count in the devices and users rows.

@@ -29,6 +29,7 @@ import { AssetSettings } from "../../settings/AssetSettings.js";
 import { BinSettings } from "../../settings/BinSettings.js";
 import { CrawledWardSettings } from "../../settings/CrawledWardSettings.js";
 import { CrawlSettings } from "../../settings/CrawlSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
 import { buildBrandLabeller } from "../buildBrandLabeller.js";
 import { LocationServiceFactory } from "../LocationServiceFactory.js";
 import { WardFilesFactory } from "../WardFilesFactory.js";
@@ -52,7 +53,7 @@ export class ReportStepsFactory {
     return [
       // A no_bin report may have no photo, and a no_bin photo is never judged as waste (decision 20261010-1630).
       new ConditionalStep(new ModerateStep(new ServiceReportModerator(moderation)), (report) => report.hasPhoto()),
-      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder()), window), wasteCheck),
+      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder(), SiteRuleSettings.fromEnv(env).siteMergeRadiusM), window), wasteCheck),
       new ConditionalStep(new BrandsStep(new LabellerBrandReader(buildBrandLabeller({ core, env, logger }))), wasteCheck),
       new LocateStep(new ServiceReportLocator(located)),
       new MergeStep(this.#merger(places, bins)),

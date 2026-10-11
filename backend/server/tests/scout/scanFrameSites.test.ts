@@ -22,7 +22,7 @@ import { ReporterReputation } from "../../src/services/ReporterReputation.js";
 import { ReportPipeline } from "../../src/services/ReportPipeline.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js";
-import { MERGE_ATTEMPTS, SiteMerger } from "../../src/services/sites/SiteMerger.js";
+import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { VerifyStep } from "../../src/services/VerifyStep.js";
 import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js";
 import { LogSink } from "../LogSink.js";
@@ -40,6 +40,7 @@ import {
 } from "../reportFakes.js";
 import { northOf, siteFixture } from "../sites/builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock as SiteClock } from "../sites/fakes.js";
+import { QUEUE, RULES, SCORES } from "../defaults.js";
 
 const USER = "7d4e2a91-6c35-4b8f-9e10-3a5c8b2f6d47";
 const SCAN = "scn_jdh_6";
@@ -90,12 +91,14 @@ function pipeline(verifier: MlVerifyClient): ReportPipeline {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings),
+    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia("https://cdn.example")),
-    retry: new ConflictRetry(MERGE_ATTEMPTS),
+    retry: new ConflictRetry(QUEUE.mergeAttempts),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   const bins = new BinLocator({ bins: [], mappedTowns: [] }, 3000);
   const steps = [

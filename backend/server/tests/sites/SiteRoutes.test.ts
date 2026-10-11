@@ -25,6 +25,7 @@ import {
   FixedClock,
 } from "./fakes.js";
 import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
+import { RULES } from "../defaults.js";
 
 const JODHPUR = "72.9,26.2,73.1,26.4";
 const VOTE = { device_token: DEVICE_B, vote: "confirm", gps: { lat: 26.853, lon: 75.815, accuracy_m: 10 } };
@@ -232,7 +233,7 @@ describe("DELETE /sites/{id}/reports/mine", () => {
   async function startWithMine(): Promise<FastifyInstance> {
     const sites = new FakeSiteRepository();
     const mine = report({ id: "jdh_9", device: DEVICE_B });
-    sites.put(Site.found(mine));
+    sites.put(Site.found(mine, RULES));
     const started = await start(sites);
     rig.rows.add("site_jdh_9", mine);
     return started;

@@ -32,6 +32,8 @@ export interface LetterServiceParts {
   readonly drafter: ProseDrafter;
   readonly stamp: LetterStamp;
   readonly noBin: NoBinEligibility;
+  // SITE_TTL_DAYS: an expired site takes no letter.
+  readonly ttlDays: number;
 }
 
 type NonEmpty<T> = [T, ...T[]];
@@ -62,8 +64,9 @@ export class LetterService {
       throw new NotFoundError(`No site ${siteId}`);
     }
     // Decision 20261010-1855: an expired site takes no letter, even before the CronJob marks it.
-    if (isLapsed(stored.properties, this.#parts.stamp.now())) {
-      throw new NotFoundError(`Site ${siteId} expired after 90 days without activity`);
+    const { ttlDays } = this.#parts;
+    if (isLapsed(stored.properties, this.#parts.stamp.now(), ttlDays)) {
+      throw new NotFoundError(`Site ${siteId} expired after ${ttlDays} days without activity`);
     }
     const site = LetterSite.fromSite(stored);
     if (!site.verified) {
