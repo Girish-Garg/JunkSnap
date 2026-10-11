@@ -72,7 +72,7 @@ Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 1
   </tr>
 </table>
 
-<sub>Every image without a label is the live web app, signed out, captured on 10 October 2026 before the field run. Images marked <i>sample data</i> show signed-in screens from the web app's mock mode (`VITE_API_MODE=mock`, fixtures in `contracts/fixtures/`); the camera feed in the Snap screen is a blurred public photo from the live app.</sub>
+<sub>Every image without a label is the live web app, signed out, captured before the field run, when the map had one site. Images marked <i>sample data</i> show signed-in screens from the web app's mock mode (`VITE_API_MODE=mock`, fixtures in `contracts/fixtures/`); the camera feed in the Snap screen is a blurred public photo from the live app.</sub>
 
 ## How a report flows
 
