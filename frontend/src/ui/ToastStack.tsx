@@ -4,8 +4,9 @@ import { ToastStackContext } from './ToastStackContext';
 import './toast-stack.css';
 
 /**
- * One column for every app-wide toast, above the bottom bar and the Report button. Toasts render into it through
- * ToastSlot and take their place with useToastOrder: the newest lowest, a card gap apart, never one over another.
+ * One column for every app-wide toast, at the top of the screen under the search field. Toasts render into it
+ * through ToastSlot and take their place with useToastOrder: a new one below those already up, a card gap apart,
+ * never one over another.
  */
 export function ToastStack({ children }: { readonly children: ReactNode }) {
   const [host, setHost] = useState<HTMLElement | null>(null);

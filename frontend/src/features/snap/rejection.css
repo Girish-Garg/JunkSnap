@@ -30,7 +30,7 @@
 @keyframes rejection-toast-in {
   from {
     opacity: 0;
-    transform: translateY(var(--s-6));
+    transform: translateY(calc(-1 * var(--s-6)));
   }
 }
 

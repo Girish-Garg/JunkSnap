@@ -1,12 +1,13 @@
 /*
-  Every app-wide toast in one column (ToastStack): above the bottom bar and the raised Report button on phones, at
-  the foot of the screen on desktop, and above every sheet. The newest sits lowest (each toast's CSS order), a card
-  gap apart, so one never covers another. The column lets taps through; only the toasts take them.
+  Every app-wide toast in one column at the top of the screen (ToastStack, decision 20261011-0303): on phones just
+  under the search field, on desktop at the top of the map area, and above every sheet. A new toast lands below
+  the ones already up (each toast's CSS order), so they never jump; a card gap apart, one never covers another.
+  The column lets taps through; only the toasts take them.
 */
 .toast-stack {
   position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--s-3) + var(--target) + var(--inline-gap));
   right: var(--edge);
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + var(--map-foot));
   left: var(--edge);
   z-index: 30;
   display: flex;
@@ -21,16 +22,10 @@
   max-width: var(--panel-width);
 }
 
-/* Phones: with the keyboard up the bar steps aside and a browser's keyboard covers the foot, so toasts go on top. */
-@media (max-width: 1023px) {
-  body:has(.sheet textarea:focus, .sheet input:not([type='checkbox'], [type='radio'], [type='range']):focus) .toast-stack {
-    top: calc(env(safe-area-inset-top) + var(--s-3));
-    bottom: auto;
-  }
-}
-
+/* Desktop: search sits in the side panel, so the column starts at the top of the map area beside it. */
 @media (min-width: 1024px) {
   .toast-stack {
-    bottom: calc(env(safe-area-inset-bottom) + var(--edge));
+    top: calc(env(safe-area-inset-top) + var(--s-3));
+    left: calc(var(--panel-width) + var(--edge));
   }
 }

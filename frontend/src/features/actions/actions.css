@@ -1,6 +1,6 @@
 /*
-  The app toast: why a tapped action is off, a lost or returning connection. It sits in the ToastStack with the
-  rejection and confirm toasts. Its live region stays mounted; empty, it leaves the column's flow (and its gap).
+  The app toast: why a tapped action is off, a lost or returning connection. It sits in the ToastStack at the top,
+  with the rejection and confirm toasts. Its live region stays mounted; empty, it leaves the column (and its gap).
 */
 .app-toast-region {
   display: flex;
@@ -51,7 +51,7 @@
 @keyframes app-toast-in {
   from {
     opacity: 0;
-    transform: translateY(var(--s-6)) scale(0.96);
+    transform: translateY(calc(-1 * var(--s-6))) scale(0.96);
   }
 }
 

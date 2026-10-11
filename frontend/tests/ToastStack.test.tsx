@@ -91,3 +91,21 @@ describe('the app toast in the stack', () => {
     expect(order(region)).toBeGreaterThan(order(rejection));
   });
 });
+
+// Vitest hands CSS imports back empty, so the stylesheet is read from disk (the app has no Node types).
+type FileReader = { readFileSync(path: string, encoding: 'utf8'): string };
+const fs = (await import('node:fs' as string)) as FileReader;
+// Tests run from frontend/ (npm test).
+const stackCss = fs.readFileSync('src/ui/toast-stack.css', 'utf8');
+// The column's own rule, phones first (desktop overrides top and left inside its media query).
+const columnRule = /\.toast-stack \{([^}]*)\}/.exec(stackCss)?.[1] ?? '';
+
+describe('where the stack sits', () => {
+  it('at the top, just under the search field (decision 20261011-0303), never at the foot', () => {
+    // The search field: s-3 under the safe area and one target tall; the column starts an inline gap below it.
+    expect(columnRule).toContain('top: calc(env(safe-area-inset-top) + var(--s-3) + var(--target) + var(--inline-gap));');
+    expect(columnRule).toContain('gap: var(--card-gap);');
+    expect(columnRule).toContain('z-index: 30;');
+    expect(stackCss).not.toContain('bottom:');
+  });
+});

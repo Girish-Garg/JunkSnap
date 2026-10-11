@@ -1,12 +1,16 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
+import { SheetHistory } from '../src/app/SheetHistory';
+import { HistoryLayers } from '../src/ui/HistoryLayers';
 import { MemoryStore, renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
 const JOIN = 'Sign in or create an account';
+const EMAIL = 'resident@example.com';
+const PASSWORD = 'Jodhpur-2026';
 
 // Decision 20261010-0227: browsing needs no sign-in, and settings are part of browsing.
 describe('Account when signed out', () => {
@@ -54,5 +58,30 @@ describe('Account when signed in', () => {
     expect(screen.queryByRole('region', { name: JOIN })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Settings' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
+});
+
+// The browser's history, as on Android: the sign-in sheet's own entry is gone once it closes, so one back is the map.
+describe('signing in from Account', () => {
+  it('shows who is signed in, and one back lands on the map with no dead entry', async () => {
+    const user = userEvent.setup();
+    const services = testServices();
+    await services.auth.signUp(EMAIL, PASSWORD);
+    await services.auth.confirmSignUp(EMAIL, '123456');
+    await services.auth.signOut();
+    await renderApp(<AppRoutes />, { services, history: 'browser' });
+    await user.click(screen.getByRole('button', { name: 'Account' }));
+    await user.click(within(screen.getByRole('region', { name: JOIN })).getByRole('button', { name: 'Sign in' }));
+    const sheet = screen.getByRole('complementary', { name: 'Sign in' });
+    await user.type(within(sheet).getByLabelText('Email'), EMAIL);
+    await user.type(within(sheet).getByLabelText('Password'), PASSWORD);
+    await user.click(within(sheet).getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByText(`Signed in as ${EMAIL}`)).toBeInTheDocument();
+    await waitFor(() => expect(HistoryLayers.open()).toHaveLength(0));
+    act(() => window.history.back());
+    await waitFor(() => expect(window.location.pathname).toBe('/'));
+    await waitFor(() => expect(screen.queryByRole('heading', { level: 2, name: 'Account' })).not.toBeInTheDocument());
+    expect(HistoryLayers.open()).toHaveLength(0);
+    expect(SheetHistory.depth((window.history.state as { usr?: unknown } | null)?.usr)).toBe(0);
   });
 });
