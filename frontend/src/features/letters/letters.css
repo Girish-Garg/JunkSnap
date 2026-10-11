@@ -134,6 +134,35 @@
   margin: var(--section-gap) 0;
 }
 
+/* Send by email and the filing portal are links that look like the buttons beside them. */
+.letter-actions a.button {
+  text-decoration: none;
+}
+
+/* An issue's verified count, after its name on the chip. */
+.chip__count {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.filing-steps {
+  flex-basis: 100%;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius-m);
+  background: var(--tile);
+}
+
+.filing-steps summary {
+  padding: var(--s-2) 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filing-steps ol {
+  margin: var(--s-2) 0 0;
+  padding-left: var(--s-5);
+}
+
 @media print {
   @page {
     size: A4;

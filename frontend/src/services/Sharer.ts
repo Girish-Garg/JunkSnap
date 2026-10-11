@@ -14,13 +14,27 @@ export class Sharer {
     return this.#navigator.clipboard.writeText(text);
   }
 
-  async share(title: string, url: string): Promise<ShareResult> {
+  /** The browser has a share sheet (Web Share API). */
+  canShare(): boolean {
+    return this.#navigator.share !== undefined;
+  }
+
+  share(title: string, url: string): Promise<ShareResult> {
+    return this.#send({ title, url }, url);
+  }
+
+  /** A whole text, such as a letter, through the share sheet; copied where there is none. */
+  shareText(title: string, text: string): Promise<ShareResult> {
+    return this.#send({ title, text }, text);
+  }
+
+  async #send(data: ShareData, copied: string): Promise<ShareResult> {
     if (!this.#navigator.share) {
-      await this.#navigator.clipboard.writeText(url);
+      await this.#navigator.clipboard.writeText(copied);
       return 'copied';
     }
     try {
-      await this.#navigator.share({ title, url });
+      await this.#navigator.share(data);
       return 'shared';
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';

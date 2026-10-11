@@ -24,10 +24,13 @@ export function useLetterRequest<Draft>(send: (language: LetterLanguage) => Prom
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<ReturnType<typeof LetterRefusal.lines>>([]);
-  const request = async (reauthed = false) => {
-    setBusy(true);
+  const clear = () => {
     setProblem(null);
     setRefusal([]);
+  };
+  const request = async (reauthed = false) => {
+    setBusy(true);
+    clear();
     try {
       setDraft(await send(language));
     } catch (error) {
@@ -39,7 +42,7 @@ export function useLetterRequest<Draft>(send: (language: LetterLanguage) => Prom
   // The api's not_verified message is English; its counts are shown in the app's own words instead.
   const reason = refusal.length > 0 ? refusal.map((line) => t(`letter.errors.${line.key}`, line.params)).join(' ') : null;
   const draftable = useSessionGate(LETTER_DRAFT_GATE, { busy });
-  return { language, setLanguage, draft, busy, problem, reason, draftable, request: () => void request(), reset: () => setDraft(null) };
+  return { language, setLanguage, draft, busy, problem, reason, draftable, request: () => void request(), reset: () => setDraft(null), clear };
 }
 
 export type LetterRequestFlow = Omit<ReturnType<typeof useLetterRequest<unknown>>, 'draft'>;
