@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { PhotoFlagRules, SiteRules } from "../domain/sites/SiteRules.js";
+import type { MergeGateRules, PhotoFlagRules, SiteRules } from "../domain/sites/SiteRules.js";
 import { parseTunables, type Env } from "./utils.js";
 
 const people = (fallback: number, min = 1) => z.coerce.number().int().min(min).max(1_000).default(fallback);
@@ -15,6 +15,8 @@ const SiteRuleEnv = z
     VOTE_RADIUS_M: metres(1_000),
     SITE_TTL_DAYS: z.coerce.number().int().min(1).max(3_650).default(90),
     SITE_MERGE_RADIUS_M: metres(40),
+    // Decision 20261011-1610-hem-same-spot-merge; 0 turns the rule off for all but the exact same point.
+    SITE_SAME_SPOT_M: z.coerce.number().int().min(0).max(50_000).default(20),
     ZONE_MERGE_RADIUS_M: metres(500),
     TARGET_MAX_M: metres(500),
     MERGE_MIN_COSINE: z.coerce.number().gt(0).max(1).default(0.88),
@@ -29,11 +31,14 @@ const SiteRuleEnv = z
   })
   .refine((values) => values.PHOTO_FLAG_WARN <= values.PHOTO_FLAG_HIDE && values.PHOTO_FLAG_HIDE_EARLY <= values.PHOTO_FLAG_HIDE, {
     message: "PHOTO_FLAG_WARN and PHOTO_FLAG_HIDE_EARLY must not exceed PHOTO_FLAG_HIDE",
+  })
+  .refine((values) => values.SITE_SAME_SPOT_M <= values.SITE_MERGE_RADIUS_M, {
+    message: "SITE_SAME_SPOT_M must not exceed SITE_MERGE_RADIUS_M",
   });
 
 type SiteRuleValues = z.output<typeof SiteRuleEnv>;
 
-export class SiteRuleSettings implements SiteRules {
+export class SiteRuleSettings implements SiteRules, MergeGateRules {
   readonly rejectMargin: number;
   readonly cleanedQuorum: number;
   readonly clearedMargin: number;
@@ -44,8 +49,10 @@ export class SiteRuleSettings implements SiteRules {
   readonly flags: PhotoFlagRules;
   // How far a long-range target may be from the reporter's fix (decision 20261011-0400-hem-long-range-target).
   readonly targetMaxM: number;
-  // Cosine at or above which a long-range report's embedding matches a site's.
+  // Cosine at or above which a report's embedding matches a site's: beyond siteSameSpotM, or for a long-range report.
   readonly mergeMinCosine: number;
+  // Within this many metres a photo report always joins a site of its type, whatever the photos look like.
+  readonly siteSameSpotM: number;
   // OpenStreetMap places within this many metres become site.insights.near.
   readonly nearPlacesRadiusM: number;
 
@@ -59,6 +66,7 @@ export class SiteRuleSettings implements SiteRules {
     this.zoneMergeRadiusM = values.ZONE_MERGE_RADIUS_M;
     this.targetMaxM = values.TARGET_MAX_M;
     this.mergeMinCosine = values.MERGE_MIN_COSINE;
+    this.siteSameSpotM = values.SITE_SAME_SPOT_M;
     this.nearPlacesRadiusM = values.NEAR_PLACES_RADIUS_M;
     this.flags = Object.freeze({
       warn: values.PHOTO_FLAG_WARN,

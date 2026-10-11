@@ -30,7 +30,7 @@ function setup(sites: FakeSiteRepository) {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(embeddings, RULES),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
@@ -59,7 +59,8 @@ describe("a redelivered scan frame", () => {
     await merger.merge(evidence({ id: "x", device: DEVICE_B, embeddingKey: "embeddings/rpt_x.json" }));
     const first = await merger.merge(scanFrame("b", 2));
     expect(first).toMatchObject({ siteId: "site_x", outcome: "merged" });
-    const spot = await merger.merge(scanFrame("a", 1));
+    // Beyond SITE_SAME_SPOT_M (20 m) of the neighbour, so frame a's other pile founds the spot's site.
+    const spot = await merger.merge(scanFrame("a", 22));
     expect(spot.outcome).toBe("founded");
     expect(spot.siteId).not.toBe("site_x");
 

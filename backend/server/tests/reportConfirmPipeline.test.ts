@@ -65,7 +65,7 @@ function siteMerger(): ReportMerger {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),

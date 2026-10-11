@@ -25,3 +25,10 @@ export interface SiteRules {
 
 export type MergeRadii = Pick<SiteRules, "siteMergeRadiusM" | "zoneMergeRadiusM">;
 export type ClearanceRules = Pick<SiteRules, "cleanedQuorum" | "clearedMargin">;
+
+// Decision 20261011-1610-hem-same-spot-merge: a report always joins a site of its type within siteSameSpotM; farther
+// out, up to the merge radius, only when the two photos match at mergeMinCosine or more.
+export interface MergeGateRules {
+  readonly siteSameSpotM: number;
+  readonly mergeMinCosine: number;
+}

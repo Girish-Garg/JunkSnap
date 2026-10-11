@@ -39,6 +39,7 @@ const RULE_TUNABLES: readonly Tunable[] = [
   { name: "FLAG_RADIUS_M", read: (env) => rules(env).flags.radiusM, fallback: 1_000, good: ["2000", 2_000], bad: ["0", "x"] },
   { name: "SITE_TTL_DAYS", read: (env) => rules(env).ttlDays, fallback: 90, good: ["30", 30], bad: ["0", "1.5", "4000"] },
   { name: "SITE_MERGE_RADIUS_M", read: (env) => rules(env).siteMergeRadiusM, fallback: 40, good: ["25", 25], bad: ["0", "-40"] },
+  { name: "SITE_SAME_SPOT_M", read: (env) => rules(env).siteSameSpotM, fallback: 20, good: ["0", 0], bad: ["-1", "2.5", "41", "near"] },
   { name: "ZONE_MERGE_RADIUS_M", read: (env) => rules(env).zoneMergeRadiusM, fallback: 500, good: ["300", 300], bad: ["0"] },
   { name: "TARGET_MAX_M", read: (env) => rules(env).targetMaxM, fallback: 500, good: ["300", 300], bad: ["0", "far"] },
   { name: "MERGE_MIN_COSINE", read: (env) => rules(env).mergeMinCosine, fallback: 0.88, good: ["0.9", 0.9], bad: ["0", "1.2", "-0.5"] },
@@ -207,6 +208,11 @@ describe("blank values outside the tunables", () => {
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {
     expect(() => SiteRuleSettings.fromEnv({ PHOTO_FLAG_HIDE: "4" })).toThrow(/PHOTO_FLAG_HIDE/);
+  });
+
+  it("keeps SITE_SAME_SPOT_M within SITE_MERGE_RADIUS_M", () => {
+    expect(() => SiteRuleSettings.fromEnv({ SITE_MERGE_RADIUS_M: "15" })).toThrow(/SITE_SAME_SPOT_M must not exceed SITE_MERGE_RADIUS_M/);
+    expect(SiteRuleSettings.fromEnv({ SITE_MERGE_RADIUS_M: "60", SITE_SAME_SPOT_M: "60" }).siteSameSpotM).toBe(60);
   });
 
   it("refuses a default area page larger than the cap", () => {

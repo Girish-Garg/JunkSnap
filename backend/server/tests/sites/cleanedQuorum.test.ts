@@ -66,7 +66,7 @@ function setup() {
     sites,
     votes,
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock,
