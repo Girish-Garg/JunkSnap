@@ -6,6 +6,7 @@ import { ServiceContainer } from '../src/app/ServiceContainer';
 import { BBox } from '../src/domain/BBox';
 import type { SiteFeature } from '../src/domain/Site';
 import { ThinView } from '../src/domain/ThinView';
+import { FitPadding } from '../src/features/map/FitPadding';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import { MemoryStore, renderApp, testServices } from './helpers';
 import { ListApi } from './listApi';
@@ -35,6 +36,9 @@ const ONE = new BBox(73.0, 26.25, 73.03, 26.28);
 // Empty, with the water site just south-west of it.
 const NEAR = new BBox(73.07, 26.34, 73.1, 26.37);
 const ELSEWHERE = new BBox(80, 20, 80.05, 20.05);
+const NONE_CARD = 'No sites on the map here right now';
+const ONE_CARD = 'Only 1 site on the map here right now';
+const TWO_CARD = 'Only 2 sites on the map here right now';
 
 function services(store = new MemoryStore()): ServiceContainer {
   return new ServiceContainer({ ...testServices(store), api: new ListApi(SITES) });
@@ -48,7 +52,7 @@ async function showMap(view: BBox, container = services()) {
   return user;
 }
 
-const thinCard = () => screen.queryByRole('region', { name: /reported/ });
+const thinCard = () => screen.queryByRole('region', { name: /on the map here/ });
 const findCard = (name: string) => screen.findByRole('region', { name });
 
 beforeEach(() => window.sessionStorage.clear());
@@ -56,7 +60,7 @@ beforeEach(() => window.sessionStorage.clear());
 describe('few-reports card', () => {
   it('shows for an empty view once the search around it is done, with no Zoom out when nothing is near', async () => {
     await showMap(ELSEWHERE);
-    const card = await findCard('Nobody has reported waste here yet');
+    const card = await findCard(NONE_CARD);
     expect(within(card).getByRole('button', { name: 'Report the first one' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'See areas' })).toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Zoom out' })).not.toBeInTheDocument();
@@ -64,25 +68,37 @@ describe('few-reports card', () => {
 
   it('shows for two sites and hides for three', async () => {
     await showMap(TWO);
-    expect(await findCard('Only 2 sites reported here so far')).toBeInTheDocument();
+    expect(await findCard(TWO_CARD)).toBeInTheDocument();
     act(() => seen.last?.onViewChange({ bbox: THREE, byUser: true }));
     await waitFor(() => expect(seen.last?.sites).toHaveLength(3));
     expect(thinCard()).not.toBeInTheDocument();
   });
 
-  it('hides while a pin card is open', async () => {
-    await showMap(ONE);
-    await findCard('Only 1 site reported here so far');
-    act(() => seen.last?.onPick('site_a'));
-    expect(await screen.findByRole('region', { name: 'Waste dump' })).toBeInTheDocument();
-    expect(thinCard()).not.toBeInTheDocument();
+  it('keeps the same card through a pan that changes nothing', async () => {
+    await showMap(TWO);
+    const card = await findCard(TWO_CARD);
+    act(() => seen.last?.onViewChange({ bbox: new BBox(73.005, 26.255, 73.055, 26.305), byUser: true }));
+    // While the pan's sites load, and once they are in.
+    expect(screen.getByRole('region', { name: TWO_CARD })).toBe(card);
+    await act(async () => undefined);
+    expect(screen.getByRole('region', { name: TWO_CARD })).toBe(card);
   });
 });
 
-describe('few-reports card, dismissed', () => {
-  it('stays dismissed for the session', async () => {
+describe('few-reports card over other cards', () => {
+  it('hides while a pin card is open, and comes back without springing in again', async () => {
     const user = await showMap(ONE);
-    await user.click(within(await findCard('Only 1 site reported here so far')).getByRole('button', { name: 'Hide this tip' }));
+    expect(await findCard(ONE_CARD)).toHaveClass('thin-card--enter');
+    act(() => seen.last?.onPick('site_a'));
+    expect(await screen.findByRole('region', { name: 'Waste dump' })).toBeInTheDocument();
+    expect(thinCard()).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(await findCard(ONE_CARD)).not.toHaveClass('thin-card--enter');
+  });
+
+  it('stays dismissed for the session, and the toast says an empty view again', async () => {
+    const user = await showMap(ONE);
+    await user.click(within(await findCard(ONE_CARD)).getByRole('button', { name: 'Hide this tip' }));
     expect(thinCard()).not.toBeInTheDocument();
     act(() => seen.last?.onViewChange({ bbox: ELSEWHERE, byUser: true }));
     expect(await screen.findByText('No reports here yet.')).toBeInTheDocument();
@@ -115,14 +131,16 @@ describe('few-reports card actions', () => {
 });
 
 describe('few-reports card, Zoom out', () => {
-  it('Zoom out keeps the view and takes in the nearest site the app already found', async () => {
+  it('keeps the view, takes in the nearest site the app already found, and says it once', async () => {
     const user = await showMap(NEAR);
-    await user.click(within(await findCard('Nobody has reported waste here yet')).getByRole('button', { name: 'Zoom out' }));
+    const card = await findCard(NONE_CARD);
+    expect(screen.queryByText('No reports in this view.')).not.toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'Zoom out' }));
     expect(seen.last?.camera?.points).toEqual([[73.07, 26.34], [73.1, 26.37], [73.06, 26.33]]);
-    // The card waits while the map moves, then counts the view it lands on.
-    expect(thinCard()).not.toBeInTheDocument();
+    // The card stays while the map moves, then counts the view it lands on.
+    expect(thinCard()).toBe(card);
     act(() => seen.last?.onViewChange({ bbox: TWO }));
-    expect(await findCard('Only 2 sites reported here so far')).toBeInTheDocument();
+    expect(await findCard(TWO_CARD)).toBe(card);
   });
 });
 
@@ -132,21 +150,31 @@ const titles = () => within(list()).getAllByRole('button').map((row) => row.quer
 describe('list view with few sites', () => {
   it('says so under the rows, with the same actions, and the map card steps aside', async () => {
     const user = await showMap(ONE);
-    await findCard('Only 1 site reported here so far');
+    await findCard(ONE_CARD);
     await user.click(screen.getByRole('button', { name: 'List view' }));
     const sheet = await screen.findByRole('complementary', { name: '1 site in view' });
-    expect(within(sheet).getByText('Only 1 site reported here so far')).toBeInTheDocument();
+    expect(within(sheet).getByText(ONE_CARD)).toBeInTheDocument();
     expect(within(sheet).getByRole('button', { name: 'Add a report' })).toBeInTheDocument();
     expect(within(sheet).getByRole('button', { name: 'See areas' })).toBeInTheDocument();
     expect(thinCard()).not.toBeInTheDocument();
   });
 
-  it('Needs confirming lists the waiting sites first, nearest first; a second tap goes back', async () => {
+  it("says nothing about the view over Jodhpur's sites", async () => {
+    const user = await showMap(ELSEWHERE);
+    await findCard(NONE_CARD);
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+    const sheet = await screen.findByRole('complementary', { name: /Sites in Jodhpur/ });
+    expect(within(sheet).queryByText(/on the map here/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Needs confirming', () => {
+  it('lists the waiting sites first, nearest first; a second tap goes back', async () => {
     const user = await showMap(THREE);
     await waitFor(() => expect(seen.last?.sites).toHaveLength(3));
     await user.click(screen.getByRole('button', { name: 'List view' }));
     expect(await screen.findByRole('heading', { level: 2, name: '3 sites in view' })).toBeInTheDocument();
-    expect(screen.queryByText(/reported here/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/on the map here/)).not.toBeInTheDocument();
     const chip = screen.getByRole('button', { name: 'Needs confirming 2' });
     await user.click(chip);
     expect(chip).toHaveAttribute('aria-pressed', 'true');
@@ -158,6 +186,7 @@ describe('list view with few sites', () => {
 
 describe('ThinView', () => {
   const view = ONE;
+  const far = testSite({ site_id: 'site_far', coordinates: [80, 20] });
   it('waits for a settled view, and for the search around an empty one', () => {
     expect(ThinView.of({ view, settled: false, sites: [], known: [] })).toBeNull();
     expect(ThinView.of({ view, settled: true, sites: [], known: null })).toBeNull();
@@ -165,8 +194,22 @@ describe('ThinView', () => {
     expect(ThinView.of({ view, settled: true, sites: SITES.slice(0, 2), known: [] })).toEqual({ count: 2, zoomOut: [] });
   });
 
-  it('never shows the list note over a filtered or still loading list', () => {
-    expect(ThinView.listShows({ rows: 1, waiting: false, filtered: true })).toBe(false);
-    expect(ThinView.listShows({ rows: 0, waiting: true, filtered: false })).toBe(false);
+  it('offers Zoom out only to a view that still loads whole', () => {
+    expect(ThinView.of({ view, settled: true, sites: [], known: [far] })?.zoomOut).toEqual([]);
+    expect(ThinView.of({ view, settled: true, sites: [], known: [SITES[2] as SiteFeature] })?.zoomOut).toHaveLength(3);
+  });
+
+  it("never shows the list note over Jodhpur's rows or a filtered list", () => {
+    expect(ThinView.listShows({ rows: 1, fallback: true, filtered: false })).toBe(false);
+    expect(ThinView.listShows({ rows: 1, fallback: false, filtered: true })).toBe(false);
+  });
+});
+
+describe('FitPadding', () => {
+  it('fits between the search stack and a card, and keeps 80 px without one or without room', () => {
+    expect(FitPadding.between({ height: 776, stack: 110, card: 200 })).toEqual({ top: 150, bottom: 280, left: 40, right: 40 });
+    expect(FitPadding.between({ height: 572, stack: 108, card: 246 })).toEqual({ top: 124, bottom: 262, left: 16, right: 16 });
+    expect(FitPadding.between({ height: 776, stack: 110, card: 0 })).toBe(80);
+    expect(FitPadding.between({ height: 420, stack: 110, card: 200 })).toBe(80);
   });
 });

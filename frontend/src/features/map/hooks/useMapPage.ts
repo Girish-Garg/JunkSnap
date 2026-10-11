@@ -42,7 +42,7 @@ export function useMapPage() {
   const browserInput = { loaded: loaded.sites, view, filter, position: location.position, selection, around };
   const browser = useSiteBrowser({ ...browserInput, openingWants: !settled && empty });
   useOpeningFit({ settled, view, empty, pilot: browser.pilot.sites, frame: selection.frame });
-  const thin = useThinView({ view, settled: empty || found, sites: loaded.sites, nearest, pilot: browser.pilot.sites, camera: selection.camera });
+  const thin = useThinView({ view, loaded, partial, nearest, pilot: browser.pilot.sites, camera: selection.camera, opening: settled });
   const notice = useMapNotice({ loaded, shown: sites.length, partial, locationProblem: location.problem, nearby: nearest, flash: flash.key });
   const moves = useMapMoves({ view, setView, selection, location, browser });
   const { showPlace } = selection;

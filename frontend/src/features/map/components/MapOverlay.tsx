@@ -1,6 +1,7 @@
 import { DESKTOP_QUERY, useMediaQuery } from '../../../ui/useMediaQuery';
 import type { MapPageState } from '../hooks/useMapPage';
 import { usePickLayer } from '../hooks/usePickLayer';
+import { useThinCard } from '../hooks/useThinCard';
 import { LegendKeys } from '../LegendKeys';
 import { BoundaryLegend } from './BoundaryLegend';
 import { DesktopActions } from './DesktopActions';
@@ -23,15 +24,18 @@ export function MapOverlay({ page, listMode }: MapOverlayProps) {
   const { selection, boundary, areaCard } = page;
   const desktop = useMediaQuery(DESKTOP_QUERY);
   const dismiss = usePickLayer(page);
+  const phone = !listMode && !desktop;
+  // The card and the toast are decided together, so "no reports here" is said once.
+  const thin = useThinCard(page, phone);
   return (
     <>
-      <MapSearchArea page={page} listMode={listMode} desktop={desktop} />
+      <MapSearchArea page={page} notice={thin.notice} listMode={listMode} desktop={desktop} />
       <PickedPin selection={selection} userLocation={page.location.position} browser={page.browser} dismiss={dismiss} />
       {!listMode && <PickedArea card={areaCard} tints={boundary.tints} dismiss={dismiss} />}
-      {!listMode && !desktop && (
+      {phone && (
         <>
           <SiteBrowserLayer page={page} />
-          <ThinMapCard page={page} />
+          <ThinMapCard page={page} card={thin} />
         </>
       )}
       {!listMode && <LegendToggle><BoundaryLegend keys={LegendKeys.of(boundary.view !== null, boundary.markers)} /></LegendToggle>}

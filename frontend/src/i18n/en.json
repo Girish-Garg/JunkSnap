@@ -1266,10 +1266,10 @@
     "announce": "{{type}}, {{area}}. {{position}} of {{total}}"
   },
   "thin": {
-    "none": "Nobody has reported waste here yet",
-    "few_one": "Only {{count}} site reported here so far",
-    "few_other": "Only {{count}} sites reported here so far",
-    "text": "Reports come from people nearby. Seen waste? Snap it, and once it is checked it shows here for everyone.",
+    "none": "No sites on the map here right now",
+    "few_one": "Only {{count}} site on the map here right now",
+    "few_other": "Only {{count}} sites on the map here right now",
+    "text": "Reports come from people nearby. Seen waste? Snap it, and once it is checked it shows on the map for everyone.",
     "reportFirst": "Report the first one",
     "report": "Add a report",
     "areas": "See areas",

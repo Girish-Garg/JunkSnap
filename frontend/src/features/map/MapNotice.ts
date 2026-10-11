@@ -46,9 +46,17 @@ const RULES: readonly Rule[] = [
   [(s) => s.loaded && s.loadedCount === 0 && s.nearby !== null, { icon: 'info', key: 'notice.empty', tone: 'info' }],
 ];
 
+// What the few-reports card already says, with its Zoom out (ThinMapCard).
+const SAID_BY_CARD: ReadonlySet<string> = new Set(['notice.empty', 'notice.offScreen']);
+
 export class MapNotice {
   static pick(input: MapNoticeInput): MapNoticeView | null {
     if (input.flash) return { icon: 'info', key: input.flash, tone: 'info' };
     return RULES.find(([applies]) => applies(input))?.[1] ?? null;
+  }
+
+  /** The toast beside the few-reports card: never a second "no reports here". */
+  static besideCard(notice: MapNoticeView | null): MapNoticeView | null {
+    return notice && SAID_BY_CARD.has(notice.key) ? null : notice;
   }
 }

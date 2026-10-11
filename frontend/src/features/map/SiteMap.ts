@@ -7,6 +7,7 @@ import type { LayerRegistry } from '../../layers/LayerRegistry';
 import type { AreaMarker } from './AreaMarkers';
 import { BasemapMode } from './BasemapMode';
 import { BoundaryOverlay, type AreaHit, type BoundaryFiles, type BoundaryView } from './BoundaryOverlay';
+import { FitPadding } from './FitPadding';
 import { PinFeatures } from './PinFeatures';
 import { PinGroups } from './PinGroups';
 import { PinPicker } from './PinPicker';
@@ -129,7 +130,7 @@ export class SiteMap {
     this.#renderLayers();
   }
 
-  /** One point: fly there (to `zoom`, else at least street level), clear of the sheet or card. Several: fit them all. */
+  /** One point: fly there (to `zoom`, else at least street level), clear of the sheet or card. Several: fit them all, between the search and a card. */
   moveTo(points: readonly LonLat[], zoom?: number): void {
     const [first] = points;
     if (!first) return;
@@ -139,7 +140,7 @@ export class SiteMap {
       return;
     }
     const bounds = points.reduce((box, point) => box.extend([...point]), new LngLatBounds([...first], [...first]));
-    this.#map.fitBounds(bounds, { padding: 80, maxZoom: SITE_ZOOM });
+    this.#map.fitBounds(bounds, { padding: FitPadding.of(this.#map.getContainer()), maxZoom: SITE_ZOOM });
   }
 
   /** MapLibre reads its locale once; this keeps the attribution toggle in the UI language. */

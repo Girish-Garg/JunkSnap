@@ -1,5 +1,6 @@
 import { LanguageToggle } from '../../../ui/LanguageToggle';
 import type { MapPageState } from '../hooks/useMapPage';
+import type { MapNoticeView } from '../MapNotice';
 import { FiltersButton } from './FiltersButton';
 import { GoToMeButton } from './GoToMeButton';
 import { MapStatus } from './MapStatus';
@@ -8,6 +9,8 @@ import { ViewToggle } from './ViewToggle';
 
 interface MapSearchAreaProps {
   readonly page: MapPageState;
+  /** The toast: the page's notice, less what the few-reports card already says. */
+  readonly notice: MapNoticeView | null;
   // The list shows its own status, and search and locate move a map that isn't there.
   readonly listMode: boolean;
   /** Desktop lists the sites in view in its side panel, so it has no map or list toggle. */
@@ -15,7 +18,7 @@ interface MapSearchAreaProps {
 }
 
 /** The top of the map: search, Filters with the map or list toggle, the status toast and "Go to my location". */
-export function MapSearchArea({ page, listMode, desktop }: MapSearchAreaProps) {
+export function MapSearchArea({ page, notice, listMode, desktop }: MapSearchAreaProps) {
   const { filters, browser } = page;
   const filtersButton = <FiltersButton activeCount={filters.filter.activeCount()} onOpen={() => filters.setOpen(true)} />;
   if (listMode) {
@@ -40,7 +43,7 @@ export function MapSearchArea({ page, listMode, desktop }: MapSearchAreaProps) {
           <ViewToggle listOpen={browser.open} onList={browser.start} />
         </div>
       )}
-      <MapStatus notice={page.notice} onNearest={page.showNearest} />
+      <MapStatus notice={notice} onNearest={page.showNearest} />
       {page.away && <GoToMeButton onGo={page.goToMe} />}
     </div>
   );

@@ -13,6 +13,10 @@
   border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: var(--shadow-float);
+}
+
+/* Springs in the first time only; after a pan or a pin card it stays put or simply reappears. */
+.thin-card--enter {
   animation: card-in var(--dur-spring) var(--spring);
 }
 
@@ -50,6 +54,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--inline-gap);
+}
+
+/* A short phone keeps the count and the actions, so the card leaves the map room. */
+@media (max-height: 720px) {
+  .thin-card .thin-note__body {
+    display: none;
+  }
 }
 
 /* The map buttons and the legend stand on the card while it is up (it publishes --card-height). */
