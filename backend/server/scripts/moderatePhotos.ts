@@ -21,6 +21,7 @@ import { GeoPoint } from "../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
 import { INDIA_BUFFER_DEG } from "../src/handlers/moderation/ModerationServiceFactory.js";
+import { RateLimitSettings } from "../src/settings/RateLimitSettings.js";
 import { NoteRouterBuilder } from "../src/handlers/moderation/NoteRouterBuilder.js";
 import { AuthenticityService } from "../src/services/moderation/AuthenticityService.js";
 import { CheckFactory } from "../src/services/moderation/CheckFactory.js";
@@ -62,7 +63,7 @@ class PhotoRun {
         store: this.#store,
       }),
       authenticity: new AuthenticityService(
-        new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices }),
+        new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices, snapPerHour: RateLimitSettings.fromEnv(process.env).snapPerHour }),
       ),
       notes: new LlmNoteModerator(PhotoRun.#noteRouter()),
       clock: new SystemClock(),
