@@ -4,9 +4,21 @@
   inset: 0;
   z-index: 50;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s-4);
   background: var(--page);
   cursor: pointer;
+}
+
+.splash__tagline {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  animation: fade-in 240ms var(--ease-out) 260ms both;
 }
 
 .logo-art g,
@@ -64,7 +76,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .splash .logo-art g,
-  .splash .logo-art path {
+  .splash .logo-art path,
+  .splash__tagline {
     animation: none;
   }
 }

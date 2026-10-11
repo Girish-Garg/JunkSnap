@@ -28,6 +28,9 @@ JOB_WAIT_SECONDS = 600
 # Single-page app: every path without a file extension (or an unknown one) serves index.html.
 ASSET_TYPES = "css|gif|ico|jpg|jpeg|js|mjs|png|txt|svg|woff|woff2|ttf|map|json|geojson|webp|" \
     "webmanifest|onnx|wasm"
+# The api's link previews (/share/*) served on the web app's own host,
+# so share links carry its domain.
+SHARE_SOURCE = "/share/<*>"
 SPA_RULE = {"source": f"</^[^.]+$|\\.(?!({ASSET_TYPES})$)([^.]+$)/>",
             "target": "/index.html", "status": "200"}
 # Vite variable -> junksnap-<stage> stack output (contracts/README.md).
@@ -59,7 +62,19 @@ def find_web_app(stage: str) -> dict | None:
 
 
 def branch_url(stage: str, app: dict) -> str:
-    """The public web app URL (VITE_WEB_URL): the Amplify branch named after the stage."""
+    """The public web app URL (VITE_WEB_URL).
+
+    The stage branch's custom domain once it is live, else its Amplify URL.
+    """
+    listed = aws_json("amplify", "list-domain-associations", "--app-id", app["appId"])
+    domains = listed["domainAssociations"]
+    for domain in domains:
+        if domain["domainStatus"] != "AVAILABLE":
+            continue
+        for sub in domain["subDomains"]:
+            if sub["subDomainSetting"]["branchName"] == stage and sub["verified"]:
+                prefix = sub["subDomainSetting"]["prefix"]
+                return f"https://{prefix + '.' if prefix else ''}{domain['domainName']}"
     return f"https://{stage}.{app['defaultDomain']}"
 
 
@@ -83,6 +98,9 @@ class WebBuild:
         env = {key: self._outputs[name] for key, name in VITE_FROM_OUTPUTS.items()}
         env["VITE_API_MODE"] = "live"
         env["VITE_WEB_URL"] = self._web_url
+        # Share links use the web app's host; its /share/* rule proxies to the api
+        # (AmplifyHost.ensure_app).
+        env["VITE_SHARE_URL"] = self._web_url
         print("build env:", json.dumps(env))
         os.environ.update(env)
         folder = str(self._frontend)
@@ -98,8 +116,10 @@ class AmplifyHost:
         self._name = web_app_name(stage)
         self._tags = f"project=junksnap,stage={stage}"
 
-    def ensure_app(self) -> dict:
-        rules = json.dumps([SPA_RULE])
+    def ensure_app(self, api_url: str) -> dict:
+        target = f"{api_url.rstrip('/')}/share/<*>"
+        share = {"source": SHARE_SOURCE, "target": target, "status": "200"}
+        rules = json.dumps([share, SPA_RULE])
         app = find_web_app(self._stage)
         if app is None:
             created = aws_json("amplify", "create-app", "--name", self._name, "--platform", "WEB",
@@ -161,7 +181,7 @@ def main() -> None:
     os.environ.setdefault("AWS_PROFILE", "junksnap")
     outputs = stack_outputs(f"junksnap-{args.stage}")
     host = AmplifyHost(args.stage)
-    app = host.ensure_app()
+    app = host.ensure_app(outputs["PublicBaseUrl"])
     host.ensure_branch(app["appId"])
     url = branch_url(args.stage, app)
     with tempfile.TemporaryDirectory() as folder:
