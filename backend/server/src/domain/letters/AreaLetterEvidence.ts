@@ -1,6 +1,7 @@
 import type { AreaLetterDraft, Site, WardScores } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../errors.js";
 import { flagged, SIGNAL_FLAGS } from "../notes/Community.js";
+import { ShareablePhotos } from "../sites/ShareablePhotos.js";
 import type { AreaIssueSites, StoredAreaSite } from "./AreaIssueSites.js";
 import { LetterEvidence } from "./LetterEvidence.js";
 
@@ -97,7 +98,7 @@ export class AreaLetterEvidence {
       verified_count,
       first_reported_at: site.first_reported_at,
       last_reported_at: site.last_reported_at,
-      photo_urls: site.photo_urls,
+      photo_urls: new ShareablePhotos(site).urls(),
       insights: site.insights === undefined || site.insights === null ? null : LetterEvidence.insights(site.insights),
     };
   }

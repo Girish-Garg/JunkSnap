@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { describe, expect, it } from "vitest";
 import { DynamoAreaReportReader } from "../../src/adapters/DynamoAreaReportReader.js";
+import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { DynamoAreaSiteReader } from "../../src/adapters/DynamoAreaSiteReader.js";
 import { DynamoScoreLister } from "../../src/adapters/DynamoScoreLister.js";
 import { DynamoScoreRepository } from "../../src/adapters/DynamoScoreRepository.js";
@@ -16,6 +17,7 @@ import { AreaKey } from "../../src/domain/AreaKey.js";
 import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
+import { LogSink } from "../LogSink.js";
 import { NO_FACTS, NOW, readContract, site, WARD } from "./siteBuilder.js";
 
 type Item = Record<string, unknown>;
@@ -131,20 +133,39 @@ describe("DynamoAreaSiteReader", () => {
 });
 
 describe("DynamoAreaReportReader", () => {
+  function reader(pages: Item[]) {
+    const sink = new LogSink();
+    const logger = new JsonLoggerFactory(sink).create({ service: "scores", stage: "dev" });
+    const fake = new FakeDocumentClient(pages);
+    return { fake, sink, reader: new DynamoAreaReportReader(fake.asClient(), "junksnap-dev-reports", logger) };
+  }
+
   it("pages the by-site index and keeps only verified reports", async () => {
-    const fake = new FakeDocumentClient([
+    const { fake, reader: reports } = reader([
       { Items: [{ status: "verified", captured_at: "2026-10-10T02:14:05Z" }], LastEvaluatedKey: { report_id: "rpt_1" } },
       { Items: [{ status: "community_check", captured_at: "2026-10-10T03:00:00Z" }, { status: "verified", captured_at: "2026-10-11T03:00:00Z" }] },
     ]);
-    const times = await new DynamoAreaReportReader(fake.asClient(), "junksnap-dev-reports").verifiedReportTimes("site_jdh_1");
+    const times = await reports.verifiedReportTimes("site_jdh_1");
     expect(times).toEqual([Date.parse("2026-10-10T02:14:05Z"), Date.parse("2026-10-11T03:00:00Z")]);
     const query = (fake.sent[0] as QueryCommand).input;
     expect(query).toMatchObject({ IndexName: "by-site", ExpressionAttributeValues: { ":site": "site_jdh_1" } });
   });
 
-  it("throws InternalDataError for a report without captured_at", async () => {
-    const fake = new FakeDocumentClient([{ Items: [{ status: "verified" }] }]);
-    await expect(new DynamoAreaReportReader(fake.asClient(), "t").verifiedReportTimes("site_x")).rejects.toThrow(InternalDataError);
+  it("reads a captured_at with an offset, as the api's date-time check accepts it", async () => {
+    const { reader: reports, sink } = reader([{ Items: [{ status: "verified", captured_at: "2026-10-11T09:00:00+05:30" }] }]);
+    expect(await reports.verifiedReportTimes("site_jdh_1")).toEqual([Date.parse("2026-10-11T03:30:00Z")]);
+    expect(sink.records()).toEqual([]);
+  });
+
+  it("logs and skips a row without a readable captured_at, keeping the site's other reports", async () => {
+    const { reader: reports, sink } = reader([
+      { Items: [{ report_id: "rpt_bad", status: "verified" }, { report_id: "rpt_odd", status: "verified", captured_at: "11/10/2026" }], LastEvaluatedKey: { report_id: "rpt_odd" } },
+      { Items: [{ report_id: "rpt_good", status: "verified", captured_at: "2026-10-11T03:00:00Z" }] },
+    ]);
+    expect(await reports.verifiedReportTimes("site_x")).toEqual([Date.parse("2026-10-11T03:00:00Z")]);
+    const warnings = sink.records().filter((record) => record.message === "skipped a report row");
+    expect(warnings.map((record) => record.report_id)).toEqual(["rpt_bad", "rpt_odd"]);
+    expect(warnings[0]).toMatchObject({ site_id: "site_x", index: "by-site" });
   });
 });
 
