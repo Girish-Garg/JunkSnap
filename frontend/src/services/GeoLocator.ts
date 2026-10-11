@@ -16,6 +16,11 @@ export class GeoLocator {
     this.#permissions = permissions;
   }
 
+  /** Whether locateIfAllowed can ever find a fix: it needs both the location and the Permissions APIs. */
+  canLocateQuietly(): boolean {
+    return this.#geolocation !== undefined && this.#permissions !== undefined;
+  }
+
   /**
    * A fix only when location is already allowed, so opening the app never asks. Null when it is not allowed
    * yet, blocked, or cannot be read; the map then stays on the pilot city.

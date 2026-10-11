@@ -37,6 +37,7 @@ export class AmplifyAuthService implements AuthService {
   #user: AuthUser | null = null;
   // Memory only: lets the code step sign in without asking for the password again.
   #pending: PendingSignUp | null = null;
+  #restoring = false;
 
   constructor(api: AmplifyAuthApi) {
     this.#api = api;
@@ -48,7 +49,13 @@ export class AmplifyAuthService implements AuthService {
 
   /** Offline at start leaves a guest until the next sign-in or token read. */
   async restore(): Promise<void> {
+    this.#setRestoring(true);
     await this.idToken().catch(() => null);
+    this.#setRestoring(false);
+  }
+
+  restoring(): boolean {
+    return this.#restoring;
   }
 
   currentUser(): AuthUser | null {
@@ -138,6 +145,15 @@ export class AmplifyAuthService implements AuthService {
   #setUser(user: AuthUser | null): void {
     if (user?.email === this.#user?.email) return;
     this.#user = user;
+    this.#notify();
+  }
+
+  #setRestoring(restoring: boolean): void {
+    this.#restoring = restoring;
+    this.#notify();
+  }
+
+  #notify(): void {
     for (const listener of this.#listeners) listener();
   }
 

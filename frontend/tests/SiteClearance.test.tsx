@@ -62,6 +62,8 @@ describe('SitePanel clearing progress', () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(<SitePanel site={testSite(PENDING)} userLocation={null} />, { services: await signedIn(api) });
+    // The votes wait while this person's reports are checked, then open.
+    await waitFor(() => expect(screen.getByRole('button', { name: "It's cleared now" })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: "It's cleared now" }));
     await waitFor(() => expect(api.calls).toHaveLength(1));
     await user.click(screen.getByRole('button', { name: 'Still there' }));

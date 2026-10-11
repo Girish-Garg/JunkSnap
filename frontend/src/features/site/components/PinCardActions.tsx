@@ -18,6 +18,8 @@ interface RoundAction {
   readonly label: string;
   readonly onClick: () => void;
   readonly blocked?: boolean;
+  /** Off for a moment, e.g. while the first location fix is on its way. */
+  readonly disabled?: boolean;
 }
 
 /** View site fills the row; Add a photo and Share sit beside it as round 48 px buttons. A blocked tap says why in a toast. */
@@ -29,15 +31,15 @@ export function PinCardActions({ site, userLocation, onView }: PinCardActionsPro
   return (
     <div className="pin-card__actions">
       <Button onClick={onView}>{t('preview.viewSite')}</Button>
-      <RoundButton icon="camera" label={t('addPhoto.action')} onClick={addPhoto.open} blocked={lookOf(addPhoto.action.availability).blocked} />
+      <RoundButton icon="camera" label={t('addPhoto.action')} onClick={addPhoto.open} {...lookOf(addPhoto.action.availability)} />
       <RoundButton icon="share" label={t(copied ? 'actions.copied' : 'actions.share')} onClick={share} />
     </div>
   );
 }
 
-function RoundButton({ icon, label, onClick, blocked = false }: RoundAction) {
+function RoundButton({ icon, label, onClick, blocked = false, disabled = false }: RoundAction) {
   return (
-    <button type="button" className="pin-card__round" aria-label={label} title={label} aria-disabled={blocked || undefined} onClick={onClick}>
+    <button type="button" className="pin-card__round" aria-label={label} title={label} aria-disabled={blocked || undefined} disabled={disabled} onClick={onClick}>
       <Icon name={icon} size={22} />
     </button>
   );

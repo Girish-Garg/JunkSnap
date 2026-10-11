@@ -18,6 +18,11 @@
   .map-page:has(.sheet textarea:focus, .sheet input:not([type='checkbox'], [type='radio'], [type='range']):focus) .nav-bar {
     display: none;
   }
+
+  /* Report steps aside with it, so the sheet's foot (sheet.css) needs no room for it. */
+  .map-page:has(.sheet textarea:focus, .sheet input:not([type='checkbox'], [type='radio'], [type='range']):focus) .map-area > .sheet {
+    padding-bottom: 0;
+  }
 }
 
 .nav-bar__brand {
