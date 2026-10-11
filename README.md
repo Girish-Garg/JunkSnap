@@ -3,7 +3,7 @@
 **Snap the junk. Prove it. Get it cleared.** Residents photograph waste; JunkSnap blurs it, checks it with stacked models, maps it to the ward, MLA and MP, and drafts a cited letter for the resident to file.
 
 [![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://junksnap.coehemang.dev)
-[![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/saboot/releases/latest)
+[![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/JunkSnap/releases/latest)
 [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
 [![Built on AWS](https://img.shields.io/badge/built%20on-AWS-ff9900?logo=amazonwebservices&logoColor=white)](#aws-services-and-why)
 
@@ -45,9 +45,9 @@ Anyone in India can photograph waste with the in-app camera. JunkSnap blurs face
 
 Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 11 October 2026, Waste and Energy track.
 
-- Web app: https://junksnap.coehemang.dev (also https://demo.d3iec0rb3f75jm.amplifyapp.com)
+- Web app: https://junksnap.coehemang.dev (on AWS Amplify Hosting)
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
-- Android app: the APK is a release-signed GitHub Release built by the `android-release` workflow; the latest is `app-v0.1.4` at https://github.com/Girish-Garg/saboot/releases/latest. Shared links open the installed app (verified App Links), else the browser; see [docs/android.md](docs/android.md).
+- Android app: the APK is a release-signed GitHub Release built by the `android-release` workflow; get the latest at https://github.com/Girish-Garg/JunkSnap/releases/latest. Share links (`https://junksnap.coehemang.dev/share/...`) and site and area links open the installed app (verified App Links), else the browser. App Links cover both web hosts, `junksnap.coehemang.dev` and the original Amplify address `demo.d3iec0rb3f75jm.amplifyapp.com`, and the API's `/share/` links; see [docs/android.md](docs/android.md).
 
 ## Screens
 
@@ -87,11 +87,11 @@ flowchart LR
 
 1. **Snap or Scan.** A signed-in user takes a photo in the app, or records a video of up to 60 s with a GPS track recorded alongside it. Report types: waste dump, no bin or pickup, overflowing or broken bin, contaminated water and open construction. On phones that pass a speed probe, a small YOLO detector runs in the browser and draws live boxes in Snap and Scan; it also sends frame hints for a Scan. Phones that fail the probe or its 150 ms warm-up stay in cloud mode, and the server always re-verifies. The phone hashes the photo, uploads it straight to a private S3 bucket with a presigned URL, and posts the report. An offline queue retries when there is no network. For a Scan, the server cuts one frame per second, places each frame on the GPS track, drops frames without a close and accurate fix, and runs each kept frame as a normal report.
 2. **Moderate and blur.** The worker rejects unsafe images, blurs faces and number plates, and only then writes a public copy. It also checks that the photo is inside India, has a fresh timestamp, is not a near-duplicate, and that the device and user are under their rate limits. The optional note is checked for abuse and personal data on Bedrock.
-3. **Stacked verification.** The `ml` service scores the blurred copy with three signals: Rekognition labels, our YOLO26 detector and a SigLIP 2 embedding classifier. A logistic-regression meta-learner turns them into one probability. Only when the signals disagree or the probability is unsure does a vision model on Bedrock act as judge. The models gate each photo: a photo they reject (probability under 0.5) stops here, and any other photo joins a site. The result also lists what the waste is (materials, size class, burning and other hazards). Every decision records the provider, model and version that made it.
-4. **Site, verified by 10 people.** A site appears on the map from its first photo the models pass, shown as "1 of 10". Reports of the same type within 20 m always merge into it, and from 20 m up to 40 m only when the photos match (cosine 0.88 or more). A site is verified when 10 different people back it, with a passed photo of it or a yes vote; a model never verifies a site alone. When people voting no outnumber the backers by 3 or more, the site leaves the map. Every blurred photo of a site shows in a swipeable strip and opens in a full-screen viewer. Residents can add notes to a site, and Bedrock summarises them.
+3. **Stacked verification.** The `ml` service scores the blurred copy with three signals: Rekognition labels, our YOLO26 detector and a SigLIP 2 embedding classifier. A vision model judges every photo too (Amazon Nova Lite on Bedrock, then Nova Pro, then an OpenAI model if both fail), answering yes, no or uncertain for each thing the claim needs, such as garbage, a bin, an overflowing bin or a usable photo. A logistic-regression meta-learner turns the signals and the judge's answer into one probability. The models gate each photo: a photo they reject (probability under 0.5, or a clear no from the judge) stops here; when the judge is unsure, the app asks the reporter to keep the report only if they are 100% sure; any other photo joins a site. The result also lists what the waste is (materials, size class, burning and other hazards). Every decision records the provider, model and version that made it.
+4. **Site, verified by 10 people.** A site appears on the map from its first photo the models pass, shown as "1 of 10". Reports of the same type within 20 m always merge into it, and from 20 m up to 40 m only when the photos match (cosine 0.88 or more). Reports at one spot take turns choosing a site, so phones that send together never found two sites there. Duplicates made before these rules were folded once into the oldest site (`backend/server/scripts/mergeSameSpotSites.ts`), and old links to them open the site they joined. A site is verified when 10 different people back it, with a passed photo of it or a yes vote; a model never verifies a site alone. When people voting no outnumber the backers by 3 or more, the site leaves the map. Actions that check your distance from the site (vote, Me too, Cleaned, Add a photo, Report a photo) ask for location when tapped; if it is blocked, they say how to allow it ("Open app settings" in the Android app, the browser's steps on the web). Every blurred photo of a site shows in a swipeable strip and opens in a full-screen viewer. Residents can add notes to a site, and Bedrock summarises them.
 5. **No bin within 1 km.** A missing dustbin cannot be photographed, so a signed-in user reports "There is no dustbin within 1 km of here" from where they stand, photo optional. Reports within 500 m join one community zone, drawn as a 1 km circle and verified when 10 people back it. The nearest mapped bin is shown as evidence and never blocks verification.
 6. **Location: ward, MLA and MP.** Amazon Location reverse geocoding gives state, district and town; point-in-polygon lookups give the assembly seat (Rajasthan) and the Lok Sabha seat; the local body comes from our own table. Ward is filled only where an open ward map exists. Schools, hospitals, water bodies and open drains within 100 m come from OpenStreetMap. When a district gets its first verified report, the ward crawler is queued to collect official ward data for it, and the app shows a banner while it runs.
-7. **Cited letters.** For any open site, verified or not, or for one issue across a ward, seat or district, the api picks the addressees and the rule clauses from hashed official texts, such as the Solid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026). Site and ward or assembly letters go To the local body head; Lok Sabha and district letters go to the District Collector first. The councillor, MLA and MP are copied "for attention" only where those seats are known. A model on Bedrock writes the prose, and a verifier checks every quote word for word; if a quote fails, a template letter with the same verified citations is used. Every letter carries evidence: report counts, distinct reporters, dates, blurred photos and measured insights, plus a line on what residents noted. A site letter says how many people have backed the site so far and calls it verified only once 10 have; an area letter needs 10 verified reports for its issue in the area. Letters print to PDF or share; nothing is filed automatically, the resident files it.
+7. **Cited letters.** For any open site, verified or not, or for one issue across a ward, seat or district, the api picks the addressees and the rule clauses from hashed official texts, such as the Solid Waste Management Rules, 2026 (S.O. 388(E), 27 January 2026, in force 1 April 2026). Site and ward or assembly letters go To the local body head; Lok Sabha and district letters go to the District Collector first. The councillor, MLA and MP are copied "for attention" only where those seats are known. A model on Bedrock writes the prose, and a verifier checks every quote word for word; if a quote fails, a template letter with the same verified citations is used. Every letter carries evidence: report counts, distinct reporters, dates, blurred photos and measured insights, plus a line on what residents noted. A site letter states how many residents back the site so far ("community verification in progress (N of 10 people confirmed so far)") and calls it verified only once 10 have; if the model's prose calls an unverified site verified, the template letter is used instead. An area letter still needs 10 verified reports for its issue in the area. Letters print to PDF or share; nothing is filed automatically, the resident files it.
 8. **Area report.** Every 15 minutes a CronJob computes city, citizen and bin-access scores per ward, assembly seat, Lok Sabha seat and district, with a diagnosis (infrastructure gap, behaviour, city response, repeat spot) and area insights. The city score counts how often overflowing or broken bins are serviced once an area has 3 verified ones. A score shows only after 10 verified reports in the area. Counts always show, pilot areas are flagged, and no history is invented. The Areas map shows assembly seats in Rajasthan and Lok Sabha seats elsewhere in one layer, with a marker inside each area for its score or verified report count, and a ranking that lists a city's areas worst first.
 
 ## Architecture
@@ -156,10 +156,10 @@ flowchart TB
 | Amazon CloudFront + Application Load Balancer | HTTPS for the API, and serves blurred photos under `/media/*`; the ALB accepts traffic only from CloudFront | `infra/aws/stage.yaml`, `infra/k8s/base/ingress.yaml` |
 | Amazon S3 + AWS KMS | Originals, scan videos and the crawler's page cache in a private bucket encrypted with KMS; a separate bucket holds only blurred copies | `infra/aws/stage.yaml` |
 | Amazon SQS | Reports queue with a dead-letter queue, so slow model calls never block the phone | `backend/server/src/adapters/SqsQueuePoller.ts` |
-| Amazon DynamoDB | On-demand tables for reports, cleanups, scans, sites, votes, devices, users, scores and crawls | `backend/server/src/adapters/Dynamo*.ts` |
+| Amazon DynamoDB | On-demand tables for reports, cleanups, scans, sites, votes, devices, users, scores, crawls and residents' notes | `backend/server/src/adapters/Dynamo*.ts` |
 | Amazon Cognito | Email sign-in; the api checks the ID token against the pool's keys. No name or email is stored outside Cognito | `backend/server/src/adapters/CognitoAuthenticator.ts` |
 | Amazon Rekognition | Unsafe-image check, face boxes and number plates for blurring, labels as a verification signal, and readable text for brand labels | `backend/server/src/adapters/moderation/`, `backend/ml/src/ml/adapters/rekognition_labels.py` |
-| Amazon Bedrock | Vision judge for unsure cases, letter prose, summaries of residents' notes, brand reading, note moderation and ward-data extraction. Bedrock is the default for anything personal | `backend/ml/src/ml/adapters/bedrock_converse.py`, `backend/server/src/adapters/llm/` |
+| Amazon Bedrock | Vision judge for every photo (Nova Lite first), letter prose, summaries of residents' notes, brand reading, note moderation and ward-data extraction. Bedrock is the default for anything personal | `backend/ml/src/ml/adapters/bedrock_converse.py`, `backend/server/src/adapters/llm/` |
 | Amazon Location Service (Places v2) | Reverse geocoding to state, district and town; no place index needed | `backend/server/src/adapters/location/GeoPlacesReverseGeocoder.ts` |
 | AWS Amplify Hosting | Hosts the web app | `scripts/deploy_web.py`, `amplify.yml` |
 | AWS CloudFormation, EKS Pod Identity, Secrets Manager | Per-stage stacks `junksnap-<stage>`; one least-privilege role per workload, no keys in pods; fallback provider keys | `infra/aws/stage.yaml` |
@@ -201,15 +201,17 @@ Full method and every table: [docs/ml/eval.md](docs/ml/eval.md). Models are trai
 | fixed weights | 0.978 | 0.047 | 0.115 | 34% | 32 (32) | 89 (86) | 63 |
 | meta-learner | 0.978 | 0.020 | 0.019 | 27% | 43 (42) | 89 (86) | 52 |
 
-The meta-learner has the same accuracy as fixed weights, but its probabilities are honest (ECE 0.019 against 0.115) and it calls the judge less often. These replays use the per-photo rule from before sites needed 10 people; today the models only gate each photo, and people verify sites.
+The meta-learner has the same accuracy as fixed weights, but its probabilities are honest (ECE 0.019 against 0.115) and it calls the judge less often. These replays use the per-photo rule from before sites needed 10 people, with the judge called only when unsure; today the judge sees every photo, the models only gate each photo, and people verify sites.
 
 **Judge.** On 224 test photos, Amazon Nova Lite was the most accurate and cheapest judge: 0.929 on the waste-dump claim and 0.825 on burning, 1.5 s median, about $0.17 per 1,000 photos. Nova Pro scored 0.908 and 0.650. Claude models on Bedrock were not run because Bedrock refuses them for this account until Anthropic's use-case form is submitted. The judge prompt gained the overflowing-bin type after this evaluation, and the judge numbers have not been re-run.
+
+**Structured judge.** Since 11 October the judge answers yes, no or uncertain for each attribute (prompt `judge_v1`). Re-run on the same 184 QR4Change test photos with the same detector signals, clean photos accepted (auto-verified or sent to people) fell from 59 of 119 to 7, and genuine waste rejected stayed at 3 of 65 (accuracy 0.946, precision 0.899, recall 0.954).
 
 **Site merging.** A report of the same type within 20 m of a site always joins it. From 20 m up to 40 m it joins only when the two photos' SigLIP 2 vectors have cosine 0.88 or more. On simulated second shots this kept 95% of same-pile pairs and merged 15% of different piles, so two field photos of one dump less than 1 m apart could still split; the 20 m rule closes that.
 
 ## Privacy
 
-- Faces and number plates are blurred before any public copy exists. Only the blurred copy is ever public.
+- Faces and number plates are blurred before any public copy exists. Only the blurred copy is ever public. The blur never trusts "found nothing": a person or vehicle with no face or plate found is blurred where one would be, and dark photos get more blur, not less.
 - Originals and scan videos stay in a private S3 bucket encrypted with KMS. Originals go only to Rekognition for moderation; every other model sees only the blurred copy. A scan video never goes to a model.
 - The `ml` service cannot read the originals. Its role reads the blurred copies and the trained model files, and writes only embeddings.
 - Personal text (the note) goes to Bedrock only.
@@ -233,10 +235,15 @@ cd backend/ml; uv sync; uv run ruff check .; uv run mypy --strict src; uv run py
 
 # Shared checks
 uv run scripts/validate_contracts.py
+uv run scripts/check_config.py
 uv run scripts/check_limits.py
 ```
 
 To point the web app at a live stage, copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_API_URL`, `VITE_COGNITO_USER_POOL_ID` and `VITE_COGNITO_CLIENT_ID` (from the stage stack's outputs). Tests stub AWS and model calls. To build the Android app, see [docs/android.md](docs/android.md).
+
+## Configuration
+
+Every tuning number (rate limits, radii, thresholds, timeouts, map and UI timings) is a variable with a default in code. `config/defaults.env` lists them all; `config/<stage>.env` holds only what differs for that stage, for example `SNAP_PER_HOUR=100` on demo for field-audit days. Values are public and set at deploy time: server and ml values go into a Kubernetes ConfigMap, and `VITE_*` values are baked into the web and Android builds. There is no public config endpoint. `scripts/stage_config.py` checks the files before any deploy or build, and `uv run scripts/check_config.py` (CI) checks them against the documented code defaults. How to change a value: [docs/config.md](docs/config.md).
 
 ## Deploy a stage
 
@@ -262,19 +269,26 @@ uv run scripts/smoke.py <url> [<url> ...]
 | `data/` | Seat and ward boundaries, local bodies and representatives by office, rule texts, brand map, ward-data crawler and its output |
 | `infra/` | CloudFormation, eksctl and Kustomize |
 | `contracts/` | Schemas, fixtures and the README of routes, tables and S3 keys |
-| `scripts/` | Deploy, Android build, smoke tests, contract and size-limit checks |
-| `docs/` | Architecture, decisions, model evaluation, Android, handover, submission |
+| `config/` | Every tuning number: `defaults.env` and one override file per stage |
+| `scripts/` | Deploy, Android build, smoke tests, contract, config and size-limit checks |
+| `docs/` | Architecture, decisions, model evaluation, Android, configuration, handover, status files and early research |
 
 ## What is built
 
 - Capture: Snap and Scan with sign-in and the offline queue; five report types, including overflowing or broken bins; the on-phone YOLO detector for live boxes and scan hints, with cloud fallback on slow phones.
-- Pipeline: moderation and blur; stacked verification; sites on the map from the first passed photo, verified by 10 people; no-bin community zones; location with ward, MLA and MP seats; brand labels; community votes and cleanup claims with an after-photo; residents' notes on a site, summarised on Bedrock.
-- Letters: site letters and area letters with evidence and the quote verifier, in English or Hindi, printed to PDF or shared.
+- Pipeline: moderation and blur; stacked verification with the judge on every photo; sites on the map from the first passed photo, verified by 10 people, with same-type reports within 20 m always in one site; no-bin community zones; location with ward, MLA and MP seats; brand labels; community votes and cleanup claims with an after-photo; residents' notes on a site, summarised on Bedrock.
+- Letters: site letters for any open site, verified or not, that say how many residents back it; area letters once an issue has 10 verified reports in the area; both with evidence and the quote verifier, in English or Hindi, printed to PDF or shared.
+- Map: pins within 20 m stack into one pin with a count; on a slow network the map says it is still loading while the list, Areas and Report keep working, and a failed basemap offers Try again; actions that check distance ask for location on tap.
 - Areas: scores with counts, the pilot flag, diagnosis and insights; the combined Areas map with markers and dark badges; a city ranking.
 - Ward data: the crawler runs as a service on EKS. Approximate ward boundaries for 34 of Jodhpur's 100 wards and 12 of Jaipur's 150 are built as unreviewed data files (`data/boundaries/*_wards.geojson`); they are not on the map and not used for lookups, scores or letters.
-- App: the playful redesign with a cartoon logo, onboarding and dark mode; the Android app with a GitHub Actions APK release.
+- App: the playful redesign with a cartoon logo, onboarding and dark mode; the Android app with a GitHub Actions APK release and App Links on both web hosts.
+- Config: every tuning number is a variable in `config/`, checked before any deploy or build (see [Configuration](#configuration)).
 - The deployed `ml` service loads the trained models at start (YOLO26s, the SigLIP 2 heads and the `meta-v2` meta-learner) and checks each file against its pinned SHA-256.
 - Not built: drones and CCTV, potholes.
+
+## Field run in Jodhpur
+
+On 11 October 2026, 4 people filed 121 reports through the app in Jodhpur in about 2 hours 20 minutes. Of those, 114 passed the checks and 7 were rejected. After same-spot duplicates were merged, there are 44 open sites. All 44 are still unverified: a site needs 10 different people to back it. Wards are not filled in yet, because there is no reviewed map of Jodhpur's 2025 wards (see [data/boundaries/SOURCES.md](data/boundaries/SOURCES.md)). The field photos are not used to train or evaluate the models.
 
 ## Limits
 
@@ -291,6 +305,7 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 - [Architecture](docs/architecture.md)
 - [Model evaluation](docs/ml/eval.md)
 - [Android app](docs/android.md)
+- [Configuration](docs/config.md)
 - [Decisions](docs/decisions/)
 - [Handover: plan and tasks](docs/handover.md)
 - [Working agreement](docs/working.md) and [rules for every agent](AGENTS.md)
