@@ -2,6 +2,7 @@ import { GetCommand, type GetCommandOutput } from "@aws-sdk/lib-dynamodb";
 import { siteSchema, validateSite, type Site } from "../../contracts/index.gen.js";
 import { ExternalServiceError, InternalDataError } from "../../domain/errors.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
+import { LegacySiteFields } from "../sites/LegacySiteFields.js";
 
 const PROPERTY_KEYS = Object.keys(siteSchema.properties.properties.properties);
 
@@ -33,7 +34,9 @@ export class DynamoSiteReader implements SiteReader {
     }
   }
 
-  static #feature(item: Record<string, unknown>): Site {
+  // Rows from before decision 20261010-1530 read as the new shape, as for the map and area letters.
+  static #feature(stored: Record<string, unknown>): Site {
+    const item = new LegacySiteFields().upgrade(stored);
     const properties = Object.fromEntries(PROPERTY_KEYS.filter((key) => key in item).map((key) => [key, item[key]]));
     const geometry = { type: "Point", coordinates: [item.lon, item.lat] };
     try {

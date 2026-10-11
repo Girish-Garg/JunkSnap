@@ -6,6 +6,7 @@ import { Logo } from '../../../ui/Logo';
 import { useAuthUser } from '../hooks/useAuthUser';
 import { AccountActions } from './AccountActions';
 import { AppearanceSetting } from './AppearanceSetting';
+import { SignOutButton } from './SignOutButton';
 
 const TITLE_ID = 'account-title';
 
@@ -23,8 +24,9 @@ export function AccountRoute() {
         <Logo markOnly size={48} />
         <p>{user ? t('account.signedInAs', { email: user.email }) : t('auth.signIn.text')}</p>
       </div>
-      <AccountActions signedIn={Boolean(user)} onSignedOut={close} />
+      <AccountActions signedIn={Boolean(user)} />
       <AppearanceSetting />
+      {user && <SignOutButton onSignedOut={close} />}
     </BottomSheet>
   );
 }

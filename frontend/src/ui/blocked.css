@@ -16,7 +16,7 @@
   transform: none;
 }
 
-.button--text[aria-disabled='true']:hover {
+.button--text[aria-disabled='true']:hover::before {
   background: transparent;
 }
 

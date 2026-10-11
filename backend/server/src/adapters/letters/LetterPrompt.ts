@@ -22,6 +22,7 @@ const RULES = [
   "Give each citation its own short paragraph: its document and clause, then the quote.",
   "Do not add a signature, a name or a placeholder for one; the resident signs.",
   "If residents_report is given, add it as one sentence in your own words with its count of people; never quote residents.",
+  "If no_bin_statement is given, state it as plain prose before the request, keeping its counts, distances and sources; never inside quotation marks.",
   "Keep the quotes in English even when the letter is in another language.",
   "Use quotation marks for nothing else: not around document names, clauses, ids, places or the subject.",
   "Ask for the action in `request` and keep the body under 300 words. Keep the subject under 150 characters.",
@@ -39,12 +40,10 @@ export class LetterPrompt {
     return [...RULES, `Write the subject and the prose in ${LANGUAGES[this.#brief.language]}.`].join("\n");
   }
 
-  #request(): string {
+  // A plain fact, never a quoted passage: the draft check accepts quotes only from cited rules.
+  #noBinStatement(): string | null {
     const { site, binRadiusM } = this.#brief;
-    if (site.reportType !== "no_bin") {
-      return REQUEST[site.reportType];
-    }
-    return `state "${new NoBinStatement(binRadiusM).english(site)}", then ask to ${REQUEST.no_bin}`;
+    return site.reportType === "no_bin" ? new NoBinStatement(binRadiusM).english(site) : null;
   }
 
   user(): string {
@@ -59,7 +58,8 @@ export class LetterPrompt {
       to: addressees.to,
       cc: addressees.cc.map((line) => ({ office: line.office, seat: line.seat.name, marking: line.marking })),
       citations: citations.map(({ document, clause, quote }) => ({ document, clause, quote })),
-      request: this.#request(),
+      no_bin_statement: this.#noBinStatement(),
+      request: REQUEST[site.reportType],
       residents_report:
         site.evidence.residents === null
           ? null

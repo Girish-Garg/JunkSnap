@@ -186,7 +186,6 @@ a {
   white-space: nowrap;
 }
 
-.badge--open,
 .badge--reopened,
 .badge--cleaned,
 .badge--alert,
@@ -197,7 +196,6 @@ a {
   padding-left: var(--s-2);
 }
 
-.badge--open::before,
 .badge--reopened::before,
 .badge--cleaned::before,
 .badge--alert::before,
@@ -212,7 +210,6 @@ a {
   background: currentColor;
 }
 
-.badge--open,
 .badge--alert,
 .badge--progress-alert {
   background: var(--status-open-tint);
@@ -251,6 +248,15 @@ a {
   background: var(--surface);
   box-shadow: var(--shadow-float);
   color: var(--text-secondary);
+}
+
+/* A state to wait out, such as offline: amber like the sheets' offline line, never the error red. */
+.notice--warn {
+  color: var(--text);
+}
+
+.notice--warn svg {
+  color: var(--status-reopened);
 }
 
 .notice--alert {

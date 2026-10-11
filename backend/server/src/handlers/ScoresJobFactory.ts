@@ -22,7 +22,7 @@ export class ScoresJobFactory {
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: core.awsRegion }));
     const ports = {
       sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser()),
-      reports: new DynamoAreaReportReader(client, settings.reportsTable),
+      reports: new DynamoAreaReportReader(client, settings.reportsTable, logger),
       facts: await ScoresJobFactory.#facts(context, settings.assetsDir),
       scores: new DynamoScoreRepository(client, settings.scoresTable),
       expirer: new DynamoSiteExpirer(client, settings.sitesTable),

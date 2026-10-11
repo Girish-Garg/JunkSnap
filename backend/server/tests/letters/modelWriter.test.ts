@@ -5,7 +5,7 @@ import type { AnswerSchema } from "../../src/domain/llm/AnswerSchema.js";
 import type { LlmRequest } from "../../src/domain/llm/LlmRequest.js";
 import { LlmResponse } from "../../src/domain/llm/LlmResponse.js";
 import type { LetterModel } from "../../src/ports/letters/LetterModel.js";
-import { DEVICE, USER, letterService, REAL_RULES_DIR, RecordingLogger, wardSite } from "./support.js";
+import { DEVICE, USER, letterService, REAL_RULES_DIR, RecordingLogger, siteFixture, wardSite } from "./support.js";
 
 const ANSWER = { provider: "bedrock", model: "apac.amazon.nova-pro-v1:0", version: "v1:0" } as const;
 
@@ -64,6 +64,21 @@ describe("ModelLetterWriter", () => {
     const letter = await service.draft(request);
     expect(letter).toMatchObject({ template_fallback: true, provider: "junksnap", model: "letter-template" });
     expect(logger.warnings).toEqual([expect.stringContaining("letter writer failed")]);
+  });
+
+  it("keeps a no-bin draft that restates the no-bin statement in its own prose", async () => {
+    const model = new FakeModel((sent) => {
+      const facts = JSON.parse(sent.userText) as { no_bin_statement: string; request: string };
+      const reply = carefulReply(sent) as { subject: string; body: string };
+      return { ...reply, body: `${reply.body}\n\n${facts.no_bin_statement} Please ${facts.request}.` };
+    });
+    const service = await letterService({ sites: [siteFixture("jdh-2")], writer: new ModelLetterWriter(model), rulesDir: REAL_RULES_DIR });
+    const letter = await service.draft({ ...request, siteId: "site_jdh_2", language: "en" });
+    const facts = JSON.parse(model.requests[0]?.userText ?? "{}") as { no_bin_statement: string; request: string };
+    expect(facts.no_bin_statement).toBe("10 people confirmed there is no dustbin within 1 km of this spot. No mapped bin or collection point within 3 km (OpenStreetMap, ward records).");
+    expect(facts.request).not.toContain('"');
+    expect(letter.template_fallback).toBe(false);
+    expect(letter.body).toContain(facts.no_bin_statement);
   });
 
   it("falls back to the template when the model rewords a quote", async () => {

@@ -3,6 +3,7 @@ import type { SitePhotoPreset } from '../../../domain/SitePhotoPreset';
 import type { GpsState } from '../hooks/useGpsFix';
 import type { SnapFlow } from '../hooks/useSnapFlow';
 import { CaptureStage } from './CaptureStage';
+import { NoBinSentStage } from './NoBinSentStage';
 import { ReviewStage } from './ReviewStage';
 import { ScanSentStage } from './ScanSentStage';
 import { SentStage } from './SentStage';
@@ -36,6 +37,8 @@ export function SnapStage({ flow, gps, preset }: SnapStageProps) {
         </>
       );
     case 'scanSent':
-      return <ScanSentStage id={phase.id} cameraStopped={phase.cameraStopped ?? false} onAgain={flow.restart} />;
+      return <ScanSentStage id={phase.id} cameraStopped={phase.cameraStopped === true} onAgain={flow.restart} />;
+    case 'noBinSent':
+      return <NoBinSentStage onAgain={flow.restart} />;
   }
 }

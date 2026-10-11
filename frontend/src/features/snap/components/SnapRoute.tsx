@@ -18,6 +18,7 @@ const TITLES: Readonly<Record<SnapPhase['kind'], string>> = {
   review: 'snap.reviewTitle',
   sent: 'snap.sentTitle',
   scanSent: 'scan.sentTitle',
+  noBinSent: 'snap.sentTitle',
 };
 
 // Until the site is read there is no camera, so no photo leaves as a new report by mistake.

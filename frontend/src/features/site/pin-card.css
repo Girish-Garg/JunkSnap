@@ -7,7 +7,7 @@
   flex-direction: column;
   gap: var(--s-3);
   min-height: 0;
-  padding: var(--s-2) var(--s-3) var(--s-3);
+  padding: var(--s-2) var(--card-pad) var(--card-pad);
   cursor: pointer;
   touch-action: none;
   transform: translateY(var(--card-drag, 0px));
