@@ -134,9 +134,10 @@ export class FakeGeolocation {
     } as unknown as Geolocation;
   }
 
-  emit({ lat, lon, accuracy_m }: GpsFix): void {
+  /** ageMs: how long before now the GPS took this fix (a cached one is older). */
+  emit({ lat, lon, accuracy_m }: GpsFix, ageMs = 0): void {
     const coords = { latitude: lat, longitude: lon, accuracy: accuracy_m } as GeolocationCoordinates;
-    this.#onFix?.({ coords, timestamp: Date.now() } as GeolocationPosition);
+    this.#onFix?.({ coords, timestamp: Date.now() - ageMs } as GeolocationPosition);
   }
 
   fail(code: number): void {

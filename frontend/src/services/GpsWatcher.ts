@@ -5,9 +5,8 @@ import { SystemClock } from './SystemClock';
 
 const PERMISSION_DENIED = 1;
 const POSITION_UNAVAILABLE = 2;
+// maximumAge stays well under the 10 s capture limit (CaptureFix), so a cached fix the browser hands out first passes.
 const OPTIONS: PositionOptions = { enableHighAccuracy: true, maximumAge: 5_000, timeout: 30_000 };
-// A timestamp further off than this is on another base (some old browsers); treat the fix as fresh.
-const MAX_BELIEVABLE_AGE_MS = 60_000;
 
 export interface GpsListener {
   /** takenAtMs is when the GPS took the fix (coords timestamp), mapped onto the given clock. */
@@ -43,6 +42,11 @@ export class GpsWatcher {
     return () => geolocation.clearWatch(id);
   }
 
+  /** How long ago a fix this watcher reported was taken, on the same clock as its takenAtMs. */
+  ageMs(takenAtMs: number): number {
+    return this.#clock.now().getTime() - takenAtMs;
+  }
+
   /** One fresh high-accuracy fix, for a vote. */
   current(): Promise<GpsFix> {
     const geolocation = this.#geolocation;
@@ -60,9 +64,10 @@ export class GpsWatcher {
     return { lat: coords.latitude, lon: coords.longitude, accuracy_m: Math.round(coords.accuracy * 10) / 10 };
   }
 
-  // The age is measured on the wall clock the browser stamps fixes with, then applied to the recorder's clock.
+  // The age is measured on the wall clock the browser stamps fixes with, then applied to the recorder's clock. However
+  // old, it stays old (CaptureFixWatch refuses it); a stamp from the future or none at all counts as just taken.
   static #ageMs(position: GeolocationPosition): number {
     const age = Date.now() - position.timestamp;
-    return Number.isFinite(age) && age >= 0 && age <= MAX_BELIEVABLE_AGE_MS ? age : 0;
+    return Number.isFinite(age) ? Math.max(age, 0) : 0;
   }
 }

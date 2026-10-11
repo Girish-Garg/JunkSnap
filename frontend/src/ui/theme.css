@@ -305,6 +305,12 @@ a {
   inset: calc(-1 * var(--s-1)) 0;
 }
 
+/* Off until something finishes, e.g. the capture mode while a video records. */
+.segmented__option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .segmented__option:hover {
   color: var(--text);
 }

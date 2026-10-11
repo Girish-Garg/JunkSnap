@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useServices } from '../../../app/useServices';
 import { CAPTURE_GATES } from '../../../domain/CaptureGates';
-import type { GpsFix } from '../../../domain/ReportUpload';
+import type { GpsFix, NoBinUpload } from '../../../domain/ReportUpload';
 import { useActionErrors } from '../../actions/hooks/useActionErrors';
 import { useSessionGate } from '../../actions/hooks/useSessionGate';
 
@@ -14,10 +14,13 @@ export function useNoBinReport(fix: GpsFix | null, onSent: (reportId: string) =>
   const { snap } = useServices();
   const handle = useActionErrors('nobin', NO_CODES);
   const [state, setState] = useState<NoBinState>('idle');
+  // One report, one upload id: a retry keeps the id (the server never makes two) but sends the fix and time of now.
+  const upload = useRef<NoBinUpload | null>(null);
   const send = async (at: GpsFix, reauthed = false) => {
     setState('sending');
     try {
-      const accepted = await snap.noBin.report(at);
+      upload.current = await snap.noBin.prepare(at, new Date(), upload.current);
+      const accepted = await snap.noBin.send(upload.current);
       setState('sent');
       onSent(accepted.report_id);
     } catch (error) {

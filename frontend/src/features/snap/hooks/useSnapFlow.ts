@@ -22,7 +22,7 @@ const CAMERA: SnapPhase = { kind: 'camera' };
 export function useSnapFlow() {
   const { snap } = useServices();
   const [phase, setPhase] = useState<SnapPhase>(CAMERA);
-  const { mode, setMode, presetType, photoFor, clearPreset } = useCaptureMode();
+  const modes = useCaptureMode();
   const [saveFailed, setSaveFailed] = useState(false);
   const capture = usePhotoCapture((photo) => setPhase({ kind: 'review', photo }));
   const send = async (photo: CapturedPhoto, choice: ReportChoice) => {
@@ -38,10 +38,15 @@ export function useSnapFlow() {
   const scanSaved = (id: string, cameraStopped = false) => setPhase({ kind: 'scanSent', id, cameraStopped });
   const noBinSent = (id: string) => setPhase({ kind: 'noBinSent', id });
   const restart = () => {
-    clearPreset();
+    modes.clearPreset();
     setPhase(CAMERA);
   };
-  return { phase, mode, setMode, presetType, photoFor, capture, saveFailed, send, scanSaved, noBinSent, retake: () => setPhase(CAMERA), restart };
+  // A retaken photo is a new attempt: the last one's "Could not save" no longer applies.
+  const retake = () => {
+    setSaveFailed(false);
+    setPhase(CAMERA);
+  };
+  return { phase, ...modes, capture, saveFailed, send, scanSaved, noBinSent, retake, restart };
 }
 
 export type SnapFlow = ReturnType<typeof useSnapFlow>;

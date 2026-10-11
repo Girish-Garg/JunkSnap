@@ -20,14 +20,35 @@ describe('HttpTransport timeouts', () => {
     expect(calls[0]?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('keeps a caller signal for json() and sets none for the presigned put(), whose video can take long', async () => {
+  it('keeps a caller signal for json() and gives the presigned put() its own timeout signal', async () => {
     const { calls, fetcher } = recordingFetch();
     const transport = new HttpTransport('https://api.test', fixedIdentity('t'), fetcher);
     const own = new AbortController().signal;
     await transport.json('/sites/site_1', { method: 'GET', signal: own });
     await transport.put('https://bucket.test/upload', { 'Content-Type': 'video/mp4' }, new ArrayBuffer(4));
     expect(calls[0]?.signal).toBe(own);
-    expect(calls[1]?.signal).toBeUndefined();
+    expect(calls[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(calls[1]?.signal?.aborted).toBe(false);
+  });
+});
+
+describe('HttpTransport put() timeout', () => {
+  it('gives a put() 30 s plus 1 s per 50 KiB, at most 15 min, so a big video on a weak uplink still has time', () => {
+    expect(HttpTransport.putTimeoutMs(0)).toBe(30_000);
+    expect(HttpTransport.putTimeoutMs(300 * 1024)).toBe(36_000);
+    expect(HttpTransport.putTimeoutMs(19 * 1024 * 1024)).toBe(420_000); // 19 MiB at 0.5 Mbit/s needs about 320 s
+    expect(HttpTransport.putTimeoutMs(40 * 1024 * 1024)).toBe(850_000); // 40 MiB at 0.5 Mbit/s needs about 670 s
+    expect(HttpTransport.putTimeoutMs(60 * 1024 * 1024)).toBe(900_000);
+  });
+
+  it('ends a stalled put() as the same timeout ApiError as json(), so the queue retries it later', async () => {
+    const stalled: typeof fetch = async () => {
+      throw new DOMException('signal timed out', 'TimeoutError');
+    };
+    const transport = new HttpTransport('https://api.test', fixedIdentity('t'), stalled);
+    const error = await transport.put('https://bucket.test/upload', {}, new ArrayBuffer(4)).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 0, code: 'timeout' });
   });
 });
 
