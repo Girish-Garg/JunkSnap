@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../src/domain/ApiError';
 import type { ReportUpload } from '../src/domain/ReportUpload';
 import { QueueLock } from '../src/services/QueueLock';
 import { ReportQueue } from '../src/services/ReportQueue';
@@ -132,5 +133,10 @@ describe('ReportTracker and RetryPolicy', () => {
     expect(RetryPolicy.retryAt('server', 3, now)?.toISOString()).toBe('2026-10-10T04:02:00.000Z');
     expect(RetryPolicy.retryAt('refused', 1, now)).toBeNull();
     expect(RetryPolicy.retryAt('sign_in', 1, now)).toBeNull();
+  });
+
+  it('backs a timed-out request off like a server error, not every 30 s like a lost connection', () => {
+    expect(RetryPolicy.problemOf(new ApiError(0, 'timeout', 'Upload failed: TimeoutError'))).toBe('server');
+    expect(RetryPolicy.problemOf(new ApiError(0, 'network_error', 'Upload failed: TypeError'))).toBe('offline');
   });
 });

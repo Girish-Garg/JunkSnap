@@ -32,7 +32,7 @@ export function CaptureStage({ flow, gps, preset = null }: CaptureStageProps) {
           {t('addPhoto.preset', { type: t(`reportType.${preset.reportType}`) })}
         </p>
       ) : (
-        <Segmented label={t('snap.mode.label')} options={modes} value={flow.mode} onChange={flow.setMode} />
+        <Segmented label={t('snap.mode.label')} options={modes} value={flow.mode} onChange={flow.setMode} disabled={flow.recording} />
       )}
       {noBinPhoto && (
         <p className="snap-preset" role="status">

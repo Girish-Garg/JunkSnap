@@ -19,7 +19,7 @@ function cameraProblem(state: CameraState): CaptureProblem | null {
 
 /** Everything the video stage shows: camera, choice (Auto unless changed), recorder, and whether recording may start. */
 export function useScanStage(video: RefObject<HTMLVideoElement | null>, flow: SnapFlow, gps: GpsState) {
-  const recorder = useScanRecorder(video, flow.scanSaved);
+  const recorder = useScanRecorder(video, { onSaved: flow.scanSaved, onBusy: flow.setRecording });
   // A camera that freezes mid-recording ends the recording with the clip so far. It reopens only
   // once the clip is saved (phase back to idle), never while the recording is being finished.
   const camera = useCamera(video, 'video', { holding: () => recorder.phase !== 'idle', onLost: recorder.cut });

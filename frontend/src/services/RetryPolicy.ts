@@ -23,6 +23,8 @@ export class RetryPolicy {
   static problemOf(error: unknown): SendProblem {
     if (error instanceof AuthError) return error.problem === 'network' ? 'offline' : 'sign_in';
     if (!(error instanceof ApiError)) return 'server';
+    // A timeout is not a lost connection: retrying every 30 s would restart a big upload from byte 0 each time.
+    if (error.code === 'timeout') return 'server';
     return BY_STATUS[error.status] ?? (error.status >= 500 ? 'server' : 'refused');
   }
 

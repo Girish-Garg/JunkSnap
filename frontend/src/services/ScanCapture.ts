@@ -6,6 +6,7 @@ import type { Clock } from './Clock';
 import type { GpsWatcher } from './GpsWatcher';
 import type { PhotoHasher } from './PhotoHasher';
 import type { Recording } from './RecordingSession';
+import { ScanRun } from './ScanRun';
 import type { ScanHintLog } from './ScanHintLog';
 import type { ScanQueue } from './ScanQueue';
 import type { VideoRecorder } from './VideoRecorder';
@@ -36,8 +37,10 @@ export interface ScanStart {
 
 export interface ActiveScan {
   stop(): void;
+  /** Abandons the recording while it still runs (see ScanRun): it is never queued, and saved resolves with null. */
+  cancel(): void;
   /** The recording, hashed and saved in the queue; rejects with CaptureError when it cannot be used. */
-  readonly saved: Promise<QueuedScan>;
+  readonly saved: Promise<QueuedScan | null>;
 }
 
 /** Records the video and its GPS track on one clock, then saves both to the scan queue. */
@@ -58,11 +61,12 @@ export class ScanCapture {
       track.pad(now());
       onTick(now() - session.startedAtMs);
     }, GPS_TRACK_TICK_MS);
-    const finished = session.finished.finally(() => {
+    const run = new ScanRun(session, () => {
       clearInterval(ticker);
       unwatch();
     });
-    return { stop: () => session.stop(), saved: finished.then((recording) => this.#save(recording, track, { choice, hints })) };
+    const saved = run.finished.then((recording) => (run.cancelled ? null : this.#save(recording, track, { choice, hints })));
+    return { stop: () => run.stop(), cancel: () => run.cancel(), saved: saved.catch((error: unknown) => run.discard(error)) };
   }
 
   async #save(recording: Recording, track: GpsTrack, { choice, hints }: Pick<ScanStart, 'choice' | 'hints'>): Promise<QueuedScan> {
