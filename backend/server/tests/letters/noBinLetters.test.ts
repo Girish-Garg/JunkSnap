@@ -72,6 +72,43 @@ describe("no-bin letters (decision 20261010-1630)", () => {
   });
 });
 
+describe("no-bin letters state the bin distance only as measured", () => {
+  const brief = (site: LetterSite) =>
+    ({ site, addressees: { channel: "local_body", to: { office: "Commissioner", body: "Jodhpur Municipal Corporation" }, cc: [], filingUrl: null }, citations: [], language: "en", binRadiusM: 3000 }) as const;
+  const statement = (site: Site) => {
+    const letterSite = LetterSite.fromSite(site);
+    const facts = JSON.parse(new LetterPrompt(brief(letterSite)).user()) as { no_bin_statement: string };
+    return { english: new EnglishWording(3000).request(letterSite), hindi: new HindiWording(3000).request(letterSite), prompt: facts.no_bin_statement };
+  };
+
+  it("gives a bin inside the zone in metres", () => {
+    const { english, prompt } = statement(measured(zone(5, 5), false, 500));
+    expect(english).toContain("A mapped bin is 500 m away (OpenStreetMap, ward records); it may be missing or broken.");
+    expect(prompt).toContain("A mapped bin is 500 m away");
+  });
+
+  it("gives the measured distance of a bin past the zone but inside the radius, never none within it", () => {
+    const { english, hindi, prompt } = statement(measured(zone(5, 5), false, 1840));
+    expect(english).toContain("The nearest mapped bin or collection point is 1.8 km away (OpenStreetMap, ward records).");
+    expect(hindi).toContain("1.8 किलोमीटर दूर दर्ज है");
+    expect(prompt).toContain("1.8 km away");
+    expect([english, hindi, prompt].join(" ")).not.toMatch(/No mapped bin|के भीतर नक्शे पर कोई/);
+  });
+
+  it("says none within the radius only when the nearest bin was measured farther than it", () => {
+    const { english, prompt } = statement(measured(zone(5, 5), true, 4210));
+    expect(english).toContain("No mapped bin or collection point within 3 km (OpenStreetMap, ward records).");
+    expect(prompt).toContain("No mapped bin or collection point within 3 km");
+  });
+
+  it("says nothing about bins when they were never measured", () => {
+    const { english, hindi, prompt } = statement(measured(zone(5, 5), null, null));
+    expect(prompt).toBe("10 people confirmed there is no dustbin within 1 km of this spot.");
+    expect(english).toBe(`${prompt} We request that waste bins be placed here and that regular collection be arranged.`);
+    expect([english, hindi].join(" ")).not.toMatch(/mapped|OpenStreetMap|किलोमीटर दूर|3 किलोमीटर/);
+  });
+});
+
 describe("letter evidence", () => {
   it("carries counts, dates, blurred photos, measured insights and the nearest bin for a waste dump", async () => {
     const dump = siteFixture("jdh-1");
