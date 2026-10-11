@@ -1,7 +1,7 @@
 import type { LocationProblem } from '../../../domain/LocationError';
 import type { SiteFeature } from '../../../domain/Site';
 import { useOnline } from '../../../ui/useOnline';
-import { MapNotice, type MapNoticeView } from '../MapNotice';
+import { MapNotice, type BasemapPhase, type MapNoticeView } from '../MapNotice';
 import type { SitesLoad } from './useSites';
 
 export interface NoticeSources {
@@ -13,6 +13,7 @@ export interface NoticeSources {
   /** Sites just off an empty view, or null while still looking. */
   readonly nearby: readonly SiteFeature[] | null;
   readonly flash: string | null;
+  readonly basemap: BasemapPhase;
 }
 
 /** The one-line toast over the map, from everything the map page knows. */
@@ -30,5 +31,6 @@ export function useMapNotice(sources: NoticeSources): MapNoticeView | null {
     truncated: loaded.truncated,
     nearby: nearby === null ? null : nearby.length > 0,
     flash: sources.flash,
+    basemap: sources.basemap,
   });
 }

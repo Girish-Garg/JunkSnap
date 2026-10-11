@@ -1,11 +1,12 @@
-import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource } from 'maplibre-gl';
+import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, type GeoJSONSource, type VectorTileSource } from 'maplibre-gl';
 import { BBox } from '../../domain/BBox';
 import { PilotCity } from '../../domain/PilotCity';
 import type { MapMode } from '../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../domain/Site';
 import type { LayerRegistry } from '../../layers/LayerRegistry';
 import type { AreaMarker } from './AreaMarkers';
-import { BasemapMode } from './BasemapMode';
+import { BASEMAP_SOURCE, BasemapMode } from './BasemapMode';
+import { BasemapWatch, type BasemapSignal } from './BasemapWatch';
 import { BoundaryOverlay, type AreaHit, type BoundaryFiles, type BoundaryView } from './BoundaryOverlay';
 import { FitPadding } from './FitPadding';
 import { PinFeatures } from './PinFeatures';
@@ -47,6 +48,8 @@ export interface SiteMapOptions {
   readonly onPickArea: (area: AreaHit) => void;
   readonly boundaries: BoundaryFiles;
   readonly onViewChange: (view: MapView) => void;
+  /** The basemap started loading, drew its first full view, or could not load (BasemapWatch). */
+  readonly onBasemap: (signal: BasemapSignal) => void;
 }
 
 export class SiteMap {
@@ -57,6 +60,7 @@ export class SiteMap {
   #mode: MapMode = 'auto';
   #ready = false;
   readonly #basemap: BasemapMode;
+  readonly #watch: BasemapWatch;
   #userMarker: Marker | null = null;
   readonly #boundaries: BoundaryOverlay;
   readonly #pulse: SelectedPulse;
@@ -81,8 +85,10 @@ export class SiteMap {
     this.#drop = new PinDrop(this.#map);
     this.#picker = new PinPicker(this.#map, this.#layers);
     this.#map.addControl(new AttributionControl({ compact: true }), 'bottom-left');
+    this.#foldAttribution();
     this.#basemap = new BasemapMode(this.#map);
-    this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => this.#basemap.transform(next) });
+    this.#watch = new BasemapWatch(this.#map, STYLE_URL, options.onBasemap);
+    this.#loadStyle();
     this.#boundaries = new BoundaryOverlay(this.#map, options.boundaries, this.#layers.all()[0]?.id);
     this.#listen(options);
   }
@@ -162,8 +168,29 @@ export class SiteMap {
     this.#userMarker.setLngLat([...position]).addTo(this.#map);
   }
 
+  /**
+   * After a failed load (offline, blocked). A style that came with a failed basemap source keeps its site layers and
+   * fetches only that source again. One that never came is dropped first: with transformStyle, setStyle would wait
+   * for it to load, forever.
+   */
+  reloadBasemap(): void {
+    const source = this.#map.getSource<VectorTileSource>(BASEMAP_SOURCE);
+    if (source) {
+      this.#watch.start();
+      void source.load();
+      return;
+    }
+    this.#map.setStyle(null);
+    this.#loadStyle();
+  }
+
   destroy(): void {
     this.#map.remove();
+  }
+
+  #loadStyle(): void {
+    this.#watch.start();
+    this.#map.setStyle(STYLE_URL, { transformStyle: (_previous, next) => this.#basemap.transform(next) });
   }
 
   #listen({ onPick, onPickStack, onPickArea, onViewChange }: SiteMapOptions): void {
@@ -172,7 +199,6 @@ export class SiteMap {
       if (this.#map.getContainer().clientHeight > 0) onViewChange({ ...this.#view(), byUser });
     };
     this.#map.on('load', () => {
-      this.#collapseAttribution();
       this.#addSiteLayers()
         .then(() => emitView())
         .catch((error: unknown) => console.error('Could not add site layers', error));
@@ -236,11 +262,17 @@ export class SiteMap {
     return { bbox: new BBox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()) };
   }
 
-  // Compact attribution opens expanded; start as the small "i" and let a tap expand it.
-  #collapseAttribution(): void {
-    const control = this.#map.getContainer().querySelector('.maplibregl-ctrl-attrib');
-    control?.classList.remove('maplibregl-compact-show');
-    control?.removeAttribute('open');
+  // Compact attribution opens expanded once its text arrives with the basemap's sources, which on a slow network
+  // is long before the first full paint (and lies under Report). Fold it then, once, to the small "i" a tap opens.
+  #foldAttribution(): void {
+    const fold = () => {
+      const control = this.#map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+      if (!control?.classList.contains('maplibregl-compact-show')) return;
+      control.classList.remove('maplibregl-compact-show');
+      control.removeAttribute('open');
+      this.#map.off('sourcedata', fold);
+    };
+    this.#map.on('sourcedata', fold);
   }
 
   #showPulse(): void {

@@ -5,7 +5,7 @@ type PaintName = Parameters<MapLibreMap['setPaintProperty']>[1];
 type PaintValue = Parameters<MapLibreMap['setPaintProperty']>[2];
 
 // Positron's vector source; boundary and site layers have their own sources and keep their colours.
-const BASEMAP_SOURCE = 'openmaptiles';
+export const BASEMAP_SOURCE = 'openmaptiles';
 
 /** Light or dark basemap colours. A switch while the style is still loading is applied once the map is idle. */
 export class BasemapMode {
