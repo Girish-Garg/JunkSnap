@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sitePath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
-import { CleanupOutcome } from '../../../domain/CleanupOutcome';
 import type { SiteFeature } from '../../../domain/Site';
 import { Button } from '../../../ui/Button';
+import { useCleanupResult } from '../hooks/useCleanupResult';
 
 interface CleanupStatusProps {
   readonly site: SiteFeature | null;
@@ -16,13 +16,11 @@ interface CleanupStatusProps {
 
 const POLL_MS = 5_000;
 
-/** Polls the site for this photo's result; the site read before the claim may hold an old result, so only a later read counts. */
+/** Polls the site until this photo has a result (useCleanupResult), then says what it was. */
 export function CleanupStatus({ site, siteId, cleanupId, reload }: CleanupStatusProps) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
-  const [beforeClaim] = useState(site);
-  const fresh = site !== null && site !== beforeClaim;
-  const key = fresh ? CleanupOutcome.of(site.properties, cleanupId) : 'checking';
+  const key = useCleanupResult(site, cleanupId);
   const checking = key === 'checking';
   useEffect(() => {
     reload();

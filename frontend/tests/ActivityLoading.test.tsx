@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { AuthError } from '../src/domain/AuthError';
@@ -30,11 +30,50 @@ describe('Activity on a cold start', () => {
     await snap.activity.revalidate();
     await snap.activity.revalidate();
     expect(api.count('mine')).toBe(1);
-    expect(snap.activity.state()).toEqual({ trusted: true, loading: false });
+    expect(snap.activity.state()).toMatchObject({ trusted: true, loading: false });
+  });
+});
+
+describe('Activity at a sign-in change', () => {
+  it('starts the next account\'s first sync at once, even while the skeleton already shows', async () => {
+    const api = new FakeReportApi();
+    api.holdList();
+    const services = testServices(new MemoryStore(), { api });
+    const auth = services.auth as MockAuthService;
+    await signIn(auth, 'resident@example.com');
+    await renderApp(<AppRoutes />, { route: '/activity', services });
+    await waitFor(() => expect(api.count('mine')).toBe(1));
+    await act(async () => {
+      await auth.signOut();
+      await signIn(auth, 'neighbour@example.com');
+    });
+    await waitFor(() => expect(api.count('mine')).toBe(2));
   });
 });
 
 describe('a sync still running at sign-out', () => {
+  it('clears at once without waiting for a slow list, and that list never lands after the next sign-in', async () => {
+    const { snap, api, auth } = await activityRig({ rows: [sentRow(1)] });
+    await snap.activity.settled();
+    api.pages_ = [[listed(1)]];
+    const release = api.holdList();
+    const first = snap.activity.revalidate();
+    await waitFor(() => expect(api.count('mine')).toBe(1));
+    await auth.signOut();
+    await snap.activity.settled();
+    expect(reportIds(snap)).toEqual([]);
+    await signIn(auth, 'neighbour@example.com');
+    api.pages_ = [[listed(7)]];
+    const next = snap.activity.revalidate();
+    await waitFor(() => expect(api.count('mine')).toBe(2));
+    release();
+    await Promise.all([first, next]);
+    expect(reportIds(snap)).toEqual(['rpt_7']);
+    expect(snap.activity.trusted()).toBe(true);
+  });
+});
+
+describe('a sync still running at sign-out, once its list arrives', () => {
   it('drops what it brought back, so the old account\'s rows and token never land', async () => {
     const { snap, api, auth, meta } = await activityRig();
     await snap.activity.settled();

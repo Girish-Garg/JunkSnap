@@ -72,10 +72,11 @@ export class FakeReportApi implements ReportApi {
 
   async mine(cursor: string | null): Promise<ReportListPage> {
     this.#record('mine', cursor);
+    const pages = this.pages_;
     await this.#held;
     const index = cursor === null ? 0 : Number(cursor);
-    const next = index + 1 < this.pages_.length ? String(index + 1) : null;
-    return { reports: this.pages_[index] ?? [], next_cursor: next };
+    const next = index + 1 < pages.length ? String(index + 1) : null;
+    return { reports: pages[index] ?? [], next_cursor: next };
   }
 
   #record(kind: Call, body: unknown): void {

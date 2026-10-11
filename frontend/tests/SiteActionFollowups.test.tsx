@@ -66,6 +66,20 @@ describe('cleanup status when an earlier photo already counts', () => {
     act(() => setSite(withCleanup(before, 'pending_confirmation', EARLIER)));
     expect(screen.getByText('Not accepted')).toBeInTheDocument();
   });
+});
+
+describe('cleanup status once a result was shown', () => {
+  it('keeps Counted once shown, when a newer photo replaces the after-photo or the site is removed', async () => {
+    const before = withCleanup(await fixtureSite('site_jdh_1'), 'checking', EARLIER);
+    let setSite: SetSite = () => undefined;
+    await renderApp(<Harness first={before} reload={vi.fn()} onReady={(set) => (setSite = set)} />);
+    act(() => setSite(withCleanup(before, 'pending_confirmation', OURS)));
+    expect(screen.getByText('Counted')).toBeInTheDocument();
+    act(() => setSite(withCleanup(before, 'pending_confirmation', 'https://cdn.test/media/cleanups/cln_test_c.jpg')));
+    expect(screen.getByText('Counted')).toBeInTheDocument();
+    act(() => setSite(withCleanup(before, 'none', null)));
+    expect(screen.getByText('Counted')).toBeInTheDocument();
+  });
 
   it('counts this photo once the site shows its blurred copy', async () => {
     const before = withCleanup(await fixtureSite('site_jdh_1'), 'pending_confirmation', EARLIER);

@@ -27,14 +27,14 @@ export function useActivity(): ActivityRows {
     (listener) => snap.activity.subscribe(listener),
     () => snap.activity.state(),
   );
-  useActivityRefresh(state.loading);
+  useActivityRefresh(state.generation);
   if (state.trusted) return { reports, scans, loading: false };
   return { reports: reports.filter((row) => row.data.stage !== 'sent'), scans: scans.filter((scan) => scan.data.stage !== 'sent'), loading: state.loading };
 }
 
-// Every REFRESH_MS while the sheet is open, and at once when a sign-in change starts a new first sync.
+// At once and every REFRESH_MS while the sheet is open; a sign-in change (a new generation) starts again at once.
 // A failure is a load's: reported with the structured tag, and the phone's copy stays.
-function useActivityRefresh(loading: boolean): void {
+function useActivityRefresh(generation: number): void {
   const { snap, errors } = useServices();
   useEffect(() => {
     const failed = (error: unknown) => void errors.report('activity', error);
@@ -44,8 +44,5 @@ function useActivityRefresh(loading: boolean): void {
     refresh();
     const timer = window.setInterval(refresh, REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [snap.activity, snap.tracker, snap.scanTracker, errors]);
-  useEffect(() => {
-    if (loading) void snap.activity.revalidate().catch((error: unknown) => void errors.report('activity', error));
-  }, [loading, snap.activity, errors]);
+  }, [snap.activity, snap.tracker, snap.scanTracker, errors, generation]);
 }

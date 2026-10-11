@@ -42,6 +42,11 @@ export class ActivityFreshness {
     return this.#clock.now().getTime() - Date.parse(token.synced_at) >= this.#ttlMs;
   }
 
+  /** A sync has confirmed this phone's list for the account at least once; a sign-in claim alone has not. */
+  isConfirmed(token: ActivityToken | null, owner: string): boolean {
+    return token !== null && token.owner === owner && Date.parse(token.synced_at) > 0;
+  }
+
   /** Sign-out: no account's list is on this phone any more. */
   async clear(): Promise<void> {
     await this.#store.set(KEY, '');

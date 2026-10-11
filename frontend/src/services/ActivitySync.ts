@@ -1,6 +1,7 @@
-import { ActivityMerge, type ActivityListing } from '../domain/ActivityMerge';
+import { ActivityMerge, type ActivityListing, type MergeContext } from '../domain/ActivityMerge';
 import { ApiError } from '../domain/ApiError';
 import { AuthError } from '../domain/AuthError';
+import type { ReportListPage } from '../domain/ReportList';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AccountKey } from './AccountKey';
 import type { ActivityFreshness } from './ActivityFreshness';
@@ -31,6 +32,8 @@ export interface ActivityState {
   readonly trusted: boolean;
   /** No sync has finished since start or the last sign-in change, so an empty list may not be empty yet. */
   readonly loading: boolean;
+  /** Bumped at every sign-in change; a sync started before it drops what it brought back. */
+  readonly generation: number;
 }
 
 interface Run {
@@ -50,11 +53,11 @@ export class ActivitySync {
   readonly #ports: ActivitySyncPorts;
   readonly #listeners = new Set<() => void>();
   #running: Run | null = null;
-  #state: ActivityState = { trusted: false, loading: true };
-  /** Bumped at every sign-in change; a sync started before it drops what it brought back. */
-  #generation = 0;
+  #state: ActivityState = { trusted: false, loading: true, generation: 0 };
   /** The claim or forget that sign-in or sign-out started; a sync waits for it. */
   #owning: Promise<void> = Promise.resolve();
+  /** The writes of a sync that passed its sign-in check; a claim or forget waits for them, never for a list. */
+  #writing: Promise<void> = Promise.resolve();
 
   constructor(ports: ActivitySyncPorts) {
     this.#ports = ports;
@@ -86,8 +89,7 @@ export class ActivitySync {
       const next = auth.currentUser()?.email ?? null;
       if (next === email) return;
       email = next;
-      this.#generation += 1;
-      this.#setState({ trusted: false, loading: true });
+      this.#setState({ trusted: false, loading: true, generation: this.#state.generation + 1 });
       this.#own(() => (next === null ? this.#ports.ownership.forget() : this.#ports.ownership.claim(true)));
     });
   }
@@ -99,7 +101,7 @@ export class ActivitySync {
 
   /** One sync at a time per sign-in; offline or refused leaves the phone's copy as it is. */
   revalidate(): Promise<void> {
-    const generation = this.#generation;
+    const { generation } = this.#state;
     if (this.#running?.generation === generation) return this.#running.done;
     const done: Promise<void> = this.#run(generation).finally(() => {
       if (this.#running?.done === done) this.#running = null;
@@ -108,10 +110,10 @@ export class ActivitySync {
     return done;
   }
 
-  // A claim or clean-up waits for a sync in flight, so it never interleaves with that sync's writes.
+  // A claim or clean-up never interleaves with a sync's writes, and never waits for a list still on its way.
   #own(step: () => Promise<void>): void {
-    const running = this.#running?.done.catch(() => undefined);
-    this.#owning = this.#owning.then(() => running).then(step).catch(() => undefined);
+    const writing = this.#writing.catch(() => undefined);
+    this.#owning = this.#owning.then(() => writing).then(step).catch(() => undefined);
   }
 
   async #run(generation: number): Promise<void> {
@@ -119,11 +121,14 @@ export class ActivitySync {
     try {
       trusted = await this.#check(generation);
     } finally {
-      if (generation === this.#generation) this.#setState({ trusted: trusted ?? this.#state.trusted, loading: false });
+      if (generation === this.#state.generation) this.#setState({ ...this.#state, trusted: trusted ?? this.#state.trusted, loading: false });
     }
   }
 
-  /** Whether the sent rows are the signed-in account's; a token that names it and is still fresh is trusted at once. */
+  /**
+   * Whether the sent rows are the signed-in account's: a token that names it and is still fresh is trusted at once,
+   * else only once a sync has confirmed the list for it (a claim alone does not).
+   */
   async #check(generation: number): Promise<boolean> {
     await this.#owning;
     const owner = await this.#ports.account.current();
@@ -131,46 +136,60 @@ export class ActivitySync {
     const token = await this.#ports.freshness.read();
     if (!this.#ports.freshness.isStale(token, owner)) return true;
     await this.#sync(owner, token?.owner !== owner, generation);
-    return (await this.#ports.freshness.read())?.owner === owner;
+    return this.#ports.freshness.isConfirmed(await this.#ports.freshness.read(), owner);
   }
 
   /** ownerChanged: the token was missing or another account's. */
   async #sync(owner: string, ownerChanged: boolean, generation: number): Promise<void> {
-    const { freshness, queue, dismissed, clock } = this.#ports;
-    const listing = await this.#list();
+    const { queue, dismissed, clock } = this.#ports;
+    const listing = await this.#list(generation);
     if (listing === null) return;
     await queue.load();
     const ownedSince = await this.#ports.ownership.since();
     const context = { now: clock.now(), ownerChanged, ownedSince, dismissed: await dismissed.all() };
     // The sign-in changed while the list was on its way: it is the previous account's, so nothing of it lands.
-    if (generation !== this.#generation) return;
+    // The check and the start of the writes happen in one step, so a sign-in change sees either none or all of them.
+    if (generation !== this.#state.generation) return;
+    this.#writing = this.#write(owner, listing, context);
+    await this.#writing;
+  }
+
+  async #write(owner: string, listing: ActivityListing, context: MergeContext): Promise<void> {
+    const { freshness, queue, ownership } = this.#ports;
     const plan = ActivityMerge.plan(queue.snapshot(), listing, context);
     for (const row of plan.save) await queue.save(row);
     for (const id of plan.remove) await queue.remove(id);
-    if (ownerChanged) await this.#ports.ownership.dropSentBefore(ownedSince);
+    if (context.ownerChanged) await ownership.dropSentBefore(context.ownedSince);
     await freshness.mark(owner, ActivitySync.#newest(listing.views));
   }
 
-  async #list(): Promise<ActivityListing | null> {
+  /** Null when offline or refused, or once the sign-in changes: no more pages are asked for the previous account. */
+  async #list(generation: number): Promise<ActivityListing | null> {
     const views: ReportStatusView[] = [];
     let cursor: string | null = null;
     for (let page = 0; page < MAX_PAGES; page += 1) {
-      try {
-        const result = await this.#ports.api.mine(cursor);
-        views.push(...result.reports);
-        cursor = result.next_cursor;
-      } catch (error) {
-        // Offline, refused, or a sign-in that cannot be refreshed: the phone's copy stays.
-        if (error instanceof ApiError || error instanceof AuthError) return null;
-        throw error;
-      }
+      const result = await this.#page(cursor);
+      if (result === null || generation !== this.#state.generation) return null;
+      views.push(...result.reports);
+      cursor = result.next_cursor;
       if (cursor === null) return { views, complete: true };
     }
     return { views, complete: false };
   }
 
+  async #page(cursor: string | null): Promise<ReportListPage | null> {
+    try {
+      return await this.#ports.api.mine(cursor);
+    } catch (error) {
+      // Offline, refused, or a sign-in that cannot be refreshed: the phone's copy stays.
+      if (error instanceof ApiError || error instanceof AuthError) return null;
+      throw error;
+    }
+  }
+
   #setState(next: ActivityState): void {
-    if (next.trusted === this.#state.trusted && next.loading === this.#state.loading) return;
+    const now = this.#state;
+    if (next.trusted === now.trusted && next.loading === now.loading && next.generation === now.generation) return;
     this.#state = next;
     for (const listener of this.#listeners) listener();
   }
