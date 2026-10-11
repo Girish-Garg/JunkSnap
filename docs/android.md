@@ -53,7 +53,7 @@ iPhones, desktops, crawlers and in-app WebViews (`; wv)`) keep the plain redirec
 **The app's links.** `AndroidManifest.xml` has three VIEW filters on `MainActivity`:
 - `junksnap://` with hosts `sites`, `areas` and `activity`.
 - `https://d2s7tf4ua41hzf.cloudfront.net` (demo api) with `/share/` and `/sites/`.
-- `https://junksnap.coehemang.dev` and `https://demo.d3iec0rb3f75jm.amplifyapp.com` (the demo web app, on its own domain and its original Amplify address) with `/sites/`, `/areas/` and `/activity/reports/`.
+- `https://junksnap.coehemang.dev` and `https://demo.d3iec0rb3f75jm.amplifyapp.com` (the demo web app, on its own domain and its original Amplify address) with `/share/`, `/sites/`, `/areas/` and `/activity/reports/`.
 
 The two https filters have `android:autoVerify="true"`. `AppLinks.kt` takes the link from the launch intent (cold start) or `onNewIntent` (app already open). It waits until the page calls `window.JunkSnapAndroid.linkReady()`, which is origin-checked like the other bridge methods. Then it dispatches a `junksnap:applink` event with the link on `window`. The page (`AppLinkRoutes.ts`, `useAppLinks.ts`) maps the link to its route and opens it as a sheet, so back returns to the map:
 
