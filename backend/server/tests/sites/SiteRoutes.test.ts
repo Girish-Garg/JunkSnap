@@ -109,6 +109,18 @@ describe("GET /sites?bbox", () => {
     expect(body.features.map((feature) => feature.properties.site_id)).not.toContain("site_gone");
   });
 
+  // Decision 20261011-1730-hem-merged-sites: a merged duplicate is off the map, and its own read names its survivor.
+  it("leaves a merged site off the map and shows merged_into when it is read by id", async () => {
+    const sites = new FakeSiteRepository();
+    sites.putFeature(siteFixture("jdh-merged"));
+    const app = await start(sites);
+    const list = (await app.inject({ url: `/sites?bbox=${JODHPUR}` })).json<{ features: SiteFeature[] }>();
+    expect(list.features.map((feature) => feature.properties.site_id)).not.toContain("site_jdh_merged");
+    const read = await app.inject({ url: "/sites/site_jdh_merged" });
+    expect(read.statusCode).toBe(200);
+    expect(validateSite(read.json()).properties).toMatchObject({ status: "removed", removed_reason: "merged", merged_into: "site_jdh_1", photo_urls: [] });
+  });
+
   it("caps the answer at the 500 newest sites", async () => {
     const sites = new FakeSiteRepository();
     for (let n = 0; n < 501; n += 1) {
