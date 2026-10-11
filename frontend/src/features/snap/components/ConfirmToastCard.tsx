@@ -5,6 +5,7 @@ import type { ConfirmationAskView } from '../../../domain/ReportConfirmation';
 import { Button } from '../../../ui/Button';
 import { Icon } from '../../../ui/Icon';
 import { IconButton } from '../../../ui/IconButton';
+import { useToastOrder } from '../../../ui/useToastOrder';
 import { useConfirmQuestion } from '../../activity/hooks/useConfirmQuestion';
 import '../rejection.css';
 
@@ -18,12 +19,13 @@ export function ConfirmToastCard({ ask, onDismiss }: ConfirmToastCardProps) {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
   const question = useConfirmQuestion(ask);
+  const order = useToastOrder(ask.reportId);
   const open = () => {
     onDismiss();
     sheets.open(feedbackPath(ask.reportId));
   };
   return (
-    <div className="rejection-toast" role="alert">
+    <div className="rejection-toast" role="alert" style={{ order }}>
       <span className="rejection-toast__icon">
         <Icon name="info" size={20} />
       </span>

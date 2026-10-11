@@ -17,7 +17,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'areas', icon: 'areas', path: AREAS_PATH, needsAccount: false },
   { id: 'report', icon: 'camera', path: SNAP_PATH, needsAccount: true },
   { id: 'activity', icon: 'activity', path: ACTIVITY_PATH, needsAccount: true },
-  { id: 'account', icon: 'account', path: ACCOUNT_PATH, needsAccount: true },
+  // Account opens for everyone: settings and the welcome cards need no sign-in; its card offers it.
+  { id: 'account', icon: 'account', path: ACCOUNT_PATH, needsAccount: false },
 ];
 
 /** The item whose path owns the current URL; site sheets belong to the map. */

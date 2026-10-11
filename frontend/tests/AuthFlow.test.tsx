@@ -90,7 +90,7 @@ describe('email code without a remembered password', () => {
     await services.auth.signUp(EMAIL, PASSWORD);
     vi.spyOn(services.auth, 'confirmSignUp').mockResolvedValue(null);
     await renderApp(<AppRoutes />, { services });
-    await user.click(screen.getByRole('button', { name: 'Account' }));
+    await user.click(screen.getByRole('button', { name: 'Activity' }));
     await user.type(screen.getByLabelText('Email'), EMAIL);
     await user.type(screen.getByLabelText('Password'), PASSWORD);
     await user.click(screen.getByRole('button', { name: 'Sign in' }));

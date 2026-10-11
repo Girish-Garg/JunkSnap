@@ -48,6 +48,36 @@
   overflow-wrap: anywhere;
 }
 
+/* Signed out: the mark and the title on one line, then what an account unlocks and the two ways in. */
+.account-join {
+  display: grid;
+  grid-template-columns: auto 1fr;
+}
+
+.account-join__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.account-join__text,
+.account-join__actions {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.account-join__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--inline-gap);
+}
+
+.account-join__actions > .button {
+  flex: 1 1 auto;
+}
+
 .settings {
   display: flex;
   flex-direction: column;
