@@ -21,6 +21,7 @@ import { SnapLimit } from "../services/SnapLimit.js";
 import { UploadPresigner } from "../services/UploadPresigner.js";
 import { ConfirmSettings } from "../settings/ConfirmSettings.js";
 import { IntakeSettings } from "../settings/IntakeSettings.js";
+import { RateLimitSettings } from "../settings/RateLimitSettings.js";
 import type { Env } from "../settings/utils.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { ReportConfirmEndpoint } from "./ReportConfirmEndpoint.js";
@@ -28,19 +29,17 @@ import { ReportEndpoints } from "./ReportEndpoints.js";
 import type { RouteContext } from "./RouteBuilder.js";
 import { awsClientConfig } from "./utils.js";
 
-// Contracts v1.16: 20 confirmations an hour, per user and per device.
-const CONFIRMATIONS_PER_HOUR = 20;
-
 // Settings load inside the plugin, so createApp's CORS check still fails first.
 export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const settings = IntakeSettings.fromEnv(env);
+    const limits = RateLimitSettings.fromEnv(env);
     const region = core.awsRegion;
     const marshallOptions = { removeUndefinedValues: true };
     const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
     const reports = new DynamoReportRepository(documents, settings.reportsTable);
     const clock = new SystemClock();
-    const snapLimit = new SnapLimit(new DynamoSnapCounter(documents, settings.reportsTable));
+    const snapLimit = new SnapLimit(new DynamoSnapCounter(documents, settings.reportsTable), limits.snapPerHour);
     const signer = new S3UploadSigner(new S3Client(awsClientConfig(region)), settings.originalsBucket);
     const presigner = new UploadPresigner({ signer, ids: new UlidIdGenerator(), clock, snapLimit }, settings.presignTtlSeconds);
     const queue = new SqsReportQueue(new SQSClient(awsClientConfig(region)), settings.reportsQueueUrl);
@@ -50,16 +49,16 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const mine = new MyReportsQuery(lister, settings.publicBaseUrl, clock);
     const guard = RouteGuard.fromEnv(env);
     await app.register(new ReportEndpoints({ presigner, intake, statuses, mine }, guard).plugin());
-    const limiter = confirmLimiter(documents, env, app.log);
+    const limiter = confirmLimiter(documents, env, limits.confirmationsPerHour, app.log);
     const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: settings.publicBaseUrl });
     await app.register(new ReportConfirmEndpoint(confirmer, guard).plugin());
   };
 }
 
 // Windowed counters on confirm_window_start and confirm_count in the devices and users rows.
-function confirmLimiter(documents: DynamoDBDocumentClient, env: Env, logger: Logger): LetterRateLimiter {
+function confirmLimiter(documents: DynamoDBDocumentClient, env: Env, perHour: number, logger: Logger): LetterRateLimiter {
   const { devicesTable, usersTable } = ConfirmSettings.fromEnv(env);
   const counter = (name: string, keyName: string) => new DynamoLetterCounter(documents, { name, keyName, prefix: "confirm" });
   const counters = { devices: counter(devicesTable, "device_token"), users: counter(usersTable, "user_id") };
-  return new LetterRateLimiter(counters, logger, CONFIRMATIONS_PER_HOUR, "confirmations");
+  return new LetterRateLimiter(counters, logger, perHour, "confirmations");
 }

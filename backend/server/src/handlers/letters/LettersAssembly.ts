@@ -12,6 +12,7 @@ import { AreaLetterService, type AreaLetterParts } from "../../services/letters/
 import { AreaTemplateLetter } from "../../services/letters/AreaTemplateLetter.js";
 import type { Logger } from "../../ports/Logger.js";
 import { BinSettings } from "../../settings/BinSettings.js";
+import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
 import type { LetterWriter } from "../../ports/letters/LetterWriter.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
@@ -47,11 +48,14 @@ export class LettersAssembly {
   readonly #rulesDir: string;
   readonly #logger: Logger;
   readonly #bins: BinSettings;
+  readonly #perHour: number;
 
-  constructor(rulesDir: string, logger: Logger, bins: BinSettings = BinSettings.fromEnv({})) {
+  // perHour: LETTERS_PER_HOUR, shared by site and area letters.
+  constructor(rulesDir: string, logger: Logger, bins = BinSettings.fromEnv({}), perHour = RateLimitSettings.fromEnv({}).lettersPerHour) {
     this.#rulesDir = rulesDir;
     this.#logger = logger;
     this.#bins = bins;
+    this.#perHour = perHour;
   }
 
   async service(adapters: LettersAdapters): Promise<LetterService> {
@@ -63,7 +67,7 @@ export class LettersAssembly {
       router: new LetterRouter(routing),
       picker: new ClausePicker(book),
       quotes,
-      limiter: new LetterRateLimiter(adapters.counters, this.#logger),
+      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#perHour),
       drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
       noBin: new NoBinEligibility(this.#bins.radiusM),
@@ -81,7 +85,7 @@ export class LettersAssembly {
       router: new AreaLetterRouter(),
       picker: new ClausePicker(book),
       quotes,
-      limiter: new LetterRateLimiter(adapters.counters, this.#logger),
+      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#perHour),
       drafter: new ProseDrafter<AreaLetterBrief>(adapters.writer, verifier, template, this.#logger),
       stamp: adapters.stamp,
       logger: this.#logger,

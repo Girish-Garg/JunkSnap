@@ -123,14 +123,14 @@ describe("RateLimitCheck", () => {
   ] as const)("snap: device %i and account %i gives %s, the stricter count", async (device, user, result, detail) => {
     const devices = new FakeDeviceRegistry();
     Object.assign(devices.counts, { device, user });
-    const outcome = await new RateLimitCheck(devices).run(subject({ user_id: USER }));
+    const outcome = await new RateLimitCheck(devices, 20).run(subject({ user_id: USER }));
     expect(outcome.toContract()).toEqual({ result, detail });
   });
 
   it("counts a guest report by device only, over the hour that ends at received_at", async () => {
     const devices = new FakeDeviceRegistry();
     devices.counts.user = 99;
-    expect((await new RateLimitCheck(devices).run(subject())).failed).toBe(false);
+    expect((await new RateLimitCheck(devices, 20).run(subject())).failed).toBe(false);
     expect(devices.windows).toEqual([
       { sender: { kind: "device", id: DEVICE }, from: new Date("2026-10-10T01:14:52Z"), to: new Date(RECEIVED_AT) },
     ]);
@@ -139,7 +139,7 @@ describe("RateLimitCheck", () => {
   it("passes scan frames without counting them, as the frame sampler limits them", async () => {
     const devices = new FakeDeviceRegistry();
     devices.counts.device = 99;
-    const outcome = await new RateLimitCheck(devices).run(subject({ capture_mode: "scan" }));
+    const outcome = await new RateLimitCheck(devices, 20).run(subject({ capture_mode: "scan" }));
     expect(outcome.toContract()).toEqual({ result: "pass", detail: "scan frame; the frame sampler keeps 1 per second" });
     expect(devices.windows).toEqual([]);
   });

@@ -10,6 +10,7 @@ import { LlmNoteModerator } from "../services/moderation/LlmNoteModerator.js";
 import { WarnedPhotoTexts } from "../services/flags/WarnedPhotoTexts.js";
 import { ScheduledCommunityRefresh } from "../services/notes/ScheduledCommunityRefresh.js";
 import { NotesSettings } from "../settings/NotesSettings.js";
+import { RateLimitSettings } from "../settings/RateLimitSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import { PhotoFlagsAssembly } from "./flags/PhotoFlagsAssembly.js";
 import { PhotoFlagsEndpoint } from "./flags/PhotoFlagsEndpoint.js";
@@ -26,7 +27,7 @@ export const buildNotesRoutes: RouteBuilder = (context) => async (app) => {
   const guard = RouteGuard.fromEnv(context.env);
   const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
   const router = new NoteRouterBuilder(new BedrockRuntimeClient({ region: context.core.awsRegion })).build(app.log);
-  const flags = new PhotoFlagsAssembly(settings, client, app.log);
+  const flags = new PhotoFlagsAssembly(settings, client, app.log, RateLimitSettings.fromEnv(context.env).flagsPerHour);
   const moderator = new LlmNoteModerator(router);
   const scheduler = new TimerScheduler(app.log);
   const assembly = new NotesAssembly(settings.notesPerHour, app.log);
