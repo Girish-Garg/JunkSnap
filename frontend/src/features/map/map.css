@@ -126,6 +126,11 @@
   color: var(--text-secondary);
 }
 
+.search-results__hint {
+  display: block;
+  margin-top: var(--s-1);
+}
+
 .search-results__item {
   display: flex;
   flex-direction: column;
