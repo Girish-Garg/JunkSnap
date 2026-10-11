@@ -64,12 +64,17 @@ export class CleanupIntake {
   // Queued before the site is marked, so a failed write or send never leaves it checking with nothing to settle it.
   async #queue(record: CleanupRecord, now: Date): Promise<CleanupAccepted> {
     await this.#deps.queue.send(record);
-    await this.#deps.retry.run(() => this.#markChecking(record.site_id, record.cleanup_id, now));
+    await this.#deps.retry.run(() => this.#markChecking(record, now));
     return CleanupIntake.#accepted(record);
   }
 
-  async #markChecking(siteId: string, cleanupId: string, now: Date): Promise<void> {
-    const site = await this.#started(siteId, cleanupId, now);
+  // Skipped once the worker has settled the record, so a fast worker never leaves the site checking.
+  async #markChecking(record: CleanupRecord, now: Date): Promise<void> {
+    const current = await this.#deps.cleanups.get(record.cleanup_id);
+    if (current?.status !== "checking") {
+      return;
+    }
+    const site = await this.#started(record.site_id, record.cleanup_id, now);
     if (site !== null) {
       await this.#deps.sites.save(site);
     }

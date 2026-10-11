@@ -49,6 +49,18 @@ class FlakyCleanups extends FakeCleanups {
   }
 }
 
+// The worker settles each photo as soon as it is queued, before the intake marks the site.
+class EagerWorkerQueue extends FakeQueue {
+  constructor(readonly settle: (record: CleanupRecord) => Promise<unknown>) {
+    super();
+  }
+
+  override async send(record: CleanupRecord): Promise<void> {
+    await super.send(record);
+    await this.settle(record);
+  }
+}
+
 function setup() {
   const sites = new FakeSiteRepository();
   sites.put(Site.found(report()));
@@ -118,6 +130,17 @@ describe("CleanupIntake", () => {
     const intake = new CleanupIntake({ sites, cleanups: new FlakyCleanups(), queue, clock: new FixedClock(), retry: new ConflictRetry() });
     await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow("cleanups table unreachable");
     expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("none");
+    await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_other" }, USER)).resolves.toMatchObject({ status: "checking" });
+  });
+
+  it("does not leave the site checking when the worker settles the photo before the site is marked", async () => {
+    const { sites, cleanups, service } = setup();
+    const passed = (id: string) => ({ moderation: { ...MODERATION, report_id: id }, verification: { ...VERIFICATION, report_id: id } });
+    const queue = new EagerWorkerQueue((record) => service.apply(record.cleanup_id, passed(record.cleanup_id)));
+    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    await intake.submit("site_jdh_1", REQUEST, USER);
+    expect(cleanups.records.get("cln_jdh_3c")?.status).toBe("accepted");
+    expect(sites.feature("site_jdh_1").properties.cleanup_status).not.toBe("checking");
     await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_other" }, USER)).resolves.toMatchObject({ status: "checking" });
   });
 
