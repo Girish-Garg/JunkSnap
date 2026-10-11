@@ -32,8 +32,8 @@ function AreaLetterSheet({ kind, areaId }: { readonly kind: AreaKind; readonly a
   const sheets = useSheetNavigation();
   // Back to the area page under it; a shared link straight to the letter falls back to the area page.
   const close = useCallback(() => sheets.close(areaPath(kind, areaId)), [sheets, kind, areaId]);
-  const flow = useAreaLetter(kind, areaId);
-  const { locked } = useAreaLetterRouteGate(kind, areaId);
+  const { locked, scores } = useAreaLetterRouteGate(kind, areaId);
+  const flow = useAreaLetter(kind, areaId, scores);
   const { draft } = flow;
   const title = draft ? t('areaLetter.titleFor', { name: draft.area.name }) : t('areaLetter.title');
   return (
@@ -47,7 +47,7 @@ function AreaLetterSheet({ kind, areaId }: { readonly kind: AreaKind; readonly a
       {draft && <AreaLetterDraftView draft={draft} onReset={flow.reset} />}
       {!draft && !locked && (
         <>
-          <AreaIssuePicker value={flow.issue} onChange={flow.setIssue} />
+          <AreaIssuePicker tally={flow.tally} value={flow.issue} onChange={flow.setIssue} />
           <LetterChooser flow={flow} />
         </>
       )}

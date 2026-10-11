@@ -3,35 +3,30 @@ import { useTranslation } from 'react-i18next';
 import type { LetterBase } from '../../../domain/SiteActions';
 import { NativeBridge } from '../../../services/NativeBridge';
 import { Button } from '../../../ui/Button';
-import { useCopyLetter } from '../hooks/useCopyLetter';
+import type { LetterScope } from '../hooks/useLetterRequest';
 import { Icon } from '../../../ui/Icon';
+import { FilingSteps } from './FilingSteps';
+import { LetterSendButtons } from './LetterSendButtons';
 
 interface LetterActionsProps {
   readonly draft: LetterBase;
   readonly onReset: () => void;
   /** The site or area share link, added to the copied or shared text. */
   readonly link?: string;
+  readonly scope?: LetterScope;
 }
 
-/** Print (Save as PDF) and copy or, in the Android app, share the text; JunkSnap never sends the letter. */
-export function LetterActions({ draft, onReset, link }: LetterActionsProps) {
+/** Print (Save as PDF), email, share or copy the text, and how to file it; JunkSnap never sends the letter. */
+export function LetterActions({ draft, onReset, link, scope = 'site' }: LetterActionsProps) {
   const { t } = useTranslation();
   const native = useMemo(() => new NativeBridge(window), []);
-  const copy = useCopyLetter(draft, native, link);
   return (
     <div className="letter-actions">
       <Button onClick={() => native.print()}>
         <Icon name="print" size={20} />
         {t('letter.print')}
       </Button>
-      <Button variant="text" onClick={copy.copy}>
-        {t(copy.label)}
-      </Button>
-      {copy.state === 'failed' && (
-        <p className="form__error" role="alert">
-          {t('letter.copyFailed')}
-        </p>
-      )}
+      <LetterSendButtons draft={draft} native={native} link={link} />
       {draft.filing_url && (
         <a className="button button--text" href={draft.filing_url} target="_blank" rel="noreferrer">
           {t('letter.openPortal')}
@@ -40,6 +35,7 @@ export function LetterActions({ draft, onReset, link }: LetterActionsProps) {
       <Button variant="text" onClick={onReset}>
         {t('letter.another')}
       </Button>
+      <FilingSteps scope={scope} copies={draft.cc.length > 0} />
     </div>
   );
 }

@@ -1,11 +1,13 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import type { ServiceContainer } from '../src/app/ServiceContainer';
+import { ApiError } from '../src/domain/ApiError';
 import type { AreaLetterDraft, AreaLetterRequest } from '../src/domain/AreaLetter';
 import type { AreaKind } from '../src/domain/AreaScores';
 import type { AreaLetterApi } from '../src/services/AreaLetterApi';
+import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { AreaLetterService } from '../src/services/AreaLetterService';
 import { HttpAreaLetterApi } from '../src/services/HttpAreaLetterApi';
 import { MemoryStore, renderApp, testServices } from './helpers';
@@ -13,11 +15,18 @@ import { DEVICE_TOKEN, fixedIdentity } from './snapFakes';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
-async function signedIn(): Promise<ServiceContainer> {
-  const services = testServices(new MemoryStore());
+async function signedIn(areaLetterApi?: AreaLetterApi): Promise<ServiceContainer> {
+  const services = testServices(new MemoryStore(), areaLetterApi ? { areaLetterApi } : {});
   await services.auth.signUp('resident@example.com', 'jodhpur2026');
   await services.auth.confirmSignUp('resident@example.com', '123456');
   return services;
+}
+
+// The mock api drafts any issue once the area has 10 verified reports; the real one counts the issue's own reports.
+class RefusingApi implements AreaLetterApi {
+  async letter(): Promise<AreaLetterDraft> {
+    throw new ApiError(409, 'not_verified', 'Not enough verified reports yet (3 of 10) for this issue in this area.');
+  }
 }
 
 class RecordingApi implements AreaLetterApi {
@@ -51,7 +60,8 @@ describe('area letter sheet', () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128', services: await signedIn() });
     await user.click(await screen.findByRole('button', { name: 'Draft a letter about this area' }));
-    expect(screen.getByRole('radio', { name: 'Waste dumps' })).toHaveAttribute('aria-checked', 'true');
+    // Waste dumps lead on the map, but only every issue at once surely has the 10 the api needs.
+    expect(await screen.findByRole('radio', { name: 'All issues 14' })).toHaveAttribute('aria-checked', 'true');
     await user.click(screen.getByRole('button', { name: 'Draft letter' }));
     const letter = await screen.findByRole('article');
     expect(within(letter).getByText('Commissioner, Jodhpur Municipal Corporation')).toBeInTheDocument();
@@ -75,19 +85,33 @@ describe('area letter issues', () => {
   });
 });
 
-describe('area letter refusals', () => {
-  it('shows the reason when an issue has too few verified reports', async () => {
+describe('area letter issue counts', () => {
+  it('turns off an issue under 10 verified reports, and a tap says why instead of failing', async () => {
     const user = userEvent.setup();
-    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn() });
-    await user.click(screen.getByRole('radio', { name: 'No bin' }));
+    await renderApp(<><AppRoutes /><ToastHost /></>, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn() });
+    const noBin = await screen.findByRole('radio', { name: 'No bin 3' });
+    expect(noBin).toHaveAttribute('aria-disabled', 'true');
+    await user.click(noBin);
+    await waitFor(() => expect(document.querySelector('.app-toast')).toHaveTextContent('3 of 10 verified no-bin reports. A letter needs 10.'));
+    expect(noBin).toHaveAttribute('aria-checked', 'false');
+  });
+});
+
+describe('area letter refusals', () => {
+  it('shows the reason the api gives, and drops it when the issue changes', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn(new RefusingApi()) });
+    await user.click(await screen.findByRole('radio', { name: /^Waste dumps/ }));
     await user.click(screen.getByRole('button', { name: 'Draft letter' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Not enough verified reports yet (3 of 10) for this issue in this area.');
+    await user.click(screen.getByRole('radio', { name: /^All issues/ }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('gives the reason in Hindi in the Hindi app, with the counts the api sent', async () => {
     const user = userEvent.setup();
-    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn(), language: 'hi' });
-    await user.click(screen.getByRole('radio', { name: 'कूड़ेदान नहीं' }));
+    await renderApp(<AppRoutes />, { route: '/areas/assembly/s20-ac-128/letter', services: await signedIn(new RefusingApi()), language: 'hi' });
+    await user.click(await screen.findByRole('radio', { name: /^कचरे के ढेर/ }));
     await user.click(screen.getByRole('button', { name: 'पत्र का मसौदा बनाएँ' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('इस इलाके में इस समस्या की अभी पर्याप्त सत्यापित रिपोर्ट नहीं (10 में से 3)।');

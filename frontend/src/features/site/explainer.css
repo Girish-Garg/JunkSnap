@@ -1,0 +1,66 @@
+/* A tap on the status chip or the "n of 10" count opens a small card of plain words (StatusExplainer). */
+.explain-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  cursor: pointer;
+}
+
+/* The tap area reaches the 48 px target without making the chip any bigger. */
+.explain-button::after {
+  content: '';
+  position: absolute;
+  inset: -12px -4px;
+}
+
+/* The backers count still reads as the card's heading, not as a button. */
+.backers__label.explain-button {
+  padding: 0;
+  background: none;
+  text-align: start;
+}
+
+.explainer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--s-4) var(--edge) calc(var(--s-4) + env(safe-area-inset-bottom));
+  background: var(--scrim);
+  animation: fade-in var(--dur-2) var(--ease-out);
+}
+
+.explainer {
+  display: grid;
+  gap: var(--s-3);
+  width: min(440px, 100%);
+  padding: var(--s-3) var(--card-pad) var(--card-pad);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  animation: explainer-in var(--dur-spring) var(--spring);
+}
+
+.explainer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--inline-gap);
+}
+
+@media (min-width: 640px) {
+  .explainer-scrim {
+    align-items: center;
+  }
+}
+
+@keyframes explainer-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}

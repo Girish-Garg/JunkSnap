@@ -102,6 +102,26 @@
     "rejected": "Rejected",
     "clearing": "{{count}} of {{needed}} say cleared"
   },
+  "explain": {
+    "hint": "What does this mean?",
+    "close": "Close",
+    "waiting": "10 different people must back this spot with a photo or a yes vote before it counts as verified. You can help by confirming if you're within 1 km.",
+    "verified": "10 different people backed this spot with a photo or a yes vote. Residents can now draft a letter to the local body and file it themselves.",
+    "verifiedClosed": "10 different people backed this spot with a photo or a yes vote before it left the map.",
+    "clearing": "Someone says this spot is cleared. It leaves the map once {{needed}} different people say so; if you've seen it, say whether it's cleared or still there.",
+    "clearingNoBin": "Someone says a bin is here now. This no-bin zone leaves the map once {{needed}} different people say so; if you've seen it, say whether there's a bin.",
+    "cleared": "Enough people said this spot was cleared, so it left the map. If the waste is back, report it with a new photo.",
+    "clearedNoBin": "Enough people said a bin is here now, so this no-bin zone left the map. If the bin goes, report it again.",
+    "reopened": "This spot was cleared once, but a new photo shows waste here again, so it is back on the map.",
+    "removed": "Its reporter withdrew the report before it was verified, so it left the map.",
+    "removedReported": "Several people reported its photos, so it left the map.",
+    "expired": "Nobody added a photo or a vote here for 90 days, so it left the map. If the waste is still there, report it again.",
+    "rejected": "At least 3 more neighbours said no than backed it, so it was hidden from the map."
+  },
+  "ask": {
+    "action": "Ask neighbours to confirm",
+    "text": "Can you confirm this waste spot near {{place}}? It needs {{needed}} people and has {{count}} so far."
+  },
   "addPhoto": {
     "action": "Add a photo",
     "title": "Add a photo to this site",
@@ -768,6 +788,18 @@
       "site": "{{type}}, {{context}} · {{status}}: {{reports}} reports, {{verified}} verified",
       "siteDates": "Reported from {{first}} to {{last}}",
       "bins": "{{n}} of {{m}} measured sites have no known bin within 3 km (OpenStreetMap, ward records)"
+    },
+    "email": "Send by email",
+    "mailCopied": "The letter is too long for an email link, so it was copied. Paste it into the email.",
+    "mailShort": "The full letter is pasted below (or attached).",
+    "shareFailed": "Could not share. Copy the text instead.",
+    "file": {
+      "title": "How to file",
+      "send": "Send it to the office in the To line: by email, by post or by hand, at the address the office publishes.",
+      "cc": "Send the same letter to each office in Copy, for their attention.",
+      "keep": "Keep the acknowledgement or reference number the office gives you.",
+      "note": "Add that reference as a note on this site, so neighbours can follow it up.",
+      "noteArea": "Add that reference as a note on one of the sites in the letter, so neighbours can follow it up."
     }
   },
   "boundaries": {
@@ -837,7 +869,16 @@
       "all": "All issues"
     },
     "locked": "Letters open once this area has 10 verified reports.",
-    "lockedShort": "Opens at 10 verified reports"
+    "lockedShort": "Opens at 10 verified reports",
+    "tooFew": {
+      "waste_dump": "{{n}} of {{min}} verified waste-dump reports. A letter needs {{min}}.",
+      "no_bin": "{{n}} of {{min}} verified no-bin reports. A letter needs {{min}}.",
+      "contaminated_water": "{{n}} of {{min}} verified contaminated-water reports. A letter needs {{min}}.",
+      "open_construction": "{{n}} of {{min}} verified open-construction reports. A letter needs {{min}}.",
+      "overflowing_bin": "{{n}} of {{min}} verified overflowing-bin reports. A letter needs {{min}}.",
+      "all": "{{n}} of {{min}} verified reports in this area. A letter needs {{min}}."
+    },
+    "tooFewHere": "Fewer than {{min}} verified reports of this kind in this area so far. A letter needs {{min}}."
   },
   "viewer": {
     "label": "Photo {{n}} of {{total}}",

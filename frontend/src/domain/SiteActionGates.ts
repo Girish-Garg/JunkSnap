@@ -1,4 +1,5 @@
 import { ActionGate, blocked, type Availability, type AvailabilityRule } from './ActionAvailability';
+import type { IssueCount } from './AreaIssueTally';
 import { GateRules, type SessionFacts } from './GateRules';
 import type { SiteProperties } from './Site';
 import { SiteListing } from './SiteListing';
@@ -151,6 +152,19 @@ export const AREA_LETTER_GATE = new ActionGate<AreaLetterFacts>([
   GateRules.cooling('letter', 'letter.errors.rate_limited'),
   GateRules.offline(),
   GateRules.signIn('gate.signIn.letter'),
+]);
+
+export interface AreaIssueFacts {
+  readonly count: IssueCount;
+  readonly min: number;
+}
+
+/** One issue in the area letter sheet: off once the area surely has too few verified reports of it (the api's 409 not_verified). */
+export const AREA_ISSUE_GATE = new ActionGate<AreaIssueFacts>([
+  ({ count, min }) => {
+    if (count.most >= min) return null;
+    return count.seen === count.most ? blocked(`areaLetter.tooFew.${count.issue}`, { n: count.seen, min }) : blocked('areaLetter.tooFewHere', { min });
+  },
 ]);
 
 // A deep-linked sheet checks only what the site or area itself allows; its own Draft or Send button says the rest.
