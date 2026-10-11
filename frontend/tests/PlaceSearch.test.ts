@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import labelsText from '../public/boundaries/areas_labels.geojson?raw';
 import { PlaceSearch, type SeatLabel } from '../src/domain/PlaceSearch';
+import type { LabelPoints } from '../src/services/BoundaryCatalog';
 import { testSite } from './siteBuilder';
 
 const sites = [
@@ -64,5 +66,54 @@ describe('PlaceSearch with the shipped seat names', () => {
   it('puts names that start with the text first', () => {
     const names = new PlaceSearch([], [...SEATS, { id: 's20-ac-124', name: 'Bilara', kind: 'assembly', point: [73.7, 26.2] }]).find('l');
     expect(names[0]?.name).toBe('Luni');
+  });
+});
+
+// Every seat the map ships, as useSeatLabels reads it: Hindi text must find the right one among all 718.
+const SHIPPED = (JSON.parse(labelsText) as LabelPoints).features.map(({ properties, geometry }): SeatLabel => ({
+  id: properties.id,
+  name: properties.name,
+  kind: properties.kind,
+  point: [geometry.coordinates[0] ?? 0, geometry.coordinates[1] ?? 0],
+}));
+
+describe('PlaceSearch in Hindi', () => {
+  const shipped = new PlaceSearch(sites, SHIPPED);
+
+  it.each([
+    ['सूरसागर', 'Soorsagar'],
+    ['जोधपुर', 'Jodhpur'],
+    ['सरदारपुरा', 'Sardarpura'],
+    ['लूणी', 'Luni'],
+    ['ओसियां', 'Osian'],
+    ['फलोदी', 'Phalodi'],
+    ['बिलाड़ा', 'Bilara'],
+    ['शेरगढ़', 'Shergarh'],
+  ])('puts %s first as %s, with its assembly seat', (hindi, name) => {
+    const found = shipped.find(hindi);
+    // Jodhpur is also the test sites' town, which ranks first because it has sites on the map.
+    expect(found[0]?.name).toBe(name);
+    expect(found).toContainEqual(expect.objectContaining({ name, kind: 'assembly' }));
+  });
+
+  it('finds a ward from the loaded sites by its Hindi name', () => {
+    expect(shipped.find('वार्ड 37')[0]).toMatchObject({ name: 'Ward 37', kind: 'ward' });
+  });
+
+  it('finds seats across India, and nothing for a locality the app has no name for', () => {
+    expect(shipped.find('मुंबई')[0]).toMatchObject({ name: expect.stringMatching(/^Mumbai /) as unknown, kind: 'loksabha' });
+    expect(shipped.find('पावटा')).toEqual([]);
+  });
+});
+
+describe('PlaceSearch in Hindi, सिंह names', () => {
+  const shipped = new PlaceSearch(sites, SHIPPED);
+
+  it.each([
+    ['रायसिंहनगर', 'Raisinghnagar'],
+    ['जगतसिंहपुर', 'Jagatsinghpur'],
+    ['सिंहभूम', 'Singhbhum'],
+  ])('reads सिंह as Singh: %s finds %s', (hindi, name) => {
+    expect(shipped.find(hindi)[0]?.name).toBe(name);
   });
 });

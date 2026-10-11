@@ -1,6 +1,7 @@
 import { AREA_KINDS, AreaKey } from './AreaKey';
 import type { AreaListing } from './AreaListing';
 import type { AreaKind, AreaScores } from './AreaScores';
+import { NameQuery } from './NameQuery';
 import type { SiteFeature } from './Site';
 
 /**
@@ -46,23 +47,15 @@ export class AreaDirectory {
     return [...byKey.values()].sort((a, b) => rank(a) - rank(b) || a.area.name.localeCompare(b.area.name));
   }
 
-  /** The entries whose name holds the text; all of them for empty text. */
+  /** The entries whose name holds the text (in Latin letters or Devanagari, see NameQuery); all of them for empty text. */
   static match(entries: readonly AreaEntry[], query: string): readonly AreaEntry[] {
-    const needle = AreaDirectory.needle(query);
-    return needle ? entries.filter((entry) => AreaDirectory.holds(entry.area.name, needle)) : entries;
+    const text = NameQuery.of(query);
+    return text.empty ? entries : entries.filter((entry) => text.matches(entry.area.name));
   }
 
-  /** Whether a name matches the search text (case and surrounding spaces ignored). */
+  /** Whether a name matches the search text (case and surrounding spaces ignored; Devanagari matches by sound). */
   static matches(name: string, query: string): boolean {
-    const needle = AreaDirectory.needle(query);
-    return !needle || AreaDirectory.holds(name, needle);
-  }
-
-  static needle(query: string): string {
-    return query.trim().toLocaleLowerCase();
-  }
-
-  static holds(name: string, needle: string): boolean {
-    return name.toLocaleLowerCase().includes(needle);
+    const text = NameQuery.of(query);
+    return text.empty || text.matches(name);
   }
 }

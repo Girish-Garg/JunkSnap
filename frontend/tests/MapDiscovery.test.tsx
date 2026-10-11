@@ -83,13 +83,26 @@ const LABELS = {
 };
 
 describe('search', () => {
+  const fetchFile = async (url: RequestInfo | URL) => Response.json(String(url).includes('labels') ? LABELS : TEST_BOUNDARY_INDEX);
+  const withLabels = () => new ServiceContainer({ ...testServices(), boundaries: new BoundaryCatalog('/boundaries/', fetchFile) });
+
   it('finds a shipped seat name with no site loaded and flies to its middle', async () => {
     const user = userEvent.setup();
-    const fetchFile = async (url: RequestInfo | URL) => Response.json(String(url).includes('labels') ? LABELS : TEST_BOUNDARY_INDEX);
-    const services = new ServiceContainer({ ...testServices(), boundaries: new BoundaryCatalog('/boundaries/', fetchFile) });
-    await renderApp(<AppRoutes />, { services });
+    await renderApp(<AppRoutes />, { services: withLabels() });
     await user.type(screen.getByRole('searchbox', { name: 'Search wards, seats and places' }), 'luni');
     await user.click(await screen.findByRole('button', { name: /Luni/ }));
     expect(seen.last?.camera).toEqual({ points: [[72.98, 26.03]], zoom: 10.5 });
+  });
+
+  it('finds the seat from its Hindi spelling, and says plainly when nothing matches', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { services: withLabels(), language: 'hi' });
+    const field = screen.getByRole('searchbox', { name: 'वार्ड, क्षेत्र और जगहें खोजें' });
+    await user.type(field, 'लूणी');
+    // The app holds no Hindi name for the seat, so the result shows the name it has.
+    await user.click(await screen.findByRole('button', { name: /Luni/ }));
+    expect(seen.last?.camera).toEqual({ points: [[72.98, 26.03]], zoom: 10.5 });
+    await user.type(field, 'पावटा');
+    expect(await screen.findByText(/किसी इलाके का नाम लिखें/)).toBeInTheDocument();
   });
 });

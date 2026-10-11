@@ -19,6 +19,7 @@
     "clear": "Clear search",
     "results": "Places",
     "noResults": "No ward, seat or place by that name.",
+    "noResultsHint": "Try the name of an area, like an assembly seat or a ward. English or Hindi both work.",
     "siteCount_one": "{{count}} site",
     "siteCount_other": "{{count}} sites"
   },
