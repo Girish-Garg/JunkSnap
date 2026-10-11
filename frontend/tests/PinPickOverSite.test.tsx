@@ -1,14 +1,15 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { SheetHistory } from '../src/app/SheetHistory';
+import { WorkSheets } from '../src/app/WorkSheets';
 import { BBox } from '../src/domain/BBox';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import { HistoryLayers } from '../src/ui/HistoryLayers';
 import { TopLayer } from '../src/ui/TopLayer';
 import { DESKTOP_QUERY } from '../src/ui/useMediaQuery';
-import { renderApp, type RenderOptions } from './helpers';
+import { MemoryStore, renderApp, testServices, type RenderOptions } from './helpers';
 
 const seen = vi.hoisted(() => ({ last: null as SiteMapBindings | null }));
 
@@ -26,6 +27,8 @@ type Layout = (typeof LAYOUTS)[number];
 const OPEN_SITE = 'Waste dump'; // site_jdh_1
 const STACK = ['site_jdh_2', 'site_jdh_3'] as const; // No bin or pickup, Contaminated water
 const STACK_TITLE = '2 sites at this spot';
+const OTHER_STACK = ['site_jdh_1', 'site_jdh_4', 'site_jpr_1'] as const;
+const OTHER_STACK_TITLE = '3 sites at this spot';
 
 const heading = (name: string) => screen.queryByRole('heading', { level: 2, name });
 const layers = () => HistoryLayers.open().length;
@@ -220,5 +223,115 @@ describe('a stack pin picked with a tab open (desktop)', () => {
     act(() => window.history.back());
     await expectBareMap();
     expect(heading(STACK_TITLE)).not.toBeInTheDocument();
+  });
+});
+
+// A resident whose mock session survived a reload, so the letter and cleanup sheets open without the sign-in sheet.
+function signedIn() {
+  const store = new MemoryStore();
+  store.setItem('junksnap.session', 'resident@example.com');
+  return testServices(store);
+}
+
+const WORK_ROUTES = ['/snap', '/sites/site_jdh_1/cleanup', '/sites/site_jdh_1/letter', '/areas/assembly/s20-ac-128/letter'] as const;
+
+// A capture, a cleanup photo and a letter draft live only in their sheet, and a new draft counts against the limit.
+describe('a stack pin picked with work in progress in the side panel (desktop)', () => {
+  it('knows the sheets that hold work from the ones a pick may replace', () => {
+    expect(WORK_ROUTES.filter((route) => WorkSheets.holds(route))).toEqual(WORK_ROUTES);
+    const others = ['/', '/sites/site_jdh_1', '/areas', '/areas/assembly/s20-ac-128', '/activity', '/account', '/ranking'];
+    expect(others.filter((route) => WorkSheets.holds(route))).toEqual([]);
+  });
+
+  it.each(WORK_ROUTES)('leaves %s as it is: no list, nothing closed, no history entry', async (route) => {
+    await loadMap('desktop', { route, history: 'browser', services: signedIn() });
+    await waitFor(() => expect(document.querySelector('.map-area > aside.sheet')).not.toBeNull());
+    const sheet = document.querySelector('.map-area > aside.sheet');
+    const before = { covering: TopLayer.covering(), layers: layers() };
+    act(() => seen.last?.onPickStack(STACK));
+    expect(heading(STACK_TITLE)).not.toBeInTheDocument();
+    expect(sheet?.isConnected).toBe(true);
+    expect(window.location.pathname).toBe(route);
+    expect({ covering: TopLayer.covering(), layers: layers() }).toEqual(before);
+  });
+});
+
+// Filters is not a route, so the list opened unseen under it, the same way it did under a site.
+describe('a stack pin picked with Filters open (desktop)', () => {
+  it('closes Filters and lists the sites in its place, one level over the map', async () => {
+    const user = userEvent.setup();
+    await loadMap('desktop', { history: 'browser' });
+    await user.click(screen.getByRole('button', { name: /Filters/ }));
+    expect(heading('Filters')).toBeInTheDocument();
+    act(() => seen.last?.onPickStack(STACK));
+    expect(await screen.findByRole('heading', { level: 2, name: STACK_TITLE })).toBeInTheDocument();
+    expect(heading('Filters')).not.toBeInTheDocument();
+    await waitFor(() => expect(layers()).toBe(1));
+    await user.click(screen.getByRole('button', { name: 'Close the list' }));
+    await expectBareMap();
+  });
+
+  it('closes Filters and the site under it too, and back from the list is the map', async () => {
+    const user = await openSiteFromPin('desktop');
+    await user.click(screen.getByRole('button', { name: /Filters/ }));
+    expect(heading('Filters')).toBeInTheDocument();
+    await pickStack();
+    expect(heading('Filters')).not.toBeInTheDocument();
+    await waitFor(() => expect(layers()).toBe(1));
+    act(() => window.history.back());
+    await expectBareMap();
+    expect(heading(OPEN_SITE)).not.toBeInTheDocument();
+  });
+});
+
+// With motion on, a sheet plays its closing animation before it gives its history entry back.
+describe('a stack pin picked with Filters open and motion on (desktop)', () => {
+  it('waits for Filters to finish closing, then lists the sites: never both, never an entry pushed mid-close', async () => {
+    const user = userEvent.setup();
+    await loadMap('desktop', { history: 'browser' });
+    // Desktop still, and "no preference" for reduced motion: sheets animate their close (useExitAnimation).
+    const media = (query: string) => ({ matches: query === DESKTOP_QUERY || query.includes('reduced-motion'), addEventListener: () => undefined, removeEventListener: () => undefined });
+    vi.stubGlobal('matchMedia', media);
+    await user.click(screen.getByRole('button', { name: /Filters/ }));
+    const filters = heading('Filters')?.closest('aside') as HTMLElement;
+    act(() => seen.last?.onPickStack(STACK));
+    expect(filters).toHaveClass('sheet--closing');
+    expect(heading(STACK_TITLE)).not.toBeInTheDocument();
+    expect(layers()).toBe(1);
+    fireEvent.animationEnd(filters);
+    expect(await screen.findByRole('heading', { level: 2, name: STACK_TITLE })).toBeInTheDocument();
+    expect(heading('Filters')).not.toBeInTheDocument();
+    await waitFor(() => expect(layers()).toBe(1));
+    expect(TopLayer.covering()).toBe(1);
+  });
+});
+
+// On phones a tap on the map closes the top sheet; the map's own list gives way to the next pick instead.
+describe('a pin picked with the stack list open (phone)', () => {
+  async function openList(): Promise<void> {
+    await loadMap('phone', { history: 'browser' });
+    act(() => seen.last?.onPickStack(STACK));
+    expect(await screen.findByRole('heading', { level: 2, name: STACK_TITLE })).toBeInTheDocument();
+    await waitFor(() => expect(layers()).toBe(1));
+  }
+
+  it('lists another stack pin in place of the list, on the same level', async () => {
+    await openList();
+    act(() => seen.last?.onPickStack(OTHER_STACK));
+    expect(await screen.findByRole('heading', { level: 2, name: OTHER_STACK_TITLE })).toBeInTheDocument();
+    expect(heading(STACK_TITLE)).not.toBeInTheDocument();
+    expect(layers()).toBe(1);
+    act(() => window.history.back());
+    await expectBareMap();
+  });
+
+  it('shows a single pin as its card in place of the list, as on the bare map', async () => {
+    await openList();
+    act(() => seen.last?.onPick('site_jdh_4'));
+    expect(await screen.findByRole('button', { name: 'View site' })).toBeInTheDocument();
+    expect(heading(STACK_TITLE)).not.toBeInTheDocument();
+    expect(layers()).toBe(1);
+    act(() => window.history.back());
+    await expectBareMap();
   });
 });
