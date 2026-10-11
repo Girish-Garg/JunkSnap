@@ -8,11 +8,16 @@
   font-weight: 600;
 }
 
+/* The sample-data note sits just under the banner, never on it. */
+.letter-banner + .form__note {
+  margin-top: var(--inline-gap);
+}
+
 .letter {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  margin-top: var(--s-6);
+  margin-top: var(--section-gap);
   color: var(--text);
 }
 
@@ -22,7 +27,7 @@
 
 /* On screen the draft reads as a sheet of paper; print uses plain black on white. */
 .letter:not(.letter--print) {
-  padding: var(--s-5);
+  padding: var(--card-pad);
   border: var(--outline) solid var(--divider);
   border-radius: var(--radius-l);
   background: var(--surface);
@@ -125,8 +130,8 @@
 .letter-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
-  margin: var(--s-6) 0;
+  gap: var(--inline-gap) var(--s-6);
+  margin: var(--section-gap) 0;
 }
 
 @media print {

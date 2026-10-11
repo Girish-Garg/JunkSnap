@@ -3,7 +3,7 @@ import { Icon, type IconName } from './Icon';
 interface NoticeProps {
   readonly icon: IconName;
   readonly text: string;
-  readonly tone?: 'info' | 'alert';
+  readonly tone?: 'info' | 'warn' | 'alert';
 }
 
 export function Notice({ icon, text, tone = 'info' }: NoticeProps) {

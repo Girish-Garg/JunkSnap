@@ -30,6 +30,7 @@
 .photo-report__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
+  /* Text buttons reach --text-bleed past their label (DESIGN.md rule 4). */
+  gap: var(--inline-gap) var(--s-6);
   align-items: center;
 }

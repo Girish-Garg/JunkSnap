@@ -8,7 +8,8 @@ export type SnapPhase =
   | { readonly kind: 'camera' }
   | { readonly kind: 'review'; readonly photo: CapturedPhoto }
   | { readonly kind: 'sent'; readonly id: string }
-  | { readonly kind: 'scanSent'; readonly id: string; readonly cameraStopped?: boolean };
+  | { readonly kind: 'scanSent'; readonly id: string; readonly cameraStopped?: boolean }
+  | { readonly kind: 'noBinSent'; readonly id: string };
 
 export type { CaptureMode } from './useCaptureMode';
 
@@ -35,11 +36,12 @@ export function useSnapFlow() {
     }
   };
   const scanSaved = (id: string, cameraStopped = false) => setPhase({ kind: 'scanSent', id, cameraStopped });
+  const noBinSent = (id: string) => setPhase({ kind: 'noBinSent', id });
   const restart = () => {
     clearPreset();
     setPhase(CAMERA);
   };
-  return { phase, mode, setMode, presetType, photoFor, capture, saveFailed, send, scanSaved, retake: () => setPhase(CAMERA), restart };
+  return { phase, mode, setMode, presetType, photoFor, capture, saveFailed, send, scanSaved, noBinSent, retake: () => setPhase(CAMERA), restart };
 }
 
 export type SnapFlow = ReturnType<typeof useSnapFlow>;
