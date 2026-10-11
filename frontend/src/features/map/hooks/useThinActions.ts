@@ -10,10 +10,12 @@ export interface ThinActions {
   readonly areas: () => void;
   /** Widens the map to the nearest sites the app already knows outside the view; null when it knows none. */
   readonly zoomOut: (() => void) | null;
+  /** Goes to the pilot city's reports; null while the map is on the city, where Zoom out already leads to them. */
+  readonly pilot: (() => void) | null;
 }
 
 /** What the few-reports card and the list's note offer. */
-export function useThinActions(page: Pick<MapPageState, 'thin' | 'browser' | 'selection'>): ThinActions {
+export function useThinActions(page: Pick<MapPageState, 'thin' | 'browser' | 'selection' | 'offPilot' | 'showPilot'>): ThinActions {
   const sheets = useSheetNavigation();
   const { requireAuth } = useAuthFlow();
   const { follow } = page.browser;
@@ -28,5 +30,6 @@ export function useThinActions(page: Pick<MapPageState, 'thin' | 'browser' | 'se
     report: () => requireAuth(() => sheets.up(SNAP_PATH)),
     areas: () => sheets.up(AREAS_PATH),
     zoomOut: points.length > 0 ? zoomOut : null,
+    pilot: page.offPilot ? page.showPilot : null,
   };
 }

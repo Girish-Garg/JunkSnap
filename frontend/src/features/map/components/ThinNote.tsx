@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../ui/Button';
+import { usePilotName } from '../hooks/usePilotName';
 import type { ThinActions } from '../hooks/useThinActions';
 import '../thin.css';
 
@@ -10,9 +11,13 @@ interface ThinNoteProps {
   readonly titleId?: string;
 }
 
-/** What a view with few or no sites says, honestly, and what to do next: report one, see the areas, zoom out. */
+/**
+ * What a view with few or no sites says, honestly, and what to do next: report one, go to the pilot city's reports
+ * (away from the city), see the areas, zoom out.
+ */
 export function ThinNote({ count, actions, titleId }: ThinNoteProps) {
   const { t } = useTranslation();
+  const city = usePilotName();
   return (
     <>
       <p id={titleId} className="thin-note__title">
@@ -23,14 +28,9 @@ export function ThinNote({ count, actions, titleId }: ThinNoteProps) {
         <Button variant="sun" size="small" onClick={actions.report}>
           {t(count === 0 ? 'thin.reportFirst' : 'thin.report')}
         </Button>
-        <Button variant="secondary" size="small" onClick={actions.areas}>
-          {t('thin.areas')}
-        </Button>
-        {actions.zoomOut && (
-          <Button variant="secondary" size="small" onClick={actions.zoomOut}>
-            {t('thin.zoomOut')}
-          </Button>
-        )}
+        {actions.pilot && <Button variant="secondary" size="small" onClick={actions.pilot}>{t('places.seeCity', { city })}</Button>}
+        <Button variant="secondary" size="small" onClick={actions.areas}>{t('thin.areas')}</Button>
+        {actions.zoomOut && <Button variant="secondary" size="small" onClick={actions.zoomOut}>{t('thin.zoomOut')}</Button>}
       </div>
     </>
   );

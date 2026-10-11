@@ -6,15 +6,19 @@ import { Icon } from '../../../ui/Icon';
 import { IconButton } from '../../../ui/IconButton';
 import { LanguageToggle } from '../../../ui/LanguageToggle';
 import { Logo } from '../../../ui/Logo';
+import { useSearchWords } from '../hooks/useSearchWords';
 import { SearchResults } from './SearchResults';
 
 interface SearchBarProps {
   readonly sites: readonly SiteFeature[];
   readonly onPickPlace: (place: Place) => void;
+  /** The map shows the pilot city and is what this screen is about (usePilotSearch): the field then names the city. */
+  readonly local: boolean;
 }
 
-export function SearchBar({ sites, onPickPlace }: SearchBarProps) {
+export function SearchBar({ sites, onPickPlace, local }: SearchBarProps) {
   const { t } = useTranslation();
+  const words = useSearchWords(local);
   const [query, setQuery] = useState('');
   const pick = (place: Place) => {
     setQuery('');
@@ -31,8 +35,7 @@ export function SearchBar({ sites, onPickPlace }: SearchBarProps) {
         <input
           className="searchbar__input"
           type="search" enterKeyHint="search"
-          aria-label={t('search.label')}
-          placeholder={t('search.placeholder')}
+          aria-label={words.label} placeholder={words.placeholder}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

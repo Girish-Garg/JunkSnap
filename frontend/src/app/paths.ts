@@ -10,6 +10,8 @@ export const ACTIVITY_PATH = '/activity';
 export const FEEDBACK_PATH = '/activity/reports/:reportId';
 export const ACCOUNT_PATH = '/account';
 export const RANKING_PATH = '/ranking';
+/** "Places with reports": where the reported sites are, each place one tap from the map. */
+export const PLACES_PATH = '/places';
 export const WELCOME_PATH = '/welcome';
 
 export function sitePath(siteId: string): string {

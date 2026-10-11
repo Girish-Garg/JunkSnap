@@ -30,9 +30,10 @@ function adopt(wanted: boolean, loaded: Loaded | null, shared: AroundSites | nul
 }
 
 /**
- * The pilot city's sites, only while `wanted` (an unsettled empty opening view, or the list with no rows of its own),
- * then kept. When the search around an empty view already takes in the whole city, its answer is used and no second
- * request goes out; otherwise one GET /sites over the city's bounds.
+ * The pilot city's sites, only while `wanted` (an unsettled empty opening view, the list with no rows of its own, an
+ * empty view away from the city, or "Places with reports", which always wants them), then kept. When the search
+ * around an empty view already takes in the whole city, its answer is used and no second request goes out;
+ * otherwise one GET /sites over the city's bounds.
  */
 export function usePilotSites(wanted: boolean, around: AroundSites | null): PilotLoad {
   const { api } = useServices();

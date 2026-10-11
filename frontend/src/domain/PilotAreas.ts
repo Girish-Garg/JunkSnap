@@ -6,6 +6,9 @@ export interface LocalBody {
   readonly name: string;
 }
 
+/** The pilot city's district: what its area lists are within, and the place "Places with reports" always lists. */
+export const PILOT_DISTRICT = new AreaKey('district', 'rajasthan-jodhpur', 'Jodhpur');
+
 /**
  * Every area of the pilot city, listed whether or not anyone has reported there, so the Areas tab never
  * depends on reports to know the city. Counts and scores still come only from the api.
@@ -30,7 +33,7 @@ export const PILOT_AREAS: readonly AreaKey[] = [
   new AreaKey('assembly', 's20-ac-131', 'Bilara'),
   new AreaKey('loksabha', 's20-pc-16', 'Jodhpur'),
   new AreaKey('loksabha', 's20-pc-15', 'Pali'),
-  new AreaKey('district', 'rajasthan-jodhpur', 'Jodhpur'),
+  PILOT_DISTRICT,
 ];
 
 /** From data/representatives/local_bodies.json. */

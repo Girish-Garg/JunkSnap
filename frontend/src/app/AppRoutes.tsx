@@ -12,6 +12,7 @@ import { MapPage } from '../features/map/components/MapPage';
 import { RankingRoute } from '../features/ranking/components/RankingRoute';
 import { OnboardingRoute } from '../features/onboarding/components/OnboardingRoute';
 import { PanelHome } from '../features/map/components/PanelHome';
+import { PlacesRoute } from '../features/places/components/PlacesRoute';
 import { SitePanelRoute } from '../features/site/components/SitePanelRoute';
 import { SnapRoute } from '../features/snap/components/SnapRoute';
 import {
@@ -21,6 +22,7 @@ import {
   AREA_PATH,
   AREAS_PATH,
   FEEDBACK_PATH,
+  PLACES_PATH,
   RANKING_PATH,
   SITE_CLEANUP_PATH,
   SITE_LETTER_PATH,
@@ -47,6 +49,7 @@ export function AppRoutes() {
         <Route path={AREA_PATH} element={sheet(<AreaRoute />)} />
         <Route path={AREA_LETTER_PATH} element={sheet(<AreaLetterRoute />)} />
         <Route path={RANKING_PATH} element={sheet(<RankingRoute />)} />
+        <Route path={PLACES_PATH} element={sheet(<PlacesRoute />)} />
         <Route path={ACTIVITY_PATH} element={sheet(<ActivityRoute />)} />
         <Route path={FEEDBACK_PATH} element={sheet(<ReportFeedbackRoute />)} />
         <Route path={ACCOUNT_PATH} element={sheet(<AccountRoute />)} />

@@ -1,0 +1,34 @@
+/* "Places with reports": rows built on the site rows (site.css), with the count at the row's end. Tokens only. */
+.place-rows {
+  margin: var(--s-4) calc(-1 * var(--s-2)) 0;
+}
+
+.place-row {
+  min-height: 64px;
+}
+
+/* A seat of the pilot city sits under it, set in by one step. */
+.place-row--seat {
+  padding-left: var(--s-6);
+}
+
+.place-row__count {
+  flex: none;
+  padding: 2px var(--s-2) 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  font-size: var(--text-small);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The status line stays in the page for screen readers; with nothing to say it takes no room. */
+.place-rows__note {
+  margin-top: var(--s-3);
+}
+
+.place-rows__note:empty {
+  margin-top: 0;
+}

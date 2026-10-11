@@ -27,6 +27,11 @@ export class PilotCity {
     return this.bounds.contains(point);
   }
 
+  /** The map is on the city: the middle of its view lies in the city. A view beside it, or far away, is not. */
+  shows(view: BBox): boolean {
+    return this.contains(view.center());
+  }
+
   /** The city's sites on the active map: never rejected, removed, cleaned or expired, never outside the city. */
   sitesOf(sites: readonly SiteFeature[]): readonly SiteFeature[] {
     return sites.filter((site) => SiteListing.onMap(site.properties) && this.contains(site.geometry.coordinates));
