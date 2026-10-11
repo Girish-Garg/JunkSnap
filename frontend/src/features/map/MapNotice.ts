@@ -55,7 +55,8 @@ const RULES: readonly Rule[] = [
   [(s) => s.basemap === 'slow', { icon: 'info', key: 'notice.mapSlow', tone: 'warn', action: 'mapless', busy: true }],
   [(s) => s.basemap === 'waiting', { icon: 'info', key: 'notice.mapLoading', tone: 'info', busy: true }],
   [(s) => s.locationProblem === 'denied', { icon: 'locate', key: 'notice.locationDenied', tone: 'info' }],
-  [(s) => s.locationProblem === 'unavailable', { icon: 'locate', key: 'notice.locationUnavailable', tone: 'info' }],
+  // Off or too slow: either way no fix.
+  [(s) => s.locationProblem !== null, { icon: 'locate', key: 'notice.locationUnavailable', tone: 'info' }],
   [(s) => s.loadedCount > 0 && s.shownCount === 0, { icon: 'info', key: 'notice.filteredEmpty', tone: 'info' }],
   [(s) => s.clamped, { icon: 'search', key: 'notice.zoomIn', tone: 'info' }],
   [(s) => s.truncated === true, { icon: 'search', key: 'notice.capped', tone: 'info' }],
