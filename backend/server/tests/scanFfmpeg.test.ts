@@ -28,6 +28,7 @@ import {
   sampleSession,
   testLogger,
 } from "./scanFakes.js";
+import { SCAN } from "./defaults.js";
 
 const HAS_FFMPEG = spawnSync("ffmpeg", ["-version"]).status === 0;
 const SKIP_REASON = "ffmpeg integration tests skipped: ffmpeg is not on PATH (install it, e.g. apt-get install ffmpeg)";
@@ -138,9 +139,9 @@ describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, { 
     const session = sampleSession({ duration_ms: 5000, video_sha256: sha, gps_track: track, hints: undefined });
     scans.rows.set(session.scan_id, queuedRecord(session));
     const now = (): Date => NOW;
-    const sampler = new ScanFrameSampler({ reader, hasher, planner: new FramePlanner(), selector: new FrameSelector() });
-    const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now);
-    const loader = new ScanVideoLoader(media, reader);
+    const sampler = new ScanFrameSampler({ reader, hasher, planner: new FramePlanner(SCAN.frames), selector: new FrameSelector(SCAN.frames), gps: SCAN.gps });
+    const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now, SCAN.frames.spotRadiusM);
+    const loader = new ScanVideoLoader(media, reader, SCAN.video);
     const deps = { scans, scratch, loader, sampler, publisher, logger: testLogger(), now };
     await new VideoScanProcessor(deps).process(session.scan_id);
 

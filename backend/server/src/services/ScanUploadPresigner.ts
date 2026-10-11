@@ -1,5 +1,5 @@
 import { ScanTooLargeError } from "../domain/scanErrors.js";
-import { SCAN_VIDEO_LIMITS } from "../domain/scanLimits.js";
+import type { ScanVideoLimits } from "../domain/scanLimits.js";
 import type { ScanUploadSigner } from "../ports/ScanUploadSigner.js";
 
 const EXTENSIONS = { "video/webm": "webm", "video/mp4": "mp4" } as const;
@@ -24,6 +24,7 @@ export interface PresignOptions {
   readonly ttlSeconds: number;
   readonly now: () => Date;
   readonly newScanId: () => string;
+  readonly limits: Pick<ScanVideoLimits, "maxBytes" | "maxDurationMs">;
 }
 
 export class ScanUploadPresigner {
@@ -36,7 +37,7 @@ export class ScanUploadPresigner {
   }
 
   async presign(request: ScanPresignRequest): Promise<ScanPresignResponse> {
-    ScanUploadPresigner.#checkLimit(request);
+    this.#checkLimit(request);
     const scanId = this.#options.newScanId();
     const key = `scans/${scanId}.${EXTENSIONS[request.content_type]}`;
     const upload = { key, contentType: request.content_type, sha256Hex: request.sha256, sizeBytes: request.size_bytes };
@@ -45,12 +46,13 @@ export class ScanUploadPresigner {
     return { scan_id: scanId, upload_url: signed.url, headers: signed.headers, expires_at: expiresAt.toISOString() };
   }
 
-  static #checkLimit({ size_bytes, duration_ms }: ScanPresignRequest): void {
-    if (size_bytes > SCAN_VIDEO_LIMITS.maxBytes) {
-      throw new ScanTooLargeError(`size_bytes is over the scan video limit of ${SCAN_VIDEO_LIMITS.maxBytes}`);
+  #checkLimit({ size_bytes, duration_ms }: ScanPresignRequest): void {
+    const { maxBytes, maxDurationMs } = this.#options.limits;
+    if (size_bytes > maxBytes) {
+      throw new ScanTooLargeError(`size_bytes is over the scan video limit of ${maxBytes}`);
     }
-    if (duration_ms > SCAN_VIDEO_LIMITS.maxDurationMs) {
-      throw new ScanTooLargeError(`duration_ms is over the scan video limit of ${SCAN_VIDEO_LIMITS.maxDurationMs}`);
+    if (duration_ms > maxDurationMs) {
+      throw new ScanTooLargeError(`duration_ms is over the scan video limit of ${maxDurationMs}`);
     }
   }
 }

@@ -4,8 +4,8 @@ import { FrameHash } from "../src/domain/FrameHash.js";
 import type { CandidateFrame } from "../src/domain/ScanFrame.js";
 import { ScanFrameId } from "../src/domain/ScanFrameId.js";
 import { FramePlanner } from "../src/services/FramePlanner.js";
-import { SCAN_FRAME_RULES } from "../src/domain/scanLimits.js";
 import { FrameSelector } from "../src/services/FrameSelector.js";
+import { SCAN } from "./defaults.js";
 
 const BOX = { left: 0.1, top: 0.1, width: 0.2, height: 0.2 };
 const GPS = { lat: 26.2918, lon: 73.0213, accuracy_m: 6 };
@@ -45,7 +45,7 @@ describe("ScanFrameId", () => {
 });
 
 describe("FramePlanner", () => {
-  const planner = new FramePlanner();
+  const planner = new FramePlanner(SCAN.frames);
 
   it("plans one frame per second of video", () => {
     expect(planner.plan(8000, []).map((planned) => planned.tMs)).toEqual([0, 1000, 2000, 3000, 4000, 5000, 6000, 7000]);
@@ -72,7 +72,7 @@ describe("FramePlanner", () => {
 });
 
 describe("FrameSelector", () => {
-  const selector = new FrameSelector();
+  const selector = new FrameSelector(SCAN.frames);
   const far = (n: number): bigint => BigInt(n) * 0x9e3779b97f4a7c15n;
 
   it("keeps at most one frame per second, preferring the strongest hint over a plain frame", () => {
@@ -103,14 +103,14 @@ describe("FrameSelector", () => {
   });
 
   it("takes the duplicate threshold from its constructor", () => {
-    const strict = new FrameSelector({ ...SCAN_FRAME_RULES, duplicateDistance: 0 });
+    const strict = new FrameSelector({ ...SCAN.frames, duplicateDistance: 0 });
     expect(strict.select([frame(0, 0n), frame(1000, 1n)])).toHaveLength(2);
     expect(strict.select([frame(0, 0n), frame(1000, 0n)])).toHaveLength(1);
   });
 });
 
 describe("FrameSelector near-duplicates", () => {
-  const selector = new FrameSelector();
+  const selector = new FrameSelector(SCAN.frames);
   const still = (tMs: number, bits: bigint, hintScore?: number) => frame(tMs, bits, hintScore, { ...GPS, lat: GPS.lat + tMs * 1e-8 });
 
   it("keeps one frame of a 6 s clip that stands at one spot and shows a similar view", () => {

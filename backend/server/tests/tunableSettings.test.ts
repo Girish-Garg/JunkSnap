@@ -3,6 +3,7 @@ import { ConfigError } from "../src/domain/errors.js";
 import { AreaListSettings } from "../src/settings/AreaListSettings.js";
 import { NotesSettings } from "../src/settings/NotesSettings.js";
 import { QueueSettings } from "../src/settings/QueueSettings.js";
+import { ScanLimitSettings } from "../src/settings/ScanLimitSettings.js";
 import { ScoreSettings } from "../src/settings/ScoreSettings.js";
 import { SiteRuleSettings } from "../src/settings/SiteRuleSettings.js";
 import type { Env } from "../src/settings/utils.js";
@@ -53,6 +54,24 @@ const RULE_TUNABLES: readonly Tunable[] = [
   { name: "WORKER_BATCH_SIZE", read: (env) => QueueSettings.fromEnv(env).batchSize, fallback: 10, good: ["5", 5], bad: ["0", "11"] },
 ];
 
+const scan = (env: Env) => ScanLimitSettings.fromEnv(env);
+
+const SCAN_TUNABLES: readonly Tunable[] = [
+  { name: "SCAN_MAX_MB", read: (env) => scan(env).video.maxBytes, fallback: 40 * 1024 * 1024, good: ["20", 20 * 1024 * 1024], bad: ["0", "1.5", "2000"] },
+  { name: "SCAN_MAX_SECONDS", read: (env) => scan(env).video.maxDurationMs, fallback: 60_000, good: ["30", 30_000], bad: ["0", "61"] },
+  { name: "SCAN_MAX_LONG_SIDE_PX", read: (env) => scan(env).video.maxLongSidePx, fallback: 1_280, good: ["1920", 1_920], bad: ["0", "wide"] },
+  { name: "SCAN_MAX_SHORT_SIDE_PX", read: (env) => scan(env).video.maxShortSidePx, fallback: 720, good: ["1080", 1_080], bad: ["0", "-720"] },
+  { name: "SCAN_FRAME_INTERVAL_MS", read: (env) => scan(env).frames.intervalMs, fallback: 1_000, good: ["500", 500], bad: ["0", "99", "60001"] },
+  { name: "SCAN_MAX_HINT_FRAMES", read: (env) => scan(env).frames.maxHintFrames, fallback: 60, good: ["0", 0], bad: ["-1", "601"] },
+  { name: "SCAN_MAX_FIX_GAP_MS", read: (env) => scan(env).gps.maxFixGapMs, fallback: 3_000, good: ["5000", 5_000], bad: ["0", "3.5"] },
+  { name: "SCAN_MAX_ACCURACY_M", read: (env) => scan(env).gps.maxAccuracyM, fallback: 50, good: ["30", 30], bad: ["0", "1001"] },
+  { name: "SCAN_MIN_FIXES_PER_SECOND", read: (env) => scan(env).gps.minFixesPerSecond, fallback: 1, good: ["0.5", 0.5], bad: ["0", "11"] },
+  { name: "SCAN_DUPLICATE_BITS", read: (env) => scan(env).frames.duplicateDistance, fallback: 5, good: ["0", 0], bad: ["65", "-1"] },
+  { name: "SCAN_SIMILAR_BITS", read: (env) => scan(env).frames.similarDistance, fallback: 20, good: ["16", 16], bad: ["65", "x"] },
+  { name: "SCAN_SAME_SPOT_M", read: (env) => scan(env).frames.sameSpotM, fallback: 10, good: ["15", 15], bad: ["-1", "1001"] },
+  { name: "SCAN_SPOT_RADIUS_M", read: (env) => scan(env).frames.spotRadiusM, fallback: 20, good: ["30", 30], bad: ["0", "1001"] },
+];
+
 function describeTunables(title: string, tunables: readonly Tunable[]): void {
   describe(title, () => {
     describe.each(tunables)("$name", ({ name, read, fallback, good, bad }) => {
@@ -72,6 +91,7 @@ function describeTunables(title: string, tunables: readonly Tunable[]): void {
 }
 
 describeTunables("site, score, area list, notes and queue variables", RULE_TUNABLES);
+describeTunables("scan variables", SCAN_TUNABLES);
 
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {

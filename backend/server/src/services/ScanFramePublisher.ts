@@ -20,14 +20,17 @@ export interface FramePublishPorts {
 export class ScanFramePublisher {
   readonly #ports: FramePublishPorts;
   readonly #now: () => Date;
+  readonly #spotRadiusM: number;
 
-  constructor(ports: FramePublishPorts, now: () => Date) {
+  // spotRadiusM: SCAN_SPOT_RADIUS_M.
+  constructor(ports: FramePublishPorts, now: () => Date, spotRadiusM: number) {
     this.#ports = ports;
     this.#now = now;
+    this.#spotRadiusM = spotRadiusM;
   }
 
   async publish(scan: ScanSession, frames: readonly CandidateFrame[]): Promise<string[]> {
-    const spots = new ScanSpots().assign(frames);
+    const spots = new ScanSpots(this.#spotRadiusM).assign(frames);
     const reportIds: string[] = [];
     for (const frame of frames) {
       reportIds.push(await this.#publishOne(scan, frame, spots.get(frame.tMs) ?? frame.tMs));

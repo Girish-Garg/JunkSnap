@@ -5,6 +5,7 @@ import { PublicMedia } from "../domain/sites/PublicMedia.js";
 import { ScanIntake } from "../services/ScanIntake.js";
 import { ScanSessionRules } from "../services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../services/ScanUploadPresigner.js";
+import { ScanLimitSettings } from "../settings/ScanLimitSettings.js";
 import { ScanSettings } from "../settings/ScanSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import type { RouteContext } from "./RouteBuilder.js";
@@ -41,6 +42,7 @@ export function scanRoutes({ presigner, intake, guard }: ScanRouteServices): Fas
 export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const settings = ScanSettings.fromEnv(env);
+    const limits = ScanLimitSettings.fromEnv(env);
     const guard = RouteGuard.fromEnv(env);
     const adapters = new ScanAdapterFactory(settings, core.awsRegion);
     const now = (): Date => new Date();
@@ -49,10 +51,11 @@ export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync
       ttlSeconds: settings.presignTtlSeconds,
       now,
       newScanId,
+      limits: limits.video,
     });
     const findings = new ScanFindings(new PublicMedia(settings.publicBaseUrl));
     const reads = { outcomes: adapters.frameOutcomes(), findings };
-    const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(), ...reads, now });
+    const intake = new ScanIntake({ scans: adapters.scans(), queue: adapters.queue(), rules: new ScanSessionRules(limits.gps.minFixesPerSecond), ...reads, now });
     await app.register(scanRoutes({ presigner, intake, guard }));
   };
 }

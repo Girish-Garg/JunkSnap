@@ -1,13 +1,13 @@
 import { GeoPoint } from "../GeoPoint.js";
 import type { LocatedFrame } from "../ScanFrame.js";
-import { SCAN_FRAME_RULES } from "../scanLimits.js";
 
 // Groups one scan's kept frames into spots: a frame joins the first spot whose first frame is within the radius.
 // Frames of one spot and type merge into one site (contracts v1.10) unless an existing neighbour site takes the frame.
 export class ScanSpots {
   readonly #radiusM: number;
 
-  constructor(radiusM: number = SCAN_FRAME_RULES.spotRadiusM) {
+  // radiusM: SCAN_SPOT_RADIUS_M.
+  constructor(radiusM: number) {
     this.#radiusM = radiusM;
   }
 
