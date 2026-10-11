@@ -17,6 +17,8 @@ export interface CheckPorts {
   // Earlier after-photos of the same site only: a cleared site can look like its before-photo.
   readonly cleanupHashes: HashIndex;
   readonly devices: DeviceRegistry;
+  // SNAP_PER_HOUR.
+  readonly snapPerHour: number;
 }
 
 // Builds each chain once, in contract order; cleanup after-photos add near_site.
@@ -42,7 +44,7 @@ export class CheckFactory {
       new InsideIndiaCheck(ports.india),
       new FreshTimestampCheck(),
       duplicate,
-      new RateLimitCheck(ports.devices),
+      new RateLimitCheck(ports.devices, ports.snapPerHour),
       new DeviceTokenCheck(ports.devices),
     ];
   }

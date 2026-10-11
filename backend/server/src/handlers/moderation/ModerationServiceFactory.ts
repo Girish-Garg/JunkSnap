@@ -25,6 +25,7 @@ import { ModerationService } from "../../services/moderation/ModerationService.j
 import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
+import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import type { EntryContext } from "../EntryPoint.js";
 import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
@@ -43,14 +44,16 @@ export interface ModerationWiring {
 // Builds the moderation object graph once per worker process.
 export class ModerationServiceFactory {
   readonly #settings: ModerationSettings;
+  readonly #limits: RateLimitSettings;
 
-  constructor(settings: ModerationSettings) {
+  constructor(settings: ModerationSettings, limits: RateLimitSettings) {
     this.#settings = settings;
+    this.#limits = limits;
   }
 
   // For the worker's entry point: reads settings when called, never at import.
   static forWorker(context: EntryContext, devices: DeviceRegistry): ModerationService {
-    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env));
+    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), RateLimitSettings.fromEnv(context.env));
     const bedrock = new BedrockRuntimeClient({ region: context.settings.awsRegion });
     return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock).build(context.logger) });
   }
@@ -87,6 +90,7 @@ export class ModerationServiceFactory {
       reportHashes: new DynamoHashIndex(reader, { reports: settings.reportsTable, sites: settings.sitesTable }),
       cleanupHashes: new DynamoCleanupHashIndex(reader, settings.cleanupsTable),
       devices,
+      snapPerHour: this.#limits.snapPerHour,
     });
   }
 }

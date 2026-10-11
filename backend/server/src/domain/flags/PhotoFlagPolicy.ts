@@ -6,8 +6,6 @@ export const PHOTO_FLAG_HIDE = 8;
 // Fewer reports hide a photo early only when they outnumber the people backing it by this surplus.
 export const PHOTO_FLAG_HIDE_EARLY = 5;
 export const PHOTO_FLAG_SURPLUS = 5;
-// Photo reports an hour, per user and per device.
-export const FLAGS_PER_HOUR = 10;
 // Like votes: only someone within this distance of the site may report its photos.
 export const FLAG_RADIUS_M = 1000;
 
