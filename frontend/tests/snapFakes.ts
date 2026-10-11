@@ -214,7 +214,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     encoder: new FakeEncoder(),
     hasher,
     gps,
-    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed }),
+    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed, marks: new ReportTracker(api, queue) }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16)), queue),
   };

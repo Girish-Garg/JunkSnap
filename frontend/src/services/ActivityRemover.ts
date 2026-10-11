@@ -6,6 +6,7 @@ import type { ReportStatusView } from '../domain/ReportStatus';
 import type { WithdrawalResult } from '../domain/SiteActions';
 import type { ReportApi } from './ReportApi';
 import type { ReportQueue } from './ReportQueue';
+import type { ReportTracker } from './ReportTracker';
 import type { ScanQueue } from './ScanQueue';
 
 export interface ActivityRemoverPorts {
@@ -17,6 +18,8 @@ export interface ActivityRemoverPorts {
   readonly sites: { withdraw(siteId: string): Promise<WithdrawalResult> };
   /** Deleted report ids, so the server's list never brings the row back. */
   readonly dismissed: { add(reportId: string): Promise<void> };
+  /** The user's other rows on a site the api withdrew them from show Withdrawn at once. */
+  readonly marks: Pick<ReportTracker, 'markWithdrawn'>;
 }
 
 // Already withdrawn, or verified in the meantime: neither stops the row from leaving this phone.
@@ -65,7 +68,9 @@ export class ActivityRemover {
 
   async #withdrawFrom(siteId: string): Promise<{ readonly removed: boolean; readonly verified: boolean }> {
     try {
-      return { removed: (await this.#ports.sites.withdraw(siteId)).site_removed, verified: false };
+      const result = await this.#ports.sites.withdraw(siteId);
+      await this.#ports.marks.markWithdrawn(result.withdrawn_report_ids);
+      return { removed: result.site_removed, verified: false };
     } catch (error) {
       if (!(error instanceof ApiError && SETTLED.has(error.code))) throw error;
       return { removed: false, verified: error.code === 'site_verified' };
