@@ -29,6 +29,12 @@ export class LocationPresenter {
     return parts.join(' · ');
   }
 
+  /** The most local name people know the spot by, as the link previews do: ward, assembly seat, town, district. */
+  nearby(): string {
+    const { ward, assembly_seat: assembly, town, district } = this.#location;
+    return ward?.name ?? assembly?.name ?? town ?? district.name;
+  }
+
   /** Each known area links to its area page; an outdated MP seat does not. */
   facts(): readonly Fact[] {
     const { local_body: body, district, ward, assembly_seat: assembly, loksabha_seat: loksabha } = this.#location;

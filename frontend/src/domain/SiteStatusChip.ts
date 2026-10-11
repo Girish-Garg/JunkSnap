@@ -39,8 +39,18 @@ export class SiteStatusChip {
     const byStatus = BY_STATUS[site.status];
     if (byStatus) return byStatus;
     if (site.verification === 'rejected') return { key: 'chip.rejected', tone: 'closed' };
+    return SiteStatusChip.backing(site);
+  }
+
+  /** The backers alone, for the "n of 10" bar: "Verified" or "Waiting · n of 10" (decision 20261010-1530). */
+  static backing(site: Pick<ChipFields, 'verification' | 'backers'>): ChipView {
     if (site.verification === 'verified') return { key: 'chip.verified', tone: 'verified' };
     return SiteStatusChip.#waiting(site.backers);
+  }
+
+  /** The plain-words explainer behind a chip (explain.* in the i18n files); "Waiting for people" shares waiting's. */
+  static explainKey(chip: ChipView): string {
+    return chip.key === 'chip.waitingPlain' ? 'explain.waiting' : chip.key.replace(/^chip\./, 'explain.');
   }
 
   // An older row without backers still says it is waiting, without numbers it does not have.
