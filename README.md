@@ -2,7 +2,7 @@
 
 **Snap the junk. Prove it. Get it cleared.** Residents photograph waste; JunkSnap blurs it, checks it with stacked models, maps it to the ward, MLA and MP, and drafts a cited letter for the resident to file.
 
-[![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://demo.d3iec0rb3f75jm.amplifyapp.com)
+[![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://junksnap.coehemang.dev)
 [![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/saboot/releases/latest)
 [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
 [![Built on AWS](https://img.shields.io/badge/built%20on-AWS-ff9900?logo=amazonwebservices&logoColor=white)](#aws-services-and-why)
@@ -45,7 +45,7 @@ Anyone in India can photograph waste with the in-app camera. JunkSnap blurs face
 
 Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 11 October 2026, Waste and Energy track.
 
-- Web app: https://demo.d3iec0rb3f75jm.amplifyapp.com
+- Web app: https://junksnap.coehemang.dev (also https://demo.d3iec0rb3f75jm.amplifyapp.com)
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
 - Android app: the APK is a release-signed GitHub Release built by the `android-release` workflow; the latest is `app-v0.1.4` at https://github.com/Girish-Garg/saboot/releases/latest. Shared links open the installed app (verified App Links), else the browser; see [docs/android.md](docs/android.md).
 

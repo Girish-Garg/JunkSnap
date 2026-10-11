@@ -90,7 +90,7 @@ describe("POST /reports with a long-range target", () => {
     const clock = new FixedClock(NOW);
     reports = new FakeReportRepository();
     queue = new FakeReportQueue();
-    const snapLimit = new SnapLimit(new FakeSnapCounter(reports));
+    const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
     const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock });
     const statuses = new ReportStatusReader(reports, "https://cdn.example", clock);

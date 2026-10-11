@@ -31,11 +31,11 @@ import { VoteService } from "../../services/sites/VoteService.js";
 import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
 import { SitesSettings } from "../../settings/SitesSettings.js";
+import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import type { Env } from "../../settings/utils.js";
 import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 
 // Decision 20261010-1700: withdrawals an hour, per user and per device.
-const WITHDRAWALS_PER_HOUR = 10;
 
 export type FlagSiteParts = Pick<PhotoFlagServiceDeps, "sites" | "rows" | "clock" | "retry">;
 
@@ -55,11 +55,13 @@ export class SiteServiceFactory {
   readonly #calls = new AwsCalls();
   readonly #retry = new ConflictRetry();
   readonly #logger: Logger;
+  readonly #limits: RateLimitSettings;
 
-  constructor(settings: SitesSettings, clients: SiteClients, logger: Logger) {
+  constructor(settings: SitesSettings, clients: SiteClients, logger: Logger, limits = RateLimitSettings.fromEnv({})) {
     this.#settings = settings;
     this.#clients = clients;
     this.#logger = logger;
+    this.#limits = limits;
     this.#mapper = new SiteItemMapper(this.#cells, logger);
   }
 
@@ -69,7 +71,7 @@ export class SiteServiceFactory {
     const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
     const s3 = new S3Client(awsClientConfig(region, AWS_TIMEOUTS.transfer));
     const clients = { dynamo, s3, sqs: new SQSClient(awsClientConfig(region)) };
-    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger);
+    return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger, RateLimitSettings.fromEnv(env));
   }
 
   // The worker reads site positions and kinds for cleanup moderation and recording.
@@ -123,7 +125,7 @@ export class SiteServiceFactory {
       rows: new DynamoSiteReportReader(dynamo, tables.reports, this.#media(), this.#calls),
       withdrawer: new DynamoReportWithdrawer(dynamo, tables.reports, this.#calls),
       reports: this.#reports(),
-      limiter: new LetterRateLimiter(counters, this.#logger, WITHDRAWALS_PER_HOUR, "withdrawals"),
+      limiter: new LetterRateLimiter(counters, this.#logger, this.#limits.withdrawalsPerHour, "withdrawals"),
       clock: this.#clock,
       retry: this.#retry,
     });

@@ -19,6 +19,13 @@ configMapGenerator:
       - AWS_DEFAULT_REGION=ap-south-1
       - PRESIGN_TTL_SECONDS=300
       - ML_URL=http://ml
+      # Rate limits per hour, each counted per user and per device (contracts/README.md, Rate limit). Edit here or per stage.
+      - SNAP_PER_HOUR=20
+      - CONFIRMATIONS_PER_HOUR=20
+      - LETTERS_PER_HOUR=5
+      - FLAGS_PER_HOUR=10
+      - WITHDRAWALS_PER_HOUR=10
+      - NOTES_PER_HOUR=10
       # Ward crawls (decision 20261010-1445): queue a district on its first verified report, recrawl monthly.
       - CRAWL_ACTIVATE_AFTER=1
       - CRAWL_INTERVAL_DAYS=30

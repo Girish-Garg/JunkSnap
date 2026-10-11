@@ -6,14 +6,14 @@ import type { RatePolicy } from "./rate/RatePolicy.js";
 import { ScanFramePolicy } from "./rate/ScanFramePolicy.js";
 import { SnapRatePolicy } from "./rate/SnapRatePolicy.js";
 
-// contracts/README.md: Snap 20 photos per hour per user and per device; scan frames never count toward it.
+// contracts/README.md: Snap photos per hour (SNAP_PER_HOUR) per user and per device; scan frames never count toward it.
 export class RateLimitCheck implements Check {
   readonly key = "rate_limit";
   readonly reason = "rate_limited";
   readonly #policies: Readonly<Record<CaptureMode, RatePolicy>>;
 
-  constructor(devices: DeviceRegistry) {
-    this.#policies = { snap: new SnapRatePolicy(devices), scan: new ScanFramePolicy() };
+  constructor(devices: DeviceRegistry, snapPerHour: number) {
+    this.#policies = { snap: new SnapRatePolicy(devices, snapPerHour), scan: new ScanFramePolicy() };
   }
 
   run({ submission }: CheckSubject): Promise<CheckOutcome> {

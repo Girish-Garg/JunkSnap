@@ -50,7 +50,7 @@ class Harness {
 
   service(notes: NoteModerator = new FakeCleanNoteModerator()): ModerationService {
     const { india, reportHashes, cleanupHashes, devices } = this;
-    const checks = new CheckFactory({ india, reportHashes, cleanupHashes, devices });
+    const checks = new CheckFactory({ india, reportHashes, cleanupHashes, devices, snapPerHour: 20 });
     return new ModerationService({
       loader: new PhotoLoader(this.store, new SharpImageCodec()),
       gate: this.gate,

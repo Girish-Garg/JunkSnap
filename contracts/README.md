@@ -97,14 +97,14 @@ Workloads: `api`, `worker` and `scores` run the TypeScript project `backend/serv
 |---|---|---|
 | Fresh timestamp | `captured_at` at most 72 h before `received_at` (room for the offline queue), at most 5 min after it | worker |
 | Duplicate | pHash Hamming distance 8 or less to an earlier photo within 100 m | worker |
-| Rate limit | Each counted per user and per device; the stricter one applies. Snap: 20 photos per hour, counted on `reports` through `by-user` and `by-device` over the last hour of `received_at` (scan frames excluded). Scan: 1 frame per second of video, which the frame sampler enforces; frames never count toward the Snap limit. Letters: 5 per hour, counted with a windowed counter (`letter_window_start`, `letter_count`) on the `users` row and on the `devices` row, reset once an hour has passed since `letter_window_start` and updated with a conditional write | api (presign) and worker for photos; worker for frames; api for letters |
+| Rate limit | Each counted per user and per device; the stricter one applies. Snap: `SNAP_PER_HOUR` photos per hour (default 20), counted on `reports` through `by-user` and `by-device` over the last hour of `received_at` (scan frames excluded). Scan: 1 frame per second of video, which the frame sampler enforces; frames never count toward the Snap limit. Letters: `LETTERS_PER_HOUR` per hour (default 5), counted with a windowed counter (`letter_window_start`, `letter_count`) on the `users` row and on the `devices` row, reset once an hour has passed since `letter_window_start` and updated with a conditional write | api (presign) and worker for photos; worker for frames; api for letters |
 | Scan video | `video/webm` or `video/mp4`, at most 60 s, 1280 by 720 and 40 MB; else 400 `scan_too_large` at presign, or scan `failed` with `invalid_video` | api (presign), worker |
 | Scan frames | 1 per second; a phone-hinted frame replaces the plain one in its second. Drop a frame when the nearest GPS fix is more than 3 s away or its `accuracy_m` is over 50. Keep one frame per view: drop a frame whose 64-bit difference hash is within 5 bits of the last kept frame, or within 20 bits of a kept frame less than 10 m away (the better hinted of the two stays) | worker |
 | Votes | voter GPS within 1 km of the site, else 403 `too_far` | api |
 | Photo reports, distance | reporter GPS within `FLAG_RADIUS_M` (1000 m) of the site, else 403 `too_far` | api |
-| Photo reports | `FLAGS_PER_HOUR` (10) per hour, per user and per device, windowed like letters on `flag_window_start` and `flag_count` (users and devices rows), checked before moderation; 429 `rate_limited` | api |
-| Withdrawals | 10 per hour, per user and per device, windowed like letters on `withdraw_window_start` and `withdraw_count` (users and devices rows); 429 `rate_limited` | api |
-| Confirmations | 20 per hour, per user and per device, windowed like letters on `confirm_window_start` and `confirm_count` (users and devices rows); 429 `rate_limited`, checked before the report is read | api |
+| Photo reports | `FLAGS_PER_HOUR` per hour (default 10), per user and per device, windowed like letters on `flag_window_start` and `flag_count` (users and devices rows), checked before moderation; 429 `rate_limited` | api |
+| Withdrawals | `WITHDRAWALS_PER_HOUR` per hour (default 10), per user and per device, windowed like letters on `withdraw_window_start` and `withdraw_count` (users and devices rows); 429 `rate_limited` | api |
+| Confirmations | `CONFIRMATIONS_PER_HOUR` per hour (default 20), per user and per device, windowed like letters on `confirm_window_start` and `confirm_count` (users and devices rows); 429 `rate_limited`, checked before the report is read | api |
 | Confirmation window | `CONFIRM_TTL_HOURS` (24) after the verify step asked (`confirmation.expires_at`); later answers get 409 `confirmation_closed` | worker sets it, api enforces it |
 | Cleanup photo | GPS within 50 m of the site (`near_site` check) | worker |
 | Long-range target | `report_upload.target` at most 500 m from `gps` (haversine), else 422 `target_too_far`; not allowed on `no_bin` or scan frames (the schema forbids it) | api (`POST /reports`) |
@@ -376,6 +376,11 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `CRAWLS_TABLE` | api (read), worker (queue a district), crawler | `junksnap-<stage>-crawls` |
 | `NOTES_TABLE` | api | `junksnap-<stage>-notes` |
 | `NOTES_PER_HOUR` | api | `10`: notes per hour per user and per device |
+| `SNAP_PER_HOUR` | api, worker | `20`: Snap photos (Me too included) per hour per user and per device; checked at presign, at `POST /reports` and again in moderation |
+| `CONFIRMATIONS_PER_HOUR` | api | `20`: answers to `POST /reports/{id}/confirm` per hour per user and per device |
+| `LETTERS_PER_HOUR` | api | `5`: site and area letters together per hour per user and per device |
+| `FLAGS_PER_HOUR` | api | `10`: photo reports per hour per user and per device |
+| `WITHDRAWALS_PER_HOUR` | api | `10`: withdrawals per hour per user and per device |
 | `CONFIRM_TTL_HOURS` | worker | `24`: hours a reporter has to answer a `needs_confirmation` report (contracts v1.16) |
 | `CRAWL_ACTIVATE_AFTER` | worker | model-passed photos merged into sites in a district before it is queued for a crawl; default `1` |
 | `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
@@ -398,7 +403,8 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `VITE_API_URL` | frontend | the CloudFront base URL, no trailing slash |
 | `VITE_API_MODE` | frontend | `mock` (reads `contracts/fixtures/`) or `live` |
 | `VITE_COGNITO_USER_POOL_ID`, `VITE_COGNITO_CLIENT_ID` | frontend | the same pool and app client as the api |
-| `VITE_WEB_URL` | frontend | the stage's public web app, `https://<stage>.<Amplify default domain>`, no trailing slash; the app's links point here (the Android app's own origin, `https://tauri.localhost`, is not public); in live mode share buttons use the api's `/share/*` link-preview routes instead. Set by `deploy_web.py` and `build_android.py`; unset, links use the page's origin |
+| `VITE_WEB_URL` | frontend | the stage's public web app, its custom domain once live (for demo `https://junksnap.coehemang.dev`), else `https://<stage>.<Amplify default domain>`, no trailing slash; the app's links point here (the Android app's own origin, `https://tauri.localhost`, is not public); in live mode share buttons use the api's `/share/*` link-preview routes instead. Set by `deploy_web.py` and `build_android.py`; unset, links use the page's origin |
+| `VITE_SHARE_URL` | frontend | optional: the base of share links (`/share/sites/{id}`, `/share/areas/{kind}/{id}`), a host that serves the api's link previews; `deploy_web.py` sets it to the web app's own URL, whose Amplify rule proxies `/share/*` to the api, and the Android build reads it from the `<STAGE>_SHARE_URL` repository variable; unset, share links use the api's URL |
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
 | `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
 | `ML_AUTO_VERIFY_MIN`, `ML_COMMUNITY_CHECK_MIN` | ml | optional decision floors on the combined probability, defaults `0.85` and `0.5`; each 0 to 1, the community floor below the auto-verify floor. Every result records them in `thresholds` |

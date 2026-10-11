@@ -82,6 +82,15 @@ describe('share links in live mode', () => {
   });
 });
 
+describe('share links on the web app domain', () => {
+  it('uses VITE_SHARE_URL, whose /share/* proxies to the api, instead of the api host', async () => {
+    const writeText = vi.fn(async () => undefined);
+    const share = 'https://junksnap.example.dev';
+    await clickShare(servicesWith({ ...LIVE, VITE_SHARE_URL: `${share}/` }, writeText));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${share}/share/sites/site_jdh_1`));
+  });
+});
+
 describe('ShareLinks', () => {
   it('points at the link previews when there is an api', () => {
     const links = new ShareLinks(`${API}/`, WEB);
