@@ -11,6 +11,7 @@ import { NoteFlagsSchema } from "../../src/domain/moderation/NoteFlagsSchema.js"
 import { NoteRouterBuilder } from "../../src/handlers/moderation/NoteRouterBuilder.js";
 import { LlmNoteModerator, type NoteRouter } from "../../src/services/moderation/LlmNoteModerator.js";
 import { LogSink } from "../LogSink.js";
+import { TIMEOUTS } from "../defaults.js";
 
 const HAIKU = "in.anthropic.claude-haiku-4-5-20251001-v1:0";
 
@@ -111,13 +112,13 @@ describe("NoteRouterBuilder", () => {
 
   it("tries the Haiku India profile, then Nova Pro APAC, and nothing outside Bedrock", async () => {
     const client = new FakeConverseClient();
-    const verdict = await new LlmNoteModerator(new NoteRouterBuilder(client).build(logger())).review("Call 98290 12345");
+    const verdict = await new LlmNoteModerator(new NoteRouterBuilder(client, TIMEOUTS.notes).build(logger())).review("Call 98290 12345");
     expect(client.models).toEqual(["in.anthropic.claude-haiku-4-5-20251001-v1:0", "apac.amazon.nova-pro-v1:0"]);
     expect(verdict).toMatchObject({ result: "removed", reasons: ["personal_data"], provider: "bedrock", model: "apac.amazon.nova-pro-v1:0" });
   });
 
   it("knows no task but note_moderation, so no other caller can reuse it", async () => {
-    const router = new NoteRouterBuilder(new FakeConverseClient()).build(logger());
+    const router = new NoteRouterBuilder(new FakeConverseClient(), TIMEOUTS.notes).build(logger());
     const letters = new Request({ task: "letters", system: "s", userText: "u" });
     await expect(router.complete(letters)).rejects.toThrow(/no TaskConfig/);
   });

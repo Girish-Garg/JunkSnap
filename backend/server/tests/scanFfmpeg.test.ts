@@ -28,7 +28,7 @@ import {
   sampleSession,
   testLogger,
 } from "./scanFakes.js";
-import { SCAN } from "./defaults.js";
+import { SCAN, TIMEOUTS } from "./defaults.js";
 
 const HAS_FFMPEG = spawnSync("ffmpeg", ["-version"]).status === 0;
 const SKIP_REASON = "ffmpeg integration tests skipped: ffmpeg is not on PATH (install it, e.g. apt-get install ffmpeg)";
@@ -77,7 +77,7 @@ afterAll(async () => {
 });
 
 describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, { timeout: FFMPEG_TIMEOUT_MS }, () => {
-  const reader = new FfmpegVideoFrameReader();
+  const reader = new FfmpegVideoFrameReader({ timeoutMs: TIMEOUTS.ffmpegMs });
   const hasher = new SharpFrameHasher();
 
   it("probes the size and the last frame's time from the packets of a webm without a duration header", async () => {

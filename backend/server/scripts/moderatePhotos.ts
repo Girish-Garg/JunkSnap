@@ -22,6 +22,7 @@ import { PerceptualHash } from "../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
 import { INDIA_BUFFER_DEG } from "../src/handlers/moderation/ModerationServiceFactory.js";
 import { RateLimitSettings } from "../src/settings/RateLimitSettings.js";
+import { TimeoutSettings } from "../src/settings/TimeoutSettings.js";
 import { NoteRouterBuilder } from "../src/handlers/moderation/NoteRouterBuilder.js";
 import { AuthenticityService } from "../src/services/moderation/AuthenticityService.js";
 import { CheckFactory } from "../src/services/moderation/CheckFactory.js";
@@ -73,7 +74,7 @@ class PhotoRun {
   static #noteRouter() {
     const core = CoreSettings.fromEnv(process.env);
     const logger = new JsonLoggerFactory().create({ service: "worker", stage: core.stage });
-    return new NoteRouterBuilder(new BedrockRuntimeClient({ region: core.awsRegion })).build(logger);
+    return new NoteRouterBuilder(new BedrockRuntimeClient({ region: core.awsRegion }), TimeoutSettings.fromEnv(process.env).notes).build(logger);
   }
 
   async moderate(name: string, bytes: Uint8Array, note?: string): Promise<ModerationResult> {

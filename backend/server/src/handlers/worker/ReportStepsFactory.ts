@@ -30,6 +30,7 @@ import { BinSettings } from "../../settings/BinSettings.js";
 import { CrawledWardSettings } from "../../settings/CrawledWardSettings.js";
 import { CrawlSettings } from "../../settings/CrawlSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
 import { buildBrandLabeller } from "../buildBrandLabeller.js";
 import { LocationServiceFactory } from "../LocationServiceFactory.js";
 import { WardFilesFactory } from "../WardFilesFactory.js";
@@ -79,7 +80,7 @@ export class ReportStepsFactory {
     const { settings: core, env, logger } = this.#deps.context;
     const { assetsDir } = AssetSettings.fromEnv(env);
     const { originalsBucket } = CrawledWardSettings.fromEnv(env);
-    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion }, logger);
+    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion, timeouts: TimeoutSettings.fromEnv(env).aws.transfer }, logger);
     const layers = await new FileMapLayerSource(files).layers();
     logger.info({ layers: layers.length }, "nearby-place layers loaded");
     return new NearPlacesFinder(layers);

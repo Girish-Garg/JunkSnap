@@ -405,6 +405,16 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `WORKER_MESSAGE_DEADLINE_MS` | worker | `240000`, below `QUEUE_VISIBILITY_SECONDS`: a handler still running after this is abandoned and SQS delivers the message again |
 | `WORKER_WAIT_SECONDS` | worker | `20` (0 to 20): SQS long-poll wait per receive |
 | `WORKER_BATCH_SIZE` | worker | `10` (1 to 10): messages per receive, handled at once; a site merge retries this plus one times on a version conflict |
+| `AWS_CONNECT_TIMEOUT_MS` | api, worker, scores | `3000`: connect timeout of every AWS SDK client |
+| `AWS_QUICK_TIMEOUT_MS`, `AWS_QUICK_IDLE_MS` | api, worker, scores | `10000` and `5000`: request and idle-socket timeouts of the DynamoDB, SQS send, Amazon Location and presign clients; idle under 6000 (smithy arms no longer one) |
+| `AWS_TRANSFER_TIMEOUT_MS`, `AWS_TRANSFER_IDLE_MS` | api, worker, scores | `30000` and `5000`: the same for S3 clients that read or write whole objects |
+| `AWS_WAIT_TIMEOUT_MS` | worker | `30000`, at least 21000: request timeout, with no idle timeout, for Rekognition and the SQS long poll, which stay silent before they answer |
+| `AWS_STREAM_TIMEOUT_MS` | worker | `30000`: request timeout, with no idle timeout, for the scan video download piped to disk |
+| `SECRET_TIMEOUT_MS` | api, worker | `5000`, under 6000: request and idle timeouts of the Secrets Manager client (the OpenAI key) |
+| `LLM_CALL_TIMEOUT_MS`, `LLM_BUDGET_MS` | api (letters), worker (brand judge) | `25000` and `45000`: one model call, and the whole fallback chain; the budget leaves letters time for the template inside CloudFront's 60 s |
+| `NOTE_LLM_CALL_TIMEOUT_MS`, `NOTE_LLM_BUDGET_MS` | api, worker | `15000` and `30000`: the same for the Bedrock-only note router (note moderation and analysis) |
+| `ML_VERIFY_TIMEOUT_MS` | worker | `60000`: one `POST /internal/verify` call to `ml` |
+| `FFMPEG_TIMEOUT_MS` | worker | `60000`: one ffmpeg run on a scan video |
 | `CRAWL_ACTIVATE_AFTER` | worker | model-passed photos merged into sites in a district before it is queued for a crawl; default `1` |
 | `CRAWL_INTERVAL_DAYS`, `CRAWL_RETRY_HOURS` | crawler | days between crawls of a district (default `30`) and hours before a failed crawl is retried (default `6`) |
 | `CRAWL_SOURCES_DIR`, `CRAWL_SCHEMA` | crawler | optional: the `sources/` folder and the `ward_record` schema file; the image sets both |

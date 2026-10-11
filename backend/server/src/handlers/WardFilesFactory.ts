@@ -6,12 +6,15 @@ import { NewestWardFiles } from "../adapters/wards/NewestWardFiles.js";
 import { S3CrawledWardFiles } from "../adapters/wards/S3CrawledWardFiles.js";
 import type { Logger } from "../ports/Logger.js";
 import type { WardFileSource } from "../ports/WardFileSource.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "./utils.js";
+import type { AwsTimeouts } from "../settings/TimeoutSettings.js";
+import { awsClientConfig } from "./utils.js";
 
 export interface WardFilePlaces {
   readonly assetsDir: string;
   readonly originalsBucket: string | null;
   readonly awsRegion: string;
+  // The transfer profile of TimeoutSettings.aws.
+  readonly timeouts: AwsTimeouts;
 }
 
 const DOWNLOAD_DIR = join(tmpdir(), "junksnap-crawled-wards");
@@ -23,7 +26,7 @@ export class WardFilesFactory {
     if (places.originalsBucket === null) {
       return image;
     }
-    const s3 = new S3Client(awsClientConfig(places.awsRegion, AWS_TIMEOUTS.transfer));
+    const s3 = new S3Client(awsClientConfig(places.awsRegion, places.timeouts));
     return new NewestWardFiles([image, new S3CrawledWardFiles(s3, places.originalsBucket, DOWNLOAD_DIR, logger)]);
   }
 }

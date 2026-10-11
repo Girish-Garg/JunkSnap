@@ -9,6 +9,7 @@ import { AssetSettings } from "../../src/settings/AssetSettings.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { FakeReverseGeocoder } from "./FakeReverseGeocoder.js";
 import { DELHI, KATHMANDU, LEH, PLACES, SAMPLES } from "./samples.js";
+import { TIMEOUTS } from "../defaults.js";
 
 const FIXTURES = fileURLToPath(new URL("fixtures/", import.meta.url));
 const MLA_SOURCE = "https://assembly.rajasthan.gov.in/";
@@ -17,7 +18,7 @@ const MP_SOURCE = "https://sansad.in/ls/members";
 async function serviceWith(place: PlaceFields) {
   const geocoder = new FakeReverseGeocoder(place);
   const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
-  const factory = new LocationServiceFactory(core, AssetSettings.fromEnv({ ASSETS_DIR: FIXTURES }));
+  const factory = new LocationServiceFactory(core, AssetSettings.fromEnv({ ASSETS_DIR: FIXTURES }), TIMEOUTS.aws.quick);
   return { service: await factory.create(geocoder), geocoder };
 }
 

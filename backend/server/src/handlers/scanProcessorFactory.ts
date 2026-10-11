@@ -11,6 +11,7 @@ import { VideoScanProcessor } from "../services/VideoScanProcessor.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import { ScanLimitSettings } from "../settings/ScanLimitSettings.js";
 import { ScanSettings } from "../settings/ScanSettings.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import type { Env } from "../settings/utils.js";
 import { ScanAdapterFactory } from "./ScanAdapterFactory.js";
 
@@ -22,9 +23,10 @@ export interface ScanProcessorContext {
 
 // The worker calls this once at startup and routes every kind scan message to the result.
 export function buildScanProcessor({ core, env, logger }: ScanProcessorContext): VideoScanProcessor {
-  const adapters = new ScanAdapterFactory(ScanSettings.fromEnv(env), core.awsRegion);
+  const timeouts = TimeoutSettings.fromEnv(env);
+  const adapters = new ScanAdapterFactory(ScanSettings.fromEnv(env), core.awsRegion, timeouts.aws);
   const media = adapters.mediaStore();
-  const reader = new FfmpegVideoFrameReader();
+  const reader = new FfmpegVideoFrameReader({ timeoutMs: timeouts.ffmpegMs });
   const scratch = new TempScratchSpace();
   const now = (): Date => new Date();
   const limits = ScanLimitSettings.fromEnv(env);

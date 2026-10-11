@@ -27,9 +27,10 @@ import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
 import type { Env } from "../../settings/utils.js";
 import type { EntryContext } from "../EntryPoint.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
+import { awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
 
 // About 2 km: absorbs the outline's 500 m simplification and GPS drift at coasts and borders.
@@ -47,6 +48,7 @@ export interface ModerationWiring {
 export interface ModerationTunables {
   readonly limits: RateLimitSettings;
   readonly rules: SiteRuleSettings;
+  readonly timeouts: TimeoutSettings;
 }
 
 // Builds the moderation object graph once per worker process.
@@ -60,20 +62,22 @@ export class ModerationServiceFactory {
   }
 
   static tunables(env: Env): ModerationTunables {
-    return { limits: RateLimitSettings.fromEnv(env), rules: SiteRuleSettings.fromEnv(env) };
+    return { limits: RateLimitSettings.fromEnv(env), rules: SiteRuleSettings.fromEnv(env), timeouts: TimeoutSettings.fromEnv(env) };
   }
 
   // For the worker's entry point: reads settings when called, never at import.
   static forWorker(context: EntryContext, devices: DeviceRegistry): ModerationService {
-    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), ModerationServiceFactory.tunables(context.env));
+    const tunables = ModerationServiceFactory.tunables(context.env);
+    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), tunables);
     const bedrock = new BedrockRuntimeClient({ region: context.settings.awsRegion });
-    return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock).build(context.logger) });
+    return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock, tunables.timeouts.notes).build(context.logger) });
   }
 
   create(wiring: ModerationWiring): ModerationService {
     const settings = this.#settings;
-    const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.wait));
-    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.transfer)), {
+    const { aws } = this.#tunables.timeouts;
+    const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, aws.wait));
+    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, aws.transfer)), {
       originals: settings.originalsBucket,
       public: settings.publicBucket,
     });
@@ -96,8 +100,8 @@ export class ModerationServiceFactory {
 
   #checks(devices: DeviceRegistry): CheckFactory {
     const settings = this.#settings;
-    const { limits, rules } = this.#tunables;
-    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion))));
+    const { limits, rules, timeouts } = this.#tunables;
+    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion, timeouts.aws.quick))));
     const tables = { reports: settings.reportsTable, sites: settings.sitesTable };
     return new CheckFactory({
       india: TurfGeofence.fromFile(settings.indiaOutlinePath(), INDIA_BUFFER_DEG),

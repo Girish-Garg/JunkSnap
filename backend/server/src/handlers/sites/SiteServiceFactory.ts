@@ -36,7 +36,8 @@ import { ScoreSettings } from "../../settings/ScoreSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
 import { SitesSettings } from "../../settings/SitesSettings.js";
 import type { Env } from "../../settings/utils.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
+import { awsClientConfig } from "../utils.js";
 
 export type FlagSiteParts = Pick<PhotoFlagServiceDeps, "sites" | "rows" | "clock" | "retry" | "radiusM">;
 
@@ -85,10 +86,11 @@ export class SiteServiceFactory {
 
   static fromEnv(core: CoreSettings, env: Env, logger: Logger): SiteServiceFactory {
     const region = core.awsRegion;
+    const aws = TimeoutSettings.fromEnv(env).aws;
     const marshallOptions = { removeUndefinedValues: true };
-    const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
-    const s3 = new S3Client(awsClientConfig(region, AWS_TIMEOUTS.transfer));
-    const clients = { dynamo, s3, sqs: new SQSClient(awsClientConfig(region)) };
+    const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region, aws.quick)), { marshallOptions });
+    const s3 = new S3Client(awsClientConfig(region, aws.transfer));
+    const clients = { dynamo, s3, sqs: new SQSClient(awsClientConfig(region, aws.quick)) };
     return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger, SiteServiceFactory.tunables(env));
   }
 

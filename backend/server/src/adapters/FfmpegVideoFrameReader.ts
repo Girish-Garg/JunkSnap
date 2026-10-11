@@ -8,7 +8,6 @@ import type { ExtractedFrame, VideoFrameReader, VideoInfo } from "../ports/Video
 import { FramecrcParser } from "./FramecrcParser.js";
 
 const MS_PER_SECOND = 1_000;
-const DEFAULT_TIMEOUT_MS = 60_000;
 // A minute of video at 240 fps lists in about 1 MB, so more than this is not a phone recording.
 const MAX_STDOUT_CHARS = 16_000_000;
 const MAX_STDERR_CHARS = 4_000;
@@ -22,7 +21,8 @@ interface FfmpegRun {
 
 export interface FfmpegOptions {
   readonly binary?: string;
-  readonly timeoutMs?: number;
+  // FFMPEG_TIMEOUT_MS.
+  readonly timeoutMs: number;
 }
 
 export class FfmpegVideoFrameReader implements VideoFrameReader {
@@ -30,7 +30,7 @@ export class FfmpegVideoFrameReader implements VideoFrameReader {
   readonly #timeoutMs: number;
   readonly #parser = new FramecrcParser();
 
-  constructor({ binary = "ffmpeg", timeoutMs = DEFAULT_TIMEOUT_MS }: FfmpegOptions = {}) {
+  constructor({ binary = "ffmpeg", timeoutMs }: FfmpegOptions) {
     this.#binary = binary;
     this.#timeoutMs = timeoutMs;
   }

@@ -29,6 +29,7 @@ import { RouteGuard } from "./auth/RouteGuard.js";
 import { ReportConfirmEndpoint } from "./ReportConfirmEndpoint.js";
 import { ReportEndpoints } from "./ReportEndpoints.js";
 import type { RouteContext } from "./RouteBuilder.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 
 // Settings load inside the plugin, so createApp's CORS check still fails first.
@@ -37,14 +38,15 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const settings = IntakeSettings.fromEnv(env);
     const limits = RateLimitSettings.fromEnv(env);
     const region = core.awsRegion;
+    const aws = TimeoutSettings.fromEnv(env).aws;
     const marshallOptions = { removeUndefinedValues: true };
-    const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
+    const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region, aws.quick)), { marshallOptions });
     const reports = new DynamoReportRepository(documents, settings.reportsTable);
     const clock = new SystemClock();
     const snapLimit = new SnapLimit(new DynamoSnapCounter(documents, settings.reportsTable), limits.snapPerHour);
-    const signer = new S3UploadSigner(new S3Client(awsClientConfig(region)), settings.originalsBucket);
+    const signer = new S3UploadSigner(new S3Client(awsClientConfig(region, aws.quick)), settings.originalsBucket);
     const presigner = new UploadPresigner({ signer, ids: new UlidIdGenerator(), clock, snapLimit }, settings.presignTtlSeconds);
-    const queue = new SqsReportQueue(new SQSClient(awsClientConfig(region)), settings.reportsQueueUrl);
+    const queue = new SqsReportQueue(new SQSClient(awsClientConfig(region, aws.quick)), settings.reportsQueueUrl);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock }, intakeLimits(env));
     const statuses = new ReportStatusReader(reports, settings.publicBaseUrl, clock);
     const lister = new DynamoUserReportLister(documents, settings.reportsTable, app.log);

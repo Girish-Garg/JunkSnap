@@ -7,6 +7,7 @@ import { ScanSessionRules } from "../services/ScanSessionRules.js";
 import { ScanUploadPresigner } from "../services/ScanUploadPresigner.js";
 import { ScanLimitSettings } from "../settings/ScanLimitSettings.js";
 import { ScanSettings } from "../settings/ScanSettings.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import type { RouteContext } from "./RouteBuilder.js";
 import { ScanAdapterFactory } from "./ScanAdapterFactory.js";
@@ -44,7 +45,7 @@ export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync
     const settings = ScanSettings.fromEnv(env);
     const limits = ScanLimitSettings.fromEnv(env);
     const guard = RouteGuard.fromEnv(env);
-    const adapters = new ScanAdapterFactory(settings, core.awsRegion);
+    const adapters = new ScanAdapterFactory(settings, core.awsRegion, TimeoutSettings.fromEnv(env).aws);
     const now = (): Date => new Date();
     const newScanId = (): string => `scn_${ulid().toLowerCase()}`;
     const presigner = new ScanUploadPresigner(adapters.uploadSigner(), {

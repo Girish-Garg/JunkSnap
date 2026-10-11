@@ -10,6 +10,7 @@ import type { UserStanding } from "../../ports/UserStanding.js";
 import { CachedUserStanding } from "../../services/CachedUserStanding.js";
 import { AuthSettings } from "../../settings/AuthSettings.js";
 import type { Env } from "../../settings/utils.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
 import { awsClientConfig } from "../utils.js";
 
 const BEARER = /^Bearer +(\S+)$/i;
@@ -30,7 +31,7 @@ export class RouteGuard {
 
   static fromEnv(env: Env): RouteGuard {
     const settings = AuthSettings.fromEnv(env);
-    const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion)));
+    const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion, TimeoutSettings.fromEnv(env).aws.quick)));
     const standing = new CachedUserStanding(new DynamoUserStanding(documents, settings.usersTable), new SystemClock(), STANDING_TTL_MS);
     return new RouteGuard(new CognitoAuthenticator(settings), standing);
   }

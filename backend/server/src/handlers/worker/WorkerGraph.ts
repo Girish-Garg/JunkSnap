@@ -11,7 +11,8 @@ import { ServiceCleanupModerator } from "../../services/wiring/ServiceCleanupMod
 import { SiteCleanupRecorder } from "../../services/wiring/SiteCleanupRecorder.js";
 import { QueueSettings } from "../../settings/QueueSettings.js";
 import { buildScanProcessor } from "../scanProcessorFactory.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
+import { awsClientConfig } from "../utils.js";
 import { ReportStepsFactory } from "./ReportStepsFactory.js";
 import type { WorkerDeps } from "./WorkerDeps.js";
 
@@ -28,7 +29,7 @@ export class WorkerGraph {
     const router = new MessageRouter({ report: await this.#report(), cleanup: this.#cleanup(), scan: this.#scan() });
     const { maxReceiveCount, messageDeadlineMs, waitSeconds, batchSize } = QueueSettings.fromEnv(context.env);
     const options = { queueUrl: settings.reportsQueueUrl, maxReceiveCount, messageDeadlineMs, waitSeconds, batchSize };
-    const sqs = new SQSClient(awsClientConfig(context.settings.awsRegion, AWS_TIMEOUTS.wait));
+    const sqs = new SQSClient(awsClientConfig(context.settings.awsRegion, TimeoutSettings.fromEnv(context.env).aws.wait));
     return new SqsQueuePoller(sqs, options, router, context.logger);
   }
 

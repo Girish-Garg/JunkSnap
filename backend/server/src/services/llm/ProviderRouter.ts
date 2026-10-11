@@ -13,11 +13,9 @@ import { LlmCallLog } from "./LlmCallLog.js";
 import type { ProviderFactory } from "./ProviderFactory.js";
 import { TextAnswer } from "./TextAnswer.js";
 
-// Leaves letters time for the template fallback inside CloudFront's 60 s.
-export const DEFAULT_BUDGET_MS = 45_000;
-
 export interface RouterOptions {
-  readonly budgetMs?: number;
+  // LLM_BUDGET_MS or NOTE_LLM_BUDGET_MS: nothing new starts once it is spent.
+  readonly budgetMs: number;
 }
 
 interface Route<J> {
@@ -33,11 +31,11 @@ export class ProviderRouter {
   readonly #log: LlmCallLog;
   readonly #budgetMs: number;
 
-  constructor(tasks: ReadonlyMap<LlmTask, TaskConfig>, factory: ProviderFactory, logger: Logger, options: RouterOptions = {}) {
+  constructor(tasks: ReadonlyMap<LlmTask, TaskConfig>, factory: ProviderFactory, logger: Logger, options: RouterOptions) {
     this.#tasks = tasks;
     this.#factory = factory;
     this.#log = new LlmCallLog(logger);
-    this.#budgetMs = options.budgetMs ?? DEFAULT_BUDGET_MS;
+    this.#budgetMs = options.budgetMs;
   }
 
   complete(request: LlmRequest): Promise<LlmResponse> {

@@ -6,6 +6,7 @@ import { QueueSettings } from "../src/settings/QueueSettings.js";
 import { ScanLimitSettings } from "../src/settings/ScanLimitSettings.js";
 import { ScoreSettings } from "../src/settings/ScoreSettings.js";
 import { SiteRuleSettings } from "../src/settings/SiteRuleSettings.js";
+import { TimeoutSettings } from "../src/settings/TimeoutSettings.js";
 import type { Env } from "../src/settings/utils.js";
 
 // One variable: how its setting is read, its default, a value it accepts (and what that reads as) and values it refuses.
@@ -72,6 +73,26 @@ const SCAN_TUNABLES: readonly Tunable[] = [
   { name: "SCAN_SPOT_RADIUS_M", read: (env) => scan(env).frames.spotRadiusM, fallback: 20, good: ["30", 30], bad: ["0", "1001"] },
 ];
 
+const timeouts = (env: Env) => TimeoutSettings.fromEnv(env);
+const MS_BAD = ["0", "999", "1.5", "slow"];
+
+const TIMEOUT_TUNABLES: readonly Tunable[] = [
+  { name: "AWS_CONNECT_TIMEOUT_MS", read: (env) => timeouts(env).aws.quick.connectionTimeout, fallback: 3_000, good: ["2000", 2_000], bad: ["0", "99", "x"] },
+  { name: "AWS_QUICK_TIMEOUT_MS", read: (env) => timeouts(env).aws.quick.requestTimeout, fallback: 10_000, good: ["8000", 8_000], bad: MS_BAD },
+  { name: "AWS_QUICK_IDLE_MS", read: (env) => timeouts(env).aws.quick.socketTimeout ?? 0, fallback: 5_000, good: ["4000", 4_000], bad: ["6000", "0", "x"] },
+  { name: "AWS_TRANSFER_TIMEOUT_MS", read: (env) => timeouts(env).aws.transfer.requestTimeout, fallback: 30_000, good: ["60000", 60_000], bad: MS_BAD },
+  { name: "AWS_TRANSFER_IDLE_MS", read: (env) => timeouts(env).aws.transfer.socketTimeout ?? 0, fallback: 5_000, good: ["3000", 3_000], bad: ["6000", "0"] },
+  { name: "AWS_WAIT_TIMEOUT_MS", read: (env) => timeouts(env).aws.wait.requestTimeout, fallback: 30_000, good: ["25000", 25_000], bad: ["20000", "x"] },
+  { name: "AWS_STREAM_TIMEOUT_MS", read: (env) => timeouts(env).aws.stream.requestTimeout, fallback: 30_000, good: ["45000", 45_000], bad: MS_BAD },
+  { name: "SECRET_TIMEOUT_MS", read: (env) => timeouts(env).aws.secrets.requestTimeout, fallback: 5_000, good: ["2000", 2_000], bad: ["6000", "0"] },
+  { name: "LLM_CALL_TIMEOUT_MS", read: (env) => timeouts(env).llm.callMs, fallback: 25_000, good: ["20000", 20_000], bad: MS_BAD },
+  { name: "LLM_BUDGET_MS", read: (env) => timeouts(env).llm.budgetMs, fallback: 45_000, good: ["50000", 50_000], bad: MS_BAD },
+  { name: "NOTE_LLM_CALL_TIMEOUT_MS", read: (env) => timeouts(env).notes.callMs, fallback: 15_000, good: ["10000", 10_000], bad: MS_BAD },
+  { name: "NOTE_LLM_BUDGET_MS", read: (env) => timeouts(env).notes.budgetMs, fallback: 30_000, good: ["20000", 20_000], bad: MS_BAD },
+  { name: "ML_VERIFY_TIMEOUT_MS", read: (env) => timeouts(env).mlVerifyMs, fallback: 60_000, good: ["90000", 90_000], bad: MS_BAD },
+  { name: "FFMPEG_TIMEOUT_MS", read: (env) => timeouts(env).ffmpegMs, fallback: 60_000, good: ["30000", 30_000], bad: MS_BAD },
+];
+
 function describeTunables(title: string, tunables: readonly Tunable[]): void {
   describe(title, () => {
     describe.each(tunables)("$name", ({ name, read, fallback, good, bad }) => {
@@ -92,6 +113,7 @@ function describeTunables(title: string, tunables: readonly Tunable[]): void {
 
 describeTunables("site, score, area list, notes and queue variables", RULE_TUNABLES);
 describeTunables("scan variables", SCAN_TUNABLES);
+describeTunables("timeout variables", TIMEOUT_TUNABLES);
 
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {

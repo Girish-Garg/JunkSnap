@@ -9,6 +9,7 @@ import { AreaScoresQuery } from "../services/AreaScoresQuery.js";
 import { AreaListSettings } from "../settings/AreaListSettings.js";
 import { AreaScoresSettings } from "../settings/AreaScoresSettings.js";
 import type { RouteContext } from "./RouteBuilder.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 
 interface AreaParams {
@@ -41,7 +42,7 @@ export function areaScoresRoutes(queries: AreaQueries): FastifyPluginAsync {
 export function buildAreaScoresRoutes(context: RouteContext): FastifyPluginAsync {
   return async (app) => {
     const settings = AreaScoresSettings.fromEnv(context.env);
-    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion, TimeoutSettings.fromEnv(context.env).aws.quick)));
     const scores = new AreaScoresQuery(new DynamoScoreRepository(client, settings.scoresTable));
     const list = new AreaListQuery(new DynamoScoreLister(client, settings.scoresTable, app.log), AreaListSettings.fromEnv(context.env));
     await app.register(areaScoresRoutes({ scores, list }));

@@ -4,7 +4,6 @@ import type { VerifyRequest } from "../domain/VerifyRequest.js";
 import type { MlVerifyClient } from "../ports/MlVerifyClient.js";
 
 const PATH = "/internal/verify";
-const TIMEOUT_MS = 60_000;
 
 export type FetchFunction = typeof fetch;
 
@@ -14,7 +13,8 @@ export class HttpMlVerifyClient implements MlVerifyClient {
   readonly #fetch: FetchFunction;
   readonly #timeoutMs: number;
 
-  constructor(baseUrl: string, fetchFunction: FetchFunction = fetch, timeoutMs = TIMEOUT_MS) {
+  // timeoutMs: ML_VERIFY_TIMEOUT_MS.
+  constructor(baseUrl: string, timeoutMs: number, fetchFunction: FetchFunction = fetch) {
     this.#url = `${baseUrl.replace(/\/+$/, "")}${PATH}`;
     this.#fetch = fetchFunction;
     this.#timeoutMs = timeoutMs;

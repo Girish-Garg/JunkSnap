@@ -17,7 +17,7 @@ import { NoteRouterBuilder } from "../../src/handlers/moderation/NoteRouterBuild
 import { LlmNoteModerator } from "../../src/services/moderation/LlmNoteModerator.js";
 import { LogSink } from "../LogSink.js";
 import { reportSubmission, testJpeg } from "./fakes.js";
-import { RULES } from "../defaults.js";
+import { RULES, TIMEOUTS } from "../defaults.js";
 
 // Thin read-only checks against the real services: RUN_AWS_TESTS=1 with AWS_PROFILE set.
 const region = "ap-south-1";
@@ -47,7 +47,7 @@ describe.skipIf(process.env.RUN_AWS_TESTS !== "1")("moderation adapters on AWS",
   // On 10 Oct the Claude models still needed the Anthropic use-case form, so Nova Pro answered.
   it("removes a note with a phone number through Bedrock and keeps a plain one", async () => {
     const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage });
-    const moderator = new LlmNoteModerator(new NoteRouterBuilder(new BedrockRuntimeClient({ region })).build(logger));
+    const moderator = new LlmNoteModerator(new NoteRouterBuilder(new BedrockRuntimeClient({ region }), TIMEOUTS.notes).build(logger));
     const phone = await moderator.review("Call 98290 12345 about this dump");
     expect(phone).toMatchObject({ result: "removed", reasons: ["personal_data"], provider: "bedrock" });
     expect(await moderator.review("Rotting vegetables dumped here every evening")).toMatchObject({ result: "clean", reasons: [] });

@@ -6,32 +6,30 @@ import { SecretsManagerSecretReader } from "../adapters/SecretsManagerSecretRead
 import { PriceTable } from "../domain/llm/PriceTable.js";
 import type { Logger } from "../ports/Logger.js";
 import { ProviderFactory } from "../services/llm/ProviderFactory.js";
-import { ProviderRouter, type RouterOptions } from "../services/llm/ProviderRouter.js";
+import { ProviderRouter } from "../services/llm/ProviderRouter.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import { LlmSettings } from "../settings/LlmSettings.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import type { Env } from "../settings/utils.js";
 import { awsClientConfig } from "./utils.js";
 
-// Per attempt; the router's overall budget (45 s by default) caps the whole chain.
-const CALL_TIMEOUT_MS = 25_000;
-const SECRET_TIMEOUT_MS = 5_000;
-
 // Call once per process from a composition root; inside a route plugin pass `app.log`.
-export function buildProviderRouter(env: Env, core: CoreSettings, logger: Logger, options: RouterOptions = {}): ProviderRouter {
+// Each attempt gets LLM_CALL_TIMEOUT_MS; LLM_BUDGET_MS caps the whole chain.
+export function buildProviderRouter(env: Env, core: CoreSettings, logger: Logger): ProviderRouter {
   const settings = LlmSettings.fromEnv(env, core.stage);
+  const timeouts = TimeoutSettings.fromEnv(env);
   const prices = new PriceTable();
   const bedrock = new BedrockRuntimeClient({ region: core.awsRegion });
-  const secretTimeouts = { requestTimeout: SECRET_TIMEOUT_MS, socketTimeout: SECRET_TIMEOUT_MS };
-  const secretsClient = new SecretsManagerClient(awsClientConfig(core.awsRegion, secretTimeouts));
+  const secretsClient = new SecretsManagerClient(awsClientConfig(core.awsRegion, timeouts.aws.secrets));
   const factory = new ProviderFactory([
-    new BedrockProviderBuilder(bedrock, prices, CALL_TIMEOUT_MS),
+    new BedrockProviderBuilder(bedrock, prices, timeouts.llm.callMs),
     new OpenAiProviderBuilder({
       fetch: globalThis.fetch,
       secrets: new SecretsManagerSecretReader(secretsClient),
       secretId: settings.openAiSecretId,
       prices,
-      timeoutMs: CALL_TIMEOUT_MS,
+      timeoutMs: timeouts.llm.callMs,
     }),
   ]);
-  return new ProviderRouter(settings.tasks, factory, logger, options);
+  return new ProviderRouter(settings.tasks, factory, logger, { budgetMs: timeouts.llm.budgetMs });
 }

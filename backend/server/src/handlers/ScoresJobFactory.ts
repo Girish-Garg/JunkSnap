@@ -14,6 +14,7 @@ import { ScoreSettings } from "../settings/ScoreSettings.js";
 import { ScoresSettings } from "../settings/ScoresSettings.js";
 import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import type { EntryContext } from "./EntryPoint.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 import { WardFilesFactory } from "./WardFilesFactory.js";
 
@@ -23,7 +24,7 @@ export class ScoresJobFactory {
     const { settings: core, env, logger } = context;
     const settings = ScoresSettings.fromEnv(env);
     const { ttlDays } = SiteRuleSettings.fromEnv(env);
-    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(core.awsRegion)));
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(core.awsRegion, TimeoutSettings.fromEnv(env).aws.quick)));
     const ports = {
       sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser(ttlDays)),
       reports: new DynamoAreaReportReader(client, settings.reportsTable, logger),
@@ -40,7 +41,7 @@ export class ScoresJobFactory {
       return WardRecordAreaFacts.fromDirectory(null);
     }
     const { originalsBucket } = CrawledWardSettings.fromEnv(env);
-    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion }, logger);
+    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion, timeouts: TimeoutSettings.fromEnv(env).aws.transfer }, logger);
     return WardRecordAreaFacts.fromFiles(files, assetsDir);
   }
 }

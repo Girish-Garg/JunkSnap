@@ -10,20 +10,24 @@ import { SeatResolver } from "../services/location/SeatResolver.js";
 import { AssetSettings } from "../settings/AssetSettings.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import type { Env } from "../settings/utils.js";
+import { TimeoutSettings, type AwsTimeouts } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 
 // create() loads and indexes about 2 MB of boundaries: call it once per process and keep the service.
 export class LocationServiceFactory {
   readonly #core: CoreSettings;
   readonly #assets: AssetSettings;
+  readonly #timeouts: AwsTimeouts;
 
-  constructor(core: CoreSettings, assets: AssetSettings) {
+  // timeouts: the quick profile of TimeoutSettings.aws, for Amazon Location.
+  constructor(core: CoreSettings, assets: AssetSettings, timeouts: AwsTimeouts) {
     this.#core = core;
     this.#assets = assets;
+    this.#timeouts = timeouts;
   }
 
   static fromEnv(core: CoreSettings, env: Env): LocationServiceFactory {
-    return new LocationServiceFactory(core, AssetSettings.fromEnv(env));
+    return new LocationServiceFactory(core, AssetSettings.fromEnv(env), TimeoutSettings.fromEnv(env).aws.quick);
   }
 
   async create(geocoder: ReverseGeocoder = this.#amazonLocation()): Promise<LocationService> {
@@ -42,6 +46,6 @@ export class LocationServiceFactory {
   }
 
   #amazonLocation(): ReverseGeocoder {
-    return new GeoPlacesReverseGeocoder(new GeoPlacesClient(awsClientConfig(this.#core.awsRegion)));
+    return new GeoPlacesReverseGeocoder(new GeoPlacesClient(awsClientConfig(this.#core.awsRegion, this.#timeouts)));
   }
 }
