@@ -99,7 +99,9 @@ export class SiteCleanup {
       return this.#parts;
     }
     const reset = props.clearance === undefined ? {} : { clearance: NO_CLEARANCE };
-    return { props: { ...props, ...reset, status: "reopened", cleanup_status: "none" }, internals };
+    // Cleared votes may have cleaned the site mid-check; that after-photo stays checking, so its result still lands.
+    const checking = props.cleanup_status === "checking" && internals.pendingCleanupId !== null;
+    return { props: { ...props, ...reset, status: "reopened", cleanup_status: checking ? "checking" : "none" }, internals };
   }
 
   #assertAwaits(cleanupId: string): void {

@@ -195,21 +195,41 @@ describe("site expiry (decision 20261010-1855)", () => {
 
 describe("DynamoSiteExpirer", () => {
   const now = new Date("2026-10-20T00:00:00.000Z");
+  // A row written before decision 20261010-1855: no expires_at.
+  const legacyRow = (lastReportedAt: string) => () => ({ Item: { status: "open", verification: "unverified", last_reported_at: lastReportedAt } });
 
   it("marks the site expired only while it is still lapsed, and bumps its version", async () => {
-    const client = new ScriptedClient();
+    const row = { status: "open", verification: "unverified", last_reported_at: "2026-07-01T00:00:00Z", expires_at: "2026-09-29T00:00:00.000Z" };
+    const client = new ScriptedClient([() => ({ Item: row })]);
     expect(await new DynamoSiteExpirer(client.as<DynamoDBDocumentClient>(), "junksnap-dev-sites").expire(SITE, now)).toBe(true);
-    const input = client.sent[0]?.input;
-    expect(client.sent[0]?.name).toBe("UpdateCommand");
+    expect(client.sent.map((command) => command.name)).toEqual(["GetCommand", "UpdateCommand"]);
+    expect(client.sent[0]?.input).toMatchObject({ TableName: "junksnap-dev-sites", Key: { site_id: SITE } });
+    const input = client.sent[1]?.input;
     expect(input).toMatchObject({ TableName: "junksnap-dev-sites", Key: { site_id: SITE }, ExpressionAttributeNames: { "#status": "status" } });
     expect(input?.UpdateExpression).toContain("version = if_not_exists(version, :zero) + :one");
-    expect(input?.ExpressionAttributeValues).toMatchObject({ ":expired": "expired", ":now": now.toISOString(), ":cutoff": "2026-07-22T00:00:00.000Z" });
+    expect(input?.ConditionExpression).toContain("expires_at < :now");
+    expect(input?.ExpressionAttributeValues).toMatchObject({ ":expired": "expired", ":now": now.toISOString(), ":seen": "2026-07-01T00:00:00Z" });
+  });
+
+  it("judges a row without expires_at by Date.parse, so an offset in last_reported_at neither delays nor hastens it", async () => {
+    // 05:00+05:30 on 22 Jul is 23:30Z on 21 Jul, past the 22 Jul 00:00Z cutoff, though it sorts after it as text.
+    const lapsed = new ScriptedClient([legacyRow("2026-07-22T05:00:00+05:30")]);
+    expect(await new DynamoSiteExpirer(lapsed.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(true);
+    const update = lapsed.sent.find((command) => command.name === "UpdateCommand")?.input;
+    expect(update?.ConditionExpression).toContain("attribute_not_exists(expires_at) AND last_reported_at = :seen");
+    expect(update?.ExpressionAttributeValues).toMatchObject({ ":seen": "2026-07-22T05:00:00+05:30" });
+    // 22:00-04:00 on 21 Jul is 02:00Z on 22 Jul, not lapsed yet, though it sorts before the cutoff as text.
+    const fresh = new ScriptedClient([legacyRow("2026-07-21T22:00:00-04:00")]);
+    expect(await new DynamoSiteExpirer(fresh.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(false);
+    expect(fresh.sent.map((command) => command.name)).toEqual(["GetCommand"]);
   });
 
   it("answers false when a vote refreshed the site meanwhile, and wraps other failures", async () => {
-    const refreshed = new ScriptedClient([conditionFailed]);
+    const refreshed = new ScriptedClient([legacyRow("2026-07-01T00:00:00Z"), conditionFailed]);
     expect(await new DynamoSiteExpirer(refreshed.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(false);
-    const down = new ScriptedClient([failure("InternalServerError")]);
+    const down = new ScriptedClient([legacyRow("2026-07-01T00:00:00Z"), failure("InternalServerError")]);
     await expect(new DynamoSiteExpirer(down.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).rejects.toThrow(ExternalServiceError);
+    const unreadable = new ScriptedClient([failure("InternalServerError")]);
+    await expect(new DynamoSiteExpirer(unreadable.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).rejects.toThrow(ExternalServiceError);
   });
 });

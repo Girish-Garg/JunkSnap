@@ -61,6 +61,22 @@ describe("removal needs more reporters than backers", () => {
     expect(result).toMatchObject({ site_removed: true, status: "removed" });
     expect(site?.snapshot().feature.properties).toMatchObject({ removed_reason: "photos_reported", removed_at: NOW });
   });
+
+  it("counts only the reporters of hidden photos still on the site, not of one its reporter withdrew", async () => {
+    const rig = flagRig();
+    seeded(rig, true);
+    await backedBy(rig, 6);
+    await flagBy(rig, 1, 14);
+    const site = await rig.sites.get(SITE);
+    const rows = await rig.rows.forSite(SITE);
+    site?.withdraw({ mine: rows.filter((row) => row.reportId === FIRST_PHOTO), others: rows.filter((row) => row.reportId !== FIRST_PHOTO), at: NOW });
+    if (site) {
+      await rig.sites.save(site);
+    }
+    await flagBy(rig, 21, 28, SECOND_PHOTO);
+    expect(properties(rig)).toMatchObject({ status: "open", photo_urls: [], backers: { count: 7 } });
+    expect(properties(rig).photo_flags).toContainEqual({ photo_id: SECOND_PHOTO, count: 8, warned: true, hidden: true });
+  });
 });
 
 // A second writer's report lands, then the first save loses the version race and the retry counts it too.
@@ -110,5 +126,19 @@ describe("descriptions as community signals", () => {
     const shown = await texts.shownFor(SITE);
     expect(shown.map((note) => note.text).sort()).toEqual(["Not this plot", "Shows a shop front"]);
     expect(shown.every((note) => note.source === "photo_report")).toBe(true);
+  });
+
+  it("start a refresh when concurrent reports jump the photo past the warning", async () => {
+    const rig = flagRig();
+    seeded(rig, true);
+    await rig.service.flag(request(flagger(1), { text: "Not this plot" }));
+    await rig.service.flag(request(flagger(2), { text: "Shows a shop front" }));
+    // A fourth person's report is stored while the third one is being counted.
+    await rig.flags.put({ ...request(flagger(4)), siteId: SITE, photoId: FIRST_PHOTO, textStatus: "none", moderation: null, createdAt: NOW });
+    const answer = await rig.service.flag(request(flagger(3)));
+    expect(answer.photo).toEqual({ count: 4, warned: true, hidden: false });
+    expect(rig.community.sites).toEqual([SITE]);
+    await rig.service.flag(request(flagger(4)));
+    expect(rig.community.sites).toEqual([SITE]);
   });
 });
