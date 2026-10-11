@@ -134,7 +134,7 @@ export class SiteServiceFactory {
       sites: this.#sites(),
       votes: this.#votes(),
       cells: this.#cells,
-      picker: new MergeTargetPicker(embeddings, rules.mergeMinCosine),
+      picker: new MergeTargetPicker(embeddings, rules),
       reports: this.#reports(),
       scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,

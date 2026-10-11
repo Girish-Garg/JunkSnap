@@ -28,7 +28,7 @@ function setup(sites = new FakeSiteRepository()) {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(embeddings, RULES),
     reports,
     scores,
     clock: new FixedClock(),
@@ -147,13 +147,15 @@ describe("SiteMerger merging", () => {
   });
 });
 
+// Beyond SITE_SAME_SPOT_M (20 m), up to the 40 m merge radius, only a matching photo joins (decision 20261011-1610).
 describe("SiteMerger embeddings", () => {
   async function withVectors(site: number[], incoming: number[]) {
     const context = setup();
     context.embeddings.add("embeddings/rpt_jdh_1.json", new EmbeddingVector(site));
     context.embeddings.add("embeddings/rpt_jdh_2.json", new EmbeddingVector(incoming));
     await context.merger.merge(evidence({ embeddingKey: "embeddings/rpt_jdh_1.json" }));
-    const result = await context.merger.merge(evidence({ id: "jdh_2", embeddingKey: "embeddings/rpt_jdh_2.json" }));
+    const second = evidence({ id: "jdh_2", lat: northOf(25), embeddingKey: "embeddings/rpt_jdh_2.json" });
+    const result = await context.merger.merge(second);
     return { ...context, result };
   }
 

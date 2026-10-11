@@ -36,7 +36,7 @@ function setup() {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(embeddings, RULES),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),

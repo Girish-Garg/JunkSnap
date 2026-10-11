@@ -30,7 +30,7 @@ function setup(sites: FakeSiteRepository) {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(embeddings, RULES),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
@@ -59,7 +59,8 @@ describe("a redelivered scan frame", () => {
     await merger.merge(evidence({ id: "x", device: DEVICE_B, embeddingKey: "embeddings/rpt_x.json" }));
     const first = await merger.merge(scanFrame("b", 2));
     expect(first).toMatchObject({ siteId: "site_x", outcome: "merged" });
-    const spot = await merger.merge(scanFrame("a", 1));
+    // Beyond SITE_SAME_SPOT_M (20 m) of the neighbour, so frame a's other pile founds the spot's site.
+    const spot = await merger.merge(scanFrame("a", 22));
     expect(spot.outcome).toBe("founded");
     expect(spot.siteId).not.toBe("site_x");
 
@@ -68,6 +69,24 @@ describe("a redelivered scan frame", () => {
     expect(again).toEqual({ siteId: "site_x", outcome: "unchanged", reportStatus: first.reportStatus });
     expect(await holdersOf(sites, "rpt_b")).toEqual(["site_x"]);
     expect(sites.feature("site_x").properties.report_count).toBe(2);
+    expect(sites.feature(spot.siteId).properties.report_count).toBe(1);
+  });
+
+  // Here only the holder check keeps the frame put: on a fresh pick the spot's site, 5 m away, is at the same spot
+  // (decision 20261011-1610) and nearer than the neighbour 30 m away.
+  it("stays in the neighbour site it joined by photo, though its spot's site is now at the same spot", async () => {
+    const sites = new FakeSiteRepository();
+    const merger = setup(sites);
+    await merger.merge(evidence({ id: "x", device: DEVICE_B, embeddingKey: "embeddings/rpt_x.json" }));
+    const first = await merger.merge(scanFrame("b", 30));
+    expect(first).toMatchObject({ siteId: "site_x", outcome: "merged" });
+    const spot = await merger.merge(scanFrame("a", 35));
+    expect(spot.outcome).toBe("founded");
+
+    const again = await merger.merge(scanFrame("b", 30));
+
+    expect(again).toEqual({ siteId: "site_x", outcome: "unchanged", reportStatus: first.reportStatus });
+    expect(await holdersOf(sites, "rpt_b")).toEqual(["site_x"]);
     expect(sites.feature(spot.siteId).properties.report_count).toBe(1);
   });
 
