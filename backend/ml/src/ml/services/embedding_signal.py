@@ -38,7 +38,8 @@ class EmbeddingSignal(Signal):
             raise ConfigError(f"heads expect {self._heads.embedder}, got {embedding.model}")
         waste = self._heads.probabilities("report_type", embedding.vector).get("waste_dump")
         claimed = case.claim.report_type in WASTE_CLAIMS and waste is not None
-        version = f"{embedding.model}/{self._heads.version}"
+        # The embedder's own file version (its pin) and the heads', e.g. siglip@v2/clf-v3.
+        version = f"{embedding.model}@{embedding.version}/{self._heads.version}"
         source = InsightSource(self.NAME, self.PROVIDER, self.MODEL, version)
         return SignalResult(
             name=self.NAME,

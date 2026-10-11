@@ -1,5 +1,5 @@
 import pytest
-from model_fakes import meta_model
+from model_fakes import meta_model, meta_v2
 
 from ml.domain.errors import ConfigError
 from ml.domain.linear import EmbeddingHeads, Logistic, MetaModel, SignalLogistic
@@ -66,6 +66,23 @@ def test_without_every_trained_signal_the_rekognition_fallback_decides() -> None
     assert model.pick(frozenset({"rekognition_labels", "yolo"}), judged=False) is model.base
     only_labels = MetaLearnerCombiner(model, Thresholds())
     assert only_labels.probability(signals(0.5), REPORT) == pytest.approx(Logistic.sigmoid(-1.0))
+
+
+def test_without_rekognition_the_full_model_reads_it_at_its_neutral_score() -> None:
+    """Training fills a missing score with 0.5 (logit 0, stacker._fit), so YOLO, the embedding
+    and the judge still count; the Rekognition-only fallback is for a missing YOLO or embedding.
+    """
+    model = meta_v2()
+    rest = frozenset({"yolo", "embedding_classifier"})
+    assert model.pick(rest | {"vision_judge"}, judged=True) is model.judged
+    assert model.pick(rest, judged=False) is model.base
+    labels_and_judge = frozenset({"rekognition_labels", "vision_judge"})
+    assert model.pick(labels_and_judge | {"yolo"}, judged=True) is model.fallback_judged
+    judge = SignalResult("vision_judge", 0.9, "bedrock", "nova", "1", 900)
+    neutral = signals(0.5, 0.9, 0.9, judge=0.9)
+    without = [*neutral[1:3], judge]
+    meta = MetaLearnerCombiner(model, Thresholds())
+    assert meta.probability(without, REPORT) == pytest.approx(meta.probability(neutral, REPORT))
 
 
 def test_missing_signals_add_nothing() -> None:
