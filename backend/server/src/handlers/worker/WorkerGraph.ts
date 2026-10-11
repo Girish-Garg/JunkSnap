@@ -11,6 +11,7 @@ import { ServiceCleanupModerator } from "../../services/wiring/ServiceCleanupMod
 import { SiteCleanupRecorder } from "../../services/wiring/SiteCleanupRecorder.js";
 import { ReportWorkerSettings } from "../../settings/ReportWorkerSettings.js";
 import { buildScanProcessor } from "../scanProcessorFactory.js";
+import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 import { ReportStepsFactory } from "./ReportStepsFactory.js";
 import type { WorkerDeps } from "./WorkerDeps.js";
 
@@ -26,7 +27,7 @@ export class WorkerGraph {
     const { settings, context } = this.#deps;
     const router = new MessageRouter({ report: await this.#report(), cleanup: this.#cleanup(), scan: this.#scan() });
     const options = { queueUrl: settings.reportsQueueUrl, maxReceiveCount: ReportWorkerSettings.MAX_RECEIVE_COUNT };
-    const sqs = new SQSClient({ region: context.settings.awsRegion });
+    const sqs = new SQSClient(awsClientConfig(context.settings.awsRegion, AWS_TIMEOUTS.wait));
     return new SqsQueuePoller(sqs, options, router, context.logger);
   }
 

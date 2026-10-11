@@ -3,6 +3,7 @@ import { DynamoPhotoFlagStore } from "../../adapters/flags/DynamoPhotoFlagStore.
 import { DynamoLetterCounter } from "../../adapters/letters/DynamoLetterCounter.js";
 import { FLAGS_PER_HOUR } from "../../domain/flags/PhotoFlagPolicy.js";
 import type { CommunityTrigger } from "../../ports/flags/PhotoFlagStore.js";
+import type { Logger } from "../../ports/Logger.js";
 import type { NoteModerator } from "../../ports/moderation/NoteModerator.js";
 import { PhotoFlagService } from "../../services/flags/PhotoFlagService.js";
 import { LetterRateLimiter } from "../../services/letters/LetterRateLimiter.js";
@@ -18,10 +19,12 @@ export interface FlagChecks {
 export class PhotoFlagsAssembly {
   readonly #settings: NotesSettings;
   readonly #client: DynamoDBDocumentClient;
+  readonly #logger: Logger;
 
-  constructor(settings: NotesSettings, client: DynamoDBDocumentClient) {
+  constructor(settings: NotesSettings, client: DynamoDBDocumentClient, logger: Logger) {
     this.#settings = settings;
     this.#client = client;
+    this.#logger = logger;
   }
 
   store(): DynamoPhotoFlagStore {
@@ -34,7 +37,7 @@ export class PhotoFlagsAssembly {
       devices: new DynamoLetterCounter(this.#client, { name: devicesTable, keyName: "device_token", prefix: "flag" }),
       users: new DynamoLetterCounter(this.#client, { name: usersTable, keyName: "user_id", prefix: "flag" }),
     };
-    const limiter = new LetterRateLimiter(counters, FLAGS_PER_HOUR, "photo reports");
+    const limiter = new LetterRateLimiter(counters, this.#logger, FLAGS_PER_HOUR, "photo reports");
     return new PhotoFlagService({ ...site, ...checks, flags: this.store(), limiter });
   }
 }

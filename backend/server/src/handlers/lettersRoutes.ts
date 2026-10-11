@@ -16,6 +16,7 @@ import { LettersAssembly } from "./letters/LettersAssembly.js";
 import { LettersEndpoint } from "./letters/LettersEndpoint.js";
 import { buildProviderRouter } from "./LlmModule.js";
 import type { RouteBuilder } from "./RouteBuilder.js";
+import { awsClientConfig } from "./utils.js";
 
 // Settings load inside the plugin, after createApp has checked CORS_ORIGINS.
 export const buildLettersRoutes: RouteBuilder = (context) => async (app) => {
@@ -23,7 +24,7 @@ export const buildLettersRoutes: RouteBuilder = (context) => async (app) => {
   const scoresTable = AreaScoresSettings.fromEnv(context.env).scoresTable;
   const guard = RouteGuard.fromEnv(context.env);
   const { sites, devices, users } = settings.tables;
-  const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
   const model = buildProviderRouter(context.env, context.core, app.log);
   const counters = {
     devices: new DynamoLetterCounter(client, { name: devices, keyName: "device_token" }),

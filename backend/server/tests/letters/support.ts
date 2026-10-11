@@ -82,6 +82,14 @@ export class MemoryCounter implements LetterCounter {
     return true;
   }
 
+  async release(request: CountRequest): Promise<void> {
+    const window = this.#current(request);
+    if (window.count > 0) {
+      this.#windows.set(request.key, { start: window.start, count: window.count - 1 });
+      this.taken.splice(this.taken.lastIndexOf(request.key), 1);
+    }
+  }
+
   #current(request: CountRequest): { start: number; count: number } {
     const now = request.now.getTime();
     const window = this.#windows.get(request.key);

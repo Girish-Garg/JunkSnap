@@ -62,13 +62,19 @@ class FakeCounterTable implements CounterClient {
     const unused = Object.keys(values).filter((name) => !`${UpdateExpression} ${ConditionExpression}`.includes(name));
     expect(unused, "DynamoDB rejects unused expression values").toEqual([]);
     const start = stored.letter_window_start;
-    const count = Number(stored.letter_count ?? 0);
     if (UpdateExpression.startsWith("SET letter_window_start")) {
       FakeCounterTable.#require(start === undefined || start === values[":seen"]);
       return { ...stored, letter_window_start: values[":now"], letter_count: values[":one"] };
     }
-    FakeCounterTable.#require(start === values[":seen"] && count < Number(values[":limit"]));
-    return { ...stored, letter_count: count + Number(values[":one"]) };
+    return FakeCounterTable.#step(UpdateExpression.endsWith("- :one") ? -1 : 1, stored, values);
+  }
+
+  // +1 below :limit, or -1 (a release) above :zero, both only in the window that was read.
+  static #step(sign: 1 | -1, stored: Item, values: Item): Item {
+    const count = Number(stored.letter_count ?? 0);
+    const room = sign === 1 ? count < Number(values[":limit"]) : count > Number(values[":zero"]);
+    FakeCounterTable.#require(stored.letter_window_start === values[":seen"] && room);
+    return { ...stored, letter_count: count + sign * Number(values[":one"]) };
   }
 
   static #require(condition: boolean): void {
@@ -145,6 +151,39 @@ describe("DynamoLetterCounter", () => {
     };
     expect(await counter.take(at(5))).toBe(false);
     expect(table.items.get("device-1")?.letter_count).toBe(2);
+  });
+
+  it("refuses (false, so 429) instead of failing when other writers change the window on every attempt", async () => {
+    const table = new FakeCounterTable();
+    const counter = new DynamoLetterCounter(table, devices);
+    await counter.take(at(0));
+    let writes = 0;
+    table.beforeWrite = () => {
+      writes += 1;
+      table.items.set("device-1", { letter_window_start: `2026-10-10T08:00:0${String(writes % 2)}.000Z`, letter_count: 1 });
+    };
+    expect(await counter.take(at(5))).toBe(false);
+    expect(writes).toBe(5);
+  });
+
+  it("gives back a taken letter in the same window and leaves a restarted window alone", async () => {
+    const table = new FakeCounterTable();
+    const counter = new DynamoLetterCounter(table, devices);
+    await counter.take(at(0));
+    await counter.take(at(10));
+    await counter.release(at(20));
+    expect(table.items.get("device-1")).toEqual({ letter_window_start: "2026-10-10T08:00:00.000Z", letter_count: 1 });
+    await counter.release(at(61));
+    expect(table.items.get("device-1")?.letter_count).toBe(1);
+  });
+
+  it("leaves alone a window another request restarted after this one's time", async () => {
+    const table = new FakeCounterTable();
+    const counter = new DynamoLetterCounter(table, devices);
+    await counter.take(at(0));
+    await counter.take(at(61));
+    await counter.release(at(59));
+    expect(table.items.get("device-1")).toEqual({ letter_window_start: "2026-10-10T09:01:00.000Z", letter_count: 1 });
   });
 
   it("raises ExternalServiceError when DynamoDB fails", async () => {
