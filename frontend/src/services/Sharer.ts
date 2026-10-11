@@ -19,8 +19,9 @@ export class Sharer {
     return this.#navigator.share !== undefined;
   }
 
-  share(title: string, url: string): Promise<ShareResult> {
-    return this.#send({ title, url }, url);
+  /** `text` is a message to send with the link; without a share sheet the copy holds both. */
+  share(title: string, url: string, text?: string): Promise<ShareResult> {
+    return this.#send(text ? { title, text, url } : { title, url }, text ? `${text} ${url}` : url);
   }
 
   /** A whole text, such as a letter, through the share sheet; copied where there is none. */

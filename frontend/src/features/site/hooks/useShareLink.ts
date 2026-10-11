@@ -5,8 +5,8 @@ import { NativeBridge } from '../../../services/NativeBridge';
 const COPIED_MS = 2500;
 
 /**
- * Shares a title and a link: the browser's share sheet, else the clipboard (`copied` is true for a
- * moment), and inside the Android app the native share sheet with the title and the link.
+ * Shares a title and a link, with an optional message: the browser's share sheet, else the clipboard (`copied` is
+ * true for a moment), and inside the Android app the native share sheet with the message (else the title) and link.
  */
 export function useShareLink() {
   const { sharer, errors, notifier } = useServices();
@@ -18,10 +18,10 @@ export function useShareLink() {
     return () => window.clearTimeout(timer);
   }, [copied]);
   const share = useCallback(
-    (title: string, url: string) => {
+    (title: string, url: string, text?: string) => {
       const shared = native.canShareText()
-        ? native.shareText(`${title} ${url}`).then(() => 'shared' as const, () => sharer.copy(url).then(() => 'copied' as const))
-        : sharer.share(title, url);
+        ? native.shareText(`${text ?? title} ${url}`).then(() => 'shared' as const, () => sharer.copy(url).then(() => 'copied' as const))
+        : sharer.share(title, url, text);
       shared.then(
         (result) => setCopied(result === 'copied'),
         // Closing the share sheet is not a failure; anything else is logged and said.

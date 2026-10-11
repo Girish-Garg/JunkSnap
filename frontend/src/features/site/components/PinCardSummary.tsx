@@ -4,7 +4,7 @@ import { TypeIcon } from '../../../ui/TypeIcon';
 import { useSiteDistance } from '../hooks/useSiteDistance';
 import { useSitePresenter } from '../hooks/useSitePresenter';
 import { SiteThumb } from './SiteThumb';
-import { StatusChip } from './StatusChip';
+import { StatusChipButton } from './StatusChipButton';
 
 interface PinCardSummaryProps {
   readonly site: SiteFeature;
@@ -28,7 +28,7 @@ export function PinCardSummary({ site, userLocation, title }: PinCardSummaryProp
           </span>
           <span className="pin-card__name">{title}</span>
         </p>
-        <StatusChip site={details} />
+        <StatusChipButton site={details} />
         <p className="pin-card__meta">{meta}</p>
       </div>
     </div>
