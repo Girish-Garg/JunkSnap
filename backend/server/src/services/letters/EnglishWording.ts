@@ -1,6 +1,7 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { BackingStatement } from "../../domain/letters/BackingStatement.js";
 import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
 import { coordinates, joinList, letterDate } from "./utils.js";
@@ -54,9 +55,11 @@ export class EnglishWording implements TemplateWording {
 
   facts(site: LetterSite): string {
     const { lat, lon, reportCount, verifiedCount, firstReportedAt, photoUrls } = site.evidence;
+    const counted = site.verified ? `${reportCount} (${verifiedCount} verified)` : String(reportCount);
     const lines = [
       `Residents have reported ${WHAT[site.context]} in ${site.place.name()}, at ${coordinates(lat, lon)}.`,
-      `Reports since ${letterDate(firstReportedAt, "en-GB")}: ${reportCount} (${verifiedCount} verified).`,
+      `Reports since ${letterDate(firstReportedAt, "en-GB")}: ${counted}.`,
+      new BackingStatement().english(site),
     ];
     if (site.burning) {
       lines.push("Burning has been seen at this site.");

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { validateLetterDraft, type LetterDraft } from "../../src/contracts/index.gen.js";
 import { NotFoundError } from "../../src/domain/errors.js";
-import { NotVerifiedError, RateLimitedError } from "../../src/domain/letters/errors.js";
+import { RateLimitedError } from "../../src/domain/letters/errors.js";
+import { SiteRejectedError } from "../../src/domain/sites/SiteErrors.js";
 import type { LetterRequest } from "../../src/services/letters/LetterService.js";
 import {
   DEVICE,
@@ -130,12 +131,6 @@ describe("LetterService errors", () => {
     await expect((await letterService({ sites: [] })).draft(request)).rejects.toThrow(NotFoundError);
   });
 
-  it("returns not_verified unless the site is verified", async () => {
-    const waiting = siteWith(jodhpur, { verification: "unverified" });
-    const service = await letterService({ sites: [waiting] });
-    await expect(service.draft(request)).rejects.toThrow(NotVerifiedError);
-  });
-
   it("returns not_found for an expired site, marked or lapsed (decision 20261010-1855)", async () => {
     const marked = await letterService({ sites: [siteWith(jodhpur, { status: "expired" })] });
     await expect(marked.draft(request)).rejects.toThrow(NotFoundError);
@@ -168,8 +163,8 @@ describe("LetterService errors", () => {
 
   it("does not count a request that fails before drafting", async () => {
     const counters = memoryCounters();
-    const waiting = siteWith(jodhpur, { verification: "rejected" });
-    await expect((await letterService({ sites: [waiting], counters })).draft(request)).rejects.toThrow(NotVerifiedError);
+    const hidden = siteWith(jodhpur, { verification: "rejected" });
+    await expect((await letterService({ sites: [hidden], counters })).draft(request)).rejects.toThrow(SiteRejectedError);
     expect([...counters.devices.taken, ...counters.users.taken]).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { BackingStatement } from "../../domain/letters/BackingStatement.js";
 import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { Language, ReportType } from "../../domain/letters/types.js";
 import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
@@ -21,6 +22,7 @@ const RULES = [
   "Quote every rule in `citations` exactly as given, character for character, inside straight double quotes.",
   "Give each citation its own short paragraph: its document and clause, then the quote.",
   "Do not add a signature, a name or a placeholder for one; the resident signs.",
+  "State community_status as one sentence with its counts. Use the word verified (or सत्यापित) only when site_verified is true; otherwise say community verification is in progress.",
   "If residents_report is given, add it as one sentence in your own words with its count of people; never quote residents.",
   "If no_bin_statement is given, state it as plain prose before the request, keeping its counts, distances and sources; never inside quotation marks.",
   "Keep the quotes in English even when the letter is in another language.",
@@ -48,13 +50,18 @@ export class LetterPrompt {
 
   user(): string {
     const { site, addressees, citations } = this.#brief;
+    const { verifiedCount, ...evidence } = site.evidence;
     const facts = {
       site_id: site.siteId,
       report_type: site.reportType,
       context: site.context,
       burning_seen: site.burning,
       place: site.place.name(),
-      ...site.evidence,
+      ...evidence,
+      // Decision 20261011-1750: an unverified site counts no verified reports; community_status says how far it is.
+      verified_reports: site.verified ? verifiedCount : null,
+      site_verified: site.verified,
+      community_status: new BackingStatement().english(site),
       to: addressees.to,
       cc: addressees.cc.map((line) => ({ office: line.office, seat: line.seat.name, marking: line.marking })),
       citations: citations.map(({ document, clause, quote }) => ({ document, clause, quote })),

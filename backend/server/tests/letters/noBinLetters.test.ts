@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { validateLetterDraft, type Site } from "../../src/contracts/index.gen.js";
-import { NotVerifiedError } from "../../src/domain/letters/errors.js";
 import { LetterSite } from "../../src/domain/letters/LetterSite.js";
 import type { LetterRequest } from "../../src/services/letters/LetterService.js";
 import { LetterPrompt } from "../../src/adapters/letters/LetterPrompt.js";
 import { EnglishWording } from "../../src/services/letters/EnglishWording.js";
 import { HindiWording } from "../../src/services/letters/HindiWording.js";
-import { NoBinEligibility } from "../../src/services/letters/NoBinEligibility.js";
 import { DEVICE, downWriter, letterService, siteFixture, siteWith, USER } from "./support.js";
 
 const noBin = siteFixture("jdh-2");
@@ -37,11 +35,13 @@ function zone(reported: number, votedYes: number, verified = reported + votedYes
 }
 
 describe("no-bin letters (decision 20261010-1630)", () => {
-  it("refuses a zone fewer than 10 people confirmed, counting reports and yes votes together", async () => {
-    const draft = draftFor(zone(3, 4));
-    await expect(draft).rejects.toThrow(NotVerifiedError);
-    await expect(draft).rejects.toThrow("not verified");
-    expect(() => new NoBinEligibility(3000).check(LetterSite.fromSite(zone(3, 4)))).toThrow("7 of 10 people have confirmed no dustbin within 1 km");
+  it("drafts for a zone fewer than 10 people confirmed, counting reports and yes votes together (decision 20261011-1750)", async () => {
+    const letter = await draftFor(zone(3, 4));
+    expect(() => validateLetterDraft(letter)).not.toThrow();
+    expect(letter.body).toContain("7 people confirmed there is no dustbin within 1 km of this spot.");
+    expect(letter.body).toContain("Reported by 3 residents; community verification in progress (7 of 10 people confirmed so far).");
+    expect(letter.body).not.toMatch(/\bverified\b/i);
+    expect(letter.evidence).toMatchObject({ verification: "unverified", backers: { count: 7, needed: 10 } });
   });
 
   it("drafts for a zone 4 people reported and 6 confirmed by vote, showing a mapped bin nearby as evidence", async () => {

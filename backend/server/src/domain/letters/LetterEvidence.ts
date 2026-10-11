@@ -1,4 +1,5 @@
 import type { LetterDraft } from "../../contracts/index.gen.js";
+import { BACKERS_NEEDED } from "../sites/Backers.js";
 import type { LetterSite, SiteInsights } from "./LetterSite.js";
 
 type Evidence = LetterDraft["evidence"];
@@ -22,6 +23,9 @@ export class LetterEvidence {
       report_count: facts.reportCount,
       reporters: facts.reporters,
       verified_count: facts.verifiedCount,
+      // Decision 20261011-1750: the letter's standing, so the app and the printout say how far the site is from verified.
+      verification: this.#site.verified ? "verified" : "unverified",
+      backers: { count: this.#site.backers, needed: BACKERS_NEEDED },
       first_reported_at: facts.firstReportedAt,
       last_reported_at: facts.lastReportedAt,
       photo_urls: facts.photoUrls,
