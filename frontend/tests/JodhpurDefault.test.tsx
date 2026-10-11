@@ -1,12 +1,13 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { BBox } from '../src/domain/BBox';
 import type { SiteMapBindings } from '../src/features/map/hooks/useSiteMap';
 import type { MapView } from '../src/features/map/SiteMap';
 import { GeoLocator, type PermissionQuery } from '../src/services/GeoLocator';
+import { DESKTOP_QUERY } from '../src/ui/useMediaQuery';
 import { DEFAULTS } from './config';
 import { renderApp, testServices } from './helpers';
 
@@ -29,6 +30,8 @@ function located(state: PermissionState) {
   const locator = new GeoLocator({ getCurrentPosition } as unknown as Geolocation, permissions);
   return { services: new ServiceContainer({ ...testServices(), locator }), getCurrentPosition };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 async function showView(view: MapView): Promise<void> {
   await waitFor(() => expect(seen.last).not.toBeNull());
@@ -54,6 +57,19 @@ describe('the map opens on Jodhpur', () => {
     expect(seen.last?.camera).toBeNull();
     await user.click(await screen.findByRole('button', { name: 'Go to my location' }));
     expect(seen.last?.camera).toEqual({ points: [DELHI] });
+  });
+});
+
+describe('"Go to my location" on desktop', () => {
+  it('sits beside Filters, not on a line over the side panel\'s list', async () => {
+    const media = (query: string) => ({ matches: query === DESKTOP_QUERY, addEventListener: () => undefined, removeEventListener: () => undefined });
+    vi.stubGlobal('matchMedia', media);
+    await renderApp(<AppRoutes />, { services: located('granted').services });
+    await showView({ bbox: OPENING });
+    const goToMe = await screen.findByRole('button', { name: 'Go to my location' });
+    const filters = screen.getByRole('button', { name: /Filters/ });
+    expect(goToMe.parentElement).toBe(filters.parentElement);
+    expect(goToMe.parentElement).toHaveClass('search-area__row');
   });
 });
 

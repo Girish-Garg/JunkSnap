@@ -35,19 +35,19 @@ export function MapSearchArea({ page, notice, listMode, desktop, actions }: MapS
       </div>
     );
   }
+  const goToMe = page.away ? <GoToMeButton onGo={page.goToMe} /> : null;
+  // Desktop has no map or list toggle, and the panel's list starts right under this row, so "Go to my location"
+  // sits beside Filters there instead of on a line of its own over the list.
+  const beside = desktop ? goToMe : <ViewToggle listOpen={browser.open} onList={browser.start} />;
   return (
     <div className="search-area">
       <SearchBar sites={page.loaded} onPickPlace={page.selection.showPlace} />
-      {desktop ? (
-        filtersButton
-      ) : (
-        <div className="search-area__row">
-          {filtersButton}
-          <ViewToggle listOpen={browser.open} onList={browser.start} />
-        </div>
-      )}
+      <div className="search-area__row">
+        {filtersButton}
+        {beside}
+      </div>
       <MapStatus notice={notice} actions={actions} />
-      {page.away && <GoToMeButton onGo={page.goToMe} />}
+      {!desktop && goToMe}
     </div>
   );
 }
