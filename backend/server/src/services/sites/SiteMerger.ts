@@ -1,6 +1,5 @@
 import { InternalDataError } from "../../domain/errors.js";
 import { BoundingBox } from "../../domain/sites/BoundingBox.js";
-import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import type { MergeableReport, MergeEvidence } from "../../domain/sites/MergeableReport.js";
 import type { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
@@ -13,6 +12,7 @@ import { ZeroScoreRows } from "../../domain/sites/ZeroScoreRows.js";
 import type { AreaScoreSeeder } from "../../ports/sites/AreaScoreSeeder.js";
 import type { Clock } from "../../ports/sites/Clock.js";
 import type { GeoCells } from "../../ports/sites/GeoCells.js";
+import type { MergeLock } from "../../ports/sites/MergeLock.js";
 import type { ReportStatusWriter } from "../../ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
 import type { VoteRepository } from "../../ports/sites/VoteRepository.js";
@@ -20,7 +20,10 @@ import type { ConflictRetry } from "./ConflictRetry.js";
 import type { MergeTargetPicker } from "./MergeTargetPicker.js";
 
 export interface SiteMergerDeps {
+  // The worker passes a RecentSitesRepository, so a site founded a moment ago is a candidate before the index has it.
   readonly sites: SiteRepository;
+  // Keyed by the geohash4 cells of the merge area; in-process, so one worker replica (contracts/README.md).
+  readonly lock: MergeLock;
   // Cleared votes are recounted against the newest report (decision 20261010-1855).
   readonly votes: VoteRepository;
   readonly cells: GeoCells;
@@ -58,39 +61,40 @@ export class SiteMerger {
   }
 
   // Reports follow their site on every pass, so a redelivered message repairs a failed status write.
+  // Only "pick a site, or found one" holds the lock on the merge area's cells: two reports of one spot in one worker
+  // batch take turns, so the second sees the first one's site; every other step of the pipeline stays parallel.
   async merge(evidence: MergeEvidence): Promise<MergeResult> {
     const report = this.#deps.reportFactory.create(evidence);
-    const { site, outcome } = await this.#deps.retry.run(() => this.#attempt(report));
+    const cells = this.#deps.cells.covering(BoundingBox.around(report.point, mergeRadiusM(report.reportType, this.#deps.rules)));
+    const { site, outcome } = await this.#deps.lock.hold(cells, () => this.#deps.retry.run(() => this.#attempt(report, cells)));
     await this.#deps.reports.followSite(site.reportIds, site.verification);
     return { siteId: site.siteId, outcome, reportStatus: site.verification };
   }
 
   // The holder check runs first: a redelivered scan frame that joined a neighbour site must not join its spot's site too.
-  async #attempt(report: MergeableReport): Promise<Merged> {
-    const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType, this.#deps.rules));
+  // The picker then puts a same-type site at the same spot ahead of the spot's site (decision 20261011-1610).
+  async #attempt(report: MergeableReport, cells: readonly string[]): Promise<Merged> {
+    const nearby = await this.#candidates(report, cells);
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
       return { site: holder, outcome: "unchanged" };
-    }
-    const spotSite = await this.#spotSite(report);
-    if (spotSite !== null) {
-      return this.#mergeInto(spotSite.siteId, report);
     }
     const target = await this.#deps.picker.pick(report, nearby);
     return target === null ? this.#found(report) : this.#mergeInto(target.siteId, report);
   }
 
-  // A consistent read by id: the geohash index may not show a site another frame of the scan founded a moment ago.
-  async #spotSite(report: MergeableReport): Promise<Site | null> {
-    if (report.spotSiteId === undefined) {
-      return null;
-    }
-    const site = await this.#deps.sites.get(report.spotSiteId);
-    return site !== null && (site.holds(report.reportId) || site.accepts(report)) ? site : null;
+  // The sites in the merge radius, and a scan frame's spot site read by id: the geohash index may not show a site
+  // another frame of the scan founded a moment ago.
+  async #candidates(report: MergeableReport, cells: readonly string[]): Promise<Site[]> {
+    const [nearby, spotSite] = await Promise.all([this.#nearby(cells), this.#spotSite(report)]);
+    return spotSite === null ? nearby : [spotSite, ...nearby.filter((site) => site.siteId !== spotSite.siteId)];
   }
 
-  async #nearby(point: GeoPoint, radius: number): Promise<Site[]> {
-    const cells = this.#deps.cells.covering(BoundingBox.around(point, radius));
+  async #spotSite(report: MergeableReport): Promise<Site | null> {
+    return report.spotSiteId === undefined ? null : this.#deps.sites.get(report.spotSiteId);
+  }
+
+  async #nearby(cells: readonly string[]): Promise<Site[]> {
     const perCell = await Promise.all(cells.map((cell) => this.#deps.sites.inCell(cell)));
     return perCell.flat();
   }

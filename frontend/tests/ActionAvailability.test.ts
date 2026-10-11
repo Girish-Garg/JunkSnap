@@ -49,12 +49,26 @@ describe('site action gates', () => {
     // The map's fix is rough, so only clearly too far blocks: 1 km plus a 100 m margin.
     expect(vote({ distanceM: 1080 })).toEqual(OK);
     expect(vote({ distanceM: null })).toEqual(OK);
-    expect(vote({ locationDenied: true })).toEqual(blocked('vote.errors.location'));
+    expect(vote({ distanceM: null, locationDenied: true })).toEqual(blocked('gate.locationOff.vote', { limit: 1000 }, 'allowLocation'));
     expect(vote({ cooling: cooling('vote') })).toEqual(blocked('vote.errors.rate_limited'));
     expect(vote({ online: false })).toEqual(blocked('gate.offline'));
     expect(vote({ signedIn: false })).toEqual(blocked('gate.signIn.vote', undefined, 'signIn'));
   });
+});
 
+describe('site action gates with location blocked', () => {
+  it('every distance action, with location blocked, says why and offers a way to allow it; the others do not care', () => {
+    const off = site({ distanceM: null, locationDenied: true });
+    const decide = (gate: keyof typeof SITE_GATES) => seen(SITE_GATES[gate].decide(off));
+    expect(decide('cleanup')).toEqual(blocked('gate.locationOff.cleanup', { limit: 50 }, 'allowLocation'));
+    expect(decide('addPhoto')).toEqual(blocked('gate.locationOff.addPhoto', { limit: 490 }, 'allowLocation'));
+    expect(decide('reportPhoto')).toEqual(blocked('gate.locationOff.reportPhoto', { limit: 1000 }, 'allowLocation'));
+    expect(lookOf(decide('vote'))).toEqual({ disabled: false, blocked: true });
+    expect([decide('letter'), decide('note')]).toEqual([OK, OK]);
+  });
+});
+
+describe('site action gates: the first reason', () => {
   it('says the reason that sign-in or a connection would not fix first', () => {
     expect(reasonOf(SITE_GATES.vote.decide(site({ ownSite: true, online: false, signedIn: false })))).toBe('vote.errors.own_site');
     expect(reasonOf(SITE_GATES.vote.decide(site({ distanceM: 5000, signedIn: false })))).toBe('vote.errors.too_far');
@@ -85,7 +99,6 @@ describe('site action gates: cleanup and letters', () => {
     expect(cleanup({ distanceM: 20, online: false })).toEqual(blocked('gate.offline'));
     expect(cleanup({ distanceM: 20, signedIn: false })).toEqual(blocked('gate.signIn.cleanup', undefined, 'signIn'));
   });
-
 });
 
 describe('site action gates: letters', () => {

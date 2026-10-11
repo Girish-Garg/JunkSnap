@@ -1248,7 +1248,19 @@
     },
     "siteClosed": "This site is off the map, so it takes no more letters or cleanup photos.",
     "back": "Back",
-    "tooFarReport": "Move within {{flagKm}} km of the site to report a photo."
+    "tooFarReport": "Move within {{flagKm}} km of the site to report a photo.",
+    "locationOff": {
+      "vote": "Turn on location to vote here. JunkSnap checks you're within {{voteKm}} km.",
+      "cleanup": "Turn on location to send a cleanup photo. JunkSnap checks you're within {{cleanupM}} m.",
+      "addPhoto": "Turn on location to add a photo here. JunkSnap checks you're within {{limit}} m.",
+      "reportPhoto": "Turn on location to report a photo here. JunkSnap checks you're within {{flagKm}} km."
+    }
+  },
+  "location": {
+    "denied": "Allow location for this site in your browser's settings, then tap Try again.",
+    "deniedApp": "Tap Open app settings, then Permissions, Location, Allow.",
+    "off": "Your phone's location is off. Turn it on and try again.",
+    "timeout": "Couldn't get your location. Try again."
   },
   "toast": {
     "dismiss": "Dismiss"

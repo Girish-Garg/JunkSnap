@@ -1,3 +1,4 @@
+import type { Site } from "./Site.js";
 import type { PhotoUrls, SiteBrand, SiteInternals, Voter } from "./SiteTypes.js";
 
 const MAX_PHOTOS = 6;
@@ -43,4 +44,11 @@ export function distanceText(metres: number): string {
 // A person is a user id, else a device token (decision 20261010-1530).
 export function personOf(voter: Voter): string {
   return voter.userId ?? voter.deviceToken;
+}
+
+// The older site first: the earlier first report, then the lower id, so every run and every worker picks the same one
+// (decision 20261011-1610-hem-same-spot-merge).
+export function olderFirst(a: Site, b: Site): number {
+  const first = (site: Site) => Date.parse(site.snapshot().feature.properties.first_reported_at);
+  return first(a) - first(b) || a.siteId.localeCompare(b.siteId);
 }

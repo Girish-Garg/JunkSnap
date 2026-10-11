@@ -2,15 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useConfig } from '../../../app/useConfig';
 import { useServices } from '../../../app/useServices';
 import { FreshFix } from '../../../domain/FreshFix';
+import { LocationError, type LocationProblem } from '../../../domain/LocationError';
 import type { LonLat } from '../../../domain/Site';
 
 export interface FreshLocation {
   /** A fix under 2 minutes old, or null; it turns null by itself when it gets stale. */
   readonly fix: FreshFix | null;
-  /** No fix yet since the sheet opened, but one is on its way without asking (location is allowed). */
+  /** No fix yet, but one is on its way: without asking (location is allowed) or after a tap asked for it. */
   readonly locating: boolean;
-  /** Takes a fresh fix; null when the browser gives none. */
-  readonly relocate: () => Promise<FreshFix | null>;
+  /** Takes a fresh fix (the browser or Android may ask the person); what went wrong when there is none. */
+  readonly relocate: () => Promise<FreshFix | LocationProblem>;
 }
 
 type SetFix = (change: (current: FreshFix | null) => FreshFix | null) => void;
@@ -21,20 +22,36 @@ type SetFix = (change: (current: FreshFix | null) => FreshFix | null) => void;
  * fresh for capture.freshFixMs.
  */
 export function useFreshFix(mapLocation: LonLat | null): FreshLocation {
-  const { locator } = useServices();
   const { freshFixMs } = useConfig().capture;
   const [fix, setFix] = useState<FreshFix | null>(() => (mapLocation ? new FreshFix(mapLocation, Date.now(), freshFixMs) : null));
   useMapFix(mapLocation, setFix);
   const locating = useQuietFix(fix, setFix, mapLocation === null);
-  const relocate = useCallback(
-    () => locator.locate().then((at) => {
-      const fresh = new FreshFix(at, Date.now(), freshFixMs);
+  const { relocate, asking } = useTapFix(setFix);
+  return { fix, locating: (locating || asking) && fix === null, relocate };
+}
+
+// A fix a tap asked for: it may show the location prompt, and the distance actions wait while it comes. Each answer
+// tells LocationAccess whether location is allowed, so the tiles say so.
+function useTapFix(setFix: SetFix): { readonly relocate: FreshLocation['relocate']; readonly asking: boolean } {
+  const { locator, locationAccess } = useServices();
+  const { freshFixMs } = useConfig().capture;
+  const [asking, setAsking] = useState(false);
+  const relocate = useCallback(async () => {
+    setAsking(true);
+    try {
+      const fresh = new FreshFix(await locator.locate(), Date.now(), freshFixMs);
       setFix(() => fresh);
+      locationAccess.learn('granted');
       return fresh;
-    }, () => null),
-    [locator, freshFixMs],
-  );
-  return { fix, locating: locating && fix === null, relocate };
+    } catch (error) {
+      const problem = error instanceof LocationError ? error.problem : 'unavailable';
+      locationAccess.learn(problem);
+      return problem;
+    } finally {
+      setAsking(false);
+    }
+  }, [locator, locationAccess, setFix, freshFixMs]);
+  return { relocate, asking };
 }
 
 // The map's fix counts from when it arrived here: at once on the first render, later ones on the next tick.

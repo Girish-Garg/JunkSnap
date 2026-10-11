@@ -4,8 +4,12 @@ kind: Deployment
 metadata:
   name: worker
 spec:
-  # One long-polling consumer; SQS spreads messages if this is raised.
+  # One long-polling consumer. Keep it at 1: the site merge lock and the memory of new sites are in-process
+  # (decision 20261011-1700-hem-merge-lock); more replicas need a shared lock first, or one spot can get two sites.
   replicas: 1
+  # A deploy stops the old pod before the new one starts, so two in-process merge locks never run at once; SQS holds the gap.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: worker

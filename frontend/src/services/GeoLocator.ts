@@ -1,8 +1,9 @@
 import { CAPTURE_DEFAULTS, type CaptureSettings } from '../config/CaptureSettings';
-import { LocationError } from '../domain/LocationError';
+import { LocationError, type LocationProblem } from '../domain/LocationError';
 import type { LonLat } from '../domain/Site';
 
-const PERMISSION_DENIED = 1;
+// GeolocationPositionError codes: PERMISSION_DENIED 1, POSITION_UNAVAILABLE 2 (the phone's location is off), TIMEOUT 3.
+const PROBLEMS: Readonly<Partial<Record<number, LocationProblem>>> = { 1: 'denied', 3: 'timeout' };
 
 /** The map's "where am I" fix: getCurrentPosition maximumAge and timeout. */
 export type LocateTimings = Pick<CaptureSettings, 'locateMaxAgeMs' | 'locateTimeoutMs'>;
@@ -19,6 +20,11 @@ export class GeoLocator {
     this.#geolocation = geolocation;
     this.#permissions = permissions;
     this.#timings = timings;
+  }
+
+  /** Whether this browser has the location API at all. */
+  canLocate(): boolean {
+    return this.#geolocation !== undefined;
   }
 
   /** Whether locateIfAllowed can ever find a fix: it needs both the location and the Permissions APIs. */
@@ -52,7 +58,6 @@ export class GeoLocator {
   }
 
   static #translate(error: GeolocationPositionError): LocationError {
-    const problem = error.code === PERMISSION_DENIED ? 'denied' : 'unavailable';
-    return new LocationError(problem, error.message);
+    return new LocationError(PROBLEMS[error.code] ?? 'unavailable', error.message);
   }
 }

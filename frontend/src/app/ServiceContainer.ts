@@ -11,6 +11,10 @@ import { BoundaryCatalog } from '../services/BoundaryCatalog';
 import type { AuthService } from '../services/AuthService';
 import { crawlFixtureLoaders } from '../services/crawlFixtures';
 import { GeoLocator, type PermissionQuery } from '../services/GeoLocator';
+import { AppLocationPermission, type AppLocationHost } from '../services/AppLocationPermission';
+import { BrowserLocationPermission } from '../services/BrowserLocationPermission';
+import { LocationAccess, type LocationPermissionSource } from '../services/LocationAccess';
+import { NativeBridge, type NativeHost } from '../services/NativeBridge';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
 import { ExpiringCache } from '../services/ExpiringCache';
@@ -61,6 +65,8 @@ export interface BrowserApis extends SnapBrowserApis {
   readonly root?: HTMLElement;
   /** Lets the map read a location fix on open only when location is already allowed. */
   readonly permissions?: PermissionQuery;
+  /** The page's window: inside the Android app, location access is read from the app, not the WebView. */
+  readonly host?: NativeHost & AppLocationHost;
   /** What the startup probe reads and how to build the detector; absent means cloud mode. */
   readonly edge?: EdgeEnvironment;
 }
@@ -94,6 +100,8 @@ export interface Services {
   readonly cooldowns?: ActionCooldowns;
   /** Sites the api answered 403 own_site for in this sign-in. */
   readonly ownSites?: OwnSiteMemory;
+  /** Whether location is allowed, for the distance gates; tests without one read no Permissions API. */
+  readonly locationAccess?: LocationAccess;
 }
 
 /** Composition root: the only place that builds services. */
@@ -115,6 +123,7 @@ export class ServiceContainer implements Services {
   readonly errors: ErrorReporter;
   readonly cooldowns: ActionCooldowns;
   readonly ownSites: OwnSiteMemory;
+  readonly locationAccess: LocationAccess;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -134,6 +143,7 @@ export class ServiceContainer implements Services {
     this.errors = services.errors ?? new ErrorReporter(console, () => navigator.onLine);
     this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now(), services.config.ui.cooldownMs);
     this.ownSites = services.ownSites ?? OwnSiteMemory.following(services.auth);
+    this.locationAccess = services.locationAccess ?? new LocationAccess(new BrowserLocationPermission(undefined));
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {
@@ -154,6 +164,7 @@ export class ServiceContainer implements Services {
       onboarding: new OnboardingPreference(browser.store),
       theme: new ThemePreference(browser.store, browser.root ?? null),
       edge: ServiceContainer.#edge(browser, config),
+      locationAccess: new LocationAccess(ServiceContainer.#locationSource(browser)),
     });
   }
 
@@ -165,6 +176,13 @@ export class ServiceContainer implements Services {
       layers: new LayerRegistry(undefined, zones),
       boundaries: new BoundaryCatalog(folder, undefined, BoundaryCatalog.caches(clock, config.cache.boundaryIndexTtlMs)),
     };
+  }
+
+  // The Android app's WebView never reports the app's location permission, so the app is asked there.
+  static #locationSource(browser: BrowserApis): LocationPermissionSource {
+    const host = browser.host;
+    if (host && new NativeBridge(host).inApp()) return new AppLocationPermission(host);
+    return new BrowserLocationPermission(browser.permissions);
   }
 
   // The startup probe runs here, once; it only reads what the browser offers and downloads nothing.

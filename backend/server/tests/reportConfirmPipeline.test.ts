@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { NgeohashCells } from "../src/adapters/sites/NgeohashCells.js";
+import { InProcessMergeLock } from "../src/adapters/sites/InProcessMergeLock.js";
 import type { VerificationResult } from "../src/contracts/index.gen.js";
 import { InternalDataError } from "../src/domain/errors.js";
 import { QueueMessage } from "../src/domain/QueueMessage.js";
@@ -65,7 +66,8 @@ function siteMerger(): ReportMerger {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES),
+    lock: new InProcessMergeLock(),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),

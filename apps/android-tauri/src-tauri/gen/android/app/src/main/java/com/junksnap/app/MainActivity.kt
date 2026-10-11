@@ -1,6 +1,8 @@
 package com.junksnap.app
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +13,7 @@ import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
@@ -89,6 +92,19 @@ class MainActivity : TauriActivity() {
       startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, details))
     }
 
+    /**
+     * Whether Android lets the app read location, answered as a junksnap:location event on window. The WebView's
+     * permissions.query never says (location prompts are answered without remembering), so the page asks here when it
+     * comes back from the app's settings.
+     */
+    @JavascriptInterface
+    fun checkLocation() = onAppPage {
+      val allowed = LOCATION_PERMISSIONS.any {
+        ContextCompat.checkSelfPermission(this@MainActivity, it) == PackageManager.PERMISSION_GRANTED
+      }
+      webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('junksnap:location',{detail:$allowed}))", null)
+    }
+
     /** The page listens for links that open the app (AppLinks); one that came before is handed over now. */
     @JavascriptInterface
     fun linkReady() = onAppPage { links.ready() }
@@ -108,5 +124,6 @@ class MainActivity : TauriActivity() {
 
   private companion object {
     const val APP_HOST = "tauri.localhost"
+    val LOCATION_PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
   }
 }

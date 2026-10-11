@@ -6,6 +6,8 @@ import { Vars } from './Vars';
 export interface UiTimings {
   /** An app toast; the next in the queue follows. */
   readonly toastMs: number;
+  /** The most a toast with a step (Open app settings, Try again) stays when nobody uses or closes it. */
+  readonly stepToastMs: number;
   /** The toast asking the reporter to confirm an unsure check. */
   readonly confirmToastMs: number;
   /** The toast saying a report was turned down. */
@@ -31,6 +33,7 @@ const MINUTE_MS = 60_000;
 
 export const UI_VARS: EnvVars<UiTimings> = {
   toastMs: Vars.ms('VITE_TOAST_MS', 4_500, MINUTE_MS),
+  stepToastMs: Vars.ms('VITE_STEP_TOAST_MS', 60_000, 10 * MINUTE_MS),
   confirmToastMs: Vars.ms('VITE_CONFIRM_TOAST_MS', 15_000, 5 * MINUTE_MS),
   rejectionToastMs: Vars.ms('VITE_REJECTION_TOAST_MS', 12_000, 5 * MINUTE_MS),
   copiedMs: Vars.ms('VITE_COPIED_MS', 2_500, MINUTE_MS),

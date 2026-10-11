@@ -1,7 +1,7 @@
 # Android app: build, release and install
 
 The Android app (`apps/android-tauri/`) is a Tauri 2 shell around the web app's production build (`frontend/dist`). All app logic stays in `frontend/`. The native side is small:
-- `MainActivity.kt`: insets, plus print, app settings and `linkReady()` through `window.JunkSnapAndroid`.
+- `MainActivity.kt`: insets, plus print, app settings, `checkLocation()` and `linkReady()` through `window.JunkSnapAndroid`.
 - `AppLinks.kt`: hands links that open the app to the page (see Links that open the app).
 - `PermissionChromeClient.kt` and `PermissionAsker.kt`: ask for runtime permissions one at a time.
 - Two plugins: opener for links, and sharekit for the share sheet.
@@ -28,6 +28,8 @@ If the camera is blocked, the Snap help screen offers two ways back:
 - **Open app settings**, for when Android no longer asks after "Don't allow" twice. In settings, open Permissions, then Camera, then Allow.
 
 After "Don't allow" for location, the app does not ask again for 5 minutes. The page retries location on its own, and the quiet period keeps the dialog from popping up again and again. Once Android stops asking, location is allowed in the same settings page. A permission that is already allowed is never asked for.
+
+The WebView's `navigator.permissions` never reports the app's location permission: the app answers each location prompt without the WebView remembering it, so the query says `prompt` (and `denied` on WebViews from before mid-2024). The page therefore learns a denial from the answer to a tap, and asks `window.JunkSnapAndroid.checkLocation()`, which answers with a `junksnap:location` event on `window` whose `detail` is true when Android allows location. The page asks when a site sheet opens and whenever it comes back on screen, so the vote, Me too, Cleaned, Add a photo and Report tiles open again after the person allows location in the settings. An app build without `checkLocation` makes the page forget the denial instead, and the next tap asks Android again.
 
 The app answers camera and location prompts one at a time (`PermissionChromeClient.kt`, `PermissionAsker.kt`). wry's own WebView client keeps a single listener, so Snap's simultaneous camera and location prompts used to cross and close the app.
 

@@ -103,6 +103,7 @@ interface ImportMetaEnv {
 
   // UI timing (src/config/UiTimings.ts)
   readonly VITE_TOAST_MS?: string;
+  readonly VITE_STEP_TOAST_MS?: string;
   readonly VITE_CONFIRM_TOAST_MS?: string;
   readonly VITE_REJECTION_TOAST_MS?: string;
   readonly VITE_COPIED_MS?: string;

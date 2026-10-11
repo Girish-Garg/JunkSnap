@@ -106,7 +106,7 @@ The 52 community checks are the photos where two signals are 0.5 or more apart; 
 
 ## Site merging threshold
 
-`backend/server` merges a report into a site within 40 m only when the two photos' SigLIP 2 vectors have cosine 0.88 or more (`MergeTargetPicker`). Measured on the 65 QR4Change test dump photos and a simulated second shot of each (crop to 70 to 90%, tilt up to 8 degrees, brightness and contrast changes, sometimes mirrored), against all 2,080 pairs of different dumps:
+`backend/server` merges a report into a site of its type within 20 m (`SITE_SAME_SPOT_M`) whatever the photos look like, and from there up to 40 m only when the two photos' SigLIP 2 vectors have cosine 0.88 or more (`MergeTargetPicker`; decision 20261011-1610-hem-same-spot-merge, after two field photos of one dump less than 1 m apart fell below 0.88 and made two sites). Measured on the 65 QR4Change test dump photos and a simulated second shot of each (crop to 70 to 90%, tilt up to 8 degrees, brightness and contrast changes, sometimes mirrored), against all 2,080 pairs of different dumps:
 
 | threshold | second shots of the same pile kept | different piles merged |
 |---|---|---|

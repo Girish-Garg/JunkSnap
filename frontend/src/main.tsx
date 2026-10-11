@@ -28,6 +28,7 @@ const services = ServiceContainer.build(config, {
   root: document.documentElement,
   geolocation: navigator.geolocation,
   permissions: navigator.permissions,
+  host: window,
   share: navigator,
   mediaDevices: navigator.mediaDevices,
   crypto: window.crypto,

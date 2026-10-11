@@ -43,7 +43,7 @@ describe('AppConfig defaults', () => {
     expect(config.pilot.centre).toEqual([73.02, 26.27]);
     expect(config.pilot.bounds).toEqual(new BBox(72.96, 26.22, 73.08, 26.36));
     expect(config.cache).toMatchObject({ areaListTtlMs: 300_000, boundaryIndexTtlMs: 600_000, activityTtlMs: 60_000, activitySyncMs: 15_000, reportPollMs: 4_000 });
-    expect(config.ui).toMatchObject({ toastMs: 4_500, copiedMs: 2_500, checkLimitMs: 8_000 });
+    expect(config.ui).toMatchObject({ toastMs: 4_500, stepToastMs: 60_000, copiedMs: 2_500, checkLimitMs: 8_000 });
     expect(config.limits).toEqual({ mailtoMaxLength: 1800, searchResults: 6, listPageSize: 30 });
   });
 

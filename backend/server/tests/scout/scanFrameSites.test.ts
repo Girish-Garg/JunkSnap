@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../../src/adapters/JsonLoggerFactory.js";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
+import { InProcessMergeLock } from "../../src/adapters/sites/InProcessMergeLock.js";
 import type { VerificationResult } from "../../src/contracts/index.gen.js";
 import { ExternalServiceError } from "../../src/domain/errors.js";
 import { QueueMessage } from "../../src/domain/QueueMessage.js";
@@ -91,7 +92,8 @@ function pipeline(verifier: MlVerifyClient): ReportPipeline {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
+    picker: new MergeTargetPicker(embeddings, RULES),
+    lock: new InProcessMergeLock(),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),
@@ -122,9 +124,13 @@ const sevenFrames = (spot: number | undefined, autoClaim?: AutoClaimKind) =>
   Array.from({ length: FRAMES }, (_v, i) => frame(i, spot, autoClaim));
 
 describe("frames of one scan at one spot", () => {
-  it("reproduces the field bug without a spot: 7 overlapping 1 of 10 sites from one person", async () => {
+  // This was the field bug: 7 overlapping 1 of 10 sites from one person. The merge lock and the same-spot rule
+  // (decision 20261011-1610) now make one site even without a spot.
+  it("make one site without a spot too, though merged at once with unlike embeddings", async () => {
     await runAll(sevenFrames(undefined), new ScriptedVerifier({ decision: "community_check" }));
-    expect(sites.count()).toBe(FRAMES);
+    expect(sites.count()).toBe(1);
+    const [siteId] = await sites.allIds();
+    expect(sites.feature(siteId ?? "").properties).toMatchObject({ report_count: FRAMES, backers: { count: 1 } });
   });
 
   it("make at most one site with one backer, even when merged at once with unlike embeddings", async () => {

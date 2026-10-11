@@ -11,7 +11,9 @@ import { DynamoReportWithdrawer } from "../../adapters/sites/DynamoReportWithdra
 import { DynamoSiteReportReader } from "../../adapters/sites/DynamoSiteReportReader.js";
 import { DynamoSiteRepository } from "../../adapters/sites/DynamoSiteRepository.js";
 import { DynamoVoteRepository } from "../../adapters/sites/DynamoVoteRepository.js";
+import { InProcessMergeLock } from "../../adapters/sites/InProcessMergeLock.js";
 import { NgeohashCells } from "../../adapters/sites/NgeohashCells.js";
+import { RecentSitesRepository } from "../../adapters/sites/RecentSitesRepository.js";
 import { S3EmbeddingStore } from "../../adapters/sites/S3EmbeddingStore.js";
 import { SiteItemMapper } from "../../adapters/sites/SiteItemMapper.js";
 import { SqsCleanupQueue } from "../../adapters/sites/SqsCleanupQueue.js";
@@ -70,6 +72,9 @@ export class SiteServiceFactory {
   readonly #retry: ConflictRetry;
   readonly #logger: Logger;
   readonly #tunables: SiteTunables;
+  // One lock and one memory of new sites per process, shared by every merger it builds (one worker replica).
+  readonly #mergeLock = new InProcessMergeLock();
+  readonly #mergeSites: RecentSitesRepository;
 
   constructor(settings: SitesSettings, clients: SiteClients, logger: Logger, tunables = SiteServiceFactory.tunables({})) {
     this.#settings = settings;
@@ -78,6 +83,7 @@ export class SiteServiceFactory {
     this.#tunables = tunables;
     this.#retry = new ConflictRetry(tunables.retry.saveAttempts);
     this.#mapper = new SiteItemMapper(this.#cells, logger, tunables.rules);
+    this.#mergeSites = new RecentSitesRepository(this.#sites(), this.#cells);
   }
 
   static tunables(env: Env): SiteTunables {
@@ -131,10 +137,11 @@ export class SiteServiceFactory {
     const embeddings = new S3EmbeddingStore(s3, this.#settings.originalsBucket, this.#calls);
     const { rules, scores, queue } = this.#tunables;
     return new SiteMerger({
-      sites: this.#sites(),
+      sites: this.#mergeSites,
+      lock: this.#mergeLock,
       votes: this.#votes(),
       cells: this.#cells,
-      picker: new MergeTargetPicker(embeddings, rules.mergeMinCosine),
+      picker: new MergeTargetPicker(embeddings, rules),
       reports: this.#reports(),
       scores: new DynamoAreaScoreSeeder(dynamo, this.#settings.tables.scores, this.#calls),
       clock: this.#clock,

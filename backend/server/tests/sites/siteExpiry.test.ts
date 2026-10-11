@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DynamoSiteExpirer } from "../../src/adapters/DynamoSiteExpirer.js";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
+import { InProcessMergeLock } from "../../src/adapters/sites/InProcessMergeLock.js";
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { validateSite } from "../../src/contracts/index.gen.js";
 import { ExternalServiceError, NotFoundError } from "../../src/domain/errors.js";
@@ -168,7 +169,8 @@ describe("site expiry (decision 20261010-1855)", () => {
       sites,
       votes: new FakeVoteRepository(),
       cells: new NgeohashCells(),
-      picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
+      picker: new MergeTargetPicker(new FakeEmbeddings(), RULES),
+      lock: new InProcessMergeLock(),
       reports: new FakeReportStatus(),
       scores: new FakeScoreSeeder(),
       clock: new SetClock(),
