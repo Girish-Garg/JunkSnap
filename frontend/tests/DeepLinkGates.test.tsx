@@ -6,17 +6,21 @@ import { renderApp } from './helpers';
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
 describe('a letter link for a site', () => {
-  it('says letters wait for 10 people on an unverified site, with no Draft button', async () => {
+  it('offers the draft on an unverified site, with a note that it is not verified yet (decision 20261011-1750)', async () => {
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1/letter' });
-    expect(await screen.findByText('Letters open once 10 people confirm this site.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Draft letter' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Draft letter' })).toBeInTheDocument();
+    expect(await screen.findByText('This spot is not verified yet. The letter says how many residents have reported it.')).toBeInTheDocument();
   });
 
-  it('offers the draft on a verified site', async () => {
+  it('notes it in Hindi too', async () => {
+    await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1/letter', language: 'hi' });
+    expect(await screen.findByText('यह जगह अभी सत्यापित नहीं है। पत्र में लिखा है कि कितने निवासियों ने इसकी सूचना दी है।')).toBeInTheDocument();
+  });
+
+  it('offers the draft on a verified site, with no note', async () => {
     await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1/letter' });
     expect(await screen.findByRole('button', { name: 'Draft letter' })).toBeInTheDocument();
-    expect(screen.queryByText('Letters open once 10 people confirm this site.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/not verified yet/)).not.toBeInTheDocument();
   });
 
   it('says so for a site that does not exist, in Hindi', async () => {

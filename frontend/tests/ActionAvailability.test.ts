@@ -72,7 +72,7 @@ describe('site action gates: the first reason', () => {
   it('says the reason that sign-in or a connection would not fix first', () => {
     expect(reasonOf(SITE_GATES.vote.decide(site({ ownSite: true, online: false, signedIn: false })))).toBe('vote.errors.own_site');
     expect(reasonOf(SITE_GATES.vote.decide(site({ distanceM: 5000, signedIn: false })))).toBe('vote.errors.too_far');
-    expect(reasonOf(SITE_GATES.letter.decide(site({ site: { verification: 'unverified', status: 'open', cleanup_status: 'none' }, online: false })))).toBe('actions.letterLocked');
+    expect(reasonOf(SITE_GATES.letter.decide(site({ site: { verification: 'unverified', status: 'removed', cleanup_status: 'none' }, online: false })))).toBe('gate.siteClosed');
   });
 });
 
@@ -102,10 +102,12 @@ describe('site action gates: cleanup and letters', () => {
 });
 
 describe('site action gates: letters', () => {
-  it('a letter waits for 10 people and shares the cooldown with area letters', () => {
+  it('a letter is open on any site on the map, verified or not, and shares the cooldown with area letters', () => {
     const letter = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.letter.decide(site(patch)));
     expect(letter({})).toEqual(OK);
-    expect(letter({ site: { verification: 'unverified', status: 'open', cleanup_status: 'none' } })).toEqual(blocked('actions.letterLocked'));
+    // Decision 20261011-1750: an unverified site takes a letter; the letter says how many people backed it.
+    expect(letter({ site: { verification: 'unverified', status: 'open', cleanup_status: 'none' } })).toEqual(OK);
+    expect(letter({ site: { verification: 'rejected', status: 'open', cleanup_status: 'none' } })).toEqual(blocked('gate.siteClosed'));
     // A deep link to a site that left the map says so before anything else.
     expect(letter({ site: { verification: 'verified', status: 'expired', cleanup_status: 'none' }, signedIn: false })).toEqual(blocked('gate.siteClosed'));
     expect(letter({ cooling: cooling('letter') })).toEqual(blocked('letter.errors.rate_limited'));

@@ -15,6 +15,7 @@ import { LetterActions } from './LetterActions';
 import { LetterStart } from './LetterStart';
 import { LetterEvidence } from './LetterEvidence';
 import { LetterView } from './LetterView';
+import { UnverifiedNote } from './UnverifiedNote';
 import type { LetterText } from '../LetterText';
 
 const TITLE_ID = 'letter-title';
@@ -28,7 +29,7 @@ export function LetterRoute() {
   const sheets = useSheetNavigation();
   const close = useCallback(() => sheets.close(sitePath(siteId)), [sheets, siteId]);
   const flow = useLetter(siteId);
-  const { locked } = useSiteRouteGate(siteId, 'letter');
+  const { locked, site } = useSiteRouteGate(siteId, 'letter');
   const { draft } = flow;
   const evidence = (text: LetterText) => draft?.evidence && <LetterEvidence evidence={draft.evidence} text={text} language={draft.language} />;
   return (
@@ -38,6 +39,7 @@ export function LetterRoute() {
       </h2>
       <p className="letter-banner">{t('letter.noAutoSend')}</p>
       {config.isSampleData() && <p className="form__note">{t('letter.sample')}</p>}
+      <UnverifiedNote site={site} draft={draft} locked={locked !== null} />
       {!draft && <LetterStart flow={flow} locked={locked} onBack={close} />}
       {draft && <LetterView draft={draft} evidence={evidence} />}
       {draft && <LetterActions draft={draft} onReset={flow.reset} link={links.site(siteId)} />}

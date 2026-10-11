@@ -10,7 +10,7 @@ import { LetterRefusal } from '../LetterRefusal';
 export type LetterScope = 'site' | 'area';
 
 // Error codes from the letter routes with their own message.
-const KNOWN_ERRORS: ReadonlySet<string> = new Set(['not_verified', 'no_local_body', 'rate_limited', 'not_found', 'area_not_found']);
+const KNOWN_ERRORS: ReadonlySet<string> = new Set(['not_verified', 'no_local_body', 'rate_limited', 'not_found', 'area_not_found', 'site_rejected']);
 
 const forScope = (problem: string, scope: LetterScope) => (problem === 'not_verified' && scope === 'area' ? 'not_verified_area' : problem);
 

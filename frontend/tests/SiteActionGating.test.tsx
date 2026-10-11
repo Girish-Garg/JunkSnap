@@ -72,18 +72,21 @@ describe('closed reasons for older rows, no-bin zones and the coming expired sta
   });
 });
 
-describe('Letter waits for 10 people', () => {
-  it('is off on an unverified site and says why', async () => {
+describe('Letter on an unverified site (decision 20261011-1750)', () => {
+  it('is offered while the site waits for its 10 people, next to Confirm', async () => {
     await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />);
-    expect(screen.getByRole('button', { name: 'Letter' })).toHaveAttribute('aria-disabled', 'true');
-    // This phone's reports are read first, so the line says "Checking…" for a moment.
-    expect(await screen.findByText('Letters open once 10 people confirm this site.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
+    const letter = await findEnabledButton('Letter');
+    expect(letter).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Confirm' })).toHaveClass('action-row__button--primary');
+    expect(screen.queryByText(/Letters open once/)).not.toBeInTheDocument();
   });
 
-  it('says it in Hindi too', async () => {
-    await renderApp(<SitePanel site={await fixtureSite('site_jpr_1')} userLocation={null} />, { language: 'hi' });
-    expect(await screen.findByText('10 लोगों के पुष्टि करने के बाद इस स्थल का पत्र बन सकता है।')).toBeInTheDocument();
+  it('opens the letter sheet from the tile, with a note that the spot is not verified yet', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn() });
+    await user.click(await findEnabledButton('Letter'));
+    expect(await screen.findByRole('button', { name: 'Draft letter' })).toBeInTheDocument();
+    expect(screen.getByText('This spot is not verified yet. The letter says how many residents have reported it.')).toBeInTheDocument();
   });
 });
 

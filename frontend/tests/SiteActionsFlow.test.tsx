@@ -63,7 +63,7 @@ describe('letter draft', () => {
     expect(screen.getByRole('button', { name: 'Print or save as PDF' })).toBeInTheDocument();
   });
 
-  it('labels a Hindi letter in Hindi and explains a site that is not verified yet', async () => {
+  it('labels a Hindi letter in Hindi and explains a site neighbours hid meanwhile', async () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(<AppRoutes />, { route: '/sites/site_jdh_1/letter', services: await signedIn(api) });
@@ -73,8 +73,8 @@ describe('letter draft', () => {
     expect(letter).toHaveAttribute('lang', 'hi');
     expect(within(letter).getByText('विधायक, Jodhpur विधानसभा क्षेत्र (ध्यानार्थ)')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Draft again' }));
-    api.failNext('letter', 409, 'not_verified');
+    api.failNext('letter', 409, 'site_rejected');
     await user.click(screen.getByRole('button', { name: 'Draft letter' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Letters open once the site is verified.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Neighbours said this is not a waste site, so it takes no letters.');
   });
 });
