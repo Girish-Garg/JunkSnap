@@ -2,8 +2,10 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useServices } from '../../../app/useServices';
 import type { Toast } from '../../../services/Notifier';
 
-/** How long one plain toast stays; the next in the queue follows. A toast with a step stays until it is used or closed. */
+/** How long one plain toast stays; the next in the queue follows. */
 export const TOAST_MS = 4500;
+/** The most a toast with a step (Open app settings, Try again) stays when nobody uses or closes it. */
+export const STEP_TOAST_MS = 60_000;
 
 export interface ToastState {
   readonly current: Toast | null;
@@ -14,7 +16,8 @@ export interface ToastState {
 
 /**
  * The toast on screen. A plain one leaves by itself after TOAST_MS or when dismissed; one with a step (Open app
- * settings, Try again) stays, so there is time to read it and reach its button with a keyboard or a screen reader.
+ * settings, Try again) stays up to STEP_TOAST_MS, so there is time to read it and reach its button with a keyboard or a
+ * screen reader.
  */
 export function useToast(): ToastState {
   const { notifier } = useServices();
@@ -23,8 +26,8 @@ export function useToast(): ToastState {
     () => notifier.current(),
   );
   useEffect(() => {
-    if (!current || current.action) return undefined;
-    const timer = window.setTimeout(() => notifier.dismiss(current.id), TOAST_MS);
+    if (!current) return undefined;
+    const timer = window.setTimeout(() => notifier.dismiss(current.id), current.action ? STEP_TOAST_MS : TOAST_MS);
     return () => window.clearTimeout(timer);
   }, [current, notifier]);
   const dismiss = useCallback(() => {

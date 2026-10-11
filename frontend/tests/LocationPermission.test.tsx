@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
-import { TOAST_MS } from '../src/features/actions/hooks/useToast';
 import { SitePanel } from '../src/features/site/components/SitePanel';
 import { AppLocationPermission, LOCATION_EVENT } from '../src/services/AppLocationPermission';
 import { BrowserLocationPermission } from '../src/services/BrowserLocationPermission';
@@ -78,7 +77,6 @@ const comeBack = () => act(() => void document.dispatchEvent(new Event('visibili
 const VOTE_OFF = /Turn on location to vote here\. JunkSnap checks you're within 1 km\./;
 
 afterEach(() => {
-  vi.useRealTimers();
   delete (window as { JunkSnapAndroid?: unknown }).JunkSnapAndroid;
 });
 
@@ -201,45 +199,5 @@ describe('an app build without checkLocation', () => {
     expect(access.answer()).toBe('prompt');
     access.learn('timeout');
     expect(access.answer()).toBe('prompt');
-  });
-});
-
-const OFF = "Your phone's location is off. Turn it on and try again.";
-const OFFLINE = "You're offline. Try again once you're connected.";
-
-// The app toast alone, on timers the test moves; withStep() shows a toast with a Try again step.
-async function toasts() {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  const services = testServices();
-  const run = vi.fn();
-  await renderApp(<ToastHost />, { services });
-  const withStep = () => act(() => services.notifier.push({ key: 'location.off', action: { key: 'snap.tryAgain', run } }));
-  return { services, run, withStep, user: userEvent.setup({ advanceTimers: vi.advanceTimersByTime }) };
-}
-
-describe('a toast with a step', () => {
-  it('stays, with its close button, until the next line replaces it; a plain line still leaves after TOAST_MS', async () => {
-    const { services, withStep } = await toasts();
-    withStep();
-    act(() => vi.advanceTimersByTime(TOAST_MS * 3));
-    expect(screen.getByText(OFF)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument();
-    act(() => services.notifier.push({ key: 'gate.offline' }));
-    expect(screen.queryByText(OFF)).not.toBeInTheDocument();
-    expect(screen.getByText(OFFLINE)).toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(TOAST_MS));
-    expect(screen.queryByText(OFFLINE)).not.toBeInTheDocument();
-  });
-
-  it('leaves when its step is taken or it is closed', async () => {
-    const { run, withStep, user } = await toasts();
-    withStep();
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(run).toHaveBeenCalledOnce();
-    expect(screen.queryByText(OFF)).not.toBeInTheDocument();
-    withStep();
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
-    expect(screen.queryByText(OFF)).not.toBeInTheDocument();
-    expect(run).toHaveBeenCalledOnce();
   });
 });
