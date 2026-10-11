@@ -51,7 +51,7 @@ iPhones, desktops, crawlers and in-app WebViews (`; wv)`) keep the plain redirec
 **The app's links.** `AndroidManifest.xml` has three VIEW filters on `MainActivity`:
 - `junksnap://` with hosts `sites`, `areas` and `activity`.
 - `https://d2s7tf4ua41hzf.cloudfront.net` (demo api) with `/share/` and `/sites/`.
-- `https://demo.d3iec0rb3f75jm.amplifyapp.com` (demo web app) with `/sites/`, `/areas/` and `/activity/reports/`.
+- `https://junksnap.coehemang.dev` and `https://demo.d3iec0rb3f75jm.amplifyapp.com` (the demo web app, on its own domain and its original Amplify address) with `/sites/`, `/areas/` and `/activity/reports/`.
 
 The two https filters have `android:autoVerify="true"`. `AppLinks.kt` takes the link from the launch intent (cold start) or `onNewIntent` (app already open). It waits until the page calls `window.JunkSnapAndroid.linkReady()`, which is origin-checked like the other bridge methods. Then it dispatches a `junksnap:applink` event with the link on `window`. The page (`AppLinkRoutes.ts`, `useAppLinks.ts`) maps the link to its route and opens it as a sheet, so back returns to the map:
 
@@ -87,7 +87,7 @@ From `app-v0.1.2` on, release builds from the workflow are signed with this key.
 
 Android verifies an https host by fetching `https://<host>/.well-known/assetlinks.json` when the app is installed or updated. On Android 12 and later each host is verified on its own; on Android 11 and older every autoVerify host must pass.
 - **api host (CloudFront):** the api serves the file from `ANDROID_CERT_SHA256`, a comma-separated list of fingerprints (contracts/README.md). Unset, the route answers 404. CloudFront's default behaviour already sends `/.well-known/*` to the ALB and the api, uncached, so no infra change is needed. The `demo` overlay (`infra/k8s/overlays/demo/kustomization.yaml`) sets it to the release fingerprint; another stage adds it to its own overlay's `configMapGenerator`, then redeploys. To also verify a debug build, append that machine's debug fingerprint after a comma.
-- **web host (Amplify):** `frontend/public/.well-known/assetlinks.json` holds the same JSON, served at `https://demo.d3iec0rb3f75jm.amplifyapp.com/.well-known/assetlinks.json`. The SPA rewrite in `deploy_web.py` leaves `.json` files alone. Keep its fingerprint the same as the overlay's.
+- **web host (Amplify):** `frontend/public/.well-known/assetlinks.json` holds the same JSON, served at `https://junksnap.coehemang.dev/.well-known/assetlinks.json` and `https://demo.d3iec0rb3f75jm.amplifyapp.com/.well-known/assetlinks.json`. The SPA rewrite in `deploy_web.py` leaves `.json` files alone. Keep its fingerprint the same as the overlay's.
 
 Check the result with `curl https://d2s7tf4ua41hzf.cloudfront.net/.well-known/assetlinks.json`, Google's statement tester (`https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://<host>&relation=delegate_permission/common.handle_all_urls`), and `adb shell pm get-app-links com.junksnap.app` after installing a release APK. To re-run verification, use `adb shell pm verify-app-links --re-verify com.junksnap.app`.
 

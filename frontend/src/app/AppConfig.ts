@@ -36,6 +36,7 @@ interface Endpoints {
   readonly apiUrl: string | null;
   readonly cognito: CognitoConfig | null;
   readonly webUrl: string | null;
+  readonly shareUrl: string | null;
   readonly baseUrl: string;
 }
 
@@ -55,6 +56,8 @@ export class AppConfig implements Tuning {
   readonly cognito: CognitoConfig | null;
   /** The stage's public web app; share links point here. Null shares the page's own origin. */
   readonly webUrl: string | null;
+  /** Where share links (/share/*) point: a host serving the api's link previews. Null uses the api itself. */
+  readonly shareUrl: string | null;
   /** Where the app is served from (Vite's BASE_URL), for the files in public/. */
   readonly baseUrl: string;
   readonly site: SiteRules;
@@ -72,6 +75,7 @@ export class AppConfig implements Tuning {
     this.apiUrl = endpoints.apiUrl;
     this.cognito = endpoints.cognito;
     this.webUrl = endpoints.webUrl;
+    this.shareUrl = endpoints.shareUrl;
     this.baseUrl = endpoints.baseUrl;
     this.site = tuning.site;
     this.map = tuning.map;
@@ -99,7 +103,8 @@ export class AppConfig implements Tuning {
     const apiMode = AppConfig.#readMode(reader.text('VITE_API_MODE') || (apiUrl ? 'live' : 'mock'));
     if (apiMode === 'live' && apiUrl === null) throw new ConfigError('VITE_API_MODE=live needs VITE_API_URL');
     const webUrl = AppConfig.#baseUrl(reader.text('VITE_WEB_URL'));
-    return { apiMode, apiUrl, cognito: AppConfig.#readCognito(reader), webUrl, baseUrl: reader.text('BASE_URL') || '/' };
+    const shareUrl = AppConfig.#baseUrl(reader.text('VITE_SHARE_URL'));
+    return { apiMode, apiUrl, cognito: AppConfig.#readCognito(reader), webUrl, shareUrl, baseUrl: reader.text('BASE_URL') || '/' };
   }
 
   static #tuning(reader: EnvReader): Tuning {
