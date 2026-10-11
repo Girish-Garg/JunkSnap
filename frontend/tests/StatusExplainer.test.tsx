@@ -16,7 +16,7 @@ vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () =
 const WAITING: SitePatch = { verification: 'unverified', backers: { count: 3, needed: 10, photo_people: 1, vote_people: 2 } };
 const ASK = 'Ask neighbours to confirm';
 const URL_OF_SITE = `${window.location.origin}/sites/site_test_1`;
-const ASK_TEXT = 'Can you confirm this waste spot near Ward 37? It needs 10 people and has 3 so far.';
+const ASK_TEXT = 'Can you confirm this waste dump near Ward 37? It needs 10 people and has 3 so far.';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -135,5 +135,19 @@ describe('Ask neighbours to confirm', () => {
     await userEvent.click(screen.getByRole('button', { name: ASK }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${ASK_TEXT} ${URL_OF_SITE}`));
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+  });
+});
+
+describe('Ask neighbours names the kind of site', () => {
+  it.each([
+    ['overflowing_bin', 'Overflowing or broken bin', 'this overflowing or broken bin'],
+    ['no_bin', 'No bin or pickup', 'that there is no dustbin or pickup'],
+  ] as const)('names a %s site for what it is, not a waste spot', async (type, title, spot) => {
+    const share = vi.fn(async () => undefined);
+    const site = testSite({ ...WAITING, report_type: type });
+    await renderApp(<SitePanel site={site} userLocation={null} />, { services: sharing({ share }).services });
+    await userEvent.click(screen.getByRole('button', { name: ASK }));
+    const text = `Can you confirm ${spot} near Ward 37? It needs 10 people and has 3 so far.`;
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({ title, text }));
   });
 });

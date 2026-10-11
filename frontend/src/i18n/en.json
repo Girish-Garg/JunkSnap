@@ -120,7 +120,14 @@
   },
   "ask": {
     "action": "Ask neighbours to confirm",
-    "text": "Can you confirm this waste spot near {{place}}? It needs {{needed}} people and has {{count}} so far."
+    "text": "Can you confirm {{spot}} near {{place}}? It needs {{needed}} people and has {{count}} so far.",
+    "spot": {
+      "waste_dump": "this waste dump",
+      "overflowing_bin": "this overflowing or broken bin",
+      "contaminated_water": "this contaminated water",
+      "open_construction": "this uncovered construction debris",
+      "no_bin": "that there is no dustbin or pickup"
+    }
   },
   "addPhoto": {
     "action": "Add a photo",
