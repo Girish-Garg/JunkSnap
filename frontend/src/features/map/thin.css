@@ -1,0 +1,70 @@
+/* A view with few or no reports: the card on the map foot and the note under the list's rows. Tokens only. */
+.thin-card {
+  position: absolute;
+  right: var(--edge);
+  bottom: var(--map-foot);
+  left: var(--edge);
+  z-index: 4;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  padding: var(--card-pad);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+/* Springs in the first time only; after a pan or a pin card it stays put or simply reappears. */
+.thin-card--enter {
+  animation: card-in var(--dur-spring) var(--spring);
+}
+
+.thin-card > .icon-button {
+  position: absolute;
+  top: var(--s-1);
+  right: var(--s-1);
+}
+
+/* The happy bin beside the title; the text and the actions take the card's full width under them. */
+.thin-card .thin-note__title {
+  padding-right: var(--s-8);
+}
+
+.thin-card .thin-note__body,
+.thin-card .thin-note__actions {
+  grid-column: 1 / -1;
+}
+
+.thin-note__title {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  font-weight: 700;
+}
+
+.thin-note__body {
+  color: var(--text-secondary);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+}
+
+.thin-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--inline-gap);
+}
+
+/* A short phone keeps the count and the actions, so the card leaves the map room. */
+@media (max-height: 720px) {
+  .thin-card .thin-note__body {
+    display: none;
+  }
+}
+
+/* The map buttons and the legend stand on the card while it is up (it publishes --card-height). */
+.map-page:has(.thin-card) .map-controls,
+.map-page:has(.thin-card) .legend-toggle {
+  bottom: calc(var(--map-foot) + var(--card-height, 0px) + var(--inline-gap));
+}

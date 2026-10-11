@@ -1,9 +1,9 @@
 import { NearestSites } from './NearestSites';
 import type { LonLat, SiteFeature } from './Site';
 
-/** How the site list is ordered. */
+/** How the site list is ordered; "confirm" (Needs confirming) is a quick sort beside these three. */
 export const SITE_SORTS = ['nearest', 'newest', 'backed'] as const;
-export type SiteSort = (typeof SITE_SORTS)[number];
+export type SiteSort = (typeof SITE_SORTS)[number] | 'confirm';
 
 type Compare = (a: SiteFeature, b: SiteFeature) => number;
 
@@ -24,9 +24,17 @@ export class SiteOrder {
     return [...sites].sort((a, b) => compare(a, b) || newest(a, b) || byId(a, b));
   }
 
+  /** Still waiting for people to back it (unverified), so someone nearby can help confirm it. */
+  static waiting(site: SiteFeature): boolean {
+    return site.properties.verification === 'unverified';
+  }
+
   static #compare(sort: SiteSort, from: LonLat): Compare {
+    const nearest: Compare = (a, b) => NearestSites.distance(from, a.geometry.coordinates) - NearestSites.distance(from, b.geometry.coordinates);
     if (sort === 'newest') return newest;
     if (sort === 'backed') return (a, b) => b.properties.backers.count - a.properties.backers.count;
-    return (a, b) => NearestSites.distance(from, a.geometry.coordinates) - NearestSites.distance(from, b.geometry.coordinates);
+    // Needs confirming: the waiting sites first, each group nearest first.
+    if (sort === 'confirm') return (a, b) => Number(SiteOrder.waiting(b)) - Number(SiteOrder.waiting(a)) || nearest(a, b);
+    return nearest;
   }
 }

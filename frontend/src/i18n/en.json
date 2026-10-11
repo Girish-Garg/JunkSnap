@@ -1296,6 +1296,7 @@
     "sortNearest": "Nearest",
     "sortNewest": "Newest",
     "sortBacked": "Most backed",
+    "confirm": "Needs confirming",
     "emptyView": "No sites in this view",
     "cityNote": "Here are Jodhpur's sites instead.",
     "showCity": "Show all of Jodhpur",
@@ -1308,5 +1309,16 @@
     "cityFailed": "Could not load Jodhpur's sites.",
     "retry": "Try again",
     "announce": "{{type}}, {{area}}. {{position}} of {{total}}"
+  },
+  "thin": {
+    "none": "No sites on the map here right now",
+    "few_one": "Only {{count}} site on the map here right now",
+    "few_other": "Only {{count}} sites on the map here right now",
+    "text": "Reports come from people nearby. Seen waste? Snap it, and once it is checked it shows on the map for everyone.",
+    "reportFirst": "Report the first one",
+    "report": "Add a report",
+    "areas": "See areas",
+    "zoomOut": "Zoom out",
+    "dismiss": "Hide this tip"
   }
 }

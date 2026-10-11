@@ -56,7 +56,21 @@
 }
 
 .site-list-sheet__sort {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--inline-gap);
   margin-top: var(--s-3);
+}
+
+.site-list-sheet__sort .segmented {
+  align-self: stretch;
+}
+
+/* "Needs confirming": quiet on the sheet like the Filters pill until it is on. */
+.confirm-chip {
+  background: var(--tile);
+  box-shadow: none;
 }
 
 .site-list-sheet__sort .segmented__option {

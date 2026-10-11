@@ -14,6 +14,7 @@ import { useNearbySites } from './useNearbySites';
 import { useSiteBrowser } from './useSiteBrowser';
 import { useSiteData } from './useSiteData';
 import type { SitesLoad } from './useSites';
+import { useThinView } from './useThinView';
 
 export type MapPageState = ReturnType<typeof useMapPage>;
 
@@ -41,6 +42,7 @@ export function useMapPage() {
   const browserInput = { loaded: loaded.sites, view, filter, position: location.position, selection, around };
   const browser = useSiteBrowser({ ...browserInput, openingWants: !settled && empty });
   useOpeningFit({ settled, view, empty, pilot: browser.pilot.sites, frame: selection.frame });
+  const thin = useThinView({ view, loaded, partial, nearest, pilot: browser.pilot.sites, camera: selection.camera, opening: settled });
   const notice = useMapNotice({ loaded, shown: sites.length, partial, locationProblem: location.problem, nearby: nearest, flash: flash.key });
   const moves = useMapMoves({ view, setView, selection, location, browser });
   const { showPlace } = selection;
@@ -49,5 +51,5 @@ export function useMapPage() {
   // Every route but the bare map opens a sheet, and so do Filters, the stack list and the site list.
   const sheetOpen = pathname !== '/' || filtersOpen || selection.stack !== null || browser.visible;
   const refresh = { refreshSites: loaded.refresh, announce: flash.announce };
-  return { loaded: loaded.sites, sites, selection, location, notice, showNearest, sheetOpen, filters, boundary, areaCard, layerBindings, browser, ...moves, ...refresh };
+  return { loaded: loaded.sites, sites, selection, location, notice, showNearest, sheetOpen, filters, boundary, areaCard, layerBindings, browser, thin, ...moves, ...refresh };
 }
