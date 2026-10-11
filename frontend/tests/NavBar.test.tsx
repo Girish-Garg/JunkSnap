@@ -34,7 +34,7 @@ describe('navigation bar', () => {
     expect(screen.getByRole('button', { name: 'Areas' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('asks a signed-out user to sign in before Activity or Account', async () => {
+  it('asks a signed-out user to sign in before Activity', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />);
     await user.click(screen.getByRole('button', { name: 'Activity' }));

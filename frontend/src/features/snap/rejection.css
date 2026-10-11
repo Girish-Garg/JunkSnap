@@ -1,20 +1,14 @@
-/* Issue 103: a report that came back as not a waste site. Firm, not alarming. */
+/* Issue 103: a report that came back as not a waste site. Firm, not alarming. It sits in the ToastStack. */
 .rejection-toast {
-  position: fixed;
-  right: var(--edge);
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + var(--s-3));
-  left: var(--edge);
-  z-index: 15;
   display: flex;
   align-items: flex-start;
   gap: var(--s-3);
-  max-width: var(--panel-width);
-  margin: 0 auto;
   padding: var(--s-3) var(--s-2) var(--s-3) var(--s-4);
   border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   color: var(--text);
+  pointer-events: auto;
   animation: rejection-toast-in var(--dur-spring) var(--spring);
 }
 
@@ -36,7 +30,7 @@
 @keyframes rejection-toast-in {
   from {
     opacity: 0;
-    transform: translateY(var(--s-6));
+    transform: translateY(calc(-1 * var(--s-6)));
   }
 }
 

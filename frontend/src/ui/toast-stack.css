@@ -1,0 +1,31 @@
+/*
+  Every app-wide toast in one column at the top of the screen (ToastStack, decision 20261011-0303): on phones just
+  under the search field, on desktop at the top of the map area, and above every sheet. A new toast lands below
+  the ones already up (each toast's CSS order), so they never jump; a card gap apart, one never covers another.
+  The column lets taps through; only the toasts take them.
+*/
+.toast-stack {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--s-3) + var(--target) + var(--inline-gap));
+  right: var(--edge);
+  left: var(--edge);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--card-gap);
+  pointer-events: none;
+}
+
+.toast-stack > * {
+  width: 100%;
+  max-width: var(--panel-width);
+}
+
+/* Desktop: search sits in the side panel, so the column starts at the top of the map area beside it. */
+@media (min-width: 1024px) {
+  .toast-stack {
+    top: calc(env(safe-area-inset-top) + var(--s-3));
+    left: calc(var(--panel-width) + var(--edge));
+  }
+}

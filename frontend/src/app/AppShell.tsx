@@ -7,6 +7,7 @@ import { SplashScreen } from '../features/brand/components/SplashScreen';
 import { SplashSession } from '../features/brand/SplashSession';
 import { ConfirmToast } from '../features/snap/components/ConfirmToast';
 import { RejectionToast } from '../features/snap/components/RejectionToast';
+import { ToastStack } from '../ui/ToastStack';
 import { AppRoutes } from './AppRoutes';
 import { WELCOME_PATH } from './paths';
 import { SheetHistory } from './SheetHistory';
@@ -31,12 +32,14 @@ export function AppShell() {
   }, [onboarding, pathname, navigate, session]);
   return (
     <div className="app">
-      <AuthFlowProvider>
-        <AppRoutes />
-      </AuthFlowProvider>
-      <RejectionToast />
-      <ConfirmToast />
-      <ToastHost />
+      <ToastStack>
+        <AuthFlowProvider>
+          <AppRoutes />
+        </AuthFlowProvider>
+        <RejectionToast />
+        <ConfirmToast />
+        <ToastHost />
+      </ToastStack>
       {splash && <SplashScreen onDone={afterSplash} />}
     </div>
   );

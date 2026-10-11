@@ -1,16 +1,15 @@
 /*
-  The app toast: why a tapped action is off, a lost or returning connection. It floats at the top, clear of the
-  sheets and the keyboard, and above every sheet; the rejection toast keeps the bottom.
+  The app toast: why a tapped action is off, a lost or returning connection. It sits in the ToastStack at the top,
+  with the rejection and confirm toasts. Its live region stays mounted; empty, it leaves the column (and its gap).
 */
 .app-toast-region {
-  position: fixed;
-  top: calc(env(safe-area-inset-top) + var(--s-3));
-  right: var(--edge);
-  left: var(--edge);
-  z-index: 30;
   display: flex;
   justify-content: center;
   pointer-events: none;
+}
+
+.app-toast-region:empty {
+  position: absolute;
 }
 
 .app-toast {
