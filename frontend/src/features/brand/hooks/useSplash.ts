@@ -27,6 +27,7 @@ function fly(mark: SVGSVGElement, screen: HTMLElement): Animation {
     duration: FLY_MS,
     fill: 'forwards',
   });
+  screen.querySelector('.splash__tagline')?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FLY_MS / 2, fill: 'forwards' });
   return mark.animate(move, { duration: FLY_MS, easing: 'cubic-bezier(0.55, 0, 0.2, 1)', fill: 'forwards' });
 }
 
