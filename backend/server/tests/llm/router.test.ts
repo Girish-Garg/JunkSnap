@@ -115,6 +115,15 @@ describe("ProviderRouter time budget", () => {
     expect(llmLines(sink).map((line) => [line.model, line.outcome])).toEqual([[SONNET, "error"]]);
   });
 
+  it("counts a hung provider build (the API key read) against the budget", async () => {
+    const hung: ProviderBuilder = { provider: "openai", build: async () => new Promise(() => undefined) };
+    const nova = new FakeLlmProvider("bedrock", NOVA, ["ok"]);
+    const config = new TaskConfig("openai", "gpt-4.1-mini", [new ModelChoice("bedrock", NOVA)]);
+    const router = routerFor(config, [hung, new FakeProviderBuilder("bedrock", { [NOVA]: nova })], new LogSink(), 30);
+    await expect(router.complete(jsonRequest())).rejects.toThrow(new ExternalServiceError("LLM time budget of 30 ms spent for task letters"));
+    expect(nova.requests).toHaveLength(0);
+  });
+
   it("starts no retry once the budget is spent", async () => {
     const sink = new LogSink();
     const sonnet = new FakeLlmProvider("bedrock", SONNET, [{ afterMs: 60, answer: "not json" }, '{"word": "ok"}']);

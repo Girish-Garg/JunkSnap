@@ -17,7 +17,8 @@ spec:
       serviceAccountName: worker
       nodeSelector:
         kubernetes.io/arch: amd64
-      terminationGracePeriodSeconds: 60
+      # SIGTERM stops receiving; in-flight messages finish or hit the poller's 240 s deadline first.
+      terminationGracePeriodSeconds: 270
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001

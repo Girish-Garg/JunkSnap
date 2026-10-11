@@ -115,10 +115,14 @@ class MetaModel:
         return report_type in self.report_types
 
     def pick(self, present: frozenset[str], judged: bool) -> SignalLogistic:
-        """The full model needs every one of its signals; its bias assumes they all spoke."""
+        """The fallback (Rekognition only) when a signal it lacks is missing, else the full model.
+
+        A missing signal the fallback has too adds nothing to the full model: training reads a
+        missing score as 0.5, logit 0 (training stacker._fit), so the others still count.
+        """
         full = self.judged if judged else self.base
         spare = self.fallback_judged if judged else self.fallback
-        if spare is None or set(full.signals) <= present:
+        if spare is None or set(full.signals) - present <= set(spare.signals):
             return full
         return spare
 

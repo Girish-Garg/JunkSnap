@@ -33,8 +33,9 @@ export class ScanMessageHandler implements MessageHandler {
 
   async #exhaust(scanId: string, receiveCount: number): Promise<void> {
     try {
-      await this.#processor.markExhausted(scanId);
-      this.#logger.warn({ scan_id: scanId, receive_count: receiveCount }, "scan failed after the last attempt");
+      if (await this.#processor.markExhausted(scanId)) {
+        this.#logger.warn({ scan_id: scanId, receive_count: receiveCount }, "scan failed after the last attempt");
+      }
     } catch (error) {
       this.#logger.error({ scan_id: scanId, error }, "could not mark the scan failed");
     }

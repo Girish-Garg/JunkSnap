@@ -16,6 +16,16 @@ export class FakeReportApi implements ReportApi {
   /** GET /me/reports pages, served in order by cursor ("0", "1", ...); empty by default. */
   pages_: readonly (readonly ReportStatusView[])[] = [];
   verification_: ReportStatusView['verification'] = undefined;
+  #held: Promise<void> = Promise.resolve();
+
+  /** Holds GET /me/reports answers until the returned release is called, as on a slow network. */
+  holdList(): () => void {
+    let release = (): void => undefined;
+    this.#held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return release;
+  }
 
   failNext(kind: Call, status: number, code = 'error'): void {
     this.#failures.set(kind, [...(this.#failures.get(kind) ?? []), new ApiError(status, code, `${kind} failed`)]);
@@ -62,9 +72,11 @@ export class FakeReportApi implements ReportApi {
 
   async mine(cursor: string | null): Promise<ReportListPage> {
     this.#record('mine', cursor);
+    const pages = this.pages_;
+    await this.#held;
     const index = cursor === null ? 0 : Number(cursor);
-    const next = index + 1 < this.pages_.length ? String(index + 1) : null;
-    return { reports: this.pages_[index] ?? [], next_cursor: next };
+    const next = index + 1 < pages.length ? String(index + 1) : null;
+    return { reports: pages[index] ?? [], next_cursor: next };
   }
 
   #record(kind: Call, body: unknown): void {

@@ -12,6 +12,7 @@ import { ScoresJob } from "../services/ScoresJob.js";
 import { CrawledWardSettings } from "../settings/CrawledWardSettings.js";
 import { ScoresSettings } from "../settings/ScoresSettings.js";
 import type { EntryContext } from "./EntryPoint.js";
+import { awsClientConfig } from "./utils.js";
 import { WardFilesFactory } from "./WardFilesFactory.js";
 
 // Composition root of the scores CronJob.
@@ -19,7 +20,7 @@ export class ScoresJobFactory {
   async create(context: EntryContext): Promise<ScoresJob> {
     const { settings: core, env, logger } = context;
     const settings = ScoresSettings.fromEnv(env);
-    const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: core.awsRegion }));
+    const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(core.awsRegion)));
     const ports = {
       sites: new DynamoAreaSiteReader(client, settings.sitesTable, new SiteItemParser()),
       reports: new DynamoAreaReportReader(client, settings.reportsTable, logger),

@@ -14,10 +14,11 @@ export function NavBar() {
   const sheets = useSheetNavigation();
   const { requireAuth } = useAuthFlow();
   const selected = NavItems.selected(pathname);
-  // Tabs replace each other, so back from any tab returns to the map and back from the map leaves.
+  // Tabs replace each other, so back from any tab returns to the map and back from the map leaves. A tab whose
+  // screen is underneath (tapped on an area page or a report's feedback) goes back to it instead of stacking a copy.
   const go = (item: NavItem) => {
     if (item.path === '/') return sheets.home();
-    const open = () => (pathname === '/' ? sheets.open(item.path) : sheets.swap(item.path));
+    const open = () => sheets.up(item.path);
     if (item.needsAccount) requireAuth(open);
     else open();
   };

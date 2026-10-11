@@ -99,14 +99,17 @@ describe("SiteNearbyCounter", () => {
 });
 
 describe("ScanMessageHandler", () => {
-  function handler(fail: boolean) {
+  function handler(fail: boolean, marks = true) {
     const calls: string[] = [];
     const processor = {
       process: async (scanId: string) => {
         calls.push(`process ${scanId}`);
         if (fail) throw new Error("ffmpeg failed");
       },
-      markExhausted: async (scanId: string) => void calls.push(`exhausted ${scanId}`),
+      markExhausted: async (scanId: string) => {
+        calls.push(`exhausted ${scanId}`);
+        return marks;
+      },
     };
     const sink = new LogSink();
     const logger = new JsonLoggerFactory(sink).create({ service: "worker", stage: "dev" });
@@ -127,6 +130,13 @@ describe("ScanMessageHandler", () => {
     await expect(subject.handle(scan(3))).rejects.toThrow("ffmpeg failed");
     expect(calls).toEqual(["process scn_jpr_1", "process scn_jpr_1", "exhausted scn_jpr_1"]);
     expect(sink.records().map((record) => record.message)).toContain("scan failed after the last attempt");
+  });
+
+  it("logs no failure when the last receive finds the scan already finished", async () => {
+    const { calls, sink, subject } = handler(true, false);
+    await expect(subject.handle(scan(3))).rejects.toThrow("ffmpeg failed");
+    expect(calls).toEqual(["process scn_jpr_1", "exhausted scn_jpr_1"]);
+    expect(sink.records().map((record) => record.message)).not.toContain("scan failed after the last attempt");
   });
 
   it("rejects a message without a valid scan id", async () => {

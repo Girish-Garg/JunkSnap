@@ -47,9 +47,14 @@ export class VideoScanProcessor {
     await this.#inScratch(scan);
   }
 
-  // For the worker once SQS has delivered the message for the last time.
-  async markExhausted(scanId: string): Promise<void> {
+  // After the last SQS delivery; true when it marked the scan failed, false for one a duplicate delivery already finished.
+  async markExhausted(scanId: string): Promise<boolean> {
+    const status = (await this.#deps.scans.find(scanId))?.status;
+    if (status === "done" || status === "failed") {
+      return false;
+    }
     await this.#fail(scanId, "retries_exhausted", "no retries left");
+    return true;
   }
 
   async #inScratch(scan: ScanRecord): Promise<void> {

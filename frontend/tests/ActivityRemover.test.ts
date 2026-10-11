@@ -32,8 +32,10 @@ function rig(frames: Record<string, ReportStatusView | null> = {}, answers: Reco
   const removed: string[] = [];
   const withdrawn: string[] = [];
   const dismissed: string[] = [];
+  const marked: string[] = [];
   const remover = new ActivityRemover({
     dismissed: { add: async (id) => void dismissed.push(id) },
+    marks: { markWithdrawn: async (ids) => void marked.push(...ids) },
     reports: { remove: async (id) => void removed.push(id) },
     scans: { remove: async (id) => void removed.push(id) },
     statuses: {
@@ -52,7 +54,7 @@ function rig(frames: Record<string, ReportStatusView | null> = {}, answers: Reco
       },
     },
   });
-  return { remover, removed, withdrawn, dismissed };
+  return { remover, removed, withdrawn, dismissed, marked };
 }
 
 describe('ActivityRemover for a photo row', () => {
@@ -63,6 +65,13 @@ describe('ActivityRemover for a photo row', () => {
     expect(await remover.removeReport(report)).toEqual({ kind: 'withdraw', sitesRemoved: 1, verifiedKept: false });
     expect(withdrawn).toEqual(['site_a']);
     expect(removed).toEqual([report.id]);
+  });
+
+  it("shows this user's other reports the api withdrew from that site as withdrawn", async () => {
+    const answer = { site_id: 'site_a', withdrawn_report_ids: ['rpt_1', 'rpt_2'], site_removed: false, status: 'open', verification: 'unverified', backers: { count: 2, needed: 10, photo_people: 2, vote_people: 0 } } as const;
+    const { remover, marked } = rig({}, { site_a: answer });
+    await remover.removeReport(photo('unverified'));
+    expect(marked).toEqual(['rpt_1', 'rpt_2']);
   });
 
   it('only hides a report on a verified site, which stays on the map', async () => {

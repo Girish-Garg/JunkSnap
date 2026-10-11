@@ -56,6 +56,18 @@ describe('an Activity card', () => {
   });
 });
 
+describe('a no-bin row in Activity', () => {
+  it('shows no photo check and no What we checked, which never apply to a no-bin report', async () => {
+    const draft = { report_type: 'no_bin', context: 'no_bin', sha256: '', gps: { lat: 26.2, lon: 73, accuracy_m: 8 }, captured_at: '2026-10-10T04:00:00Z' } as const;
+    const view = { report_id: 'rpt_nobin', status: 'processing', site_id: null, blurred_url: null, updated_at: '2026-10-10T04:01:00Z' } as const;
+    await activity([QueuedReport.sentNoBin(draft, 'rpt_nobin', NOW).withStatus(view)]);
+    const card = within(await screen.findByRole('list', { name: 'Photos' })).getByRole('listitem');
+    expect(within(card).getByText('No bin or pickup')).toBeInTheDocument();
+    expect(within(card).queryByText('Checking the photo')).toBeNull();
+    expect(within(card).queryByRole('button', { name: 'What we checked' })).toBeNull();
+  });
+});
+
 describe('an Activity status pill', () => {
   it('colours the status by state', () => {
     const tone = (status: ReportStatus) => ReportProgress.of(sent(status, null)).tone;

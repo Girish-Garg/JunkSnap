@@ -8,6 +8,7 @@ import type { CrawlStatusReader } from "../ports/CrawlStatusReader.js";
 import { AreaCrawlQuery } from "../services/AreaCrawlQuery.js";
 import { CrawlSettings } from "../settings/CrawlSettings.js";
 import type { RouteContext } from "./RouteBuilder.js";
+import { awsClientConfig } from "./utils.js";
 
 interface DistrictParams {
   readonly id: string;
@@ -31,6 +32,6 @@ function crawlReader(context: RouteContext, table: string | null): CrawlStatusRe
   if (table === null) {
     return new DisabledCrawlStatusReader();
   }
-  const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
   return new DynamoCrawlStatusReader(client, table, new AwsCalls());
 }

@@ -68,6 +68,17 @@ describe('No bin here', () => {
   });
 });
 
+describe('No bin here, retried', () => {
+  it('keeps the upload id on a retry, with the fix and time of the new attempt', async () => {
+    const reporter = new NoBinReporter(new RecordingReportApi(), signedIn, () => crypto.getRandomValues(new Uint8Array(16)));
+    const first = await reporter.prepare({ lat: 26.3, lon: 73.03, accuracy_m: 12 }, new Date('2026-10-10T10:00:00Z'));
+    const retry = await reporter.prepare({ lat: 26.31, lon: 73.04, accuracy_m: 8 }, new Date('2026-10-10T10:02:00Z'), first);
+    expect(retry).toEqual({ ...first, gps: { lat: 26.31, lon: 73.04, accuracy_m: 8 }, captured_at: '2026-10-10T10:02:00Z' });
+    const fresh = await reporter.prepare({ lat: 26.3, lon: 73.03, accuracy_m: 12 });
+    expect(fresh.upload_id).not.toBe(first.upload_id);
+  });
+});
+
 describe('No bin here in Activity', () => {
   it('keeps the accepted report as a sent Activity row keyed by its report id, as the server list does', async () => {
     const saved: QueuedReport[] = [];

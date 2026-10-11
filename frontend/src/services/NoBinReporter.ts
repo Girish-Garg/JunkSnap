@@ -33,10 +33,18 @@ export class NoBinReporter {
   }
 
   async report(gps: GpsFix, now: Date = new Date()): Promise<AcceptedReport> {
+    return this.send(await this.prepare(gps, now), now);
+  }
+
+  /**
+   * The upload for this attempt, from the fix and time now. A retry passes the last attempt's upload: it keeps that
+   * upload id, so the server (which dedups on it) still makes one report.
+   */
+  async prepare(gps: GpsFix, now: Date = new Date(), retrying: NoBinUpload | null = null): Promise<NoBinUpload> {
     if (!NoBinReporter.accurateEnough(gps)) throw new RangeError(`GPS accuracy ${gps.accuracy_m} m is worse than ${NO_BIN_MAX_ACCURACY_M} m`);
     const device_token = await this.#identity.deviceToken();
-    const upload: NoBinUpload = {
-      upload_id: `upl_${this.#id()}`,
+    return {
+      upload_id: retrying?.upload_id ?? `upl_${this.#id()}`,
       report_type: 'no_bin',
       context: 'no_bin',
       capture_mode: 'snap',
@@ -44,6 +52,10 @@ export class NoBinReporter {
       captured_at: isoSeconds(now),
       device_token,
     };
+  }
+
+  /** Sends a prepared upload, then keeps it in Activity. */
+  async send(upload: NoBinUpload, now: Date = new Date()): Promise<AcceptedReport> {
     const accepted = await new SignedInStep(this.#identity).run(() => this.#api.submit(upload));
     await this.#record(upload, accepted, now);
     return accepted;

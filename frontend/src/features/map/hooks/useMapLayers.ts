@@ -8,6 +8,7 @@ import { useBoundaryLayer } from './useBoundaryLayer';
 
 interface Selection {
   readonly preview: SiteFeature | null;
+  readonly stack: readonly SiteFeature[] | null;
   readonly pick: (siteId: string | null) => void;
   readonly pickStack: (siteIds: readonly string[]) => void;
 }
@@ -26,7 +27,7 @@ function useOpenArea(): string | null {
  */
 export function useMapLayers(mode: MapMode, selection: Selection, position: LonLat | null) {
   const boundary = useBoundaryLayer();
-  const area = useAreaPick(selection.preview, () => selection.pick(null));
+  const area = useAreaPick(selection.preview !== null || selection.stack !== null, () => selection.pick(null));
   const open = useOpenArea();
   const { shapes } = boundary;
   const here = useMemo(() => (position && shapes ? shapes.containing(position) : null), [position, shapes]);

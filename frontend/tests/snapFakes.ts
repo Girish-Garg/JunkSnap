@@ -134,9 +134,10 @@ export class FakeGeolocation {
     } as unknown as Geolocation;
   }
 
-  emit({ lat, lon, accuracy_m }: GpsFix): void {
+  /** ageMs: how long before now the GPS took this fix (a cached one is older). */
+  emit({ lat, lon, accuracy_m }: GpsFix, ageMs = 0): void {
     const coords = { latitude: lat, longitude: lon, accuracy: accuracy_m } as GeolocationCoordinates;
-    this.#onFix?.({ coords, timestamp: Date.now() } as GeolocationPosition);
+    this.#onFix?.({ coords, timestamp: Date.now() - ageMs } as GeolocationPosition);
   }
 
   fail(code: number): void {
@@ -213,7 +214,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     encoder: new FakeEncoder(),
     hasher,
     gps,
-    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed }),
+    ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed, marks: new ReportTracker(api, queue) }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
     noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16)), queue),
   };

@@ -41,6 +41,15 @@ describe('SiteLifecycle (decision 20261010-1855)', () => {
   });
 });
 
+describe('SitePanel clearing progress in a no-bin zone', () => {
+  it('words a no-bin zone as a bin being there now, not as waste cleared', async () => {
+    await renderApp(<SitePanel site={testSite({ ...PENDING, report_type: 'no_bin', context: 'no_bin' })} userLocation={null} />);
+    expect(screen.getByRole('button', { name: "There's a bin here now" })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Still no bin' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: "It's cleared now" })).toBeNull();
+  });
+});
+
 describe('SitePanel clearing progress', () => {
   it('marks a site reported cleaned and shows how many people agree', async () => {
     await renderApp(<SitePanel site={testSite({ ...PENDING, clearance: { count: 2, needed: 3, still_there: 0 } })} userLocation={null} />);

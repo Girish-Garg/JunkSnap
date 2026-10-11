@@ -4,7 +4,10 @@ import { AREAS_PATH } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { Icon } from '../../../ui/Icon';
 
-/** "All areas": back through history when the list is underneath, so back never loops between the two. */
+/**
+ * "All areas": back through history when the list is underneath, so back never loops between the two; opened from
+ * elsewhere (the map's ranking button, a site's area), the list takes this sheet's place instead.
+ */
 export function AreaBackLink() {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
@@ -14,7 +17,7 @@ export function AreaBackLink() {
       to={AREAS_PATH}
       onClick={(event) => {
         event.preventDefault();
-        sheets.close(AREAS_PATH);
+        sheets.up(AREAS_PATH);
       }}
     >
       <Icon name="back" size={20} />

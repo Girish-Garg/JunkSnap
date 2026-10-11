@@ -12,13 +12,16 @@ import type { QueuePoller } from "../ports/QueuePoller.js";
 
 const WAIT_SECONDS = 20;
 const BATCH_SIZE = 10;
+// Below the queue's 300 s visibility timeout, so an abandoned message comes back only after this poller let it go.
+const MESSAGE_DEADLINE_MS = 240_000;
 
 export interface SqsPollerOptions {
   readonly queueUrl: string;
   readonly maxReceiveCount: number;
+  readonly messageDeadlineMs?: number;
 }
 
-// Deletes a message only after its handler succeeds; a failed one becomes visible again and SQS retries it.
+// Deletes a message only after its handler succeeds; a failed, hung or undeleted one becomes visible again and SQS retries it.
 export class SqsQueuePoller implements QueuePoller {
   readonly #client: SQSClient;
   readonly #options: SqsPollerOptions;
@@ -34,11 +37,7 @@ export class SqsQueuePoller implements QueuePoller {
 
   async pollOnce(signal: AbortSignal): Promise<void> {
     const messages = await this.#receive(signal);
-    const results = await Promise.allSettled(messages.map((message) => this.#process(message)));
-    const failure = results.find((result) => result.status === "rejected");
-    if (failure !== undefined) {
-      throw failure.reason;
-    }
+    await Promise.all(messages.map((message) => this.#process(message)));
   }
 
   async #receive(signal: AbortSignal): Promise<Message[]> {
@@ -67,7 +66,7 @@ export class SqsQueuePoller implements QueuePoller {
   // A poison message only fails itself; the rest of the batch carries on.
   async #handled(message: Message): Promise<boolean> {
     try {
-      await this.#handler.handle(this.#parse(message));
+      await this.#withinDeadline(this.#handler.handle(this.#parse(message)));
       return true;
     } catch (error) {
       const fields = { error, message_id: message.MessageId, receive_count: SqsQueuePoller.#receiveCount(message) };
@@ -76,12 +75,27 @@ export class SqsQueuePoller implements QueuePoller {
     }
   }
 
+  // A hung handler is abandoned, not deleted, so one stuck message never stalls the queue.
+  async #withinDeadline(work: Promise<void>): Promise<void> {
+    const ms = this.#options.messageDeadlineMs ?? MESSAGE_DEADLINE_MS;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => reject(new ExternalServiceError(`handler still running after ${String(ms)} ms`)), ms);
+    });
+    try {
+      await Promise.race([work, late]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // A failed delete only means SQS redelivers a handled message, and every handler is idempotent.
   async #delete(message: Message): Promise<void> {
     const command = new DeleteMessageCommand({ QueueUrl: this.#options.queueUrl, ReceiptHandle: message.ReceiptHandle });
     try {
       await this.#client.send(command);
     } catch (error) {
-      throw new ExternalServiceError("Could not delete a handled message", { cause: error });
+      this.#logger.warn({ error, message_id: message.MessageId }, "could not delete a handled message; SQS will redeliver it");
     }
   }
 

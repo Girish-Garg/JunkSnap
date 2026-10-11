@@ -6,6 +6,12 @@ type Fetch = typeof fetch;
 
 // A letter drafts for up to 60 s (contracts/README.md); past this the call is given up and said to have timed out.
 export const REQUEST_TIMEOUT_MS = 75_000;
+// A presigned PUT gets 30 s plus 1 s per 50 KiB (a weak 400 kbit/s uplink), at most 15 min (a 40 MB video needs about
+// 14); then it ends as a timeout and the queue backs off, instead of one stalled upload holding the queue and its lock.
+const PUT_BASE_TIMEOUT_MS = 30_000;
+const PUT_MS_PER_CHUNK = 1_000;
+const PUT_CHUNK_BYTES = 50 * 1024;
+const PUT_MAX_TIMEOUT_MS = 900_000;
 
 /** JSON calls to the api with the caller's tokens, and PUTs to presigned S3 URLs. */
 export class HttpTransport {
@@ -35,11 +41,17 @@ export class HttpTransport {
     return (await response.json()) as T;
   }
 
+  /** How long a PUT of this many bytes may take before it is given up as a timeout. */
+  static putTimeoutMs(bytes: number): number {
+    return Math.min(PUT_BASE_TIMEOUT_MS + Math.ceil(bytes / PUT_CHUNK_BYTES) * PUT_MS_PER_CHUNK, PUT_MAX_TIMEOUT_MS);
+  }
+
   /** PUT with exactly the presigned headers; a 403 is a stale or mismatched signature that a fresh presign can fix. */
   async put(url: string, headers: Readonly<Record<string, string>>, body: ArrayBuffer): Promise<void> {
     let response: Response;
     try {
-      response = await this.#fetch(url, { method: 'PUT', headers: { ...headers }, body });
+      const signal = AbortSignal.timeout(HttpTransport.putTimeoutMs(body.byteLength));
+      response = await this.#fetch(url, { method: 'PUT', headers: { ...headers }, body, signal });
     } catch (cause) {
       throw HttpErrors.network('Upload', cause);
     }

@@ -10,6 +10,7 @@ import type { UserStanding } from "../../ports/UserStanding.js";
 import { CachedUserStanding } from "../../services/CachedUserStanding.js";
 import { AuthSettings } from "../../settings/AuthSettings.js";
 import type { Env } from "../../settings/utils.js";
+import { awsClientConfig } from "../utils.js";
 
 const BEARER = /^Bearer +(\S+)$/i;
 // How long a users-row answer is reused; a new block takes effect within this.
@@ -29,7 +30,7 @@ export class RouteGuard {
 
   static fromEnv(env: Env): RouteGuard {
     const settings = AuthSettings.fromEnv(env);
-    const documents = DynamoDBDocumentClient.from(new DynamoDBClient({ region: settings.awsRegion }));
+    const documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion)));
     const standing = new CachedUserStanding(new DynamoUserStanding(documents, settings.usersTable), new SystemClock(), STANDING_TTL_MS);
     return new RouteGuard(new CognitoAuthenticator(settings), standing);
   }
