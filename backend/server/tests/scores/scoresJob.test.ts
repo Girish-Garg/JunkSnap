@@ -18,6 +18,7 @@ import { ScoresJob } from "../../src/services/ScoresJob.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { NO_FACTS, NOW, site, WARD } from "./siteBuilder.js";
+import { SCORES } from "../defaults.js";
 
 const ASSEMBLY: AreaRef = { kind: "assembly", id: "s20-ac-127", name: "Sardarpura" };
 const LOKSABHA: AreaRef = { kind: "loksabha", id: "s20-pc-16", name: "Jodhpur" };
@@ -97,7 +98,7 @@ function setup(sites: AreaSite[]) {
   const sink = new LogSink();
   const logger = new JsonLoggerFactory(sink).create({ service: "scores", stage: "dev" });
   const ports = { sites: new FakeSites(sites), reports: new FakeReports(), facts: new FakeFacts(), scores: new InMemoryScores(), expirer: new FakeExpirer() };
-  return { ...ports, sink, job: new ScoresJob(ports, ScoreCalculator.standard(), new AreaGrouper(), logger) };
+  return { ...ports, sink, job: new ScoresJob(ports, ScoreCalculator.standard(SCORES), new AreaGrouper(), logger) };
 }
 
 const everyArea = [WARD, ASSEMBLY, LOKSABHA, DISTRICT];

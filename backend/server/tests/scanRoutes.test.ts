@@ -16,6 +16,7 @@ import { LogSink } from "./LogSink.js";
 import { ScanFindings } from "../src/domain/scout/ScanFindings.js";
 import { PublicMedia } from "../src/domain/sites/PublicMedia.js";
 import { FakeFrameOutcomeReader, FakeScanQueue, FakeScanRepository, FakeUploadSigner, NOW, sampleSession, USER_ID } from "./scanFakes.js";
+import { SCAN } from "./defaults.js";
 
 const DEVICE = "a71e5c90-2d3b-4f86-b1c4-9e0d27f58a63";
 const OTHER_USER = "5b0e2c4d-7a91-4f3e-8c6d-2e1f0a9b8c7d";
@@ -45,10 +46,10 @@ beforeEach(async () => {
   queue = new FakeScanQueue();
   signer = new FakeUploadSigner();
   const now = (): Date => NOW;
-  const presigner = new ScanUploadPresigner(signer, { ttlSeconds: 300, now, newScanId: () => "scn_01k7abc" });
+  const presigner = new ScanUploadPresigner(signer, { ttlSeconds: 300, now, newScanId: () => "scn_01k7abc", limits: SCAN.video });
   outcomes = new FakeFrameOutcomeReader();
   const findings = new ScanFindings(new PublicMedia("https://cdn.example"));
-  const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), outcomes, findings, now });
+  const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(SCAN.gps.minFixesPerSecond), outcomes, findings, now });
   const guard = new RouteGuard(new FakeAuthenticator(), new FakeUserStanding());
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });

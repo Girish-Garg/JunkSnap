@@ -16,6 +16,7 @@ import { StaleSiteError } from "../../src/domain/sites/SiteErrors.js";
 import { DEVICE_B, fixture, report } from "./builders.js";
 import { FixedClock, RecordingLogger } from "./fakes.js";
 import { conditionFailed, failure, ScriptedClient } from "./ScriptedClient.js";
+import { RULES } from "../defaults.js";
 
 const calls = new AwsCalls();
 const throttled = failure("ProvisionedThroughputExceededException");
@@ -34,15 +35,15 @@ const RECORD: CleanupRecord = {
 };
 
 function siteRepository(client: ScriptedClient, logger = new RecordingLogger()) {
-  const mapper = new SiteItemMapper(new NgeohashCells(), logger);
+  const mapper = new SiteItemMapper(new NgeohashCells(), logger, RULES);
   return { mapper, logger, sites: new DynamoSiteRepository(dynamo(client), "junksnap-dev-sites", mapper, calls) };
 }
 
 describe("DynamoSiteRepository", () => {
   it("queries the by-geohash index page by page, skipping and logging a bad item", async () => {
     const { mapper } = siteRepository(new ScriptedClient());
-    const first = mapper.toItem(Site.found(report()));
-    const second = mapper.toItem(Site.found(report({ id: "jdh_2" })));
+    const first = mapper.toItem(Site.found(report(), RULES));
+    const second = mapper.toItem(Site.found(report({ id: "jdh_2" }), RULES));
     const client = new ScriptedClient([
       () => ({ Items: [first, { ...second, site_id: "site_bad", status: "gone" }], LastEvaluatedKey: { site_id: "x" } }),
       () => ({ Items: [second] }),
@@ -56,7 +57,7 @@ describe("DynamoSiteRepository", () => {
 
   it("saves only over the version it read, writing the next one", async () => {
     const { mapper } = siteRepository(new ScriptedClient());
-    const stored = mapper.toSite(mapper.toItem(Site.found(report())));
+    const stored = mapper.toSite(mapper.toItem(Site.found(report(), RULES)));
     const client = new ScriptedClient([() => ({}), conditionFailed]);
     const { sites } = siteRepository(client);
     await sites.save(stored);
@@ -70,7 +71,7 @@ describe("DynamoSiteRepository", () => {
 
   it("saves an item from before versioning only while it still has no version", async () => {
     const { mapper } = siteRepository(new ScriptedClient());
-    const { version: _old, ...older } = mapper.toItem(Site.found(report()));
+    const { version: _old, ...older } = mapper.toItem(Site.found(report(), RULES));
     expect(_old).toBe(1);
     const client = new ScriptedClient();
     await siteRepository(client).sites.save(mapper.toSite(older));
@@ -80,7 +81,7 @@ describe("DynamoSiteRepository", () => {
   it("reports an existing id on create and wraps other failures", async () => {
     const client = new ScriptedClient([conditionFailed, throttled]);
     const { sites } = siteRepository(client);
-    expect(await sites.create(Site.found(report()))).toBe(false);
+    expect(await sites.create(Site.found(report(), RULES))).toBe(false);
     expect(client.sent[0]?.input.ConditionExpression).toBe("attribute_not_exists(site_id)");
     await expect(sites.get("site_jdh_1")).rejects.toThrow(ExternalServiceError);
   });

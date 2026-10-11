@@ -24,6 +24,7 @@ import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js"
 import { fixture, upload } from "../reportFakes.js";
 import { report as mergeable } from "../sites/builders.js";
 import { FakeSiteRepository } from "../sites/fakes.js";
+import { RULES } from "../defaults.js";
 
 const RECEIVED = "2026-10-10T02:14:52Z";
 const moderation = () => fixture<ModerationResult>("moderation_result.jdh-1");
@@ -45,7 +46,7 @@ class FakeModerationService {
 
 async function siteRepository(): Promise<{ sites: FakeSiteRepository; site: Site }> {
   const sites = new FakeSiteRepository();
-  const site = Site.found(mergeable());
+  const site = Site.found(mergeable(), RULES);
   await sites.create(site);
   return { sites, site };
 }
@@ -135,7 +136,7 @@ describe("SiteReportMerger", () => {
     const sites = { merge: async (evidence: MergeEvidence) => (seen.push(evidence), result) };
     const bin = { point: new GeoPoint(26.2702, 73.0035), ref: "osm:node/2", source: layer.source };
     const bins = new BinLocator({ bins: [bin], mappedTowns: ["jodhpur"] }, 3000);
-    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer]), bins) };
+    return { seen, subject: new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([layer], RULES.nearPlacesRadiusM), bins) };
   }
 
   it("hands over the evidence with nearby places and the nearest bin, and follows the site's status", async () => {

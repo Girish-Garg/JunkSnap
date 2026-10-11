@@ -20,6 +20,7 @@ import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
 import { fakeMine } from "./myReportsFakes.js";
 import { FakeReportQueue, FakeReportRepository, FakeSnapCounter, FixedClock, upload } from "./reportFakes.js";
+import { PAGING, QUEUE, RULES } from "./defaults.js";
 
 const NOW = "2026-10-10T02:14:52Z";
 const BASE = "https://cdn.example";
@@ -40,7 +41,7 @@ beforeEach(async () => {
   reports = new FakeReportRepository();
   const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
-  const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock });
+  const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock }, { targetMaxM: RULES.targetMaxM, requeueAfterMs: QUEUE.visibilityMs });
   const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE, clock), mine: fakeMine(reports, BASE, clock) };
   const plugin = new ReportEndpoints(services, new RouteGuard(new TokenIsUser(), new FakeUserStanding())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
@@ -163,7 +164,7 @@ describe("DynamoUserReportLister", () => {
   it("queries by-user newest first, snaps only, and returns the next key as a cursor", async () => {
     const last = { report_id: "rpt_row_1", user_id: USER, received_at: NOW };
     const client = new ScriptedClient([{ Items: [row(USER)], LastEvaluatedKey: last }]);
-    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 1, cursor: null });
+    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet, PAGING.myReportsMaxRounds).page(USER, { limit: 1, cursor: null });
     expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_1"]);
     expect(page.nextCursor).toBe(cursorOf(last));
     expect(client.commands[0]?.input).toMatchObject({
@@ -180,7 +181,7 @@ describe("DynamoUserReportLister", () => {
   it("reads past a recent 60-frame scan to fill the page", async () => {
     const rows = [...Array.from({ length: 60 }, (_, i) => listedRow(i, "scan")), ...[60, 61, 62].map((i) => listedRow(i, "snap"))];
     const index = new ByUserIndex(rows);
-    const page = await new DynamoUserReportLister(index.documents(), "reports", quiet).page(USER, { limit: 20, cursor: null });
+    const page = await new DynamoUserReportLister(index.documents(), "reports", quiet, PAGING.myReportsMaxRounds).page(USER, { limit: 20, cursor: null });
     expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_60", "rpt_row_61", "rpt_row_62"]);
     expect(page.nextCursor).toBeNull();
     expect(index.queries).toBe(4);
@@ -189,14 +190,14 @@ describe("DynamoUserReportLister", () => {
   it("resumes after the last report shown when a round reads past the page, so no snap is skipped", async () => {
     const kinds = ["scan", "snap", "snap", "snap", "snap", "snap", "scan", "snap"] as const;
     const index = new ByUserIndex(kinds.map((kind, i) => listedRow(i, kind)));
-    const pages = await everyPage(new DynamoUserReportLister(index.documents(), "reports", quiet), 3);
+    const pages = await everyPage(new DynamoUserReportLister(index.documents(), "reports", quiet, PAGING.myReportsMaxRounds), 3);
     expect(pages).toEqual([["rpt_row_1", "rpt_row_2", "rpt_row_3"], ["rpt_row_4", "rpt_row_5", "rpt_row_7"]]);
   });
 
   it("stops after 10 queries with a cursor that carries on where the reads stopped", async () => {
     const rows = [...Array.from({ length: 250 }, (_, i) => listedRow(i, "scan")), listedRow(250, "snap")];
     const index = new ByUserIndex(rows);
-    const lister = new DynamoUserReportLister(index.documents(), "reports", quiet);
+    const lister = new DynamoUserReportLister(index.documents(), "reports", quiet, PAGING.myReportsMaxRounds);
     const first = await lister.page(USER, { limit: 20, cursor: null });
     expect(first.reports).toEqual([]);
     expect(index.queries).toBe(10);
@@ -208,7 +209,7 @@ describe("DynamoUserReportLister", () => {
   it("starts after the cursor's key", async () => {
     const key = { report_id: "rpt_row_1", user_id: USER, received_at: NOW };
     const client = new ScriptedClient([{ Items: [] }]);
-    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 5, cursor: cursorOf(key) });
+    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet, PAGING.myReportsMaxRounds).page(USER, { limit: 5, cursor: cursorOf(key) });
     expect(page.nextCursor).toBeNull();
     expect(client.commands[0]?.input.ExclusiveStartKey).toEqual(key);
   });
@@ -218,7 +219,7 @@ describe("DynamoUserReportLister", () => {
     ["extra key fields", cursorOf({ report_id: "rpt_row_1", user_id: USER, received_at: NOW, site_id: "x" })],
     ["not json", Buffer.from("nope").toString("base64url")],
   ])("refuses a cursor with %s", async (_case, cursor) => {
-    const lister = new DynamoUserReportLister(new ScriptedClient([]).documents(), "reports", quiet);
+    const lister = new DynamoUserReportLister(new ScriptedClient([]).documents(), "reports", quiet, PAGING.myReportsMaxRounds);
     await expect(lister.page(USER, { limit: 5, cursor })).rejects.toThrow(ValidationError);
   });
 
@@ -226,7 +227,7 @@ describe("DynamoUserReportLister", () => {
     const sink = new LogSink();
     const logger = new JsonLoggerFactory(sink).create({ service: "api", stage: "dev" });
     const items = [row(OTHER_USER), { report_id: "rpt_broken", user_id: USER }, row(USER)];
-    const lister = new DynamoUserReportLister(new ScriptedClient([{ Items: items }]).documents(), "reports", logger);
+    const lister = new DynamoUserReportLister(new ScriptedClient([{ Items: items }]).documents(), "reports", logger, PAGING.myReportsMaxRounds);
     const page = await lister.page(USER, { limit: 5, cursor: null });
     expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_1"]);
     const warnings = sink.records().filter((record) => record.message === "skipped a listed report");
@@ -234,7 +235,7 @@ describe("DynamoUserReportLister", () => {
   });
 
   it("turns DynamoDB errors into ExternalServiceError", async () => {
-    const lister = new DynamoUserReportLister(new ScriptedClient([new Error("throttled")]).documents(), "reports", quiet);
+    const lister = new DynamoUserReportLister(new ScriptedClient([new Error("throttled")]).documents(), "reports", quiet, PAGING.myReportsMaxRounds);
     await expect(lister.page(USER, { limit: 5, cursor: null })).rejects.toThrow(ExternalServiceError);
   });
 });

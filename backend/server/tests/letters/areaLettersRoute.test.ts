@@ -13,6 +13,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { ASSEMBLY, areaLetterService } from "./areaSupport.js";
 import { DEVICE, USER, wardSite } from "./support.js";
+import { PAGING } from "../defaults.js";
 
 const core = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
 const body = { issue: "waste_dump", language: "en", device_token: DEVICE };
@@ -98,7 +99,7 @@ describe("DynamoAreaLetterSites", () => {
       { $metadata: {}, Items: [stored("site_d1", { reporter_ids: ["u1", "u2"] })], LastEvaluatedKey: { site_id: "site_d1" } },
       { $metadata: {}, Items: [stored("site_d2", { reporter_devices: ["d1"] }), { site_id: "site_bad" }] },
     ];
-    const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), pages.shift() ?? { $metadata: {} }) }, "t");
+    const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), pages.shift() ?? { $metadata: {} }) }, "t", PAGING.areaLetterMaxPages);
     const batch = await reader.sitesIn(AreaKey.parse("assembly", ASSEMBLY));
     expect(batch.sites.map((entry) => [entry.site.properties.site_id, entry.reporterIds])).toEqual([
       ["site_d1", ["u1", "u2"]],
@@ -118,14 +119,14 @@ describe("DynamoAreaLetterSites", () => {
     const { backers: _gone, ...older } = stored("site_old", { verification: "community_check", reporter_ids: ["u1"] });
     expect(_gone).toBeDefined();
     const page: ScanCommandOutput = { $metadata: {}, Items: [older] };
-    const batch = await new DynamoAreaLetterSites({ send: async () => page }, "t").sitesIn(AreaKey.parse("assembly", ASSEMBLY));
+    const batch = await new DynamoAreaLetterSites({ send: async () => page }, "t", PAGING.areaLetterMaxPages).sitesIn(AreaKey.parse("assembly", ASSEMBLY));
     expect(batch.unreadable).toBe(0);
     expect(batch.sites[0]?.site.properties).toMatchObject({ verification: "unverified", backers: { count: 5, photo_people: 5, vote_people: 0 } });
   });
 
   it("projects only the contract fields and reporter ids", async () => {
     const commands: ScanCommand[] = [];
-    const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), { $metadata: {} }) }, "t");
+    const reader = new DynamoAreaLetterSites({ send: async (command) => (commands.push(command), { $metadata: {} }) }, "t", PAGING.areaLetterMaxPages);
     await reader.sitesIn(AreaKey.parse("district", "rajasthan-jodhpur"));
     const input = commands[0]?.input;
     const projected = (input?.ProjectionExpression ?? "").split(", ").map((name) => input?.ExpressionAttributeNames?.[name]);
@@ -137,12 +138,12 @@ describe("DynamoAreaLetterSites", () => {
   it("stops after 20 pages with ExternalServiceError", async () => {
     let calls = 0;
     const endless = { send: async () => ((calls += 1), { $metadata: {}, Items: [], LastEvaluatedKey: { site_id: `site_${calls}` } }) };
-    await expect(new DynamoAreaLetterSites(endless, "t").sitesIn(AreaKey.parse("ward", "w-1"))).rejects.toThrow("passed 20 pages");
+    await expect(new DynamoAreaLetterSites(endless, "t", PAGING.areaLetterMaxPages).sitesIn(AreaKey.parse("ward", "w-1"))).rejects.toThrow("passed 20 pages");
     expect(calls).toBe(20);
   });
 
   it("raises ExternalServiceError when the scan fails", async () => {
-    const reader = new DynamoAreaLetterSites({ send: async () => Promise.reject(new Error("AccessDenied")) }, "t");
+    const reader = new DynamoAreaLetterSites({ send: async () => Promise.reject(new Error("AccessDenied")) }, "t", PAGING.areaLetterMaxPages);
     await expect(reader.sitesIn(AreaKey.parse("ward", "jodhpur-mc-w37"))).rejects.toThrow(ExternalServiceError);
   });
 });

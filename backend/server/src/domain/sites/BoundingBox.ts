@@ -2,7 +2,6 @@ import { ValidationError } from "../errors.js";
 import type { GeoPoint } from "./GeoPoint.js";
 import { BboxTooLargeError } from "./SiteErrors.js";
 
-const MAX_SPAN_DEGREES = 1;
 const SPAN_TOLERANCE = 1e-9;
 const METRES_PER_DEGREE_LAT = 111_320;
 const MIN_COS_LAT = 0.01;
@@ -21,8 +20,8 @@ export class BoundingBox {
     this.maxLat = maxLat;
   }
 
-  // The GET /sites query value: four numbers, corners in range, at most 1 by 1 degree.
-  static parse(text: string): BoundingBox {
+  // The GET /sites query value: four numbers, corners in range, at most maxSpanDeg (BBOX_MAX_DEGREES) on each side.
+  static parse(text: string, maxSpanDeg: number): BoundingBox {
     const numbers = text.split(",").map((part) => (part.trim() === "" ? Number.NaN : Number(part)));
     if (numbers.length !== 4 || !numbers.every(Number.isFinite)) {
       throw new ValidationError(BBOX_SHAPE);
@@ -32,8 +31,8 @@ export class BoundingBox {
     if (!box.#cornersValid()) {
       throw new ValidationError(`${BBOX_SHAPE}, inside -180..180 and -90..90, min before max`);
     }
-    if (box.#tooLarge()) {
-      throw new BboxTooLargeError("bbox can cover at most 1 by 1 degree");
+    if (box.#tooLarge(maxSpanDeg)) {
+      throw new BboxTooLargeError(`bbox can cover at most ${maxSpanDeg} by ${maxSpanDeg} degree`);
     }
     return box;
   }
@@ -54,8 +53,8 @@ export class BoundingBox {
     return lonOk && this.minLat >= -90 && this.maxLat <= 90 && this.minLat <= this.maxLat;
   }
 
-  #tooLarge(): boolean {
-    const limit = MAX_SPAN_DEGREES + SPAN_TOLERANCE;
+  #tooLarge(maxSpanDeg: number): boolean {
+    const limit = maxSpanDeg + SPAN_TOLERANCE;
     return this.maxLon - this.minLon > limit || this.maxLat - this.minLat > limit;
   }
 }

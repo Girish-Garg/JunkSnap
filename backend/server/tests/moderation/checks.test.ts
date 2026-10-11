@@ -5,7 +5,6 @@ import { ConfigError } from "../../src/domain/errors.js";
 import { GeoPoint } from "../../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../../src/domain/moderation/PhotoSubmission.js";
-import { INDIA_BUFFER_DEG } from "../../src/handlers/moderation/ModerationServiceFactory.js";
 import type { CheckSubject } from "../../src/services/moderation/checks/Check.js";
 import { DeviceTokenCheck } from "../../src/services/moderation/checks/DeviceTokenCheck.js";
 import { DuplicateCheck } from "../../src/services/moderation/checks/DuplicateCheck.js";
@@ -14,6 +13,7 @@ import { InsideIndiaCheck } from "../../src/services/moderation/checks/InsideInd
 import { NearSiteCheck } from "../../src/services/moderation/checks/NearSiteCheck.js";
 import { RateLimitCheck } from "../../src/services/moderation/checks/RateLimitCheck.js";
 import { DEVICE, FakeDeviceRegistry, FakeHashIndex, JODHPUR, reportUpload, RECEIVED_AT } from "./fakes.js";
+import { MODERATION } from "../defaults.js";
 
 const OUTLINE = fileURLToPath(new URL("../../../../data/boundaries/india_outline.geojson", import.meta.url));
 const HASH = PerceptualHash.fromHex("c4e1b3a59d0f2687");
@@ -28,7 +28,7 @@ function at(lat: number, lon: number): CheckSubject {
 }
 
 describe("InsideIndiaCheck on the real outline, buffered 0.02 degrees", () => {
-  const check = new InsideIndiaCheck(TurfGeofence.fromFile(OUTLINE, INDIA_BUFFER_DEG));
+  const check = new InsideIndiaCheck(TurfGeofence.fromFile(OUTLINE, MODERATION.indiaBufferDeg));
 
   it.each([
     ["Jodhpur", 26.2618, 73.0035],
@@ -54,12 +54,12 @@ describe("InsideIndiaCheck on the real outline, buffered 0.02 degrees", () => {
   });
 
   it("refuses a file that is not a FeatureCollection of polygons", () => {
-    expect(() => TurfGeofence.fromFile(fileURLToPath(import.meta.url), INDIA_BUFFER_DEG)).toThrow(ConfigError);
+    expect(() => TurfGeofence.fromFile(fileURLToPath(import.meta.url), MODERATION.indiaBufferDeg)).toThrow(ConfigError);
   });
 });
 
 describe("FreshTimestampCheck", () => {
-  const check = new FreshTimestampCheck();
+  const check = new FreshTimestampCheck(MODERATION);
 
   it.each([
     ["2026-10-10T02:14:05Z", "pass", "captured 47 s before upload; limit 72 h"],
@@ -85,7 +85,7 @@ describe("DuplicateCheck", () => {
   function checkWith(...photos: { photoId: string; hash: PerceptualHash; location: GeoPoint }[]): DuplicateCheck {
     const index = new FakeHashIndex();
     index.photos = photos;
-    return new DuplicateCheck(index, "earlier photo");
+    return new DuplicateCheck(index, "earlier photo", MODERATION);
   }
 
   it("passes when nothing was photographed nearby", async () => {
@@ -186,17 +186,17 @@ describe("NearSiteCheck", () => {
   });
 
   it("passes at 48.9 m and fails at 50.04 m", async () => {
-    expect((await new NearSiteCheck().run(cleanupAt(26.27054))).toContract()).toEqual({
+    expect((await new NearSiteCheck(MODERATION.nearSiteM).run(cleanupAt(26.27054))).toContract()).toEqual({
       result: "pass",
       detail: "after-photo 49 m from the site; limit 50 m",
     });
-    expect((await new NearSiteCheck().run(cleanupAt(26.27055))).toContract()).toEqual({
+    expect((await new NearSiteCheck(MODERATION.nearSiteM).run(cleanupAt(26.27055))).toContract()).toEqual({
       result: "fail",
       detail: "after-photo 51 m from the site; limit 50 m",
     });
   });
 
   it("refuses a report photo, which has no site", async () => {
-    await expect(new NearSiteCheck().run(subject())).rejects.toThrow(/without a site/);
+    await expect(new NearSiteCheck(MODERATION.nearSiteM).run(subject())).rejects.toThrow(/without a site/);
   });
 });

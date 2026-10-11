@@ -28,6 +28,7 @@ import {
   sampleSession,
   testLogger,
 } from "./scanFakes.js";
+import { SCAN, TIMEOUTS } from "./defaults.js";
 
 const HAS_FFMPEG = spawnSync("ffmpeg", ["-version"]).status === 0;
 const SKIP_REASON = "ffmpeg integration tests skipped: ffmpeg is not on PATH (install it, e.g. apt-get install ffmpeg)";
@@ -76,7 +77,7 @@ afterAll(async () => {
 });
 
 describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, { timeout: FFMPEG_TIMEOUT_MS }, () => {
-  const reader = new FfmpegVideoFrameReader();
+  const reader = new FfmpegVideoFrameReader({ timeoutMs: TIMEOUTS.ffmpegMs });
   const hasher = new SharpFrameHasher();
 
   it("probes the size and the last frame's time from the packets of a webm without a duration header", async () => {
@@ -138,9 +139,9 @@ describe.skipIf(!HAS_FFMPEG)(HAS_FFMPEG ? "ffmpeg integration" : SKIP_REASON, { 
     const session = sampleSession({ duration_ms: 5000, video_sha256: sha, gps_track: track, hints: undefined });
     scans.rows.set(session.scan_id, queuedRecord(session));
     const now = (): Date => NOW;
-    const sampler = new ScanFrameSampler({ reader, hasher, planner: new FramePlanner(), selector: new FrameSelector() });
-    const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now);
-    const loader = new ScanVideoLoader(media, reader);
+    const sampler = new ScanFrameSampler({ reader, hasher, planner: new FramePlanner(SCAN.frames), selector: new FrameSelector(SCAN.frames), gps: SCAN.gps });
+    const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now, SCAN.frames.spotRadiusM);
+    const loader = new ScanVideoLoader(media, reader, SCAN.video);
     const deps = { scans, scratch, loader, sampler, publisher, logger: testLogger(), now };
     await new VideoScanProcessor(deps).process(session.scan_id);
 

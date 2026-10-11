@@ -1,3 +1,4 @@
+import type { ModerationRules } from "../../domain/moderation/ModerationRules.js";
 import type { PhotoKind } from "../../domain/moderation/PhotoId.js";
 import type { PhotoSubmission } from "../../domain/moderation/PhotoSubmission.js";
 import type { DeviceRegistry } from "../../ports/moderation/DeviceRegistry.js";
@@ -19,6 +20,7 @@ export interface CheckPorts {
   readonly devices: DeviceRegistry;
   // SNAP_PER_HOUR.
   readonly snapPerHour: number;
+  readonly rules: ModerationRules;
 }
 
 // Builds each chain once, in contract order; cleanup after-photos add near_site.
@@ -27,10 +29,10 @@ export class CheckFactory {
 
   constructor(ports: CheckPorts) {
     this.#chains = {
-      report: this.#chain(ports, new DuplicateCheck(ports.reportHashes, "earlier photo")),
+      report: this.#chain(ports, new DuplicateCheck(ports.reportHashes, "earlier photo", ports.rules)),
       cleanup: [
-        ...this.#chain(ports, new DuplicateCheck(ports.cleanupHashes, "earlier after-photo of this site")),
-        new NearSiteCheck(),
+        ...this.#chain(ports, new DuplicateCheck(ports.cleanupHashes, "earlier after-photo of this site", ports.rules)),
+        new NearSiteCheck(ports.rules.nearSiteM),
       ],
     };
   }
@@ -42,7 +44,7 @@ export class CheckFactory {
   #chain(ports: CheckPorts, duplicate: DuplicateCheck): Check[] {
     return [
       new InsideIndiaCheck(ports.india),
-      new FreshTimestampCheck(),
+      new FreshTimestampCheck(ports.rules),
       duplicate,
       new RateLimitCheck(ports.devices, ports.snapPerHour),
       new DeviceTokenCheck(ports.devices),

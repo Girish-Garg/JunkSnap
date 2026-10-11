@@ -3,13 +3,14 @@ import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import { validatePhotoFlag, validateSite } from "../../src/contracts/index.gen.js";
 import { NotFoundError } from "../../src/domain/errors.js";
 import { OwnPhotoError } from "../../src/domain/flags/PhotoFlag.js";
-import { PHOTO_FLAG_HIDE, PHOTO_FLAG_HIDE_EARLY, PHOTO_FLAG_SURPLUS, PHOTO_FLAG_WARN, PhotoFlagPolicy } from "../../src/domain/flags/PhotoFlagPolicy.js";
+import { PhotoFlagPolicy } from "../../src/domain/flags/PhotoFlagPolicy.js";
 import { RateLimitedError } from "../../src/domain/letters/errors.js";
 import { VoteTally, type Vote } from "../../src/domain/sites/VoteTally.js";
 import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { BASE_URL, DEVICE_A, DEVICE_B, userOf } from "../sites/builders.js";
 import { FixedClock, NOW } from "../sites/fakes.js";
 import { FIRST_PHOTO, flagBy, flagger, flagRig, REMOVED, request, SECOND_PHOTO, seeded, SITE, type FlagRig } from "./flagFakes.js";
+import { PAGING, RULES } from "../defaults.js";
 
 const FIRST_URL = `${BASE_URL}/media/reports/${FIRST_PHOTO}.jpg`;
 const SECOND_URL = `${BASE_URL}/media/reports/${SECOND_PHOTO}.jpg`;
@@ -79,8 +80,8 @@ describe("no self-reporting", () => {
 });
 
 describe("thresholds", () => {
-  it("names them as constants", () => {
-    expect([PHOTO_FLAG_WARN, PHOTO_FLAG_HIDE, PHOTO_FLAG_HIDE_EARLY, PHOTO_FLAG_SURPLUS]).toEqual([3, 8, 5, 5]);
+  it("defaults PHOTO_FLAG_WARN, PHOTO_FLAG_HIDE, PHOTO_FLAG_HIDE_EARLY and PHOTO_FLAG_SURPLUS to the decision's numbers", () => {
+    expect([RULES.flags.warn, RULES.flags.hide, RULES.flags.hideEarly, RULES.flags.surplus]).toEqual([3, 8, 5, 5]);
   });
 
   it("warns at 3 people and hides at 8 when the site is well backed", async () => {
@@ -112,7 +113,7 @@ describe("thresholds", () => {
   });
 
   it("follows the surplus rule exactly", () => {
-    const policy = new PhotoFlagPolicy();
+    const policy = new PhotoFlagPolicy(RULES.flags);
     expect(policy.state(4, 0, false).hidden).toBe(false);
     expect(policy.state(5, 0, false).hidden).toBe(true);
     expect(policy.state(5, 1, false).hidden).toBe(false);
@@ -143,7 +144,7 @@ describe("removing a site whose only photo is hidden", () => {
     const stored = validateSite(rig.sites.feature(SITE)).properties;
     expect(stored).toMatchObject({ status: "removed", removed_reason: "photos_reported", removed_at: "2026-10-10T06:00:00Z", photo_urls: [] });
     expect(rig.sites.internals(SITE)?.reports.map((report) => report.reportId)).toEqual([FIRST_PHOTO]);
-    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.status).toBe("removed");
+    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).byId(SITE)).properties.status).toBe("removed");
     await expect(rig.service.flag(request(flagger(7)))).rejects.toThrow(NotFoundError);
   });
 

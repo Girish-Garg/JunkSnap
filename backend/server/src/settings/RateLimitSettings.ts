@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 // Every per-hour limit, counted per user and per device (contracts/README.md, Rate limit). Defaults are the contract's.
 const RateLimitEnv = z.object({
@@ -26,6 +26,6 @@ export class RateLimitSettings {
   }
 
   static fromEnv(env: Env): RateLimitSettings {
-    return new RateLimitSettings(parseEnv(RateLimitEnv, env));
+    return new RateLimitSettings(parseTunables(RateLimitEnv, env));
   }
 }

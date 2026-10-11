@@ -6,8 +6,9 @@ import { CitizenScore } from "../../src/services/CitizenScore.js";
 import { Diagnoser } from "../../src/services/Diagnoser.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { binned, NO_FACTS, NOW, site, WARD } from "./siteBuilder.js";
+import { SCORES } from "../defaults.js";
 
-const calculator = ScoreCalculator.standard();
+const calculator = ScoreCalculator.standard(SCORES);
 
 function calculate(sites: readonly AreaSite[], facts: AreaFactSheet = NO_FACTS) {
   return calculator.calculate({ area: WARD, sites, facts, now: NOW });

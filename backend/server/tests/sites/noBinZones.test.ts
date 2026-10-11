@@ -13,6 +13,7 @@ import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, northOf, siteFixture } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, RecordingLogger } from "./fakes.js";
+import { RETRY, RULES, SCORES } from "../defaults.js";
 
 function fail(): never {
   throw new Error("no stored internals");
@@ -24,12 +25,14 @@ function setup() {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   return { sites, merger };
 }
@@ -53,11 +56,11 @@ describe("no-bin zones", () => {
   it("publishes a one-person zone's centre only to about 100 m, and the exact centre once a second person backs it", async () => {
     const { merger, sites } = setup();
     await merger.merge(noBin(1, 26.261834, 73.003527));
-    const first = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() });
+    const first = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() }, RULES);
     expect(first.toFeature().geometry.coordinates).toEqual([73.004, 26.262]);
     expect(first.snapshot().feature.geometry.coordinates).toEqual([73.003527, 26.261834]);
     await merger.merge(noBin(2, 26.261834, 73.003527));
-    const second = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() });
+    const second = Site.restore({ feature: sites.feature("site_nb_1"), internals: sites.internals("site_nb_1") ?? fail() }, RULES);
     expect(second.toFeature().geometry.coordinates).toEqual([73.003527, 26.261834]);
   });
 
@@ -108,7 +111,7 @@ describe("no-bin zones", () => {
     const { zone_radius_m: _radius, backers: _backers, ...older } = legacy.properties;
     expect([_radius, _backers.count]).toEqual([1000, 10]);
     const [lon, lat] = legacy.geometry.coordinates;
-    const site = new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toSite({ ...older, lat, lon, report_ids: ["rpt_jdh_2"] });
+    const site = new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES).toSite({ ...older, lat, lon, report_ids: ["rpt_jdh_2"] });
     expect(site.toFeature().properties).toMatchObject({ zone_radius_m: 1000, report_type: "no_bin" });
     const { merger, sites } = setup();
     sites.put(site);

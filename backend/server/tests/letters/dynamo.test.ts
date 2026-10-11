@@ -9,6 +9,7 @@ import { DynamoLetterCounter, type CounterClient } from "../../src/adapters/lett
 import { DynamoSiteReader, type SiteGetter } from "../../src/adapters/letters/DynamoSiteReader.js";
 import { ExternalServiceError, InternalDataError } from "../../src/domain/errors.js";
 import { siteFixture } from "./support.js";
+import { RETRY } from "../defaults.js";
 
 type Item = Record<string, unknown>;
 
@@ -113,7 +114,7 @@ describe("DynamoLetterCounter", () => {
 
   it("counts letters in a window that starts with the first one and refuses the one over the limit", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     expect(await counter.take(at(0))).toBe(true);
     expect(await counter.take(at(10))).toBe(true);
     expect(await counter.fits(at(20))).toBe(false);
@@ -124,7 +125,7 @@ describe("DynamoLetterCounter", () => {
 
   it("starts a new window once an hour has passed since letter_window_start", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     await counter.take(at(0));
     await counter.take(at(59));
     expect(await counter.fits(at(60))).toBe(true);
@@ -134,13 +135,13 @@ describe("DynamoLetterCounter", () => {
 
   it("keys users rows by user_id", async () => {
     const table = new FakeCounterTable();
-    await new DynamoLetterCounter(table, { name: "junksnap-dev-users", keyName: "user_id" }).take(at(0));
+    await new DynamoLetterCounter(table, { name: "junksnap-dev-users", keyName: "user_id" }, RETRY.counter).take(at(0));
     expect(new Set(table.keys)).toEqual(new Set(["user_id"]));
   });
 
   it("re-reads and retries when another request wrote in between", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     await counter.take(at(0));
     let raced = false;
     table.beforeWrite = () => {
@@ -155,7 +156,7 @@ describe("DynamoLetterCounter", () => {
 
   it("refuses (false, so 429) instead of failing when other writers change the window on every attempt", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     await counter.take(at(0));
     let writes = 0;
     table.beforeWrite = () => {
@@ -168,7 +169,7 @@ describe("DynamoLetterCounter", () => {
 
   it("gives back a taken letter in the same window and leaves a restarted window alone", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     await counter.take(at(0));
     await counter.take(at(10));
     await counter.release(at(20));
@@ -179,7 +180,7 @@ describe("DynamoLetterCounter", () => {
 
   it("leaves alone a window another request restarted after this one's time", async () => {
     const table = new FakeCounterTable();
-    const counter = new DynamoLetterCounter(table, devices);
+    const counter = new DynamoLetterCounter(table, devices, RETRY.counter);
     await counter.take(at(0));
     await counter.take(at(61));
     await counter.release(at(59));
@@ -191,6 +192,6 @@ describe("DynamoLetterCounter", () => {
     failing.beforeWrite = () => {
       throw new Error("ProvisionedThroughputExceeded");
     };
-    await expect(new DynamoLetterCounter(failing, devices).take(at(0))).rejects.toThrow(ExternalServiceError);
+    await expect(new DynamoLetterCounter(failing, devices, RETRY.counter).take(at(0))).rejects.toThrow(ExternalServiceError);
   });
 });

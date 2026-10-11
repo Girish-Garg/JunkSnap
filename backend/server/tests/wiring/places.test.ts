@@ -19,6 +19,7 @@ import { LogSink } from "../LogSink.js";
 import { TempDirs } from "../TempDirs.js";
 import { upload } from "../reportFakes.js";
 import { siteFixture } from "../sites/builders.js";
+import { RULES } from "../defaults.js";
 
 const SITE = { lat: 26.26183, lon: 73.00352 };
 const NORTH_PER_M = 1 / 110_574;
@@ -34,7 +35,7 @@ describe("NearPlacesFinder", () => {
   ];
 
   it("keeps places within 100 m, nearest first, measuring to the nearest vertex or edge", () => {
-    const near = new NearPlacesFinder(layers).near(SITE.lat, SITE.lon);
+    const near = new NearPlacesFinder(layers, RULES.nearPlacesRadiusM).near(SITE.lat, SITE.lon);
     expect(near.map((place) => [place.kind, place.ref, place.distance_m])).toEqual([
       ["drain", "osm:way/3", 0],
       ["water", "osm:way/4", 60],
@@ -44,7 +45,7 @@ describe("NearPlacesFinder", () => {
   });
 
   it("finds nothing without layers", () => {
-    expect(new NearPlacesFinder([]).near(SITE.lat, SITE.lon)).toEqual([]);
+    expect(new NearPlacesFinder([], RULES.nearPlacesRadiusM).near(SITE.lat, SITE.lon)).toEqual([]);
   });
 });
 
@@ -96,7 +97,7 @@ describe("SiteNearbyCounter", () => {
     ];
     const finder = { inBox: async (box: BoundingBox) => (boxes.push(box), sites) };
     const record = Report.receive({ ...upload(), gps: { ...SITE, accuracy_m: 6 } }, "2026-10-10T02:14:52Z").toRecord();
-    expect(await new SiteNearbyCounter(finder as unknown as SiteFinder).count(record)).toBe(3);
+    expect(await new SiteNearbyCounter(finder as unknown as SiteFinder, RULES.siteMergeRadiusM).count(record)).toBe(3);
     expect(boxes).toHaveLength(1);
   });
 });

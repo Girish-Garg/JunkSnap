@@ -27,6 +27,7 @@ import {
   OTHER_DEVICE,
   upload,
 } from "./reportFakes.js";
+import { QUEUE, RULES } from "./defaults.js";
 
 const NOW = "2026-10-10T02:14:52Z";
 const PUBLIC_BASE_URL = "https://d111111abcdef8.cloudfront.net";
@@ -87,7 +88,7 @@ beforeEach(async () => {
   queue = new FakeReportQueue();
   const snapLimit = new SnapLimit(counter, 20);
   const presigner = new UploadPresigner({ signer, ids: new CountingIds(), clock, snapLimit }, 300);
-  const intake = new ReportIntake({ reports, snapLimit, queue, clock });
+  const intake = new ReportIntake({ reports, snapLimit, queue, clock }, { targetMaxM: RULES.targetMaxM, requeueAfterMs: QUEUE.visibilityMs });
   const statuses = new ReportStatusReader(reports, PUBLIC_BASE_URL, clock);
   const mine = fakeMine(reports, PUBLIC_BASE_URL, clock);
   const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new FakeAuthenticator(), new FakeUserStanding())).plugin();

@@ -9,6 +9,7 @@ import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_URL, DEVICE_B, evidence, northOf, type PhotoEvidence } from "../sites/builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock } from "../sites/fakes.js";
+import { RETRY, RULES, SCORES } from "../defaults.js";
 
 const SCAN = "scn_jdh_6";
 
@@ -29,12 +30,14 @@ function setup(sites: FakeSiteRepository) {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(embeddings),
+    picker: new MergeTargetPicker(embeddings, RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
 }
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { siteSchema, validateSite } from "../../contracts/index.gen.js";
 import { InternalDataError } from "../../domain/errors.js";
 import { Site } from "../../domain/sites/Site.js";
+import type { SiteRules } from "../../domain/sites/SiteRules.js";
 import type { MergedReport, ReportInsights, SiteFeature, SiteInternals } from "../../domain/sites/SiteTypes.js";
 import type { Logger } from "../../ports/Logger.js";
 import { LegacySiteFields } from "./LegacySiteFields.js";
@@ -51,10 +52,12 @@ type Extras = z.output<typeof StoredExtras>;
 export class SiteItemMapper {
   readonly #cells: NgeohashCells;
   readonly #logger: Logger;
+  readonly #rules: SiteRules;
 
-  constructor(cells: NgeohashCells, logger: Logger) {
+  constructor(cells: NgeohashCells, logger: Logger, rules: SiteRules) {
     this.#cells = cells;
     this.#logger = logger;
+    this.#rules = rules;
   }
 
   // Writes the next version; the repository's condition checks the current one.
@@ -93,7 +96,7 @@ export class SiteItemMapper {
     const properties = Object.fromEntries(PROPERTY_KEYS.filter((key) => key in item).map((key) => [key, item[key]]));
     const geometry = { type: "Point", coordinates: [parsed.data.lon, parsed.data.lat] };
     const feature = SiteItemMapper.#checked({ type: "Feature", geometry, properties });
-    return Site.restore({ feature, internals: { ...SiteItemMapper.#internals(parsed.data), needsBackerCount } });
+    return Site.restore({ feature, internals: { ...SiteItemMapper.#internals(parsed.data), needsBackerCount } }, this.#rules);
   }
 
   // For lists: one bad item is logged and left out instead of failing the whole answer.

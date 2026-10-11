@@ -7,6 +7,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { WithdrawalService } from "../../src/services/sites/WithdrawalService.js";
 import { memoryCounters, RecordingLogger } from "../letters/support.js";
 import { FakeReportStatus, FakeSiteRepository, FixedClock } from "./fakes.js";
+import { RETRY } from "../defaults.js";
 
 // The reports table's by-site index, filled from the reports merged in a test.
 export class FakeSiteReports implements SiteReportReader {
@@ -50,7 +51,7 @@ export function withdrawalRig(sites = new FakeSiteRepository(), limit = 10): Wit
     reports: statuses,
     limiter: new LetterRateLimiter(memoryCounters(), new RecordingLogger(), limit, "withdrawals"),
     clock: new FixedClock(),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
   });
   return { service, sites, rows, withdrawer, statuses };
 }

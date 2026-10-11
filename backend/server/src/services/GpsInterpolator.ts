@@ -1,27 +1,29 @@
 import type { FramePosition, GpsFix } from "../domain/ScanFrame.js";
-import { SCAN_GPS_LIMITS } from "../domain/scanLimits.js";
+import type { ScanGpsLimits } from "../domain/scanLimits.js";
 
 const DEGREE_STEPS = 1e6;
 const METRE_STEPS = 10;
 
 export class GpsInterpolator {
   readonly #track: readonly GpsFix[];
+  readonly #limits: Pick<ScanGpsLimits, "maxFixGapMs" | "maxAccuracyM">;
 
   // The track is oldest first with strictly increasing t_ms, as ScanSessionRules checks.
-  constructor(track: readonly GpsFix[]) {
+  constructor(track: readonly GpsFix[], limits: Pick<ScanGpsLimits, "maxFixGapMs" | "maxAccuracyM">) {
     this.#track = track;
+    this.#limits = limits;
   }
 
-  // Undefined when the nearest fix is over 3 s away or the position is worse than 50 m.
+  // Undefined when the nearest fix is over SCAN_MAX_FIX_GAP_MS away or the position is worse than SCAN_MAX_ACCURACY_M.
   locate(tMs: number): FramePosition | undefined {
     const nextIndex = this.#track.findIndex((fix) => fix.t_ms >= tMs);
     const after = nextIndex === -1 ? undefined : this.#track[nextIndex];
     const before = nextIndex === -1 ? this.#track.at(-1) : this.#track[nextIndex - 1];
-    if (GpsInterpolator.#nearestGapMs(tMs, before, after) > SCAN_GPS_LIMITS.maxFixGapMs) {
+    if (GpsInterpolator.#nearestGapMs(tMs, before, after) > this.#limits.maxFixGapMs) {
       return undefined;
     }
     const position = GpsInterpolator.#blend(tMs, before, after);
-    return position !== undefined && position.accuracy_m <= SCAN_GPS_LIMITS.maxAccuracyM ? position : undefined;
+    return position !== undefined && position.accuracy_m <= this.#limits.maxAccuracyM ? position : undefined;
   }
 
   static #nearestGapMs(tMs: number, before?: GpsFix, after?: GpsFix): number {

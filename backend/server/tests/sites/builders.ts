@@ -21,6 +21,7 @@ import type {
   ReportType,
   SiteFeature,
 } from "../../src/domain/sites/SiteTypes.js";
+import { RULES } from "../defaults.js";
 
 const FIXTURES = new URL("../../../../contracts/fixtures/", import.meta.url);
 
@@ -44,7 +45,7 @@ export function siteFixture(sample: string): SiteFeature {
 
 // The Feature the api shows for a stored site: a row without expires_at shows 90 days after its last report.
 export function shown(feature: SiteFeature): SiteFeature {
-  return { ...feature, properties: { ...feature.properties, expires_at: expiryOf(feature.properties) } };
+  return { ...feature, properties: { ...feature.properties, expires_at: expiryOf(feature.properties, RULES.ttlDays) } };
 }
 
 export function northOf(metres: number): number {

@@ -1,27 +1,23 @@
 import { GeoPoint } from "../domain/GeoPoint.js";
 import type { CandidateFrame } from "../domain/ScanFrame.js";
-import { SCAN_FRAME_RULES } from "../domain/scanLimits.js";
+import type { ScanFrameRules } from "../domain/scanLimits.js";
 
 const NO_HINT = -1;
 
-export interface SelectorRules {
-  readonly duplicateDistance: number;
-  readonly sameSpotM: number;
-  readonly similarDistance: number;
-}
+export type SelectorRules = Pick<ScanFrameRules, "intervalMs" | "duplicateDistance" | "sameSpotM" | "similarDistance">;
 
 // At most one frame per second (a hinted frame beats a plain one), then one frame per view: a repeat of the last
 // kept frame, or a similar view within sameSpotM of any kept frame, is dropped (the better ranked of the two stays).
 export class FrameSelector {
   readonly #rules: SelectorRules;
 
-  constructor(rules: SelectorRules = SCAN_FRAME_RULES) {
+  constructor(rules: SelectorRules) {
     this.#rules = rules;
   }
 
   select<T extends CandidateFrame>(frames: readonly T[]): T[] {
     const kept: T[] = [];
-    for (const frame of FrameSelector.#bestPerSecond(frames)) {
+    for (const frame of this.#bestPerInterval(frames)) {
       const last = kept.at(-1);
       if (last !== undefined && last.hash.distanceTo(frame.hash) <= this.#rules.duplicateDistance) {
         continue;
@@ -43,10 +39,10 @@ export class FrameSelector {
     return metres <= this.#rules.sameSpotM && a.hash.distanceTo(b.hash) <= this.#rules.similarDistance;
   }
 
-  static #bestPerSecond<T extends CandidateFrame>(frames: readonly T[]): T[] {
+  #bestPerInterval<T extends CandidateFrame>(frames: readonly T[]): T[] {
     const best = new Map<number, T>();
     for (const frame of frames.toSorted((a, b) => a.tMs - b.tMs)) {
-      const second = Math.floor(frame.tMs / SCAN_FRAME_RULES.intervalMs);
+      const second = Math.floor(frame.tMs / this.#rules.intervalMs);
       const current = best.get(second);
       if (current === undefined || FrameSelector.#rank(frame) > FrameSelector.#rank(current)) {
         best.set(second, frame);

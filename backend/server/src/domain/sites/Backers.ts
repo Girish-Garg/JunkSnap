@@ -1,7 +1,7 @@
 import type { SiteProperties, Verification } from "./SiteTypes.js";
 
+// Fixed by the site contract (backers.needed is const 10), so not a setting.
 export const BACKERS_NEEDED = 10;
-const REJECT_MARGIN = 3;
 
 export type BackersView = SiteProperties["backers"];
 
@@ -10,8 +10,11 @@ export class Backers {
   readonly #photo: ReadonlySet<string>;
   readonly #yes: ReadonlySet<string>;
   readonly #no: ReadonlySet<string>;
+  readonly #rejectMargin: number;
 
-  constructor(photoPeople: readonly string[], yesPeople: readonly string[], noPeople: readonly string[]) {
+  // rejectMargin: REJECT_MARGIN.
+  constructor(photoPeople: readonly string[], yesPeople: readonly string[], noPeople: readonly string[], rejectMargin: number) {
+    this.#rejectMargin = rejectMargin;
     this.#photo = new Set(photoPeople);
     this.#yes = new Set(yesPeople);
     // A person who sent a photo of the site backs it, whatever their latest vote says.
@@ -33,11 +36,11 @@ export class Backers {
     return previous ?? Math.max(this.count, BACKERS_NEEDED);
   }
 
-  // Null while neither threshold is met: 10 backers verify, no voters 3 or more ahead reject.
+  // Null while neither threshold is met: 10 backers verify, no voters rejectMargin or more ahead reject.
   outcome(): Exclude<Verification, "unverified"> | null {
     if (this.count >= BACKERS_NEEDED) {
       return "verified";
     }
-    return this.#no.size - this.count >= REJECT_MARGIN ? "rejected" : null;
+    return this.#no.size - this.count >= this.#rejectMargin ? "rejected" : null;
   }
 }

@@ -14,6 +14,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, userOf } from "../sites/builders.js";
 import { FIRST_PHOTO, flagger, flagRig, seeded, SITE } from "./flagFakes.js";
+import { PAGING } from "../defaults.js";
 
 const guard: UserGuard = {
   async requireUser(request) {
@@ -103,7 +104,7 @@ describe("photo report adapters", () => {
 
   it("keeps one row per person per photo in the notes table, with hashes only", async () => {
     const commands: PutCommand[] = [];
-    const store = new DynamoPhotoFlagStore({ send: async (command: PutCommand) => (commands.push(command), { $metadata: {} }) } as never, "notes");
+    const store = new DynamoPhotoFlagStore({ send: async (command: PutCommand) => (commands.push(command), { $metadata: {} }) } as never, "notes", PAGING.notesMaxPages);
     await store.put(flag);
     const item = commands[0]?.input.Item;
     expect(item).toMatchObject({ site_id: SITE, note_id: `flag#${FIRST_PHOTO}#${flag.authorHash}`, kind: "photo_flag", text_status: "hidden" });
@@ -118,11 +119,11 @@ describe("photo report adapters", () => {
       { author_hash: "a", device_hash: "d1", text_status: "shown", text: "wrong place" },
       { author_hash: "b", device_hash: "d2", text_status: "hidden" },
     ];
-    const store = new DynamoPhotoFlagStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: items }) } as never, "notes");
+    const store = new DynamoPhotoFlagStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: items }) } as never, "notes", PAGING.notesMaxPages);
     expect(await store.authorsOf(SITE, FIRST_PHOTO)).toEqual([{ authorHash: "a", deviceHash: "d1" }, { authorHash: "b", deviceHash: "d2" }]);
     expect(commands[0]?.input).toMatchObject({ ConsistentRead: true, ExpressionAttributeValues: { ":prefix": `flag#${FIRST_PHOTO}#` } });
     const withPhoto = items.map((item) => ({ ...item, photo_id: FIRST_PHOTO }));
-    const texts = new DynamoPhotoFlagStore({ send: async () => ({ $metadata: {}, Items: withPhoto }) } as never, "notes");
+    const texts = new DynamoPhotoFlagStore({ send: async () => ({ $metadata: {}, Items: withPhoto }) } as never, "notes", PAGING.notesMaxPages);
     expect(await texts.textsFor(SITE)).toEqual([
       { photoId: FIRST_PHOTO, author: { authorHash: "a", deviceHash: "d1" }, text: "wrong place" },
       { photoId: FIRST_PHOTO, author: { authorHash: "b", deviceHash: "d2" }, text: null },
@@ -131,7 +132,7 @@ describe("photo report adapters", () => {
 
   it("reads notes without the photo report rows", async () => {
     const commands: QueryCommand[] = [];
-    const store = new DynamoNoteStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: [] }) } as never, "notes");
+    const store = new DynamoNoteStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: [] }) } as never, "notes", PAGING.notesMaxPages);
     await store.shownFor(SITE);
     expect(commands[0]?.input.KeyConditionExpression).toContain("begins_with(note_id, :note)");
     expect(commands[0]?.input.ExpressionAttributeValues).toMatchObject({ ":note": "note_" });

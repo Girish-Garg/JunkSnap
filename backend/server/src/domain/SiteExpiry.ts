@@ -1,7 +1,5 @@
-// Decision 20261010-1855: a site with no report, vote or cleanup photo for this long leaves the map.
+// Decision 20261010-1855: a site with no report, vote or cleanup photo for ttlDays (SITE_TTL_DAYS) leaves the map.
 // Soft expiry: the row and its history stay; only the status changes.
-export const SITE_TTL_DAYS = 90;
-
 const DAY_MS = 86_400_000;
 // Only a site on the active map can expire; cleaned, removed and rejected sites are already off it.
 const EXPIRING_STATUSES: ReadonlySet<string> = new Set(["open", "reopened"]);
@@ -15,18 +13,18 @@ export interface ExpiringSite {
 }
 
 // The expiry that activity at this time sets.
-export function expiryAfter(activityAt: string): string {
-  return new Date(Date.parse(activityAt) + SITE_TTL_DAYS * DAY_MS).toISOString();
+export function expiryAfter(activityAt: string, ttlDays: number): string {
+  return new Date(Date.parse(activityAt) + ttlDays * DAY_MS).toISOString();
 }
 
-export function expiryOf(site: ExpiringSite): string {
-  return site.expires_at ?? expiryAfter(site.last_reported_at);
+export function expiryOf(site: ExpiringSite, ttlDays: number): string {
+  return site.expires_at ?? expiryAfter(site.last_reported_at, ttlDays);
 }
 
 // Activity only ever pushes the expiry later, so a late-arriving older event changes nothing.
-export function refreshedExpiry(site: ExpiringSite, activityAt: string): string {
-  const current = expiryOf(site);
-  const next = expiryAfter(activityAt);
+export function refreshedExpiry(site: ExpiringSite, activityAt: string, ttlDays: number): string {
+  const current = expiryOf(site, ttlDays);
+  const next = expiryAfter(activityAt, ttlDays);
   return Date.parse(next) > Date.parse(current) ? next : current;
 }
 
@@ -39,6 +37,6 @@ export function isLapsedAt(status: string, verification: string, expiresAt: stri
 }
 
 // True once an open or reopened site is past its expiry, whether or not the CronJob has marked it yet.
-export function isLapsed(site: ExpiringSite, now: Date): boolean {
-  return isLapsedAt(site.status, site.verification, expiryOf(site), now);
+export function isLapsed(site: ExpiringSite, now: Date, ttlDays: number): boolean {
+  return isLapsedAt(site.status, site.verification, expiryOf(site, ttlDays), now);
 }

@@ -8,6 +8,7 @@ import { WarnedPhotoTexts } from "../../src/services/flags/WarnedPhotoTexts.js";
 import { BASE_LAT, BASE_LON, DEVICE_B } from "../sites/builders.js";
 import { NOW } from "../sites/fakes.js";
 import { FIRST_PHOTO, flagBy, flagger, flagRig, MemoryFlags, request, SECOND_PHOTO, seeded, SITE, type FlagRig } from "./flagFakes.js";
+import { RULES } from "../defaults.js";
 
 // Yes votes from people 101 onwards back the site without reporting any photo.
 async function backedBy(rig: FlagRig, voters: number): Promise<void> {
@@ -115,7 +116,7 @@ describe("descriptions as community signals", () => {
   it("feed the analysis only once the photo is warned, and start a refresh then", async () => {
     const rig = flagRig();
     seeded(rig, true);
-    const texts = new WarnedPhotoTexts(rig.flags);
+    const texts = new WarnedPhotoTexts(rig.flags, RULES.flags);
     await rig.service.flag(request(flagger(1), { text: "Not this plot" }));
     await rig.service.flag(request(flagger(2), { text: "Shows a shop front" }));
     await rig.service.flag(request(flagger(3), { photo: SECOND_PHOTO, text: "Duplicate of the first" }));

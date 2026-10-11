@@ -3,12 +3,11 @@ import { NotFoundError } from "../../domain/errors.js";
 import { OwnPhotoError, type FlagReason, type StoredPhotoFlag } from "../../domain/flags/PhotoFlag.js";
 import type { Requester } from "../../domain/letters/types.js";
 import type { Site } from "../../domain/sites/Site.js";
-import { FLAG_RADIUS_M } from "../../domain/flags/PhotoFlagPolicy.js";
 import type { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import { SiteNotFoundError, TooFarError } from "../../domain/sites/SiteErrors.js";
 import type { PhotoFlagCount } from "../../domain/sites/SitePhotoFlags.js";
 import type { SiteReportRef } from "../../domain/sites/Withdrawal.js";
-import { personOf } from "../../domain/sites/utils.js";
+import { distanceText, personOf } from "../../domain/sites/utils.js";
 import type { CommunityTrigger, PhotoFlagStore } from "../../ports/flags/PhotoFlagStore.js";
 import type { NoteModerator } from "../../ports/moderation/NoteModerator.js";
 import type { Clock } from "../../ports/sites/Clock.js";
@@ -40,6 +39,8 @@ export interface PhotoFlagServiceDeps {
   readonly community: CommunityTrigger;
   readonly clock: Clock;
   readonly retry: ConflictRetry;
+  // FLAG_RADIUS_M: like votes, only someone this near the site may report its photos.
+  readonly radiusM: number;
 }
 
 interface FlaggedPhoto {
@@ -96,8 +97,8 @@ export class PhotoFlagService {
     if (PhotoFlagService.#ownedBy(row, request.requester)) {
       throw new OwnPhotoError("You took this photo, so a neighbour has to report it");
     }
-    if (site.point.distanceTo(request.point) > FLAG_RADIUS_M) {
-      throw new TooFarError("You need to be within 1 km of the site to report its photos");
+    if (site.point.distanceTo(request.point) > this.#deps.radiusM) {
+      throw new TooFarError(`You need to be within ${distanceText(this.#deps.radiusM)} of the site to report its photos`);
     }
     return { url, reporter: personOf(row) };
   }

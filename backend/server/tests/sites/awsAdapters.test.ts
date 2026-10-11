@@ -17,6 +17,7 @@ import { DEVICE_B, evidence, fixture, report } from "./builders.js";
 import { RecordingLogger } from "./fakes.js";
 import { failure, ScriptedClient, type SentCommand } from "./ScriptedClient.js";
 import { SITES_ENV } from "./sitesEnv.js";
+import { RULES } from "../defaults.js";
 
 const calls = new AwsCalls();
 
@@ -92,9 +93,9 @@ describe("SiteServiceFactory", () => {
   });
 
   it("builds a cleanup service wired to the cleanups and sites tables", async () => {
-    const site = Site.found(report());
+    const site = Site.found(report(), RULES);
     site.startCleanup("cln_jdh_3c", new Date("2026-10-10T06:00:00Z"));
-    const siteItem = new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toItem(site);
+    const siteItem = new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES).toItem(site);
     const record = { cleanup_id: "cln_jdh_3c", site_id: "site_jdh_1", upload_id: "upl_jdh_3c", device_token: DEVICE_B };
     const stored = { ...record, sha256: "c".repeat(64), gps: { lat: 1, lon: 1, accuracy_m: 1 }, captured_at: "t", received_at: "2026-10-10T06:00:00.000Z", status: "checking" };
     const { dynamo, built } = factory((command) => {

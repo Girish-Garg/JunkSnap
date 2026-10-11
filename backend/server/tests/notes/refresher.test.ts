@@ -2,10 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Community } from "../../src/domain/notes/Community.js";
 import { TimerScheduler } from "../../src/handlers/notes/NotesAssembly.js";
 import { WordingCheck } from "../../src/services/letters/WordingCheck.js";
-import { CommunityRefresher, REFRESH_WINDOW_MS } from "../../src/services/notes/CommunityRefresher.js";
+import { CommunityRefresher } from "../../src/services/notes/CommunityRefresher.js";
+
+// NOTE_ANALYSIS_INTERVAL_MINUTES at its default, 10.
+const REFRESH_WINDOW_MS = 10 * 60 * 1000;
 import { NoteAnalyzer } from "../../src/services/notes/NoteAnalyzer.js";
 import { FakeSites, RecordingLogger } from "../letters/support.js";
 import { CLEAN, FakeAnalysisModel, FixedReportNotes, GOOD_READING, ManualScheduler, MemoryCommunity, MemoryNotes, siteWithoutCommunity } from "./notesSupport.js";
+import { MODELS } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const NOW = new Date("2026-10-10T10:00:00Z");
@@ -23,10 +27,11 @@ function refresher(writer: { save(siteId: string, community: Community): Promise
     reportNotes: new FixedReportNotes(),
     photoReports: new FixedReportNotes(),
     sites: new FakeSites([siteWithoutCommunity()]),
-    analyzer: new NoteAnalyzer(model, new WordingCheck(), logger),
+    analyzer: new NoteAnalyzer(model, new WordingCheck(), logger, MODELS.noteAnalysisMaxTokens),
     writer,
     scheduler,
     now: () => NOW,
+    windowMs: REFRESH_WINDOW_MS,
     logger,
   };
   return { refresher: new CommunityRefresher(parts), model, scheduler, logger, writer };

@@ -11,9 +11,6 @@ const ReportWorkerEnv = z.object({
 });
 
 export class ReportWorkerSettings {
-  // contracts/README.md: the reports queue moves a message to the DLQ after 3 receives.
-  static readonly MAX_RECEIVE_COUNT = 3;
-
   readonly reportsTable: string;
   readonly devicesTable: string;
   readonly usersTable: string;

@@ -24,14 +24,17 @@ import { LlmNoteModerator, type NoteRouter } from "../../services/moderation/Llm
 import { ModerationService } from "../../services/moderation/ModerationService.js";
 import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
+import { CacheSettings } from "../../settings/CacheSettings.js";
+import { ModelLimitSettings } from "../../settings/ModelLimitSettings.js";
+import { ModerationRuleSettings } from "../../settings/ModerationRuleSettings.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
+import type { Env } from "../../settings/utils.js";
 import type { EntryContext } from "../EntryPoint.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
+import { awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
-
-// About 2 km: absorbs the outline's 500 m simplification and GPS drift at coasts and borders.
-export const INDIA_BUFFER_DEG = 0.02;
 
 export interface ModerationWiring {
   readonly devices: DeviceRegistry;
@@ -41,32 +44,53 @@ export interface ModerationWiring {
   readonly waste?: WasteLocator;
 }
 
+// The tunable numbers moderation takes, each read once from its variable.
+export interface ModerationTunables {
+  readonly limits: RateLimitSettings;
+  readonly rules: SiteRuleSettings;
+  readonly timeouts: TimeoutSettings;
+  readonly models: ModelLimitSettings;
+  readonly caches: CacheSettings;
+  readonly moderation: ModerationRuleSettings;
+}
+
 // Builds the moderation object graph once per worker process.
 export class ModerationServiceFactory {
   readonly #settings: ModerationSettings;
-  readonly #limits: RateLimitSettings;
+  readonly #tunables: ModerationTunables;
 
-  constructor(settings: ModerationSettings, limits: RateLimitSettings) {
+  constructor(settings: ModerationSettings, tunables: ModerationTunables) {
     this.#settings = settings;
-    this.#limits = limits;
+    this.#tunables = tunables;
+  }
+
+  static tunables(env: Env): ModerationTunables {
+    return {
+      limits: RateLimitSettings.fromEnv(env),
+      rules: SiteRuleSettings.fromEnv(env),
+      timeouts: TimeoutSettings.fromEnv(env),
+      models: ModelLimitSettings.fromEnv(env),
+      caches: CacheSettings.fromEnv(env),
+      moderation: ModerationRuleSettings.fromEnv(env),
+    };
   }
 
   // For the worker's entry point: reads settings when called, never at import.
   static forWorker(context: EntryContext, devices: DeviceRegistry): ModerationService {
-    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), RateLimitSettings.fromEnv(context.env));
+    const tunables = ModerationServiceFactory.tunables(context.env);
+    const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), tunables);
     const bedrock = new BedrockRuntimeClient({ region: context.settings.awsRegion });
-    return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock).build(context.logger) });
+    return factory.create({ devices, noteRouter: NoteRouterBuilder.fromEnv(bedrock, context.env).build(context.logger) });
   }
 
   create(wiring: ModerationWiring): ModerationService {
     const settings = this.#settings;
-    const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.wait));
-    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.transfer)), {
-      originals: settings.originalsBucket,
-      public: settings.publicBucket,
-    });
+    const { aws } = this.#tunables.timeouts;
+    const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, aws.wait));
+    const buckets = { originals: settings.originalsBucket, public: settings.publicBucket };
+    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, aws.transfer)), buckets, this.#tunables.caches.mediaMaxAgeSeconds);
     return new ModerationService({
-      loader: new PhotoLoader(store, new SharpImageCodec()),
+      loader: new PhotoLoader(store, new SharpImageCodec(), this.#tunables.moderation.maxUploadBytes),
       gate: new RekognitionImageModerator(rekognition),
       waste: wiring.waste ?? new NoWasteLocator(),
       blur: new PrivacyBlur({
@@ -77,20 +101,23 @@ export class ModerationServiceFactory {
         store,
       }),
       authenticity: new AuthenticityService(this.#checks(wiring.devices)),
-      notes: new LlmNoteModerator(wiring.noteRouter),
+      notes: new LlmNoteModerator(wiring.noteRouter, this.#tunables.models.noteModerationMaxTokens),
       clock: new SystemClock(),
     });
   }
 
   #checks(devices: DeviceRegistry): CheckFactory {
     const settings = this.#settings;
-    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion))));
+    const { limits, rules, timeouts, moderation } = this.#tunables;
+    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion, timeouts.aws.quick))));
+    const tables = { reports: settings.reportsTable, sites: settings.sitesTable };
     return new CheckFactory({
-      india: TurfGeofence.fromFile(settings.indiaOutlinePath(), INDIA_BUFFER_DEG),
-      reportHashes: new DynamoHashIndex(reader, { reports: settings.reportsTable, sites: settings.sitesTable }),
+      india: TurfGeofence.fromFile(settings.indiaOutlinePath(), moderation.indiaBufferDeg),
+      reportHashes: new DynamoHashIndex(reader, tables, rules.siteMergeRadiusM + rules.targetMaxM),
       cleanupHashes: new DynamoCleanupHashIndex(reader, settings.cleanupsTable),
       devices,
-      snapPerHour: this.#limits.snapPerHour,
+      snapPerHour: limits.snapPerHour,
+      rules: moderation,
     });
   }
 }

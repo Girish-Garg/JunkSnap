@@ -15,10 +15,11 @@ import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, northOf, report } from "./builders.js";
 import { FakeReportStatus, FakeSiteRepository, FakeVoteRepository, RecordingLogger } from "./fakes.js";
+import { PAGING, RETRY, RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 
 // One minute later on every read, so each vote has its own time.
 class SteppingClock implements Clock {
@@ -32,10 +33,10 @@ class SteppingClock implements Clock {
 
 function setup() {
   const sites = new FakeSiteRepository();
-  sites.put(Site.found(report()));
+  sites.put(Site.found(report(), RULES));
   const reports = new FakeReportStatus();
-  const service = new VoteService({ sites, votes: new FakeVoteRepository(), reports, clock: new SteppingClock(), retry: new ConflictRetry() });
-  const finder = new SiteFinder(sites, new NgeohashCells(), new SteppingClock());
+  const service = new VoteService({ sites, votes: new FakeVoteRepository(), reports, clock: new SteppingClock(), retry: new ConflictRetry(RETRY.saveAttempts) });
+  const finder = new SiteFinder(sites, new NgeohashCells(), new SteppingClock(), PAGING.mapMaxSites);
   let next = 1;
   const cast = async (choice: VoteChoice, count = 1) => {
     let result;
@@ -97,8 +98,8 @@ describe("cleared votes (decision 20261010-1700)", () => {
     const props = validateSite(sites.feature(SITE)).properties;
     expect(props).toMatchObject({ verification: "verified", status: "cleaned", verified_count: 1 });
     const stored = await sites.get(SITE);
-    const item = stored === null ? {} : new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toItem(stored);
-    const area = new SiteItemParser().parse(item);
+    const item = stored === null ? {} : new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES).toItem(stored);
+    const area = new SiteItemParser(RULES.ttlDays).parse(item);
     expect(area.everCleared()).toBe(true);
     expect(new AreaSites([area]).counts()).toMatchObject({ sites: 1, cleaned_sites: 1, open_sites: 0, verified_reports: 1 });
   });

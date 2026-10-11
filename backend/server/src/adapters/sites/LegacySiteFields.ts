@@ -1,6 +1,6 @@
-const NEEDED = 10;
-// A no_bin site from before decision 20261010-1630 reads as a zone of this radius.
-const ZONE_RADIUS = 1000;
+import { BACKERS_NEEDED as NEEDED } from "../../domain/sites/Backers.js";
+// A no_bin site from before decision 20261010-1630 reads as a zone of the contract's radius.
+import { ZONE_RADIUS_M as ZONE_RADIUS } from "../../domain/sites/NoBinZone.js";
 
 // Items written before decision 20261010-1530 read as the new shape until the backers migration rewrites them.
 export class LegacySiteFields {

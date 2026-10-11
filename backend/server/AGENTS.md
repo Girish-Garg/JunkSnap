@@ -32,7 +32,7 @@ After any change to `contracts/schemas`, run `npm run gen:contracts` and commit 
 - Presign against the regional S3 endpoint (`s3.ap-south-1.amazonaws.com`).
 - Brands: Rekognition DetectText plus the brand-to-parent-company map with a source per row; a label only when readable at confidence 0.8 or more.
 - Scans (decision 20261010-0203): one frame per second, GPS by interpolation, drop frames more than 3 s from a fix or worse than 50 m, frame ids derived from the scan id and frame time. Every frame runs the normal pipeline.
-- Insights (decision 20261010-0202): merge per `site.insights`; nearby places within 100 m from the crawler's `map_layers`; area shares withheld below 10 verified reports. Only measured numbers.
+- Insights (decision 20261010-0202): merge per `site.insights`; nearby places within `NEAR_PLACES_RADIUS_M` (100 m) from the crawler's `map_layers`; area shares withheld below 10 verified reports. Only measured numbers.
 - Crawl trigger (issue 78): when the merge settles a verified report, `ActivatingReportMerger` adds its id to the district's `crawls` row and queues the district at `CRAWL_ACTIVATE_AFTER` (default 1); a failure only warns. Without `CRAWLS_TABLE` nothing is queued and `GET /areas/district/{id}/crawl` (open) answers `not_started`.
 - Ward files: the worker (nearby-place layers, at startup) and scores read, per city, whichever of `<ASSETS_DIR>/wards/<city>.json` and `crawl/wards/<city>.json` in `ORIGINALS_BUCKET` has the newer `generated_at` (`NewestWardFiles`); an S3 failure falls back to the image's files.
 - Every model decision records provider, model and version. Steps are idempotent per report id.

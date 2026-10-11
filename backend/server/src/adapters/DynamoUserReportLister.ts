@@ -19,8 +19,6 @@ interface Collected {
 }
 
 const KEY_NAMES = ["report_id", "user_id", "received_at"] as const;
-// Limit applies before the snap filter, so a recent scan's frames can fill whole rounds; this caps the reads per page.
-const MAX_ROUNDS = 10;
 
 // GET /me/reports on the reports by-user GSI (user_id, received_at), newest first. The cursor is a by-user key
 // (report_id, user_id, received_at) as base64url JSON, and it must name the asking user, so it never opens another user's rows.
@@ -28,11 +26,15 @@ export class DynamoUserReportLister implements UserReportLister {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
   readonly #logger: Logger;
+  readonly #maxRounds: number;
 
-  constructor(client: DynamoDBDocumentClient, table: string, logger: Logger) {
+  // maxRounds: MY_REPORTS_MAX_ROUNDS. Limit applies before the snap filter, so a recent scan's frames can fill whole
+  // rounds; this caps the reads per page.
+  constructor(client: DynamoDBDocumentClient, table: string, logger: Logger, maxRounds: number) {
     this.#client = client;
     this.#table = table;
     this.#logger = logger;
+    this.#maxRounds = maxRounds;
   }
 
   async page(userId: string, request: UserReportPageRequest): Promise<UserReportPage> {
@@ -45,11 +47,11 @@ export class DynamoUserReportLister implements UserReportLister {
     return { reports: shown.map((each) => each.report), nextCursor };
   }
 
-  // Queries until the page is full or by-user has no more rows, at most MAX_ROUNDS times.
+  // Queries until the page is full or by-user has no more rows, at most maxRounds times.
   async #collect(userId: string, limit: number, first: StartKey | undefined): Promise<Collected> {
     const listed: Listed[] = [];
     let next = first;
-    for (let round = 0; round < MAX_ROUNDS; round += 1) {
+    for (let round = 0; round < this.#maxRounds; round += 1) {
       const output = await this.#query(userId, limit, next);
       listed.push(...(output.Items ?? []).flatMap((item) => this.#listed(item, userId)));
       next = output.LastEvaluatedKey;

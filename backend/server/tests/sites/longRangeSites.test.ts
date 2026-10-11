@@ -18,6 +18,7 @@ import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { SiteReportMerger } from "../../src/services/wiring/SiteReportMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, DEVICE_C, evidence, fixture, northOf } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock } from "./fakes.js";
+import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 // The first reporter stood about 128 m from the waste (100 m north, 80 m east) and marked it at BASE.
 const REPORTER = { lat: 26.26273, lon: 73.00432, accuracy_m: 6 };
@@ -36,14 +37,16 @@ function setup() {
     sites,
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
-  return { sites, merger, finder: new SiteFinder(sites, new NgeohashCells(), new FixedClock()) };
+  return { sites, merger, finder: new SiteFinder(sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites) };
 }
 
 describe("site placement from a long-range target", () => {
@@ -95,7 +98,7 @@ describe("worker steps that use the target", () => {
     const bins = new BinLocator({ bins: [{ point: new GeoPoint(northOf(30), BASE_LON), ref: "osm:node/2", source }], mappedTowns: ["jodhpur"] }, 3000);
     const seen: MergeEvidence[] = [];
     const sites = { merge: async (e: MergeEvidence) => (seen.push(e), { siteId: "site_far_1", outcome: "founded", reportStatus: "unverified" }) };
-    const subject = new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([school]), bins);
+    const subject = new SiteReportMerger(sites as unknown as SiteMerger, new NearPlacesFinder([school], RULES.nearPlacesRadiusM), bins);
     const e = longRange("far_1", DEVICE_B, REPORTER, WASTE);
     const record = { ...Report.receive(e.upload, "2026-10-10T02:14:52Z").toRecord(), moderation_result: e.moderation ?? undefined, verification_result: e.verification ?? undefined, location: e.location };
     await subject.merge(record);

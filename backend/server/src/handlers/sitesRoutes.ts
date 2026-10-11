@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { PagingSettings } from "../settings/PagingSettings.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
 import type { RouteContext } from "./RouteBuilder.js";
 import { GuardedSiteUsers } from "./sites/GuardedSiteUsers.js";
@@ -17,6 +18,6 @@ export function buildSitesRoutes(context: RouteContext): FastifyPluginAsync {
       withdrawals: factory.withdrawalService(),
       users,
     };
-    await app.register(new SiteRoutes(deps).plugin());
+    await app.register(new SiteRoutes(deps, PagingSettings.fromEnv(context.env).bboxMaxDegrees).plugin());
   };
 }

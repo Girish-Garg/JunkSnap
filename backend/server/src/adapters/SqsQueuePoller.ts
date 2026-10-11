@@ -10,15 +10,13 @@ import type { Logger } from "../ports/Logger.js";
 import type { MessageHandler } from "../ports/MessageHandler.js";
 import type { QueuePoller } from "../ports/QueuePoller.js";
 
-const WAIT_SECONDS = 20;
-const BATCH_SIZE = 10;
-// Below the queue's 300 s visibility timeout, so an abandoned message comes back only after this poller let it go.
-const MESSAGE_DEADLINE_MS = 240_000;
-
 export interface SqsPollerOptions {
   readonly queueUrl: string;
   readonly maxReceiveCount: number;
-  readonly messageDeadlineMs?: number;
+  // Below the queue's visibility timeout, so an abandoned message comes back only after this poller let it go.
+  readonly messageDeadlineMs: number;
+  readonly waitSeconds: number;
+  readonly batchSize: number;
 }
 
 // Deletes a message only after its handler succeeds; a failed, hung or undeleted one becomes visible again and SQS retries it.
@@ -43,8 +41,8 @@ export class SqsQueuePoller implements QueuePoller {
   async #receive(signal: AbortSignal): Promise<Message[]> {
     const command = new ReceiveMessageCommand({
       QueueUrl: this.#options.queueUrl,
-      MaxNumberOfMessages: BATCH_SIZE,
-      WaitTimeSeconds: WAIT_SECONDS,
+      MaxNumberOfMessages: this.#options.batchSize,
+      WaitTimeSeconds: this.#options.waitSeconds,
       MessageSystemAttributeNames: ["ApproximateReceiveCount"],
     });
     try {
@@ -77,7 +75,7 @@ export class SqsQueuePoller implements QueuePoller {
 
   // A hung handler is abandoned, not deleted, so one stuck message never stalls the queue.
   async #withinDeadline(work: Promise<void>): Promise<void> {
-    const ms = this.#options.messageDeadlineMs ?? MESSAGE_DEADLINE_MS;
+    const ms = this.#options.messageDeadlineMs;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => reject(new ExternalServiceError(`handler still running after ${String(ms)} ms`)), ms);

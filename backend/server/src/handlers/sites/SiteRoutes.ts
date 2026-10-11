@@ -6,6 +6,7 @@ import type { CleanupIntake } from "../../services/sites/CleanupIntake.js";
 import type { SiteFinder } from "../../services/sites/SiteFinder.js";
 import type { VoteService } from "../../services/sites/VoteService.js";
 import type { WithdrawalService } from "../../services/sites/WithdrawalService.js";
+import { PagingSettings } from "../../settings/PagingSettings.js";
 import { SiteRequests } from "./SiteRequests.js";
 import type { SiteUsers } from "./SiteUsers.js";
 
@@ -27,10 +28,12 @@ interface FeatureCollection {
 // Browsing is open; voting, cleanups and withdrawals need the signed-in user first (401 before any other check).
 export class SiteRoutes {
   readonly #deps: SiteRouteDeps;
-  readonly #requests = new SiteRequests();
+  readonly #requests: SiteRequests;
 
-  constructor(deps: SiteRouteDeps) {
+  // bboxMaxDegrees: BBOX_MAX_DEGREES.
+  constructor(deps: SiteRouteDeps, bboxMaxDegrees = PagingSettings.fromEnv({}).bboxMaxDegrees) {
     this.#deps = deps;
+    this.#requests = new SiteRequests(bboxMaxDegrees);
   }
 
   plugin(): FastifyPluginAsync {

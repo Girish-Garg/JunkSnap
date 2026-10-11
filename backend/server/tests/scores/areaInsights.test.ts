@@ -3,8 +3,9 @@ import type { AreaFactSheet } from "../../src/domain/AreaFactSheet.js";
 import type { AreaSite } from "../../src/domain/AreaSite.js";
 import { ScoreCalculator } from "../../src/services/ScoreCalculator.js";
 import { insights, JUDGE, NO_FACTS, NOW, nearPlace, share, site, WARD, YOLO } from "./siteBuilder.js";
+import { SCORES } from "../defaults.js";
 
-const calculator = ScoreCalculator.standard();
+const calculator = ScoreCalculator.standard(SCORES);
 
 function areaInsights(sites: readonly AreaSite[], facts: AreaFactSheet = NO_FACTS) {
   return calculator.calculate({ area: WARD, sites, facts, now: NOW }).insights;

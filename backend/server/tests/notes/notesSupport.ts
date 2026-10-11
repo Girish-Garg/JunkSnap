@@ -10,6 +10,7 @@ import type { NoteModerator } from "../../src/ports/moderation/NoteModerator.js"
 import type { CommunityWriter, NoteStore, ReportNoteReader, Scheduler } from "../../src/ports/notes/NoteStore.js";
 import type { NoteService } from "../../src/services/notes/NoteService.js";
 import { FakeSites, memoryCounters, RecordingLogger, siteFixture } from "../letters/support.js";
+import { MODELS } from "../defaults.js";
 
 export const CLEAN: NoteVerdict = { result: "clean", reasons: [], provider: "bedrock", model: "apac.amazon.nova-pro-v1:0", version: "v1:0" };
 export const REMOVED: NoteVerdict = { ...CLEAN, result: "removed", reasons: ["personal_data"] };
@@ -124,7 +125,7 @@ export function notesWorld(sites: readonly Site[] = [siteWithoutCommunity()], re
     model: new FakeAnalysisModel(),
     logger: new RecordingLogger(),
   };
-  const service = new NotesAssembly(10, world.logger).service({
+  const service = new NotesAssembly({ perHour: 10, analysisWindowMs: 10 * 60_000, analysisMaxTokens: MODELS.noteAnalysisMaxTokens }, world.logger).service({
     sites: new FakeSites(sites),
     notes: world.notes,
     reportNotes: new FixedReportNotes(reportNotes),

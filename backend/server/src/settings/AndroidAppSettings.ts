@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, splitList, type Env } from "./utils.js";
+import { parseTunables, splitList, type Env } from "./utils.js";
 
 // The Android app's package id (applicationId in apps/android-tauri/src-tauri/gen/android/app/build.gradle.kts).
 export const ANDROID_PACKAGE = "com.junksnap.app";
@@ -20,6 +20,7 @@ const AndroidEnv = z.object({
     .optional()
     .transform((value) => splitList(value ?? "").map(colonHex))
     .pipe(z.array(z.string().regex(FINGERPRINT, "a SHA-256 certificate fingerprint, AA:BB:...:FF"))),
+  ANDROID_HANDOFF_WAIT_MS: z.coerce.number().int().min(0).max(30_000).default(2_000),
 });
 
 // The Android app (contracts/README.md): the package the share pages open, and the signing certificates that
@@ -27,12 +28,16 @@ const AndroidEnv = z.object({
 export class AndroidAppSettings {
   readonly packageName = ANDROID_PACKAGE;
   readonly certFingerprints: readonly string[];
+  // How long a share page waits for the app to open before it sends an Android browser to the web app.
+  readonly handoffWaitMs: number;
 
-  private constructor(certFingerprints: readonly string[]) {
+  private constructor(certFingerprints: readonly string[], handoffWaitMs: number) {
     this.certFingerprints = certFingerprints;
+    this.handoffWaitMs = handoffWaitMs;
   }
 
   static fromEnv(env: Env): AndroidAppSettings {
-    return new AndroidAppSettings(parseEnv(AndroidEnv, env).ANDROID_CERT_SHA256);
+    const values = parseTunables(AndroidEnv, env, ["ANDROID_HANDOFF_WAIT_MS"]);
+    return new AndroidAppSettings(values.ANDROID_CERT_SHA256, values.ANDROID_HANDOFF_WAIT_MS);
   }
 }

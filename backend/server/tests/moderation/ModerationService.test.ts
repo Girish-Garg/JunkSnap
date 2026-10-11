@@ -35,6 +35,7 @@ import {
   sidewaysJpeg,
   testJpeg,
 } from "./fakes.js";
+import { MODERATION } from "../defaults.js";
 
 class Harness {
   readonly store = new FakeImageStore();
@@ -50,9 +51,9 @@ class Harness {
 
   service(notes: NoteModerator = new FakeCleanNoteModerator()): ModerationService {
     const { india, reportHashes, cleanupHashes, devices } = this;
-    const checks = new CheckFactory({ india, reportHashes, cleanupHashes, devices, snapPerHour: 20 });
+    const checks = new CheckFactory({ india, reportHashes, cleanupHashes, devices, snapPerHour: 20, rules: MODERATION });
     return new ModerationService({
-      loader: new PhotoLoader(this.store, new SharpImageCodec()),
+      loader: new PhotoLoader(this.store, new SharpImageCodec(), MODERATION.maxUploadBytes),
       gate: this.gate,
       waste: this.waste,
       blur: new PrivacyBlur({ faces: this.faces, plates: this.plates, subjects: this.subjects, blurrer: new SharpBlurrer(), store: this.store }),
