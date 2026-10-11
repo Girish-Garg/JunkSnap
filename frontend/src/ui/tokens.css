@@ -79,7 +79,8 @@
   --text: #221c15;
   --text-secondary: #5f5446;
   --text-tertiary: #6f6354;
-  --map-bg: #f1ebe0;
+  /* The basemap's own land colour (BasemapTheme), so the map area reads as a map before its style arrives. */
+  --map-bg: #f3ede2;
   --accent: #0b7a73;
   --accent-hover: #08675f;
   --accent-pressed: #06554f;
@@ -149,7 +150,7 @@
     --text: #f7f0e4;
     --text-secondary: #c9bdaa;
     --text-tertiary: #a29684;
-    --map-bg: #201c17;
+    --map-bg: #1d1a16;
     --accent: #3cc7b8;
     --accent-hover: #5ad3c6;
     --accent-pressed: #2fb3a5;
@@ -199,7 +200,7 @@
   --text: #f7f0e4;
   --text-secondary: #c9bdaa;
   --text-tertiary: #a29684;
-  --map-bg: #201c17;
+  --map-bg: #1d1a16;
   --accent: #3cc7b8;
   --accent-hover: #5ad3c6;
   --accent-pressed: #2fb3a5;

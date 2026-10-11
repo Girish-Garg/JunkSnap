@@ -1,5 +1,6 @@
 import { LanguageToggle } from '../../../ui/LanguageToggle';
 import type { MapPageState } from '../hooks/useMapPage';
+import type { StatusActions } from '../hooks/useStatusActions';
 import type { MapNoticeView } from '../MapNotice';
 import { FiltersButton } from './FiltersButton';
 import { GoToMeButton } from './GoToMeButton';
@@ -15,10 +16,12 @@ interface MapSearchAreaProps {
   readonly listMode: boolean;
   /** Desktop lists the sites in view in its side panel, so it has no map or list toggle. */
   readonly desktop: boolean;
+  /** What the toast's buttons do (useStatusActions). */
+  readonly actions: StatusActions;
 }
 
 /** The top of the map: search, Filters with the map or list toggle, the status toast and "Go to my location". */
-export function MapSearchArea({ page, notice, listMode, desktop }: MapSearchAreaProps) {
+export function MapSearchArea({ page, notice, listMode, desktop, actions }: MapSearchAreaProps) {
   const { filters, browser } = page;
   const filtersButton = <FiltersButton activeCount={filters.filter.activeCount()} onOpen={() => filters.setOpen(true)} />;
   if (listMode) {
@@ -43,7 +46,7 @@ export function MapSearchArea({ page, notice, listMode, desktop }: MapSearchArea
           <ViewToggle listOpen={browser.open} onList={browser.start} />
         </div>
       )}
-      <MapStatus notice={notice} onNearest={page.showNearest} />
+      <MapStatus notice={notice} actions={actions} />
       {page.away && <GoToMeButton onGo={page.goToMe} />}
     </div>
   );

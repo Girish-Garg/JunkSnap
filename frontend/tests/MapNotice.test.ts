@@ -48,3 +48,42 @@ describe('MapNotice.pick for an empty view', () => {
     expect(keyFor({ loaded: false, loadedCount: 0, shownCount: 0 })).toBeNull();
   });
 });
+
+describe('MapNotice.pick for the basemap', () => {
+  it('says nothing before 600 ms, once drawn, or without a map', () => {
+    for (const basemap of ['idle', 'loading', 'loaded'] as const) expect(keyFor({ basemap })).toBeNull();
+  });
+
+  it('comes after offline; its Try again comes before a failed site load, its waits after', () => {
+    expect(keyFor({ basemap: 'failed', online: false })).toBe('notice.offline');
+    expect(keyFor({ basemap: 'failed', failed: true })).toBe('notice.mapFailed');
+    expect(keyFor({ basemap: 'slow', failed: true })).toBe('notice.loadFailed');
+    expect(MapNotice.pick({ ...CALM, basemap: 'failed', locationProblem: 'denied' })).toMatchObject({ key: 'notice.mapFailed', tone: 'alert', action: 'retryMap' });
+    expect(MapNotice.pick({ ...CALM, basemap: 'slow', clamped: true })).toMatchObject({ key: 'notice.mapSlow', action: 'mapless', busy: true });
+    expect(MapNotice.pick({ ...CALM, basemap: 'waiting', loadedCount: 0, shownCount: 0 })).toMatchObject({ key: 'notice.mapLoading', busy: true });
+  });
+});
+
+// Vitest hands CSS imports back empty, so the stylesheets are read from disk (the app has no Node types).
+type FileReader = { readFileSync(path: string, encoding: 'utf8'): string };
+const fs = (await import('node:fs' as string)) as FileReader;
+const rule = (file: string, selector: string) => {
+  const css = fs.readFileSync(file, 'utf8');
+  const at = css.indexOf(`\n${selector} {`);
+  return at < 0 ? '' : css.slice(at, css.indexOf('}', at));
+};
+
+// A 360 px phone cut "Only the middle of this wide view is loaded…" off at the screen edge (one unwrapped line).
+describe('the toast and the legend hint on a narrow phone', () => {
+  it('keeps the toast inside its column and wraps a long line to three lines at most', () => {
+    expect(rule('src/features/map/map.css', '.map-status')).toContain('max-width: 100%;');
+    const text = rule('src/features/map/map.css', '.map-status .notice__text');
+    expect(text).toContain('-webkit-line-clamp: 3;');
+    expect(text).not.toContain('nowrap');
+  });
+
+  it('puts the legend hint above its chip when the two do not fit side by side', () => {
+    expect(rule('src/features/map/boundaries.css', '.legend-toggle__row')).toContain('flex-wrap: wrap-reverse;');
+    expect(rule('src/features/map/boundaries.css', '.legend-toggle__chip')).toContain('flex: none;');
+  });
+});

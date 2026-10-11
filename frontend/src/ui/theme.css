@@ -263,6 +263,27 @@ a {
   color: var(--error);
 }
 
+/* Something still on its way (the map loading), the size of a notice icon; reduced motion leaves it still. */
+.spinner {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--divider);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+.notice--warn .spinner {
+  border-top-color: var(--status-reopened);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Loading: a soft sweep instead of a blink. */
 .skeleton {
   display: block;
