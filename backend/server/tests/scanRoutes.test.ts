@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { UnauthorizedError } from "../src/domain/errors.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ROUTE_BUILDERS } from "../src/handlers/routes.js";
 import { buildScanRoutes, scanRoutes } from "../src/handlers/scanRoutes.js";
 import { createApp } from "../src/handlers/web.js";
@@ -48,7 +49,7 @@ beforeEach(async () => {
   outcomes = new FakeFrameOutcomeReader();
   const findings = new ScanFindings(new PublicMedia("https://cdn.example"));
   const intake = new ScanIntake({ scans, queue, rules: new ScanSessionRules(), outcomes, findings, now });
-  const guard = new RouteGuard(new FakeAuthenticator());
+  const guard = new RouteGuard(new FakeAuthenticator(), new FakeUserStanding());
   const settings = CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" });
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(settings, [scanRoutes({ presigner, intake, guard })], logger);
@@ -271,7 +272,7 @@ describe("buildScanRoutes", () => {
     REPORTS_TABLE: "junksnap-dev-reports",
     PUBLIC_BASE_URL: "https://d111111abcdef8.cloudfront.net",
   };
-  const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1" };
+  const env = { ...scanEnv, COGNITO_USER_POOL_ID: "ap-south-1_AbCdEf123", COGNITO_CLIENT_ID: "client-1", USERS_TABLE: "junksnap-dev-users" };
 
   it("is registered with the api", () => {
     expect(ROUTE_BUILDERS).toContain(buildScanRoutes);

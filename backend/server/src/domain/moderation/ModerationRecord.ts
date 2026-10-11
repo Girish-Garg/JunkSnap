@@ -11,7 +11,7 @@ export interface ModerationParts {
   // Null when the image could not be decoded.
   readonly hash: PerceptualHash | null;
   readonly gate: GateVerdict;
-  // Null when rejected before blurring.
+  // Null for a rejected photo: no public copy exists.
   readonly blur: BlurRecord | null;
   readonly checks: AuthenticityReport;
   readonly note: NoteVerdict | null;

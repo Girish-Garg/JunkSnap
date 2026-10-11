@@ -6,7 +6,9 @@ import { JsonLoggerFactory } from "../src/adapters/JsonLoggerFactory.js";
 import { validateReportList, type ReportUpload } from "../src/contracts/index.gen.js";
 import { ExternalServiceError, ValidationError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
+import type { ReportRecord } from "../src/domain/ReportRecord.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
 import { createApp } from "../src/handlers/web.js";
 import type { AuthUser, Authenticator } from "../src/ports/Authenticator.js";
@@ -40,7 +42,7 @@ beforeEach(async () => {
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock });
   const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE, clock), mine: fakeMine(reports, BASE, clock) };
-  const plugin = new ReportEndpoints(services, new RouteGuard(new TokenIsUser())).plugin();
+  const plugin = new ReportEndpoints(services, new RouteGuard(new TokenIsUser(), new FakeUserStanding())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
 });
@@ -114,11 +116,54 @@ const quiet = new JsonLoggerFactory(new LogSink()).create({ service: "api", stag
 const row = (userId: string) => Report.receive({ ...upload(), upload_id: "upl_row_1" }, NOW, userId).toRecord();
 const cursorOf = (key: object) => Buffer.from(JSON.stringify(key)).toString("base64url");
 
+// A by-user Query over rows held newest first: Limit counts rows read before the snap filter, as DynamoDB does.
+class ByUserIndex {
+  queries = 0;
+  readonly #rows: ReportRecord[];
+
+  constructor(rows: ReportRecord[]) {
+    this.#rows = rows;
+  }
+
+  async send(command: QueryCommand): Promise<object> {
+    this.queries += 1;
+    const { Limit = 20, ExclusiveStartKey: after } = command.input;
+    const from = after === undefined ? 0 : this.#rows.findIndex((each) => each.report_id === after.report_id) + 1;
+    const read = this.#rows.slice(from, from + Limit);
+    const last = read.at(-1);
+    const more = read.length === Limit && last !== undefined;
+    const key = last && { report_id: last.report_id, user_id: last.user_id, received_at: last.received_at };
+    return { Items: read.filter((each) => each.capture_mode === "snap"), ...(more ? { LastEvaluatedKey: key } : {}) };
+  }
+
+  documents(): DynamoDBDocumentClient {
+    return this as unknown as DynamoDBDocumentClient;
+  }
+}
+
+// Row i was received i minutes before NOW; a scan frame when kind is "scan".
+function listedRow(i: number, kind: "snap" | "scan"): ReportRecord {
+  const scan = kind === "scan" ? { capture_mode: "scan" as const, scan: { scan_id: "scn_x", t_ms: i * 1000 } } : {};
+  const receivedAt = new Date(Date.parse(NOW) - i * 60_000).toISOString();
+  return Report.receive({ ...upload(), ...scan, upload_id: `upl_row_${i}` }, receivedAt, USER).toRecord();
+}
+
+async function everyPage(lister: DynamoUserReportLister, limit: number): Promise<string[][]> {
+  const pages: string[][] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await lister.page(USER, { limit, cursor });
+    pages.push(page.reports.map((report) => report.id));
+    cursor = page.nextCursor;
+  } while (cursor !== null && pages.length < 20);
+  return pages;
+}
+
 describe("DynamoUserReportLister", () => {
   it("queries by-user newest first, snaps only, and returns the next key as a cursor", async () => {
     const last = { report_id: "rpt_row_1", user_id: USER, received_at: NOW };
     const client = new ScriptedClient([{ Items: [row(USER)], LastEvaluatedKey: last }]);
-    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 20, cursor: null });
+    const page = await new DynamoUserReportLister(client.documents(), "reports", quiet).page(USER, { limit: 1, cursor: null });
     expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_1"]);
     expect(page.nextCursor).toBe(cursorOf(last));
     expect(client.commands[0]?.input).toMatchObject({
@@ -128,8 +173,36 @@ describe("DynamoUserReportLister", () => {
       FilterExpression: "capture_mode = :snap",
       ExpressionAttributeValues: { ":user": USER, ":snap": "snap" },
       ScanIndexForward: false,
-      Limit: 20,
+      Limit: 1,
     });
+  });
+
+  it("reads past a recent 60-frame scan to fill the page", async () => {
+    const rows = [...Array.from({ length: 60 }, (_, i) => listedRow(i, "scan")), ...[60, 61, 62].map((i) => listedRow(i, "snap"))];
+    const index = new ByUserIndex(rows);
+    const page = await new DynamoUserReportLister(index.documents(), "reports", quiet).page(USER, { limit: 20, cursor: null });
+    expect(page.reports.map((report) => report.id)).toEqual(["rpt_row_60", "rpt_row_61", "rpt_row_62"]);
+    expect(page.nextCursor).toBeNull();
+    expect(index.queries).toBe(4);
+  });
+
+  it("resumes after the last report shown when a round reads past the page, so no snap is skipped", async () => {
+    const kinds = ["scan", "snap", "snap", "snap", "snap", "snap", "scan", "snap"] as const;
+    const index = new ByUserIndex(kinds.map((kind, i) => listedRow(i, kind)));
+    const pages = await everyPage(new DynamoUserReportLister(index.documents(), "reports", quiet), 3);
+    expect(pages).toEqual([["rpt_row_1", "rpt_row_2", "rpt_row_3"], ["rpt_row_4", "rpt_row_5", "rpt_row_7"]]);
+  });
+
+  it("stops after 10 queries with a cursor that carries on where the reads stopped", async () => {
+    const rows = [...Array.from({ length: 250 }, (_, i) => listedRow(i, "scan")), listedRow(250, "snap")];
+    const index = new ByUserIndex(rows);
+    const lister = new DynamoUserReportLister(index.documents(), "reports", quiet);
+    const first = await lister.page(USER, { limit: 20, cursor: null });
+    expect(first.reports).toEqual([]);
+    expect(index.queries).toBe(10);
+    expect(first.nextCursor).toBe(cursorOf({ report_id: "rpt_row_199", user_id: USER, received_at: rows[199]?.received_at }));
+    const second = await lister.page(USER, { limit: 20, cursor: first.nextCursor });
+    expect(second.reports.map((report) => report.id)).toEqual(["rpt_row_250"]);
   });
 
   it("starts after the cursor's key", async () => {

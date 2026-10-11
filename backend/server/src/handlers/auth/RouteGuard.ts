@@ -1,24 +1,37 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import type { FastifyRequest } from "fastify";
 import { CognitoAuthenticator } from "../../adapters/CognitoAuthenticator.js";
-import { UnauthorizedError } from "../../domain/errors.js";
+import { DynamoUserStanding } from "../../adapters/DynamoUserStanding.js";
+import { SystemClock } from "../../adapters/SystemClock.js";
+import { ForbiddenError, UnauthorizedError } from "../../domain/errors.js";
 import type { AuthUser, Authenticator } from "../../ports/Authenticator.js";
+import type { UserStanding } from "../../ports/UserStanding.js";
+import { CachedUserStanding } from "../../services/CachedUserStanding.js";
 import { AuthSettings } from "../../settings/AuthSettings.js";
 import type { Env } from "../../settings/utils.js";
 
 const BEARER = /^Bearer +(\S+)$/i;
+// How long a users-row answer is reused; a new block takes effect within this.
+const STANDING_TTL_MS = 60_000;
 
 export type AuthRequest = Pick<FastifyRequest, "headers">;
 
-// Build one per route module with fromEnv, so its JWKS cache lives as long as the api.
+// Build one per route module with fromEnv, so its JWKS and standing caches live as long as the api.
 export class RouteGuard {
   readonly #authenticator: Authenticator;
+  readonly #standing: UserStanding;
 
-  constructor(authenticator: Authenticator) {
+  constructor(authenticator: Authenticator, standing: UserStanding) {
     this.#authenticator = authenticator;
+    this.#standing = standing;
   }
 
   static fromEnv(env: Env): RouteGuard {
-    return new RouteGuard(new CognitoAuthenticator(AuthSettings.fromEnv(env)));
+    const settings = AuthSettings.fromEnv(env);
+    const documents = DynamoDBDocumentClient.from(new DynamoDBClient({ region: settings.awsRegion }));
+    const standing = new CachedUserStanding(new DynamoUserStanding(documents, settings.usersTable), new SystemClock(), STANDING_TTL_MS);
+    return new RouteGuard(new CognitoAuthenticator(settings), standing);
   }
 
   async requireUser(request: AuthRequest): Promise<AuthUser> {
@@ -26,10 +39,14 @@ export class RouteGuard {
     if (token === undefined) {
       throw new UnauthorizedError("Sign in to do this.");
     }
-    return this.#authenticator.verify(token);
+    const user = await this.#authenticator.verify(token);
+    if (await this.#standing.isBlocked(user.userId)) {
+      throw new ForbiddenError("This account is blocked.");
+    }
+    return user;
   }
 
-  // Browsing never 401s: a missing, malformed or expired token is a guest; a JWKS outage still fails.
+  // Browsing never 401s: a missing, malformed or expired token is a guest; a JWKS outage and a blocked user still fail.
   async optionalUser(request: AuthRequest): Promise<AuthUser | undefined> {
     try {
       return await this.requireUser(request);

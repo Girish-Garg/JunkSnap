@@ -213,8 +213,29 @@ describe("ModerationService rejections", () => {
     harness.reportHashes.photos.push({ photoId: "rpt_jdh_0", hash, location: JODHPUR });
     const result = validateModerationResult(await harness.service().moderate(reportSubmission(jpeg)));
     expect(result).toMatchObject({ outcome: "rejected", reasons: ["duplicate"], duplicate_of: "rpt_jdh_0" });
-    expect(result.blurred_key).toBe("media/reports/rpt_jdh_1.jpg");
+    expect(result.blurred_key).toBeNull();
     expect([result.checks.rate_limit.result, result.checks.device_token.result]).toEqual(["skipped", "skipped"]);
+  });
+
+  const earlierCopy = async () => {
+    const hash = PerceptualHash.fromGrayscale(await new SharpImageCodec().grayscale(jpeg, PerceptualHash.SIDE));
+    harness.reportHashes.photos = [{ photoId: "rpt_jdh_0", hash, location: JODHPUR }];
+  };
+
+  it.each([
+    ["taken outside India", "outside_india", async () => void (harness.india.inside = false), {}],
+    ["with a stale timestamp", "stale_timestamp", async () => undefined, { captured_at: "2026-10-01T00:00:00Z" }],
+    ["that repeats an earlier one", "duplicate", earlierCopy, {}],
+    ["over the rate limit", "rate_limited", async () => void (harness.devices.counts.device = 21), {}],
+    ["from a blocked device", "blocked_device", async () => void (harness.devices.standings.device = { known: true, reputation: 0.1, blocked: true }), {}],
+  ])("never publishes a blurred copy of a photo %s, and records no blurred_key", async (_case, reason, arrange, overrides) => {
+    await arrange();
+    const publish = vi.spyOn(PrivacyBlur.prototype, "publish");
+    const result = validateModerationResult(await harness.service().moderate(reportSubmission(jpeg, overrides)));
+    expect(result).toMatchObject({ outcome: "rejected", reasons: [reason], blurred_key: null, blur: null });
+    expect(publish).not.toHaveBeenCalled();
+    expect(harness.store.written.size).toBe(0);
+    publish.mockRestore();
   });
 
   it("stops the chain at the first failure", async () => {
@@ -265,6 +286,8 @@ describe("ModerationService on cleanup after-photos", () => {
     const result = validateModerationResult(await harness.service().moderate(cleanup(jpeg, 26.2711)));
     expect(result.reasons).toEqual(["not_near_site"]);
     expect(result.checks.near_site?.result).toBe("fail");
+    expect([result.blurred_key, result.blur]).toEqual([null, null]);
+    expect(harness.store.written.size).toBe(0);
   });
 
   it("compares an after-photo with earlier after-photos of the site, never with its before-photos", async () => {
