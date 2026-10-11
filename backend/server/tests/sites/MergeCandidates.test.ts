@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MergeCandidates, olderFirst } from "../../src/domain/sites/MergeCandidates.js";
+import { MergeCandidates } from "../../src/domain/sites/MergeCandidates.js";
+import { olderFirst } from "../../src/domain/sites/utils.js";
 import type { MergeableReport } from "../../src/domain/sites/MergeableReport.js";
 import { Site } from "../../src/domain/sites/Site.js";
 import type { SiteProperties } from "../../src/domain/sites/SiteTypes.js";

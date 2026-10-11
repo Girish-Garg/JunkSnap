@@ -1,5 +1,6 @@
 import type { MergeableReport } from "./MergeableReport.js";
 import type { Site } from "./Site.js";
+import { olderFirst } from "./utils.js";
 
 // The open sites a report may join (Site.accepts: its type, within the merge radius, not rejected, removed or expired),
 // nearest first and the oldest on a tie (decision 20261011-1610-hem-same-spot-merge).
@@ -45,10 +46,4 @@ export class MergeCandidates {
   spotSite(): Site | null {
     return this.#open.find((site) => site.siteId === this.#report.spotSiteId) ?? null;
   }
-}
-
-// The older site first: the earlier first report, then the lower id, so every run and every worker picks the same one.
-export function olderFirst(a: Site, b: Site): number {
-  const first = (site: Site) => Date.parse(site.snapshot().feature.properties.first_reported_at);
-  return first(a) - first(b) || a.siteId.localeCompare(b.siteId);
 }

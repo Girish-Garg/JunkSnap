@@ -1,4 +1,4 @@
-import { olderFirst } from "../../src/domain/sites/MergeCandidates.js";
+import { olderFirst } from "../../src/domain/sites/utils.js";
 import type { Site } from "../../src/domain/sites/Site.js";
 import type { SiteProperties } from "../../src/domain/sites/SiteTypes.js";
 
