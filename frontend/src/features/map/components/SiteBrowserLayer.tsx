@@ -1,5 +1,7 @@
+import { ThinView } from '../../../domain/ThinView';
 import { useHistoryLayer } from '../../../ui/useHistoryLayer';
 import type { MapPageState } from '../hooks/useMapPage';
+import { useThinActions } from '../hooks/useThinActions';
 import { SiteListSheet } from './SiteListSheet';
 
 /**
@@ -9,7 +11,10 @@ import { SiteListSheet } from './SiteListSheet';
 export function SiteBrowserLayer({ page }: { readonly page: MapPageState }) {
   const { browser, filters } = page;
   const dismiss = useHistoryLayer('list', browser.open, browser.close);
+  const actions = useThinActions(page);
   if (!browser.visible) return null;
   const filtersButton = { activeCount: filters.filter.activeCount(), onOpen: () => filters.setOpen(true) };
-  return <SiteListSheet browser={browser} userLocation={page.location.position} filters={filtersButton} onClose={() => dismiss()} />;
+  const { rows, pilot } = browser;
+  const thin = ThinView.listShows({ rows: rows.sites.length, waiting: rows.fallback && pilot.sites === null, filtered: filtersButton.activeCount > 0 });
+  return <SiteListSheet browser={browser} userLocation={page.location.position} filters={filtersButton} thin={thin ? actions : null} onClose={() => dismiss()} />;
 }
