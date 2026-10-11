@@ -22,7 +22,7 @@ const RULES = [
   "Quote every rule in `citations` exactly as given, character for character, inside straight double quotes.",
   "Give each citation its own short paragraph: its document and clause, then the quote.",
   "Do not add a signature, a name or a placeholder for one; the resident signs.",
-  "State community_status as one sentence with its counts. Use the word verified (or सत्यापित) only when site_verified is true; otherwise say community verification is in progress.",
+  "State community_status as one sentence with its counts. When site_verified is false, never say the site is verified: say it is not verified yet and community verification is in progress.",
   "If residents_report is given, add it as one sentence in your own words with its count of people; never quote residents.",
   "If no_bin_statement is given, state it as plain prose before the request, keeping its counts, distances and sources; never inside quotation marks.",
   "Keep the quotes in English even when the letter is in another language.",

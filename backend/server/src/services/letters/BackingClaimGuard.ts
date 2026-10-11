@@ -1,11 +1,9 @@
 import { ExternalServiceError } from "../../domain/errors.js";
 import type { LetterBrief, LetterWriter, WrittenLetter } from "../../ports/letters/LetterWriter.js";
 import { DraftVerifier } from "./DraftVerifier.js";
+import { VerifiedClaim } from "./VerifiedClaim.js";
 
-// "verified" or सत्यापित as a word; unverified, verification, असत्यापित and सत्यापन do not match.
-const VERIFIED_CLAIM = /\bverified\b|(?<![\p{L}\p{M}])सत्यापित(?![\p{L}\p{M}])/iu;
-
-// Decision 20261011-1750: a model draft that calls an unverified site verified never ships; the drafter falls back to the template.
+// Decision 20261011-1750: a model draft that overstates the site's backing never ships; the drafter falls back to the template.
 export class BackingClaimGuard implements LetterWriter {
   readonly #writer: LetterWriter;
 
@@ -15,16 +13,25 @@ export class BackingClaimGuard implements LetterWriter {
 
   async write(brief: LetterBrief): Promise<WrittenLetter> {
     const written = await this.#writer.write(brief);
-    if (!brief.site.verified && BackingClaimGuard.claimsVerified(written)) {
-      throw new ExternalServiceError("model draft calls an unverified site verified");
+    const problem = BackingClaimGuard.problem(written, brief.site.verified);
+    if (problem !== null) {
+      throw new ExternalServiceError(`model draft ${problem}`);
     }
     return written;
   }
 
-  // Quoted rule text may say verified; only the letter's own prose is checked.
-  static claimsVerified(written: WrittenLetter): boolean {
+  // Null when the draft is honest; "not yet verified" and its Hindi forms are honest for an unverified site.
+  static problem(written: WrittenLetter, siteVerified: boolean): string | null {
+    const claim = new VerifiedClaim(BackingClaimGuard.#ownProse(written));
+    if (claim.undercounts()) {
+      return "says verified by fewer people than verification needs";
+    }
+    return !siteVerified && claim.affirms() ? "calls an unverified site verified" : null;
+  }
+
+  // Quoted rule text may say verified; only the letter's own prose is read.
+  static #ownProse(written: WrittenLetter): string {
     const text = `${written.subject}\n${written.body}`;
-    const prose = DraftVerifier.passages(text).reduce((rest, passage) => rest.replace(passage, " "), text);
-    return VERIFIED_CLAIM.test(prose.normalize("NFC"));
+    return DraftVerifier.passages(text).reduce((rest, passage) => rest.replace(passage, " "), text);
   }
 }

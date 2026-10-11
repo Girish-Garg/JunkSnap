@@ -66,19 +66,23 @@ describe("a letter for an unverified site", () => {
 });
 
 describe("a model draft for an unverified site", () => {
-  it("falls back to the template when it calls the site verified", async () => {
+  it("falls back to the template, and says so, when it calls the site verified", async () => {
     const logger = new RecordingLogger();
     const writer = modelSaying("This site has been verified by residents.");
     const letter = await (await letterService({ sites: [waiting], writer, logger })).draft(request);
-    expect(letter).toMatchObject({ template_fallback: true, provider: "junksnap", model: "letter-template" });
+    expect(letter).toMatchObject({ template_fallback: true, provider: "junksnap", model: "letter-template", version: "1" });
     expect(letter.body).not.toContain("has been verified");
     expect(logger.warnings).toEqual([expect.stringContaining("letter writer failed")]);
   });
 
-  it("ships when it says verification is in progress, with the counts", async () => {
-    const writer = modelSaying("Reported by 2 residents; community verification is in progress (3 of 10 people confirmed so far).");
-    const letter = await (await letterService({ sites: [waiting], writer })).draft(request);
+  it.each([
+    ["verification in progress", "Reported by 2 residents; community verification is in progress (3 of 10 people confirmed so far)."],
+    ["not yet verified", "This site is not yet verified: 3 of 10 people have confirmed it so far."],
+    ["Hindi, not verified yet", "यह स्थल अभी सत्यापित नहीं है; 10 में से 3 लोगों ने अब तक पुष्टि की है।"],
+  ])("ships the model's prose, with the model named, when it says %s", async (_name, sentence) => {
+    const letter = await (await letterService({ sites: [waiting], writer: modelSaying(sentence) })).draft(request);
     expect(letter).toMatchObject({ template_fallback: false, ...MODEL });
+    expect(letter.body).toContain(sentence);
   });
 
   it("ships for a verified site that says so", async () => {
@@ -86,13 +90,12 @@ describe("a model draft for an unverified site", () => {
     expect(letter.template_fallback).toBe(false);
   });
 
-  it("reads only the letter's own prose: quoted text and unverified are no claim", () => {
-    const claims = (body: string) => BackingClaimGuard.claimsVerified({ subject: "Request", body, provenance: MODEL });
-    expect(claims('Rule 4 says "the quantity shall be verified by the authority".')).toBe(false);
-    expect(claims("It is still unverified; community verification is in progress.")).toBe(false);
-    expect(claims("यह स्थल असत्यापित है; सत्यापन जारी है।")).toBe(false);
-    expect(claims("The site is Verified.")).toBe(true);
-    expect(claims("यह स्थल सत्यापित है।")).toBe(true);
+  it("reads only the letter's own prose: a quoted rule may say verified", () => {
+    const problem = (body: string, siteVerified = false) => BackingClaimGuard.problem({ subject: "Request", body, provenance: MODEL }, siteVerified);
+    expect(problem('Rule 4 says "the quantity shall be verified by the authority".')).toBeNull();
+    expect(problem("The site is Verified.")).toBe("calls an unverified site verified");
+    expect(problem("It was verified by 3 people.", true)).toBe("says verified by fewer people than verification needs");
+    expect(problem("It was verified by 12 people.", true)).toBeNull();
   });
 });
 
