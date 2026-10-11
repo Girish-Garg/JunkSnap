@@ -66,6 +66,7 @@
                 <data android:scheme="https" />
                 <data android:host="junksnap.coehemang.dev" />
                 <data android:host="demo.d3iec0rb3f75jm.amplifyapp.com" />
+                <data android:pathPrefix="/share/" />
                 <data android:pathPrefix="/sites/" />
                 <data android:pathPrefix="/areas/" />
                 <data android:pathPrefix="/activity/reports/" />
