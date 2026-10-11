@@ -33,6 +33,15 @@
   --s-12: 48px;
   --edge: var(--s-4);
 
+  /* Spacing roles (DESIGN.md, Spacing rules). A flex or grid gap spaces its children; children add no margin. */
+  --card-pad: var(--s-4);
+  --card-gap: var(--s-3);
+  --section-gap: var(--s-6);
+  --inline-gap: var(--s-2);
+  --sheet-edge: var(--edge);
+  /* Floating map buttons, the legend and a map card sit this far above the map's foot, clear of Report. */
+  --map-foot: calc(var(--report-overhang) + var(--s-2));
+
   /* Radii: soft and round, the playful register. */
   --radius-xs: 8px;
   --radius-s: 12px;

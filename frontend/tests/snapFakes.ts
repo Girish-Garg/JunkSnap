@@ -215,7 +215,7 @@ export function testSnapServices(options: SnapTestOptions): SnapServices {
     gps,
     ...testActions(testSiteActions(options.siteApi, { uploads: api, identity, gps }), { reports: queue, scans, statuses: api, dismissed }),
     areaLetters: new AreaLetterService(testAreaLetterApi(options.areaLetterApi), identity),
-    noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16))),
+    noBin: new NoBinReporter(api, identity, () => crypto.getRandomValues(new Uint8Array(16)), queue),
   };
 }
 

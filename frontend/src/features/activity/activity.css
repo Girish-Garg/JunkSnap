@@ -11,8 +11,8 @@
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
-  margin: var(--s-4) 0 0;
+  gap: var(--card-gap);
+  margin: var(--section-gap) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -20,7 +20,7 @@
 .activity-card {
   display: flex;
   flex-direction: column;
-  padding: var(--s-3);
+  padding: var(--card-pad);
   border: var(--outline) solid var(--divider);
   border-radius: var(--radius-l);
   background: var(--surface);
@@ -90,7 +90,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2);
+  /* Text buttons reach --text-bleed past their label (DESIGN.md rule 4). */
+  gap: var(--inline-gap) var(--s-6);
   margin-top: var(--s-3);
   padding-top: var(--s-2);
   border-top: 1px solid var(--divider);
@@ -110,7 +111,8 @@
   flex-basis: 100%;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2);
+  /* Text buttons reach --text-bleed past their label (DESIGN.md rule 4). */
+  gap: var(--inline-gap) var(--s-6);
   padding: var(--s-3);
   border-radius: var(--radius-m);
   background: var(--tile);

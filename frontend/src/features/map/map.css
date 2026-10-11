@@ -217,7 +217,7 @@
 .map-controls {
   position: absolute;
   right: var(--edge);
-  bottom: calc(var(--s-6) + var(--s-2));
+  bottom: var(--map-foot);
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -269,9 +269,9 @@
   filter: invert(1);
 }
 
-/* A floating card publishes its measured height (useCardHeight); the fallback is the pin card's usual height. */
+/* A floating card sits on the map foot and publishes its measured height before paint (useCardHeight). */
 .map-page--card .map-controls {
-  bottom: calc(var(--card-height, 176px) + var(--s-6) + var(--s-2));
+  bottom: calc(var(--map-foot) + var(--card-height, 0px) + var(--inline-gap));
 }
 
 /* The sign-in sheet covers everything but the search field. */

@@ -64,6 +64,15 @@ export class QueuedReport {
     });
   }
 
+  /**
+   * A no-bin report the api accepted (no photo, nothing to queue) as an Activity row. Its id is the report id, as
+   * ListedReport.rowId gives a listed no-bin report, so GET /me/reports later updates this row instead of adding one.
+   */
+  static sentNoBin(draft: ReportDraft, reportId: string, now: Date): QueuedReport {
+    const empty = { upload: null, status: null, attempts: 0, put_refusals: 0, retry_at: null, problem: null } as const;
+    return new QueuedReport({ ...empty, id: reportId, stage: 'sent', draft, photo: null, report_id: reportId, saved_at: now.toISOString() });
+  }
+
   get id(): string {
     return this.data.id;
   }

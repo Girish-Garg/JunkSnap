@@ -1,8 +1,7 @@
 /* The Snap place step: right here, or a long-range pin on a small map (decision 20261011-0400). Tokens only. */
 .place-target {
   display: grid;
-  gap: var(--s-2);
-  margin-top: var(--s-3);
+  gap: var(--inline-gap);
 }
 
 .target-map {

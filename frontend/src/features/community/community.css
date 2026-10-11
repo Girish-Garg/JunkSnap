@@ -3,8 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  margin-top: var(--s-4);
-  padding: var(--s-4);
+  margin-top: var(--section-gap);
+  padding: var(--card-pad);
   border: 1px solid var(--divider);
   border-radius: var(--radius-m);
 }
@@ -20,15 +20,16 @@
   color: var(--text-secondary);
 }
 
+/* Text buttons reach --text-bleed past their label, so the row leaves room for both bleeds between buttons. */
 .vote-box__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
+  gap: var(--inline-gap) var(--s-6);
 }
 
 .vote-box {
   gap: var(--s-3);
-  padding: var(--s-4);
+  padding: var(--card-pad);
   border: var(--outline) solid var(--divider);
   border-radius: var(--radius-l);
   animation: pop-in var(--dur-3) var(--spring);
@@ -50,8 +51,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  margin-top: var(--s-4);
-  padding: var(--s-4);
+  margin-top: var(--card-gap);
+  padding: var(--card-pad);
   border: var(--outline) solid var(--divider);
   border-radius: var(--radius-l);
 }
