@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const tries = (max: number, fallback: number) => z.coerce.number().int().min(1).max(max).default(fallback);
 
@@ -31,6 +31,6 @@ export class RetrySettings {
   }
 
   static fromEnv(env: Env): RetrySettings {
-    return new RetrySettings(parseEnv(RetryEnv, env));
+    return new RetrySettings(parseTunables(RetryEnv, env));
   }
 }

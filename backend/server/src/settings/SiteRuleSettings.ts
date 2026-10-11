@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { PhotoFlagRules, SiteRules } from "../domain/sites/SiteRules.js";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const people = (fallback: number, min = 1) => z.coerce.number().int().min(min).max(1_000).default(fallback);
 const metres = (fallback: number) => z.coerce.number().int().min(1).max(50_000).default(fallback);
@@ -18,9 +18,10 @@ const SiteRuleEnv = z
     ZONE_MERGE_RADIUS_M: metres(500),
     TARGET_MAX_M: metres(500),
     MERGE_MIN_COSINE: z.coerce.number().gt(0).max(1).default(0.88),
-    PHOTO_FLAG_WARN: people(3),
-    PHOTO_FLAG_HIDE: people(8),
-    PHOTO_FLAG_HIDE_EARLY: people(5),
+    // Decision 20261011-0310-hem-photo-flags: nothing happens on one person's word.
+    PHOTO_FLAG_WARN: people(3, 2),
+    PHOTO_FLAG_HIDE: people(8, 2),
+    PHOTO_FLAG_HIDE_EARLY: people(5, 2),
     PHOTO_FLAG_SURPLUS: people(5),
     FLAG_RADIUS_M: metres(1_000),
     // The site schema caps insights.near distance_m at 100.
@@ -70,6 +71,6 @@ export class SiteRuleSettings implements SiteRules {
   }
 
   static fromEnv(env: Env): SiteRuleSettings {
-    return new SiteRuleSettings(parseEnv(SiteRuleEnv, env));
+    return new SiteRuleSettings(parseTunables(SiteRuleEnv, env));
   }
 }

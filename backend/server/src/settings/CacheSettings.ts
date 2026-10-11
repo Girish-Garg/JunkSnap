@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const YEAR_SECONDS = 31_536_000;
 const seconds = (min: number, max: number, fallback: number) => z.coerce.number().int().min(min).max(max).default(fallback);
@@ -34,7 +34,7 @@ export class CacheSettings {
   }
 
   static fromEnv(env: Env): CacheSettings {
-    return new CacheSettings(parseEnv(CacheEnv, env));
+    return new CacheSettings(parseTunables(CacheEnv, env));
   }
 
   // A public Cache-Control value.

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const CrawlEnv = z.object({
   CRAWLS_TABLE: z.string().optional(),
@@ -22,6 +22,6 @@ export class CrawlSettings {
   }
 
   static fromEnv(env: Env): CrawlSettings {
-    return new CrawlSettings(parseEnv(CrawlEnv, env));
+    return new CrawlSettings(parseTunables(CrawlEnv, env, ["CRAWL_ACTIVATE_AFTER", "CRAWL_EXPECTED_HOURS"]));
   }
 }

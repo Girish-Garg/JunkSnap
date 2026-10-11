@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 // One AWS SDK client's limits: connect, whole request (stops once headers arrive) and idle socket (covers the body read).
 export interface AwsTimeouts {
@@ -70,7 +70,7 @@ export class TimeoutSettings {
   }
 
   static fromEnv(env: Env): TimeoutSettings {
-    return new TimeoutSettings(parseEnv(TimeoutEnv, env));
+    return new TimeoutSettings(parseTunables(TimeoutEnv, env));
   }
 
   static #aws(values: TimeoutValues): AwsTimeoutProfiles {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 // Area scores and everything that withholds by them (area letters, zero-count rows); api, worker and scores agree.
 const ScoreEnv = z.object({
@@ -20,6 +20,6 @@ export class ScoreSettings {
   }
 
   static fromEnv(env: Env): ScoreSettings {
-    return new ScoreSettings(parseEnv(ScoreEnv, env));
+    return new ScoreSettings(parseTunables(ScoreEnv, env));
   }
 }

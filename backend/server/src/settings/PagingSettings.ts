@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const pages = (max: number, fallback: number) => z.coerce.number().int().min(1).max(max).default(fallback);
 
@@ -38,6 +38,6 @@ export class PagingSettings {
   }
 
   static fromEnv(env: Env): PagingSettings {
-    return new PagingSettings(parseEnv(PagingEnv, env));
+    return new PagingSettings(parseTunables(PagingEnv, env));
   }
 }

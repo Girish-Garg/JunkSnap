@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, splitList, type Env } from "./utils.js";
+import { parseTunables, splitList, type Env } from "./utils.js";
 
 // The Android app's package id (applicationId in apps/android-tauri/src-tauri/gen/android/app/build.gradle.kts).
 export const ANDROID_PACKAGE = "com.junksnap.app";
@@ -37,7 +37,7 @@ export class AndroidAppSettings {
   }
 
   static fromEnv(env: Env): AndroidAppSettings {
-    const values = parseEnv(AndroidEnv, env);
+    const values = parseTunables(AndroidEnv, env, ["ANDROID_HANDOFF_WAIT_MS"]);
     return new AndroidAppSettings(values.ANDROID_CERT_SHA256, values.ANDROID_HANDOFF_WAIT_MS);
   }
 }

@@ -62,6 +62,15 @@ describe("FramePlanner", () => {
     ]);
   });
 
+  it("adds no hinted frame when SCAN_MAX_HINT_FRAMES is 0", () => {
+    const none = new FramePlanner({ ...SCAN.frames, maxHintFrames: 0 });
+    expect(none.plan(3000, [hint(1600, 0.5), hint(2000, 0.9)])).toEqual([{ tMs: 0 }, { tMs: 1000 }, { tMs: 2000 }]);
+    const one = new FramePlanner({ ...SCAN.frames, maxHintFrames: 1 });
+    expect(one.plan(3000, [hint(1600, 0.5), hint(2500, 0.9)]).filter((planned) => planned.hintScore !== undefined)).toEqual([
+      { tMs: 2500, hintScore: 0.9 },
+    ]);
+  });
+
   it("keeps the strongest hint at a repeated time and at most 60 hinted frames", () => {
     expect(planner.plan(1000, [hint(500, 0.9), hint(500, 0.2)])).toContainEqual({ tMs: 500, hintScore: 0.9 });
     const many = Array.from({ length: 200 }, (_value, i) => hint(i * 250 + 1, i / 200));

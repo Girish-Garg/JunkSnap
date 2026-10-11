@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AreaListLimits } from "../domain/AreaListRequest.js";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 // The area_list contract caps a page at 200 areas, so neither may go above it.
 const AreaListEnv = z
@@ -24,6 +24,6 @@ export class AreaListSettings implements AreaListLimits {
   }
 
   static fromEnv(env: Env): AreaListSettings {
-    return new AreaListSettings(parseEnv(AreaListEnv, env));
+    return new AreaListSettings(parseTunables(AreaListEnv, env));
   }
 }

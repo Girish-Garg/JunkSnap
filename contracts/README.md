@@ -387,9 +387,9 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `CLEARED_MARGIN` | api, worker | `3`: how many more people must say cleared than say still there |
 | `VOTE_RADIUS_M` | api | `1000`: a voter's GPS must be within this many metres of the site |
 | `FLAG_RADIUS_M` | api | `1000`: a photo reporter's GPS must be within this many metres of the site |
-| `PHOTO_FLAG_WARN` | api | `3`: distinct people whose reports warn a photo; at most `PHOTO_FLAG_HIDE` |
-| `PHOTO_FLAG_HIDE` | api | `8`: distinct people whose reports hide a photo |
-| `PHOTO_FLAG_HIDE_EARLY` | api | `5`: fewer people hide a photo early when they outnumber its other backers by `PHOTO_FLAG_SURPLUS`; at most `PHOTO_FLAG_HIDE` |
+| `PHOTO_FLAG_WARN` | api | `3`, at least 2 (nothing happens on one person's word) and at most `PHOTO_FLAG_HIDE`: distinct people whose reports warn a photo |
+| `PHOTO_FLAG_HIDE` | api | `8`, at least 2: distinct people whose reports hide a photo |
+| `PHOTO_FLAG_HIDE_EARLY` | api | `5`, at least 2 and at most `PHOTO_FLAG_HIDE`: fewer people hide a photo early when they outnumber its other backers by `PHOTO_FLAG_SURPLUS` |
 | `PHOTO_FLAG_SURPLUS` | api | `5`: the surplus over the backers that hides a photo early or removes a site whose every photo is hidden |
 | `SITE_TTL_DAYS` | api, worker, scores | `90`: days without a merged report, vote or accepted after-photo before an open site expires |
 | `SITE_MERGE_RADIUS_M` | worker | `40`: a photo report merges into a site of its type within this many metres; also the radius of the ml `nearby_verified_reports` feature |
@@ -423,7 +423,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `AREA_LETTER_MAX_PAGES` | api | `20`: sites-table scan pages an area letter reads before it fails |
 | `NOTES_MAX_PAGES` | api | `5`: query pages of notes, report notes and photo report texts read for one site's community analysis |
 | `MY_REPORTS_MAX_ROUNDS` | api | `10`: `by-user` queries `GET /me/reports` runs to fill one page |
-| `MAP_MAX_SITES` | api | `500`: sites `GET /sites?bbox` returns at most, newest first |
+| `MAP_MAX_SITES` | api, worker | `500`: sites `GET /sites?bbox` returns at most, newest first; the worker's nearby-verified count for ml reads sites through the same cap |
 | `SHARE_CACHE_MAX_AGE_SECONDS` | api | `300`: `Cache-Control` max-age of the link-preview pages |
 | `ASSETLINKS_CACHE_MAX_AGE_SECONDS` | api | `3600`: `Cache-Control` max-age of `/.well-known/assetlinks.json` |
 | `MEDIA_CACHE_MAX_AGE_SECONDS` | worker | `86400`: `Cache-Control` max-age the worker writes on every blurred public copy |
@@ -476,6 +476,8 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 | `JUNKSNAP_DATA_CACHE` | training tooling in `backend/ml/training` (local, not a workload) | local folder for downloaded training images, outside the repo and never committed |
 | `ML_MODEL_DIR` | ml | optional local folder for downloaded model files; default `/tmp/junksnap-models` |
 | `JUNKSNAP_REPO` | training tooling (local, not a workload) | path to the repo checkout, for `data/datasets/` manifests and `contracts/` |
+
+Every tunable variable with a default above (the rule, limit, rate, timeout, retry, paging, cache and model-limit variables of `backend/server`) reads a blank or whitespace-only value as unset, so its default applies. `CORS_ORIGINS`, the table names and the other variables keep their own meaning of a blank value.
 
 Reverse geocoding uses Amazon Location Places v2 (`geo-places:ReverseGeocode`), which needs no place index, so there is no `PLACE_INDEX` variable; the worker's Pod Identity role gets that one action.
 

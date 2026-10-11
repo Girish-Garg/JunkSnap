@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 // The reports queue (contracts/README.md, SQS). QUEUE_VISIBILITY_SECONDS and QUEUE_MAX_RECEIVE_COUNT mirror the
 // queue's own settings in infra; change them together.
@@ -33,7 +33,7 @@ export class QueueSettings {
   }
 
   static fromEnv(env: Env): QueueSettings {
-    return new QueueSettings(parseEnv(QueueEnv, env));
+    return new QueueSettings(parseTunables(QueueEnv, env));
   }
 
   // The worker merges up to a batch of reports at once, so in each round of conflicts at least one writer wins.

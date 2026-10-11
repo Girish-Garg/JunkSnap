@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ModelLimits } from "../domain/llm/ModelLimits.js";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const tokens = (fallback: number) => z.coerce.number().int().min(10).max(16_000).default(fallback);
 
@@ -33,6 +33,6 @@ export class ModelLimitSettings {
   }
 
   static fromEnv(env: Env): ModelLimitSettings {
-    return new ModelLimitSettings(parseEnv(ModelLimitEnv, env));
+    return new ModelLimitSettings(parseTunables(ModelLimitEnv, env));
   }
 }

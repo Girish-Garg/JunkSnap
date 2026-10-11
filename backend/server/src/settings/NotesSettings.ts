@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const NotesEnv = z.object({
   NOTES_TABLE: z.string().min(1),
@@ -32,6 +32,6 @@ export class NotesSettings {
   }
 
   static fromEnv(env: Env): NotesSettings {
-    return new NotesSettings(parseEnv(NotesEnv, env));
+    return new NotesSettings(parseTunables(NotesEnv, env, ["NOTES_PER_HOUR", "NOTE_ANALYSIS_INTERVAL_MINUTES"]));
   }
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ModerationRules } from "../domain/moderation/ModerationRules.js";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const MEBIBYTE = 1024 * 1024;
 const whole = (min: number, max: number, fallback: number) => z.coerce.number().int().min(min).max(max).default(fallback);
@@ -40,6 +40,6 @@ export class ModerationRuleSettings implements ModerationRules {
   }
 
   static fromEnv(env: Env): ModerationRuleSettings {
-    return new ModerationRuleSettings(parseEnv(ModerationRuleEnv, env));
+    return new ModerationRuleSettings(parseTunables(ModerationRuleEnv, env));
   }
 }

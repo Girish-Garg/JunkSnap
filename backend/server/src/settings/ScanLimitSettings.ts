@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ScanFrameRules, ScanGpsLimits, ScanLimits, ScanVideoLimits } from "../domain/scanLimits.js";
-import { parseEnv, type Env } from "./utils.js";
+import { parseTunables, type Env } from "./utils.js";
 
 const MEBIBYTE = 1024 * 1024;
 const whole = (min: number, max: number, fallback: number) => z.coerce.number().int().min(min).max(max).default(fallback);
@@ -49,7 +49,7 @@ export class ScanLimitSettings implements ScanLimits {
   }
 
   static fromEnv(env: Env): ScanLimitSettings {
-    return new ScanLimitSettings(parseEnv(ScanLimitEnv, env));
+    return new ScanLimitSettings(parseTunables(ScanLimitEnv, env));
   }
 
   static #frames(values: ScanLimitValues): ScanFrameRules {

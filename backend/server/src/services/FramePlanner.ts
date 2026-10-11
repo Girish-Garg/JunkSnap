@@ -21,10 +21,9 @@ export class FramePlanner {
   }
 
   // Weakest first, so the strongest hint at a repeated t_ms is written last and wins.
+  // slice(-0) would keep every hint, so SCAN_MAX_HINT_FRAMES=0 counts from the front.
   #strongestLast(detections: readonly ScanDetection[], durationMs: number): ScanDetection[] {
-    return detections
-      .filter((hint) => hint.t_ms < durationMs)
-      .toSorted((a, b) => a.score - b.score)
-      .slice(-this.#rules.maxHintFrames);
+    const hints = detections.filter((hint) => hint.t_ms < durationMs).toSorted((a, b) => a.score - b.score);
+    return hints.slice(Math.max(0, hints.length - this.#rules.maxHintFrames));
   }
 }

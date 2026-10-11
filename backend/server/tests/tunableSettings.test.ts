@@ -3,6 +3,8 @@ import { ConfigError } from "../src/domain/errors.js";
 import { AreaListSettings } from "../src/settings/AreaListSettings.js";
 import { CacheSettings } from "../src/settings/CacheSettings.js";
 import { AndroidAppSettings } from "../src/settings/AndroidAppSettings.js";
+import { CoreSettings } from "../src/settings/CoreSettings.js";
+import { RateLimitSettings } from "../src/settings/RateLimitSettings.js";
 import { CrawlSettings } from "../src/settings/CrawlSettings.js";
 import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
 import { ModerationRuleSettings } from "../src/settings/ModerationRuleSettings.js";
@@ -40,9 +42,9 @@ const RULE_TUNABLES: readonly Tunable[] = [
   { name: "ZONE_MERGE_RADIUS_M", read: (env) => rules(env).zoneMergeRadiusM, fallback: 500, good: ["300", 300], bad: ["0"] },
   { name: "TARGET_MAX_M", read: (env) => rules(env).targetMaxM, fallback: 500, good: ["300", 300], bad: ["0", "far"] },
   { name: "MERGE_MIN_COSINE", read: (env) => rules(env).mergeMinCosine, fallback: 0.88, good: ["0.9", 0.9], bad: ["0", "1.2", "-0.5"] },
-  { name: "PHOTO_FLAG_WARN", read: (env) => rules(env).flags.warn, fallback: 3, good: ["2", 2], bad: COUNT_BAD },
-  { name: "PHOTO_FLAG_HIDE", read: (env) => rules(env).flags.hide, fallback: 8, good: ["10", 10], bad: COUNT_BAD },
-  { name: "PHOTO_FLAG_HIDE_EARLY", read: (env) => rules(env).flags.hideEarly, fallback: 5, good: ["4", 4], bad: COUNT_BAD },
+  { name: "PHOTO_FLAG_WARN", read: (env) => rules(env).flags.warn, fallback: 3, good: ["2", 2], bad: ["1", ...COUNT_BAD] },
+  { name: "PHOTO_FLAG_HIDE", read: (env) => rules(env).flags.hide, fallback: 8, good: ["10", 10], bad: ["1", ...COUNT_BAD] },
+  { name: "PHOTO_FLAG_HIDE_EARLY", read: (env) => rules(env).flags.hideEarly, fallback: 5, good: ["4", 4], bad: ["1", ...COUNT_BAD] },
   { name: "PHOTO_FLAG_SURPLUS", read: (env) => rules(env).flags.surplus, fallback: 5, good: ["6", 6], bad: COUNT_BAD },
   { name: "MIN_VERIFIED_REPORTS", read: (env) => ScoreSettings.fromEnv(env).minVerifiedReports, fallback: 10, good: ["5", 5], bad: COUNT_BAD },
   { name: "MIN_BIN_SERVICE_SITES", read: (env) => ScoreSettings.fromEnv(env).minBinServiceSites, fallback: 3, good: ["4", 4], bad: COUNT_BAD },
@@ -145,11 +147,28 @@ const CHECK_TUNABLES: readonly Tunable[] = [
   { name: "ANDROID_HANDOFF_WAIT_MS", read: (env) => AndroidAppSettings.fromEnv(env).handoffWaitMs, fallback: 2_000, good: ["1500", 1_500], bad: ["-1", "30001"] },
 ];
 
+const rates = (env: Env) => RateLimitSettings.fromEnv(env);
+
+// Variables that existed before this sweep but now also read a blank value as unset.
+const EARLIER_TUNABLES: readonly Tunable[] = [
+  { name: "SNAP_PER_HOUR", read: (env) => rates(env).snapPerHour, fallback: 20, good: ["100", 100], bad: COUNT_BAD },
+  { name: "CONFIRMATIONS_PER_HOUR", read: (env) => rates(env).confirmationsPerHour, fallback: 20, good: ["5", 5], bad: COUNT_BAD },
+  { name: "LETTERS_PER_HOUR", read: (env) => rates(env).lettersPerHour, fallback: 5, good: ["2", 2], bad: COUNT_BAD },
+  { name: "FLAGS_PER_HOUR", read: (env) => rates(env).flagsPerHour, fallback: 10, good: ["4", 4], bad: COUNT_BAD },
+  { name: "WITHDRAWALS_PER_HOUR", read: (env) => rates(env).withdrawalsPerHour, fallback: 10, good: ["3", 3], bad: COUNT_BAD },
+  { name: "NOTES_PER_HOUR", read: (env) => NotesSettings.fromEnv({ ...NOTE_TABLES, ...env }).notesPerHour, fallback: 10, good: ["6", 6], bad: COUNT_BAD },
+  { name: "CRAWL_ACTIVATE_AFTER", read: (env) => CrawlSettings.fromEnv(env).activateAfter, fallback: 1, good: ["3", 3], bad: COUNT_BAD },
+];
+
 function describeTunables(title: string, tunables: readonly Tunable[]): void {
   describe(title, () => {
     describe.each(tunables)("$name", ({ name, read, fallback, good, bad }) => {
       it("defaults to today's value", () => {
         expect(read({})).toBe(fallback);
+      });
+
+      it.each(["", "  "])("reads the blank value %j as unset", (blank) => {
+        expect(read({ [name]: blank })).toBe(fallback);
       });
 
       it("reads a valid value", () => {
@@ -168,6 +187,22 @@ describeTunables("scan variables", SCAN_TUNABLES);
 describeTunables("timeout variables", TIMEOUT_TUNABLES);
 describeTunables("retry, paging, cache and model limit variables", OPERATIONAL_TUNABLES);
 describeTunables("photo check, nearby place, bbox, crawl and handoff variables", CHECK_TUNABLES);
+describeTunables("rate limits and crawl activation", EARLIER_TUNABLES);
+
+describe("blank values outside the tunables", () => {
+  it("keep CORS_ORIGINS= meaning any origin in dev and refused in demo", () => {
+    expect(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev", CORS_ORIGINS: "" }).allowedOrigins()).toBe("*");
+    expect(() => CoreSettings.fromEnv({ JUNKSNAP_STAGE: "demo", CORS_ORIGINS: "" }).allowedOrigins()).toThrow(ConfigError);
+  });
+
+  it("keep CRAWLS_TABLE= meaning no crawls table, next to a blank tunable", () => {
+    expect(CrawlSettings.fromEnv({ CRAWLS_TABLE: "", CRAWL_EXPECTED_HOURS: "" })).toMatchObject({ crawlsTable: null, expectedWithinMs: 7_200_000 });
+  });
+
+  it("keep refusing a blank required table name", () => {
+    expect(() => NotesSettings.fromEnv({ ...NOTE_TABLES, NOTES_TABLE: "" })).toThrow(ConfigError);
+  });
+});
 
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {
