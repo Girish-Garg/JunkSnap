@@ -3,7 +3,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  margin-top: var(--s-6);
+  margin-top: var(--section-gap);
+}
+
+/* The form's gap spaces its lines; a lead line adds no margin of its own. */
+.form > .sheet-text {
+  margin-top: 0;
 }
 
 .field {
@@ -217,16 +222,35 @@
   cursor: progress;
 }
 
+/* Text buttons: the label sits on the content edge like the text around it; the tap area and the hover pill
+   reach --text-bleed past it on each side (::before), so a text button never looks indented. */
 .button--text {
+  --text-bleed: var(--s-3);
+  position: relative;
+  isolation: isolate;
   min-width: var(--target);
   min-height: var(--target);
-  padding: 0 var(--s-3);
+  padding: 0;
   background: transparent;
   color: var(--accent-ink);
 }
 
-.button--text:hover {
+.button--text::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(-1 * var(--text-bleed));
+  z-index: -1;
+  border-radius: var(--radius-pill);
+}
+
+.button--text:hover::before {
   background: var(--accent-tint);
+}
+
+/* A text button stretched across a column already spans the content, so its pill stays inside it. */
+.form > .button--text,
+.snap-actions > .button--text {
+  --text-bleed: 0px;
 }
 
 /* Tonal: a quiet filled action, softer than primary (the main action on a card). */
@@ -249,7 +273,7 @@
 }
 
 .button--text.button--small {
-  padding: 0 var(--s-3);
+  padding: 0;
 }
 
 .form__row {

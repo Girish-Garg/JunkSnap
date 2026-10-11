@@ -182,7 +182,7 @@ export class SnapServiceFactory {
     return {
       siteActions,
       areaLetters: new AreaLetterService(apis.areaLetters, identity),
-      noBin: new NoBinReporter(apis.reports, identity, random),
+      noBin: new NoBinReporter(apis.reports, identity, random, queue),
       remover: new ActivityRemover({ reports: queue, scans, statuses: apis.reports, sites: siteActions, dismissed }),
     };
   }
