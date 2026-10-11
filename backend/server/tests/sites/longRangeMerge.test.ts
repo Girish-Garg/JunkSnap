@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
+import { InProcessMergeLock } from "../../src/adapters/sites/InProcessMergeLock.js";
 import type { ReportUpload } from "../../src/contracts/index.gen.js";
 import { EmbeddingVector } from "../../src/domain/sites/EmbeddingVector.js";
 import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
@@ -37,6 +38,7 @@ function setup() {
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(embeddings, RULES),
+    lock: new InProcessMergeLock(),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
