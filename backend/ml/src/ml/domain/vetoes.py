@@ -21,9 +21,9 @@ from ml.domain.verification import (
 
 JUDGE_SIGNAL = "vision_judge"
 # Claim support below this is a clear "no" from every detector.
-LOW_SUPPORT = 0.2
+LOW_SUPPORT = 0.2  # ML_DETECTORS_VETO_MAX
 # A trained detector at or above this is sure it sees waste.
-DETECTOR_SURE = 0.5
+DETECTOR_SURE = 0.5  # ML_YOLO_LIFT_MIN
 # Only our trained object detector can lift a judge "no" or an unusable photo. Rekognition's
 # generic labels see waste in clean streets, and the embedding head gave 0.77 to the prod
 # indoor-cupboard photo the judge rightly called not_waste (decision 20261011-0305).
@@ -158,10 +158,23 @@ class JudgeAndCombinerSayNo(VetoRule):
         return Veto(f"{JUDGE_VETO}:{COMBINED_NO_REASON}", (judge,))
 
 
-REPORT_VETOES: tuple[VetoRule, ...] = (
-    JudgeUnusable(),
-    JudgeSaysNo(),
-    JudgeUnsure(),
-    DetectorsDenyJudgeUnsure(),
-    JudgeAndCombinerSayNo(),
-)
+@dataclass(frozen=True)
+class VetoLimits:
+    """The report rules' numbers (ML_YOLO_LIFT_MIN, ML_DETECTORS_VETO_MAX); rules() orders them."""
+
+    detector_sure: float = DETECTOR_SURE
+    no_waste_max: float = LOW_SUPPORT
+
+    def rules(self) -> tuple[VetoRule, ...]:
+        """First match wins."""
+        sure = SureDetectors(TRAINED_DETECTORS, self.detector_sure)
+        return (
+            JudgeUnusable(sure),
+            JudgeSaysNo(sure),
+            JudgeUnsure(),
+            DetectorsDenyJudgeUnsure(self.no_waste_max),
+            JudgeAndCombinerSayNo(),
+        )
+
+
+REPORT_VETOES: tuple[VetoRule, ...] = VetoLimits().rules()

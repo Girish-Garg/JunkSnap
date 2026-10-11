@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-WEAK_WEIGHT = 0.6
+WEAK_WEIGHT = 0.6  # ML_LABEL_WEAK_WEIGHT
 
 
 @dataclass(frozen=True)
@@ -23,20 +23,22 @@ class LabelSet:
 
 @dataclass(frozen=True)
 class KeywordGroup:
-    """Lower-case label names that show one report type; weak ones count WEAK_WEIGHT."""
+    """Lower-case label names that show one report type; a weak one counts `weak_weight`."""
 
     strong: frozenset[str]
     weak: frozenset[str] = frozenset()
 
-    def weight(self, label_name: str) -> float:
+    def weight(self, label_name: str, weak_weight: float = WEAK_WEIGHT) -> float:
         name = label_name.lower()
         if name in self.strong:
             return 1.0
-        return WEAK_WEIGHT if name in self.weak else 0.0
+        return weak_weight if name in self.weak else 0.0
 
-    def score(self, labels: tuple[DetectedLabel, ...]) -> tuple[float, tuple[str, ...]]:
+    def score(
+        self, labels: tuple[DetectedLabel, ...], weak_weight: float = WEAK_WEIGHT
+    ) -> tuple[float, tuple[str, ...]]:
         """The best single weighted confidence, and the matched labels as notes."""
-        matched = [(label, self.weight(label.name)) for label in labels]
+        matched = [(label, self.weight(label.name, weak_weight)) for label in labels]
         matched = [(label, weight) for label, weight in matched if weight > 0]
         best = max((label.confidence * weight for label, weight in matched), default=0.0)
         notes = tuple(f"{label.name} {label.confidence:.2f}" for label, _ in matched)

@@ -12,11 +12,11 @@ from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
 from ml.services.judge_decides_combiner import AUTO_CLAIM_REASON, JudgeDecidesCombiner
 
-# Hand-set, not fitted. The judge runs on every case and carries the largest weight.
+# Hand-set, not fitted (ML_WEIGHT_<SIGNAL>). The judge runs on every case and weighs most.
 FIXED_WEIGHTS: Mapping[str, float] = MappingProxyType(
     {"rekognition_labels": 0.4, "yolo": 0.3, "embedding_classifier": 0.3, "vision_judge": 0.6}
 )
-# Two scores this far apart on 0..1 strongly disagree.
+# Two scores this far apart on 0..1 strongly disagree (ML_DISAGREEMENT_GAP).
 DISAGREEMENT_GAP = 0.5
 JUDGE_SIGNAL = "vision_judge"
 

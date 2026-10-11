@@ -19,6 +19,7 @@ from ml.services.verify_service import VerifyService
 from ml.settings.core import CoreSettings
 from ml.settings.llm import LlmSettings
 from ml.settings.models import ModelSettings
+from ml.settings.tuning import Tuning
 from ml.settings.verify import VerifySettings
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,9 @@ BAD_REQUEST_ERRORS = (ValidationError, InvalidClaimError, InvalidImageError, Not
 
 
 def build_verify_router() -> APIRouter:
-    builder = VerifierBuilder(CoreSettings.load(), LlmSettings.load(), ModelSettings.load())
+    builder = VerifierBuilder(
+        CoreSettings.load(), LlmSettings.load(), ModelSettings.load(), Tuning.load()
+    )
     images = builder.image_store(VerifySettings.load().public_bucket)
     return verify_router(builder.service(images))
 

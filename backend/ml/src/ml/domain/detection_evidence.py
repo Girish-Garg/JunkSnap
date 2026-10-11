@@ -7,9 +7,9 @@ from ml.domain.detections import DetectionSet
 
 BIN = "bin"
 # Waste that spills around a bin lies within half the bin's longer side of its box.
-NEAR_REACH = 0.5
+NEAR_REACH = 0.5  # ML_YOLO_BIN_REACH
 # A bin with no waste near it, or waste with no bin, is only half evidence of an overflowing bin.
-ALONE_WEIGHT = 0.5
+ALONE_WEIGHT = 0.5  # ML_YOLO_BIN_ALONE_WEIGHT
 
 
 class DetectionEvidence(ABC):
