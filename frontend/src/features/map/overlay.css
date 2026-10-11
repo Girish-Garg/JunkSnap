@@ -86,11 +86,14 @@
   z-index: 20;
   display: grid;
   place-items: center;
+  /* One row the scrim's height, so the dialog's max-height has something to stop at. */
+  grid-template-rows: minmax(0, 1fr);
   padding: var(--s-6);
   background: var(--scrim);
   animation: fade-in var(--dur-2) var(--ease-out);
 }
 
+/* A short window scrolls the dialog instead of spilling it off screen. */
 .dialog {
   position: relative;
   display: flex;
@@ -98,7 +101,10 @@
   align-items: center;
   gap: var(--s-2);
   width: min(440px, 100%);
+  max-height: 100%;
   padding: var(--s-8) var(--s-8) var(--s-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow-2);
@@ -111,6 +117,11 @@
     opacity: 0;
     transform: translateY(16px) scale(0.92);
   }
+}
+
+/* Parts keep their size (the badge would squeeze to its icon) and the dialog scrolls instead. */
+.dialog > * {
+  flex-shrink: 0;
 }
 
 .dialog__close {
@@ -154,6 +165,27 @@
   font-family: var(--font-display);
   font-size: var(--text-lead);
   font-weight: 700;
+}
+
+/* The Android app's download page: a link that looks like the secondary buttons. */
+.dialog__app {
+  margin-top: var(--s-2);
+  text-decoration: none;
+}
+
+/* A short desktop window: tighter spacing, so most windows still fit the whole dialog without scrolling. */
+@media (max-height: 720px) {
+  .dialog-scrim {
+    padding: var(--s-4);
+  }
+
+  .dialog {
+    padding-top: var(--s-6);
+  }
+
+  .dialog__qr {
+    margin-top: var(--s-2);
+  }
 }
 
 /* Desktop panel with nothing open: the reports in view. */

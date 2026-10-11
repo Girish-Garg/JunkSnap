@@ -1,6 +1,7 @@
 import { CACHE_VARS, type CacheSettings } from '../config/CacheSettings';
 import { CAPTURE_VARS, type CaptureSettings } from '../config/CaptureSettings';
 import { EnvReader, type EnvSource, type Warn } from '../config/EnvReader';
+import { LINK_VARS, type LinkSettings } from '../config/LinkSettings';
 import { LIMIT_VARS, type ListLimits } from '../config/ListLimits';
 import { MAP_CHECKS, MAP_VARS, type MapSettings } from '../config/MapSettings';
 import { NETWORK_VARS, type NetworkSettings } from '../config/NetworkSettings';
@@ -29,6 +30,7 @@ export interface Tuning {
   readonly cache: CacheSettings;
   readonly ui: UiTimings;
   readonly limits: ListLimits;
+  readonly links: LinkSettings;
 }
 
 interface Endpoints {
@@ -67,6 +69,7 @@ export class AppConfig implements Tuning {
   readonly cache: CacheSettings;
   readonly ui: UiTimings;
   readonly limits: ListLimits;
+  readonly links: LinkSettings;
   /** The pilot city, from map.pilotCentre and map.pilotBounds. */
   readonly pilot: PilotCity;
 
@@ -84,6 +87,7 @@ export class AppConfig implements Tuning {
     this.cache = tuning.cache;
     this.ui = tuning.ui;
     this.limits = tuning.limits;
+    this.links = tuning.links;
     this.pilot = new PilotCity(tuning.map.pilotCentre, tuning.map.pilotBounds);
   }
 
@@ -116,6 +120,7 @@ export class AppConfig implements Tuning {
       cache: reader.group(CACHE_VARS),
       ui: reader.group(UI_VARS),
       limits: reader.group(LIMIT_VARS),
+      links: reader.group(LINK_VARS),
     };
   }
 
