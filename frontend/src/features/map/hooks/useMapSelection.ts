@@ -1,17 +1,37 @@
 import { useCallback, useState } from 'react';
-import { useMatch } from 'react-router';
+import { useLocation, useMatch } from 'react-router';
 import { SITE_PATH, sitePath } from '../../../app/paths';
-import { useSheetNavigation } from '../../../app/useSheetNavigation';
+import { useSheetNavigation, type SheetNavigation } from '../../../app/useSheetNavigation';
 import type { Place } from '../../../domain/PlaceSearch';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import { PlaceCamera, type CameraRequest } from '../CameraRequest';
 import { usePinPick } from './usePinPick';
 
+type StackPick = Pick<ReturnType<typeof usePinPick>, 'stack' | 'pickStack'>;
+
+/**
+ * A stack pin's list takes the place of whatever sheet is open (a site, a tab): it shows on the bare map only, and
+ * a pick made with a sheet open first goes back to the map. So the list is never a level over that sheet, and
+ * closing it, or the site picked from it, ends on the map.
+ */
+function useStackOnMap({ stack, pickStack }: StackPick, sheets: SheetNavigation): StackPick {
+  const onMap = useLocation().pathname === '/';
+  const listStack = useCallback(
+    (siteIds: readonly string[]) => {
+      pickStack(siteIds);
+      if (!onMap) sheets.up('/');
+    },
+    [pickStack, onMap, sheets],
+  );
+  return { stack: onMap ? stack : null, pickStack: listStack };
+}
+
 /** Which site is previewed or open, which stack pin is listed, and where the camera should go. */
 export function useMapSelection(loaded: readonly SiteFeature[]) {
   const sheets = useSheetNavigation();
   const openId = useMatch(SITE_PATH)?.params.siteId ?? null;
-  const { preview, stack, setPreview, pick, pickStack } = usePinPick(loaded);
+  const { preview, setPreview, pick, ...stacks } = usePinPick(loaded);
+  const { stack, pickStack } = useStackOnMap(stacks, sheets);
   const [camera, setCamera] = useState<CameraRequest | null>(null);
   const showSite = useCallback((site: SiteFeature) => setCamera({ points: [site.geometry.coordinates] }), []);
   const openDetails = useCallback(
