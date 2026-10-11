@@ -90,8 +90,8 @@ export const SITE_GATES = {
   ]),
   letter: new ActionGate<SiteActionFacts>([
     GateRules.busy(),
+    // Any site on the map takes a letter, verified or not; the letter says how many people backed it (decision 20261011-1750).
     offMap(),
-    GateRules.when((facts) => facts.site.verification !== 'verified', 'actions.letterLocked'),
     GateRules.cooling('letter', 'letter.errors.rate_limited'),
     GateRules.offline(),
     GateRules.signIn('gate.signIn.letter'),
@@ -200,7 +200,7 @@ const ROUTE_SESSION: SessionFacts = { signedIn: true, online: true, cooling: new
 // With no distance known, no distance rule applies, so the radii do not matter here.
 const ROUTE_REACH: SiteReach = { voteRadiusM: 0, flagRadiusM: 0, cleanupRadiusM: 0, distanceMarginM: 0 };
 
-/** Whether a letter or cleanup sheet opened by link can be used at all: off the map, not verified, a photo checking. */
+/** Whether a letter or cleanup sheet opened by link can be used at all: off the map, a photo checking. */
 export function decideSiteRoute(rule: ActionGate<SiteActionFacts>, site: SiteActionFacts['site']): Availability {
   return rule.decide({ ...ROUTE_SESSION, site, ownSite: false, distanceM: null, locationDenied: false, addPhotoLimitM: 0, reach: ROUTE_REACH });
 }

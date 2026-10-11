@@ -1,3 +1,4 @@
+import { CountNoun } from "../CountNoun.js";
 import { ZONE_RADIUS_M } from "../sites/NoBinZone.js";
 import type { LetterSite } from "./LetterSite.js";
 
@@ -12,6 +13,9 @@ interface BinReading {
   // Metres for near, kilometres otherwise.
   readonly distance: string;
 }
+
+// Hindi nouns before ने take the oblique plural: "3 लोगों ने", but "1 व्यक्ति ने".
+const PEOPLE_HI = new CountNoun("व्यक्ति", "लोगों");
 
 const ENGLISH: Phrases = {
   near: (m) => `A mapped bin is ${m} m away (OpenStreetMap, ward records); it may be missing or broken.`,
@@ -34,12 +38,12 @@ export class NoBinStatement {
   }
 
   english(site: LetterSite): string {
-    const people = `${site.backers} people confirmed there is no dustbin within 1 km of this spot.`;
+    const people = `${NoBinStatement.#confirmed(site.backers)} there is no dustbin within 1 km of this spot.`;
     return this.#withBin(people, site, ENGLISH);
   }
 
   hindi(site: LetterSite): string {
-    const people = `${site.backers} लोगों ने पुष्टि की है कि इस जगह के 1 किलोमीटर के भीतर कोई कूड़ेदान नहीं है।`;
+    const people = `${PEOPLE_HI.of(site.backers)} ने पुष्टि की है कि इस जगह के 1 किलोमीटर के भीतर कोई कूड़ेदान नहीं है।`;
     return this.#withBin(people, site, HINDI);
   }
 
@@ -60,6 +64,10 @@ export class NoBinStatement {
       return { kind: "near", distance: String(Math.round(metres)) };
     }
     return metres <= this.#binRadiusM ? { kind: "within", distance: NoBinStatement.#km(metres) } : none;
+  }
+
+  static #confirmed(people: number): string {
+    return people === 1 ? "1 person has confirmed" : `${people} people confirmed`;
   }
 
   // 3000 m reads "3", 1840 m reads "1.8".

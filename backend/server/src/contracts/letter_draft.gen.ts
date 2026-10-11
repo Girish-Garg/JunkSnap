@@ -2,7 +2,7 @@
 import { ContractValidator } from "./ContractValidator.js";
 
 /**
- * A cited letter draft from POST /sites/{id}/letters. Addressed by office only, neutral wording. Nothing is filed automatically; the resident files it.
+ * A cited letter draft from POST /sites/{id}/letters, for any open site, verified or not. Addressed by office only, neutral wording. Nothing is filed automatically; the resident files it.
  */
 export interface LetterDraft {
   letter_id: string;
@@ -118,6 +118,17 @@ export interface LetterDraft {
      */
     reporters: number | null;
     verified_count: number;
+    /**
+     * Contracts v1.17 (decision 20261011-1750-hem-letters-any-site): site.verification when the draft was made. Any open site takes a letter; for an unverified one the letter says how many people backed it so far and never calls it verified. Not in required so older drafts stay valid; the api always sends it.
+     */
+    verification?: "unverified" | "verified";
+    /**
+     * Contracts v1.17: site.backers when the draft was made, the people who backed the site by photo or yes vote (each once) and the 10 needed to verify it. Not in required so older drafts stay valid; the api always sends it.
+     */
+    backers?: {
+      count: number;
+      needed: 10;
+    };
     first_reported_at: string;
     last_reported_at: string;
     /**
@@ -213,7 +224,7 @@ export const letterDraftSchema = {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Girish-Garg/saboot/main/contracts/schemas/letter_draft.schema.json",
   "title": "letter_draft",
-  "description": "A cited letter draft from POST /sites/{id}/letters. Addressed by office only, neutral wording. Nothing is filed automatically; the resident files it.",
+  "description": "A cited letter draft from POST /sites/{id}/letters, for any open site, verified or not. Addressed by office only, neutral wording. Nothing is filed automatically; the resident files it.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -454,6 +465,31 @@ export const letterDraftSchema = {
         "verified_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "verification": {
+          "enum": [
+            "unverified",
+            "verified"
+          ],
+          "description": "Contracts v1.17 (decision 20261011-1750-hem-letters-any-site): site.verification when the draft was made. Any open site takes a letter; for an unverified one the letter says how many people backed it so far and never calls it verified. Not in required so older drafts stay valid; the api always sends it."
+        },
+        "backers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "count",
+            "needed"
+          ],
+          "description": "Contracts v1.17: site.backers when the draft was made, the people who backed the site by photo or yes vote (each once) and the 10 needed to verify it. Not in required so older drafts stay valid; the api always sends it.",
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "needed": {
+              "const": 10
+            }
+          }
         },
         "first_reported_at": {
           "type": "string",

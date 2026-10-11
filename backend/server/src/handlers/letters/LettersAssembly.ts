@@ -2,6 +2,7 @@ import { AssetFiles } from "../../adapters/letters/AssetFiles.js";
 import { RoutingRepository } from "../../adapters/letters/RoutingRepository.js";
 import { RuleRepository } from "../../adapters/letters/RuleRepository.js";
 import { ConfigError } from "../../domain/errors.js";
+import { LetterStanding } from "../../domain/letters/LetterStanding.js";
 import type { RuleBook } from "../../domain/letters/RuleBook.js";
 import type { AreaLetterBrief, AreaLetterWriter } from "../../ports/letters/AreaLetterWriter.js";
 import type { AreaLetterSites } from "../../ports/letters/AreaLetterSites.js";
@@ -19,6 +20,7 @@ import type { Env } from "../../settings/utils.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
 import type { LetterWriter } from "../../ports/letters/LetterWriter.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
+import { BackingClaimGuard } from "../../services/letters/BackingClaimGuard.js";
 import { ClausePicker } from "../../services/letters/ClausePicker.js";
 import { DraftVerifier } from "../../services/letters/DraftVerifier.js";
 import { EnglishWording } from "../../services/letters/EnglishWording.js";
@@ -26,7 +28,6 @@ import { HindiWording } from "../../services/letters/HindiWording.js";
 import { LetterRateLimiter, type LetterCounters } from "../../services/letters/LetterRateLimiter.js";
 import { LetterRouter } from "../../services/letters/LetterRouter.js";
 import { LetterService } from "../../services/letters/LetterService.js";
-import { NoBinEligibility } from "../../services/letters/NoBinEligibility.js";
 import { ProseDrafter } from "../../services/letters/ProseDrafter.js";
 import { QuoteVerifier } from "../../services/letters/QuoteVerifier.js";
 import { TemplateLetter } from "../../services/letters/TemplateLetter.js";
@@ -81,16 +82,18 @@ export class LettersAssembly {
     const { book, quotes } = await this.#rules();
     const routing = await new RoutingRepository(new AssetFiles(this.#rulesDir)).load();
     const template = new TemplateLetter([new EnglishWording(this.#bins.radiusM), new HindiWording(this.#bins.radiusM)]);
+    // Decision 20261011-1750: a model draft that calls an unverified site verified falls back to the template.
+    const writer = new BackingClaimGuard(adapters.writer);
     return new LetterService({
       sites: adapters.sites,
       router: new LetterRouter(routing),
       picker: new ClausePicker(book),
       quotes,
       limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#tunables.perHour),
-      drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
+      drafter: new ProseDrafter(writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
-      noBin: new NoBinEligibility(this.#bins.radiusM),
-      ttlDays: this.#tunables.ttlDays,
+      standing: new LetterStanding(this.#tunables.ttlDays),
+      binRadiusM: this.#bins.radiusM,
     });
   }
 

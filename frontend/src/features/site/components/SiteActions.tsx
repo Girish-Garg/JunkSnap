@@ -30,7 +30,7 @@ interface SiteActionsProps {
 
 /**
  * Confirm opens the vote; Me too sends a yes vote; Cleaned and Letter open their sheets. Each stays in the row when
- * the person cannot use it now (own site, too far, letters waiting for 10 people, offline) and says why when tapped.
+ * the person cannot use it now (own site, too far, offline) and says why when tapped.
  */
 export function SiteActions({ site, presenter, gates, onConfirm, onChanged }: SiteActionsProps) {
   const { t } = useTranslation();
@@ -48,6 +48,6 @@ export function SiteActions({ site, presenter, gates, onConfirm, onChanged }: Si
   ];
   // While the sign-in, this person's reports or the first fix are still read, the tiles wait and the line says so.
   const checking = isChecking(gates.vote.availability) || isChecking(gates.cleanup.availability);
-  const note = meToo.note ?? (checking ? t(CHECKING) : presenter.letterReady() ? '' : t('actions.letterLocked'));
+  const note = meToo.note ?? (checking ? t(CHECKING) : '');
   return <ActionRow label={t('actions.label')} actions={actions} primaryId={presenter.primaryAction()} note={note} />;
 }

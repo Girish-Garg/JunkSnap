@@ -1,6 +1,7 @@
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
 import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import type { CcLine, Recipient, ReportType, SiteContext } from "../../domain/letters/types.js";
+import { BackingStatement } from "../../domain/letters/BackingStatement.js";
 import { NoBinStatement } from "../../domain/letters/NoBinStatement.js";
 import type { TemplateWording } from "./TemplateLetter.js";
 import { coordinates, joinList, letterDate } from "./utils.js";
@@ -55,9 +56,11 @@ export class HindiWording implements TemplateWording {
 
   facts(site: LetterSite): string {
     const { lat, lon, reportCount, verifiedCount, firstReportedAt, photoUrls } = site.evidence;
+    const counted = site.verified ? `${reportCount} (${verifiedCount} सत्यापित)` : String(reportCount);
     const lines = [
       `निवासियों ने ${site.place.name()} में (${coordinates(lat, lon)}) यह सूचना दी है: ${WHAT[site.context]}।`,
-      `${letterDate(firstReportedAt, "hi-IN")} से अब तक रिपोर्ट: ${reportCount} (${verifiedCount} सत्यापित)।`,
+      `${letterDate(firstReportedAt, "hi-IN")} से अब तक रिपोर्ट: ${counted}।`,
+      new BackingStatement().hindi(site),
     ];
     if (site.burning) {
       lines.push("इस स्थान पर कचरा जलता हुआ देखा गया है।");

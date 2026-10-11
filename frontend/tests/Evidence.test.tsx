@@ -57,6 +57,7 @@ describe('letter evidence', () => {
     expect(within(letter).getByText('Medium pile')).toBeInTheDocument();
     expect(within(letter).getByText('Near a school, 80 m (OpenStreetMap)')).toBeInTheDocument();
     expect(within(letter).getByText('Nearest known bin: 1.8 km (OpenStreetMap)')).toBeInTheDocument();
+    expect(within(letter).getByText('Community check').nextSibling).toHaveTextContent('Verified by 10 people');
   });
 
   it('drafts a letter for a no-bin zone once 10 people verified it', async () => {
@@ -70,6 +71,31 @@ describe('letter evidence', () => {
     const sites = new MockApiClient(siteFixtureLoaders);
     const api = new MockSiteActionsApi({ site: (id) => sites.getSite(id), letter: sampleLetterLoader }, 0);
     await expect(api.letter('site_jdh_2', { device_token: 'x', channel: 'local_body', language: 'en' })).resolves.toHaveProperty('site_id', 'site_jdh_2');
-    await expect(api.letter('site_jpr_1', { device_token: 'x', channel: 'local_body', language: 'en' })).rejects.toMatchObject({ status: 409, code: 'not_verified' });
+  });
+});
+
+describe('letter evidence for an unverified site (decision 20261011-1750)', () => {
+  it('drafts in mock mode, with the site standing in the evidence', async () => {
+    const sites = new MockApiClient(siteFixtureLoaders);
+    const api = new MockSiteActionsApi({ site: (id) => sites.getSite(id), letter: sampleLetterLoader }, 0);
+    const waiting = await api.letter('site_jpr_1', { device_token: 'x', channel: 'local_body', language: 'en' });
+    expect(waiting.evidence).toMatchObject({ verification: 'unverified', backers: { count: 2, needed: 10 } });
+  });
+
+  it('keeps the note after drafting and says how many people confirmed it', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1/letter', services: await signedIn() });
+    await user.click(await screen.findByRole('button', { name: 'Draft letter' }));
+    const letter = await screen.findByRole('article');
+    expect(within(letter).getByText('Community check').nextSibling).toHaveTextContent('2 of 10 people confirmed so far');
+    expect(screen.getByText('This spot is not verified yet. The letter says how many residents have reported it.')).toBeInTheDocument();
+  });
+
+  it('says it in Hindi in a Hindi letter', async () => {
+    const user = userEvent.setup();
+    await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1/letter', services: await signedIn(), language: 'hi' });
+    await user.click(await screen.findByRole('button', { name: 'पत्र का मसौदा बनाएँ' }));
+    const letter = await screen.findByRole('article');
+    expect(within(letter).getByText('सामुदायिक पुष्टि').nextSibling).toHaveTextContent('अब तक 10 में से 2');
   });
 });

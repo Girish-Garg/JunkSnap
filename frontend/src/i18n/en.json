@@ -114,7 +114,7 @@
     "hint": "What does this mean?",
     "close": "Close",
     "waiting": "10 different people must back this spot with a photo or a yes vote before it counts as verified. You can help by confirming if you're within {{voteKm}} km.",
-    "verified": "10 different people backed this spot with a photo or a yes vote. Residents can now draft a letter to the local body and file it themselves.",
+    "verified": "10 different people backed this spot with a photo or a yes vote, so it counts in the area's scores and its letters say it is verified.",
     "verifiedClosed": "10 different people backed this spot with a photo or a yes vote before it left the map.",
     "clearing": "Someone says this spot is cleared. It leaves the map once {{needed}} different people say so; if you've seen it, say whether it's cleared or still there.",
     "clearingNoBin": "Someone says a bin is here now. This no-bin zone leaves the map once {{needed}} different people say so; if you've seen it, say whether there's a bin.",
@@ -204,7 +204,6 @@
     "share": "Share",
     "copied": "Copied",
     "metooThanks": "Thanks. Your yes vote backs this site.",
-    "letterLocked": "Letters open once 10 people confirm this site.",
     "shareFailed": "Could not share. Copy the address from the browser instead."
   },
   "site": {
@@ -728,6 +727,7 @@
     "title": "Draft letter",
     "close": "Close letter",
     "noAutoSend": "Draft for you to file. JunkSnap never sends or files anything.",
+    "unverifiedNote": "This spot is not verified yet. The letter says how many residents have reported it.",
     "sample": "Sample mode: this is the sample letter, with placeholder quotes.",
     "intro": "JunkSnap drafts a letter to the local body, with copies to the elected offices for this place, and quotes the rules word for word.",
     "language": "Letter language",
@@ -755,7 +755,8 @@
       "mp": "MP, {{seat}} Lok Sabha seat (for attention)"
     },
     "errors": {
-      "not_verified": "Letters open once the site is verified.",
+      "not_verified": "This site can't take a letter right now. Reload it and try again.",
+      "site_rejected": "Neighbours said this is not a waste site, so it takes no letters.",
       "not_verified_area": "Letters open once this area has {{minReports}} verified reports for this issue.",
       "no_local_body": "No local body is known for this place yet, so there is no one to address.",
       "rate_limited": "You can draft 5 letters an hour. Try again later.",
@@ -775,6 +776,9 @@
       "reporters": "People who reported",
       "notCounted": "Not counted",
       "verified": "Verified reports",
+      "backers": "Community check",
+      "backersVerified": "Verified by {{count}} people",
+      "backersWaiting": "{{count}} of {{needed}} people confirmed so far",
       "first": "First reported",
       "last": "Last reported",
       "photoAlt": "Blurred photo {{n}}",
@@ -1143,7 +1147,7 @@
     "explain": {
       "checking": "We're still checking this photo. This page updates by itself.",
       "waiting": "The checks passed. Once enough neighbours back this spot, by photo or by vote, it becomes verified.",
-      "verified": "Enough people backed this spot, so it counts in the area's scores and letters.",
+      "verified": "Enough people backed this spot, so it counts in the area's scores and area letters.",
       "unclear": "Retake: we couldn't see waste clearly in this photo, so it isn't on the map.",
       "not_waste": "The checks found no waste in this photo, so it isn't on the map.",
       "unconfirmed": "The checks couldn't confirm waste in this photo, so it isn't on the map.",

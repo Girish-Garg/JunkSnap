@@ -18,7 +18,9 @@ const jodhpur = wardSite();
 const body = { device_token: DEVICE, channel: "local_body", language: "en" };
 const sites = [
   jodhpur,
-  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "unverified" }),
+  siteWith(jodhpur, { site_id: "site_jdh_9", verification: "unverified", verified_count: 0, backers: { count: 3, needed: 10, photo_people: 2, vote_people: 1 } }),
+  siteWith(jodhpur, { site_id: "site_jdh_8", verification: "rejected" }),
+  siteWith(jodhpur, { site_id: "site_jdh_7", status: "removed", removed_reason: "withdrawn" }),
   siteWith(jodhpur, { site_id: "site_far_1" }, { local_body: null }),
 ];
 
@@ -92,10 +94,21 @@ describe("POST /sites/{id}/letters", () => {
     expect(response.json()).toMatchObject({ error: "not_found" });
   });
 
-  it("returns 409 not_verified for a site waiting for a neighbour check", async () => {
+  it("drafts for an unverified site, with its standing in the evidence (decision 20261011-1750)", async () => {
     const response = await post(await withFakes(), "site_jdh_9");
-    expect(response.statusCode).toBe(409);
-    expect(response.json()).toMatchObject({ error: "not_verified" });
+    expect(response.statusCode).toBe(200);
+    const letter = validateLetterDraft(response.json());
+    expect(letter.evidence).toMatchObject({ verification: "unverified", backers: { count: 3, needed: 10 }, verified_count: 0 });
+  });
+
+  it("returns 409 site_rejected for a site neighbours hid, and 404 not_found for a removed one", async () => {
+    const server = await withFakes();
+    const rejected = await post(server, "site_jdh_8");
+    expect(rejected.statusCode).toBe(409);
+    expect(rejected.json()).toMatchObject({ error: "site_rejected" });
+    const removed = await post(server, "site_jdh_7");
+    expect(removed.statusCode).toBe(404);
+    expect(removed.json()).toMatchObject({ error: "not_found" });
   });
 
   it("returns 422 no_local_body when there is no local body to address", async () => {

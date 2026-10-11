@@ -1,3 +1,4 @@
+import { CountNoun } from "../CountNoun.js";
 import { flagged, SIGNAL_FLAGS, type CommunitySignals, type SignalFlag } from "./Community.js";
 
 type Language = "en" | "hi";
@@ -53,6 +54,11 @@ export interface AreaMention {
   readonly sites: number;
 }
 
+// Hindi counts: "1 निवासी के अनुसार" and "(1 व्यक्ति)", but "3 निवासियों के अनुसार" and "(3 लोग)".
+const RESIDENTS_HI = new CountNoun("निवासी", "निवासियों");
+const PEOPLE_HI = new CountNoun("व्यक्ति", "लोग");
+const SITES_HI = new CountNoun("स्थल", "स्थलों");
+
 // Neutral phrases from structured signals, written by code so a letter never carries a resident's own words.
 export class CommunityPhrases {
   readonly #language: Language;
@@ -72,7 +78,7 @@ export class CommunityPhrases {
     const phrases = this.phrases(signals);
     if (this.#language === "hi") {
       const said = phrases.length === 0 ? "नोट जोड़े गए, कोई ख़ास समस्या नहीं बताई गई" : phrases.join("; ");
-      return `${people} निवासियों के अनुसार: ${said}।`;
+      return `${RESIDENTS_HI.of(people)} के अनुसार: ${said}।`;
     }
     const said = phrases.length === 0 ? "notes added, no specific problem named" : phrases.join("; ");
     return `From ${people} ${people === 1 ? "resident" : "residents"}: ${said}.`;
@@ -83,7 +89,7 @@ export class CommunityPhrases {
     const phrases = this.phrases(signals);
     if (this.#language === "hi") {
       const said = phrases.length === 0 ? "नोट जोड़े गए" : phrases.join("; ");
-      return `निवासियों की सूचना (${people} लोग): ${said}।`;
+      return `निवासियों की सूचना (${PEOPLE_HI.of(people)}): ${said}।`;
     }
     const said = phrases.length === 0 ? "notes added, no specific problem named" : phrases.join("; ");
     return `Residents report (${people} ${people === 1 ? "person" : "people"}): ${said}.`;
@@ -94,7 +100,7 @@ export class CommunityPhrases {
     const words = MENTIONS[this.#language];
     if (this.#language === "hi") {
       const said = mentions.map((mention) => `${words[mention.signal]} (${mention.sites} स्थल)`).join("; ");
-      return `${sites} स्थलों पर निवासियों की सूचना (${people} लोग)${said === "" ? "" : `: ${said}`}।`;
+      return `${SITES_HI.of(sites)} पर निवासियों की सूचना (${PEOPLE_HI.of(people)})${said === "" ? "" : `: ${said}`}।`;
     }
     const said = mentions.map((mention) => `${words[mention.signal]} at ${mention.sites} ${mention.sites === 1 ? "site" : "sites"}`).join("; ");
     const who = `${people} ${people === 1 ? "person" : "people"}`;

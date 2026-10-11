@@ -61,12 +61,15 @@ export class MockSiteActionsApi implements SiteActionsApi {
     return { cleanup_id: request.upload_id.replace(/^upl_/, 'cln_'), site_id: siteId, status: 'checking' };
   }
 
+  /** Any site still standing takes a letter (decision 20261011-1750); the sample carries this site's standing. */
   async letter(siteId: string, request: LetterRequest): Promise<LetterDraft> {
     await this.#wait();
-    const site = (await this.#sources.site(siteId)).properties;
-    if (site.verification !== 'verified') throw new ApiError(409, 'not_verified', 'Letters open once the site is verified');
+    const { status, verification, backers } = (await this.#sources.site(siteId)).properties;
+    if (status === 'removed') throw new ApiError(404, 'not_found', 'This site was removed');
+    if (verification === 'rejected') throw new ApiError(409, 'site_rejected', 'Neighbours hid this site');
     const sample = await this.#sources.letter();
-    return { ...sample, site_id: siteId, language: request.language };
+    const evidence = sample.evidence && { ...sample.evidence, verification, backers: { count: backers.count, needed: backers.needed } };
+    return { ...sample, site_id: siteId, language: request.language, evidence };
   }
 
   #wait(): Promise<void> {

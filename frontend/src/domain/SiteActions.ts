@@ -95,6 +95,9 @@ export interface LetterEvidence {
   readonly report_count: number;
   readonly reporters: number | null;
   readonly verified_count: number;
+  /** v1.17: the site's standing when drafted; any open site takes a letter (decision 20261011-1750). Absent from older servers. */
+  readonly verification?: 'unverified' | 'verified';
+  readonly backers?: { readonly count: number; readonly needed: number };
   readonly first_reported_at: string;
   readonly last_reported_at: string;
   /** Blurred public copies only. */

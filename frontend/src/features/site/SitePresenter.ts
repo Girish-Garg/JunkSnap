@@ -76,11 +76,6 @@ export class SitePresenter {
     return SiteClosure.reasonOf(this.#site);
   }
 
-  /** The api drafts a letter only for a verified site (10 people; decision 20261010-1530) that is still on the map. */
-  letterReady(): boolean {
-    return this.#site.verification === 'verified' && this.closedReason() === null;
-  }
-
   /** The status chip says verified or waiting only for an open site; any other status spells it out beside the chip. */
   showsVerification(): boolean {
     return this.#site.status !== 'open';
