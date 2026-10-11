@@ -14,7 +14,7 @@ interface MoveSources {
 
 /**
  * The person's own moves: the map's view as it changes, "Show my location" (asks, then flies there) and
- * "Go to my location" for a fix read quietly on open, which never moves the map by itself.
+ * "Go to my location" for a fix read quietly on open or taken at start, which never moves the map by itself.
  */
 export function useMapMoves({ view, setView, selection, location, browser }: MoveSources) {
   const { frame } = selection;

@@ -2,7 +2,7 @@ import { EnvReader } from './EnvReader';
 import type { EnvVars } from './EnvVar';
 import { Vars } from './Vars';
 
-/** GPS freshness, Snap and Scan limits, the on-phone hints and the camera watchdog. */
+/** GPS freshness and the start-up fix, Snap and Scan limits, the on-phone hints and the camera watchdog. */
 export interface CaptureSettings {
   /** Snap, Scan, No bin and cleanup refuse a fix already older than this when it arrives. */
   readonly fixMaxAgeMs: number;
@@ -20,6 +20,11 @@ export interface CaptureSettings {
   readonly locateTimeoutMs: number;
   /** Distance rules (vote, cleanup, add a photo) trust the map's fix for this long. */
   readonly freshFixMs: number;
+  /**
+   * One fix per launch after the splash and the first-run cards: quiet if allowed, the ask if undecided and never
+   * refused, none if blocked.
+   */
+  readonly askLocationAtStart: boolean;
   /** A Scan stops at this length (api scan video limit; the scan_session schema allows at most 60 s). */
   readonly scanMaxDurationMs: number;
   /** A Scan stops before this size (api scan video limit, 400 scan_too_large). */
@@ -64,6 +69,7 @@ export const CAPTURE_VARS: EnvVars<CaptureSettings> = {
   locateMaxAgeMs: Vars.number('VITE_LOCATE_MAX_AGE_MS', 60_000, { min: 0, max: 30 * MINUTE_MS, integer: true }),
   locateTimeoutMs: Vars.ms('VITE_LOCATE_TIMEOUT_MS', 10_000, 5 * MINUTE_MS),
   freshFixMs: Vars.ms('VITE_FRESH_FIX_MS', 120_000, 30 * MINUTE_MS),
+  askLocationAtStart: Vars.flag('VITE_ASK_LOCATION_AT_START', true),
   scanMaxDurationMs: Vars.number('VITE_SCAN_MAX_DURATION_MS', 60_000, { min: 5_000, max: SCHEMA_MAX_DURATION_MS, integer: true }),
   scanMaxBytes: Vars.count('VITE_SCAN_MAX_BYTES', 40 * 1024 * 1024, 1024 * 1024 * 1024, 4 * 1024 * 1024),
   scanVideoBitsPerSecond: Vars.count('VITE_SCAN_VIDEO_BITS_PER_SECOND', 2_500_000, 20_000_000, 100_000),

@@ -15,6 +15,7 @@ import { AppLocationPermission, type AppLocationHost } from '../services/AppLoca
 import { BrowserLocationPermission } from '../services/BrowserLocationPermission';
 import { LocationAccess, type LocationPermissionSource } from '../services/LocationAccess';
 import { NativeBridge, type NativeHost } from '../services/NativeBridge';
+import { StartupLocation } from '../services/StartupLocation';
 import { HttpApiClient } from '../services/HttpApiClient';
 import { CachedAreaApi } from '../services/CachedAreaApi';
 import { ExpiringCache } from '../services/ExpiringCache';
@@ -124,6 +125,8 @@ export class ServiceContainer implements Services {
   readonly cooldowns: ActionCooldowns;
   readonly ownSites: OwnSiteMemory;
   readonly locationAccess: LocationAccess;
+  /** The one location fix at start; always built from this container's own locator and LocationAccess. */
+  readonly startupLocation: StartupLocation;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -144,6 +147,8 @@ export class ServiceContainer implements Services {
     this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now(), services.config.ui.cooldownMs);
     this.ownSites = services.ownSites ?? OwnSiteMemory.following(services.auth);
     this.locationAccess = services.locationAccess ?? new LocationAccess(new BrowserLocationPermission(undefined));
+    const marks = StartupLocation.marks(() => window.sessionStorage, () => window.localStorage);
+    this.startupLocation = new StartupLocation(this.locator, this.locationAccess, marks, services.config.capture.askLocationAtStart);
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {

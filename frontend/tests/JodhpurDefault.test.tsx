@@ -74,7 +74,8 @@ describe('"Go to my location" on desktop', () => {
 });
 
 describe('location and links on open', () => {
-  it('never asks for location on open', async () => {
+  // The map itself never asks; the app shell's one start-up fix is StartupLocation.test.tsx.
+  it('never asks for location on open from the map itself', async () => {
     const { services, getCurrentPosition } = located('prompt');
     await renderApp(<AppRoutes />, { services });
     await showView({ bbox: OPENING });

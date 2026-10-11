@@ -59,6 +59,7 @@ interface ImportMetaEnv {
   readonly VITE_LOCATE_MAX_AGE_MS?: string;
   readonly VITE_LOCATE_TIMEOUT_MS?: string;
   readonly VITE_FRESH_FIX_MS?: string;
+  readonly VITE_ASK_LOCATION_AT_START?: string;
   readonly VITE_SCAN_MAX_DURATION_MS?: string;
   readonly VITE_SCAN_MAX_BYTES?: string;
   readonly VITE_SCAN_VIDEO_BITS_PER_SECOND?: string;

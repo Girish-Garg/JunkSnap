@@ -15,19 +15,37 @@ export interface FreshLocation {
 }
 
 type SetFix = (change: (current: FreshFix | null) => FreshFix | null) => void;
+type FromMap = (at: LonLat | null) => FreshFix | null;
 
 /**
- * The person's location for distance gates: the map's fix (as old as its last change) or a fresh one taken when the
+ * The person's location for distance gates: the map's fix (as old as it really is) or a fresh one taken when the
  * sheet opens or the fix gets stale, only if location is already allowed so opening a sheet never prompts. A fix is
  * fresh for capture.freshFixMs.
  */
 export function useFreshFix(mapLocation: LonLat | null): FreshLocation {
-  const { freshFixMs } = useConfig().capture;
-  const [fix, setFix] = useState<FreshFix | null>(() => (mapLocation ? new FreshFix(mapLocation, Date.now(), freshFixMs) : null));
-  useMapFix(mapLocation, setFix);
-  const locating = useQuietFix(fix, setFix, mapLocation === null);
+  const fromMap = useFromMap();
+  const [fix, setFix] = useState<FreshFix | null>(() => fromMap(mapLocation));
+  useMapFix(mapLocation, fromMap, setFix);
+  // Only the first render's value counts: wait for a quiet fix when the sheet opens without a fresh one.
+  const locating = useQuietFix(fix, setFix, fix === null);
   const { relocate, asking } = useTapFix(setFix);
   return { fix, locating: (locating || asking) && fix === null, relocate };
+}
+
+// The map's fix aged from when the app got it (GeoLocator knows; a point it did not hand out counts from now). A fix
+// from app start may be long stale when a sheet opens: then there is none, and a tap takes a fresh one.
+function useFromMap(): FromMap {
+  const { locator } = useServices();
+  const { freshFixMs } = useConfig().capture;
+  return useCallback(
+    (at: LonLat | null) => {
+      if (!at) return null;
+      const now = Date.now();
+      const fix = new FreshFix(at, locator.takenMs(at) ?? now, freshFixMs);
+      return fix.isFresh(now) ? fix : null;
+    },
+    [locator, freshFixMs],
+  );
 }
 
 // A fix a tap asked for: it may show the location prompt, and the distance actions wait while it comes. Each answer
@@ -54,15 +72,14 @@ function useTapFix(setFix: SetFix): { readonly relocate: FreshLocation['relocate
   return { relocate, asking };
 }
 
-// The map's fix counts from when it arrived here: at once on the first render, later ones on the next tick.
-function useMapFix(mapLocation: LonLat | null, setFix: SetFix): void {
-  const { freshFixMs } = useConfig().capture;
+// The map's fix, at its real age: at once on the first render, later ones on the next tick. A stale one changes nothing.
+function useMapFix(mapLocation: LonLat | null, fromMap: FromMap, setFix: SetFix): void {
   useEffect(() => {
     if (!mapLocation) return undefined;
-    const stamp = () => setFix((current) => (current?.at === mapLocation ? current : new FreshFix(mapLocation, Date.now(), freshFixMs)));
-    const timer = window.setTimeout(stamp, 0);
+    const take = () => setFix((current) => (current?.at === mapLocation ? current : (fromMap(mapLocation) ?? current)));
+    const timer = window.setTimeout(take, 0);
     return () => window.clearTimeout(timer);
-  }, [mapLocation, setFix, freshFixMs]);
+  }, [mapLocation, fromMap, setFix]);
 }
 
 // A fix taken without asking when the sheet opens, and again when the one held gets stale; true only while the first
