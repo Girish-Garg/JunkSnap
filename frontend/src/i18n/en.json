@@ -1232,6 +1232,7 @@
   },
   "gate": {
     "busy": "One moment, it is on its way.",
+    "checking": "Checking…",
     "offline": "You're offline. Try again once you're connected.",
     "tooFarCleanup": "Go within 50 m of the site to send a cleanup photo.",
     "noteEmpty": "Write your note first.",

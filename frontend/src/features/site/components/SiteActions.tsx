@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { cleanupPath, letterPath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
-import { lookOf } from '../../../domain/ActionAvailability';
+import { CHECKING, isChecking, lookOf } from '../../../domain/ActionAvailability';
 import type { SiteFeature } from '../../../domain/Site';
 import type { IconName } from '../../../ui/Icon';
 import { ActionRow, type RowAction } from '../../../ui/ActionRow';
@@ -46,6 +46,8 @@ export function SiteActions({ site, presenter, gates, onConfirm, onChanged }: Si
     row('letter', 'letter', gates.letter, () => sheets.open(letterPath(siteId))),
     { id: 'share', icon: 'share', label: t(copied ? 'actions.copied' : 'actions.share'), onClick: share },
   ];
-  const note = meToo.note ?? (presenter.letterReady() ? '' : t('actions.letterLocked'));
+  // While the sign-in, this person's reports or the first fix are still read, the tiles wait and the line says so.
+  const checking = isChecking(gates.vote.availability) || isChecking(gates.cleanup.availability);
+  const note = meToo.note ?? (checking ? t(CHECKING) : presenter.letterReady() ? '' : t('actions.letterLocked'));
   return <ActionRow label={t('actions.label')} actions={actions} primaryId={presenter.primaryAction()} note={note} />;
 }

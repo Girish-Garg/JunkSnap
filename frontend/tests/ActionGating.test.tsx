@@ -7,7 +7,7 @@ import type { ServiceContainer } from '../src/app/ServiceContainer';
 import { QueuedReport } from '../src/domain/QueuedReport';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { MemoryStore, renderApp, testServices } from './helpers';
+import { findEnabledButton, MemoryStore, renderApp, testServices } from './helpers';
 import { MemoryReportStore, sampleDraft } from './snapFakes';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -74,7 +74,7 @@ describe('a vote that needs a connection or a session', () => {
     const api = new FakeSiteActionsApi();
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
     expect(await screen.findByText(/You're offline\. Photos wait on this phone/)).toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
+    await user.click(await findEnabledButton("Yes, it's waste"));
     // The toast says it, not a line under another button.
     await waitFor(() => expect(document.querySelector('.app-toast')).toHaveTextContent("You're offline. Try again once you're connected."));
     expect(api.calls).toEqual([]);
@@ -99,7 +99,7 @@ describe('a vote the api rate-limited', () => {
     const api = new FakeSiteActionsApi();
     api.failNext('vote', 429, 'rate_limited', 'Rate limit exceeded');
     await renderApp(withToasts(<AppRoutes />), { route: SITE, services: await servicesWith({ api }) });
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
+    await user.click(await findEnabledButton("Yes, it's waste"));
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many tries. Wait a little and try again.');
     expect(screen.queryByText('Rate limit exceeded')).not.toBeInTheDocument();
     const metoo = within(screen.getByRole('list', { name: 'Site actions' })).getByRole('button', { name: 'Me too' });

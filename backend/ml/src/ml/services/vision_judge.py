@@ -13,6 +13,7 @@ from ml.domain.insights import InsightSource
 from ml.domain.llm import LlmRequest
 from ml.domain.verification import JudgeVerdict, SignalResult
 from ml.services.judge_answer import ANSWER_SCHEMAS, PROMPT_VERSION
+from ml.services.judge_fields import DEFAULT_LIMITS, JudgeFieldLimits
 from ml.services.provider_router import JsonJob, ProviderRouter
 
 logger = logging.getLogger(__name__)
@@ -26,27 +27,45 @@ class JudgeReading:
     signal: SignalResult
 
 
+@dataclass(frozen=True)
+class JudgeOptions:
+    """ML_JUDGE_MAX_TOKENS, ML_JUDGE_TEMPERATURE, and the limits its answer is read with."""
+
+    max_tokens: int = 700
+    temperature: float = 0.0
+    fields: JudgeFieldLimits = DEFAULT_LIMITS
+
+
+DEFAULT_OPTIONS = JudgeOptions()
+
+
 class VisionJudge:
     NAME = "vision_judge"
     TASK = "judge"
-    MAX_TOKENS = 700
 
     def __init__(
-        self, router: ProviderRouter, system_prompt: str, prompt_version: str = PROMPT_VERSION
+        self,
+        router: ProviderRouter,
+        system_prompt: str,
+        prompt_version: str = PROMPT_VERSION,
+        options: JudgeOptions = DEFAULT_OPTIONS,
     ) -> None:
         self._router = router
         self._system_prompt = system_prompt
         self._prompt_version = prompt_version  # recorded in judge.attributes.prompt
+        self._options = options
 
     def judge(self, case: VerificationCase) -> JudgeReading | None:
         """None (and a warning log) when no provider gave a valid answer."""
         prompt = f"{USER_PROMPT} {case.purpose.judge_hint(case.claim)}".strip()
+        options = self._options
         request = LlmRequest(
-            self._system_prompt, prompt, images=(case.image,), max_tokens=self.MAX_TOKENS
+            self._system_prompt, prompt, images=(case.image,),
+            max_tokens=options.max_tokens, temperature=options.temperature,
         )
-        schema = ANSWER_SCHEMAS[case.purpose.name]
+        job = JsonJob(self.TASK, request, ANSWER_SCHEMAS[case.purpose.name], options.fields)
         try:
-            answer = self._router.complete_json(JsonJob(self.TASK, request, schema))
+            answer = self._router.complete_json(job)
         except NoProviderAnsweredError as error:
             logger.warning("judge_unavailable", extra={"fields": {"reason": str(error)}})
             return None

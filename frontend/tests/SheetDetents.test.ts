@@ -16,6 +16,17 @@ describe('SheetDetents', () => {
     expect(SheetDetents.step('full', 1)).toBe('full');
   });
 
+  it('keeps half tall enough on a short phone for the action row above Report, never above full', () => {
+    // 640 px phone: 572 px over the nav bar, so half is 400 px, not 286.
+    const phone = { heightPx: 572, topInsetPx: 0 };
+    expect(SheetDetents.px('half', phone)).toBe(400);
+    expect(SheetDetents.px('half', CONTAINER_PX)).toBe(400);
+    expect(SheetDetents.px('half', { heightPx: 1000, topInsetPx: 0 })).toBe(500);
+    expect(SheetDetents.px('half', { heightPx: 300, topInsetPx: 0 })).toBe(SheetDetents.px('full', { heightPx: 300, topInsetPx: 0 }));
+    expect(SheetDetents.settle('half', 390, 0.1, phone)).toBe('half');
+    expect(SheetDetents.css('half')).toBe('min(max(50%, 400px), calc(100% - 80px - env(safe-area-inset-top)))');
+  });
+
   it('cycles peek, half, full and back on tap', () => {
     expect(SheetDetents.cycle('peek')).toBe('half');
     expect(SheetDetents.cycle('half')).toBe('full');

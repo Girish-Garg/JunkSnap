@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../src/app/AppRoutes';
 import type { ServiceContainer } from '../src/app/ServiceContainer';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { MemoryStore, renderApp, testServices } from './helpers';
+import { findEnabledButton, MemoryStore, renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
@@ -19,7 +19,7 @@ describe('community vote', () => {
   it('shows the neighbour check on a community-check site and counts the vote', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn() });
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
+    await user.click(await findEnabledButton("Yes, it's waste"));
     expect(await screen.findByText('Thanks. Votes now: 3 yes, 1 no, 2 cleared.')).toBeInTheDocument();
   });
 
@@ -28,7 +28,7 @@ describe('community vote', () => {
     const api = new FakeSiteActionsApi();
     api.failNext('vote', 403, 'too_far');
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn(api) });
-    await user.click(await screen.findByRole('button', { name: 'No' }));
+    await user.click(await findEnabledButton('No'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Votes count only within 1 km of the site.');
   });
 });

@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -21,21 +22,23 @@ from ml.domain.errors import ExternalServiceError, NoProviderAnsweredError
 from ml.domain.llm import LlmRequest, LlmResponse, ModelChoice, TaskConfig
 from ml.domain.model_files import PinnedModel
 from ml.domain.pricing import PriceTable
-from ml.handlers.judge_timeouts import (
-    ATTEMPTS,
-    DETECTORS_S,
-    READ_TIMEOUT_S,
-    WORKER_BUDGET_S,
-    JudgeTimeouts,
-)
+from ml.handlers.judge_timeouts import JudgeTimeouts
 from ml.handlers.verify_graph import VerifierBuilder
 from ml.ports.clock import Clock
 from ml.services.judge_answer import JudgeAnswer
 from ml.services.provider_factory import ProviderFactory
-from ml.services.provider_router import JsonJob, ProviderRouter
+from ml.services.provider_router import AttemptPolicy, JsonJob, ProviderRouter
 from ml.settings.core import CoreSettings
 from ml.settings.llm import LlmSettings
 from ml.settings.models import ModelSettings
+from ml.settings.timing import (
+    ATTEMPTS,
+    DETECTORS_S,
+    READ_TIMEOUT_S,
+    WORKER_BUDGET_S,
+    TimingSettings,
+)
+from ml.settings.tuning import Tuning
 
 LITE = "apac.amazon.nova-lite-v1:0"
 PRO = "apac.amazon.nova-pro-v1:0"
@@ -97,10 +100,16 @@ def test_nova_lite_nova_pro_and_openai_all_hung_fit_the_workers_budget() -> None
     assert worst < WORKER_BUDGET_S - DETECTORS_S
 
 
+def judge_timing(read_s: float, connect_s: float) -> Tuning:
+    """Today's tuning with these judge timeouts."""
+    timing = TimingSettings(ML_JUDGE_READ_TIMEOUT_S=read_s, ML_JUDGE_CONNECT_TIMEOUT_S=connect_s)
+    return replace(Tuning.load(), timing=timing)
+
+
 def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    timeouts = JudgeTimeouts(read_s=7.5, connect_s=2.5)
+    tuning = judge_timing(read_s=7.5, connect_s=2.5)
     configs: list[tuple[str, Any]] = []
     clients: list[httpx.Client] = []
     real_client, real_http = boto3.session.Session.client, JudgeTimeouts.http_client
@@ -120,7 +129,7 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
     monkeypatch.setattr(JudgeTimeouts, "http_client", http_client)
     monkeypatch.setattr(S3ModelStore, "fetch", refuse)
     models = ModelSettings(ORIGINALS_BUCKET="bucket")
-    VerifierBuilder(CoreSettings(), LlmSettings(), models, timeouts).verifier()
+    VerifierBuilder(CoreSettings(), LlmSettings(), models, tuning).verifier()
 
     bedrock = [config for name, config in configs if name == "bedrock-runtime"]
     assert len(bedrock) == 2  # Titan embeddings and the judge
@@ -195,7 +204,8 @@ def judge_router(clock: SteppingClock, lite: FakeProvider, pro: FakeProvider,
     task = TaskConfig("bedrock", LITE, (ModelChoice("bedrock", PRO), ModelChoice("openai", GPT)))
     factory = ProviderFactory({"bedrock": FakeBuilder({LITE: lite, PRO: pro}),
                                "openai": FakeBuilder({GPT: gpt})})
-    return ProviderRouter({"judge": task}, factory, PriceTable(), JudgeTimeouts().window(clock))
+    policy = AttemptPolicy(window=JudgeTimeouts().window(clock))
+    return ProviderRouter({"judge": task}, factory, PriceTable(), policy)
 
 
 def test_with_lite_and_pro_hung_openai_still_answers_in_the_budget() -> None:

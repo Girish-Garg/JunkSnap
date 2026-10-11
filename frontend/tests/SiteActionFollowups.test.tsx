@@ -10,7 +10,7 @@ import type { CleanupStatus as CleanupState, SiteFeature } from '../src/domain/S
 import { CleanupStatus } from '../src/features/cleanup/components/CleanupStatus';
 import { ActionProblem } from '../src/features/site/ActionProblem';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
+import { findEnabledButton, fixtureSite, MemoryStore, renderApp, testServices } from './helpers';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
 
@@ -109,7 +109,7 @@ describe('a sign-in the api still refuses after a refresh', () => {
     api.failNext('vote', 401, 'unauthorized');
     api.failNext('vote', 401, 'unauthorized');
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn(api) });
-    await user.click(await screen.findByRole('button', { name: "Yes, it's waste" }));
+    await user.click(await findEnabledButton("Yes, it's waste"));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Your sign-in has expired. Sign in again'));
     expect(api.calls.filter((call) => call.kind === 'vote')).toHaveLength(2);
   });

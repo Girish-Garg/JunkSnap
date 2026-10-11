@@ -9,13 +9,16 @@ attributes stay strict.
 
 import math
 from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from types import MappingProxyType
+
+from pydantic import ValidationInfo
 
 from ml.domain.insights import HAZARD_MIN, HAZARDS, MATERIALS, SIZE_CLASSES
 from ml.domain.label_insights import MATERIAL_LABELS
 from ml.utils import name_index, snake_word
 
-BRANDS_MAX = 20
+BRANDS_MAX = 20  # ML_JUDGE_BRANDS_MAX
 PERCENT = 100.0
 # Label words that name no hazard or material when the judge writes them: ash is not fire,
 # a mask is not medical waste, a barrel is not chemicals.
@@ -35,13 +38,29 @@ MATERIAL_NAMES = name_index(
 HAZARD_NAMES = name_index(HAZARDS, JUDGE_HAZARD_WORDS)
 
 
+@dataclass(frozen=True)
+class JudgeFieldLimits:
+    """The validation context of a judge answer; without one these defaults hold."""
+
+    hazard_min: float = HAZARD_MIN  # ML_JUDGE_HAZARD_MIN
+    brands_max: int = BRANDS_MAX
+
+
+DEFAULT_LIMITS = JudgeFieldLimits()
+
+
 class JudgeInsightFields:
     """Pydantic BeforeValidators: each turns a raw field into what the strict model accepts."""
 
     @staticmethod
-    def brands(value: object) -> tuple[str, ...]:
-        texts = (item.strip() for item in JudgeInsightFields._items(value) if isinstance(item, str))
-        return tuple(text for text in texts if text)[:BRANDS_MAX]
+    def limits(info: ValidationInfo) -> JudgeFieldLimits:
+        context = info.context
+        return context if isinstance(context, JudgeFieldLimits) else DEFAULT_LIMITS
+
+    @classmethod
+    def brands(cls, value: object, info: ValidationInfo) -> tuple[str, ...]:
+        texts = (item.strip() for item in cls._items(value) if isinstance(item, str))
+        return tuple(text for text in texts if text)[: cls.limits(info).brands_max]
 
     @staticmethod
     def size_class(value: object) -> str | None:
@@ -55,15 +74,16 @@ class JudgeInsightFields:
         return [{"material": name, "share": share} for name, share in entries][: len(MATERIALS)]
 
     @classmethod
-    def hazards(cls, value: object) -> list[dict[str, object]]:
-        return [{"hazard": name, "confidence": conf} for name, conf in cls.sure(value).items()]
+    def hazards(cls, value: object, info: ValidationInfo) -> list[dict[str, object]]:
+        sure = cls.sure(value, cls.limits(info).hazard_min)
+        return [{"hazard": name, "confidence": conf} for name, conf in sure.items()]
 
     @classmethod
-    def sure(cls, value: object) -> dict[str, float]:
-        """Each hazard at its highest confidence, kept only at HAZARD_MIN or more."""
+    def sure(cls, value: object, floor: float) -> dict[str, float]:
+        """Each hazard at its highest confidence, kept only at the floor or more."""
         best: dict[str, float] = {}
         for name, confidence in cls._entries(value, ("hazard", "confidence"), HAZARD_NAMES):
-            if confidence >= HAZARD_MIN:
+            if confidence >= floor:
                 best[name] = max(best.get(name, 0.0), confidence)
         return best
 

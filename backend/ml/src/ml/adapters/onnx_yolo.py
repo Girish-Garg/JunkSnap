@@ -15,8 +15,8 @@ from ml.domain.images import BlurredImage
 from ml.ports.object_detector import ObjectDetector
 
 MODEL = "junksnap-yolo26"
-PAD_GREY = 114
-MIN_CONFIDENCE = 0.25
+PAD_GREY = 114  # Ultralytics trains with this letterbox grey, so it must match
+MIN_CONFIDENCE = 0.25  # ML_YOLO_MIN_CONFIDENCE
 
 
 class Letterbox:
@@ -37,7 +37,9 @@ class Letterbox:
 
 
 class OnnxYoloDetector(ObjectDetector):
-    def __init__(self, model_path: Path, version: str) -> None:
+    def __init__(
+        self, model_path: Path, version: str, min_confidence: float = MIN_CONFIDENCE
+    ) -> None:
         self._session = OnnxSessionLoader.open(model_path)
         meta = self._session.get_modelmeta().custom_metadata_map
         if "names" not in meta:
@@ -47,6 +49,7 @@ class OnnxYoloDetector(ObjectDetector):
         self._letterbox = Letterbox(size)
         self._input = self._session.get_inputs()[0].name
         self._version = version
+        self._min_confidence = min_confidence
 
     def detect(self, image: BlurredImage) -> DetectionSet:
         started = time.monotonic()
@@ -57,7 +60,9 @@ class OnnxYoloDetector(ObjectDetector):
         except RUN_ERRORS as error:
             raise ExternalServiceError(f"yolo onnx inference: {error}") from error
         frame = (scale, left, top, picture.width, picture.height)
-        found = tuple(self._detection(row, frame) for row in rows if row[4] >= MIN_CONFIDENCE)
+        found = tuple(
+            self._detection(row, frame) for row in rows if row[4] >= self._min_confidence
+        )
         latency = round((time.monotonic() - started) * 1000)
         return DetectionSet(found, MODEL, self._version, latency)
 

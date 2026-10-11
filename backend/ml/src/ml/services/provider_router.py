@@ -16,7 +16,7 @@ from ml.utils import json_object_text
 
 logger = logging.getLogger(__name__)
 
-RETRIES_ON_INVALID_JSON = 1
+RETRIES_ON_INVALID_JSON = 1  # ML_JUDGE_INVALID_ANSWER_RETRIES
 INVALID_JSON_REMINDER = (
     "Your previous answer was not valid JSON for the requested fields. "
     "Reply with exactly one JSON object and nothing else."
@@ -34,12 +34,23 @@ class JsonJob[M: BaseModel]:
     task: str
     request: LlmRequest
     schema: type[M]
+    context: object | None = None  # the schema's pydantic validation context
+
+
+@dataclass(frozen=True)
+class AttemptPolicy:
+    """How often an invalid answer is asked again, and the window every attempt must fit."""
+
+    invalid_answer_retries: int = RETRIES_ON_INVALID_JSON
+    window: AttemptWindow | None = None  # None: no time limit (offline scoring)
+
+
+DEFAULT_POLICY = AttemptPolicy()
 
 
 class ProviderRouter:
-    """A call error moves on at once; an invalid answer is retried once, then moves on.
-
-    With a window, an attempt (first call or retry) starts only if it still fits.
+    """A call error moves on at once; an invalid answer is retried (once by default), then
+    moves on. With a window, an attempt (first call or retry) starts only if it still fits.
     """
 
     def __init__(
@@ -47,15 +58,15 @@ class ProviderRouter:
         tasks: Mapping[str, TaskConfig],
         factory: ProviderFactory,
         prices: PriceTable,
-        window: AttemptWindow | None = None,  # None: no time limit (offline scoring)
+        policy: AttemptPolicy = DEFAULT_POLICY,
     ) -> None:
         self._tasks = dict(tasks)
         self._factory = factory
         self._prices = prices
-        self._window = window
+        self._policy = policy
 
     def complete_json[M: BaseModel](self, job: JsonJob[M]) -> RoutedAnswer[M]:
-        window = None if self._window is None else self._window.open()
+        window = None if self._policy.window is None else self._policy.window.open()
         for choice in self._config(job.task).choices():
             provider = self._provider(job.task, choice)
             if provider is None:
@@ -85,7 +96,7 @@ class ProviderRouter:
         self, job: JsonJob[M], choice: ModelChoice, provider: LlmProvider, window: OpenWindow | None
     ) -> RoutedAnswer[M] | None:
         request = job.request
-        for _ in range(1 + RETRIES_ON_INVALID_JSON):
+        for _ in range(1 + self._policy.invalid_answer_retries):
             if window is not None and not window.fits(choice.provider):
                 self._log("llm_out_of_time", job.task, choice, "its longest attempt would not fit")
                 return None
@@ -96,7 +107,8 @@ class ProviderRouter:
                 return None
             self._log_call(job.task, response)
             try:
-                value = job.schema.model_validate_json(json_object_text(response.text))
+                text = json_object_text(response.text)
+                value = job.schema.model_validate_json(text, context=job.context)
             except ValidationError as error:
                 self._log("llm_invalid_json", job.task, choice, f"{error.error_count()} errors")
                 request = job.request.with_reminder(INVALID_JSON_REMINDER)

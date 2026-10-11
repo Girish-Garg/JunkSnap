@@ -76,14 +76,16 @@ describe('AmplifyAuthService sign-up and sign-in', () => {
 });
 
 describe('AmplifyAuthService sessions', () => {
-  it('restores a saved session and tells listeners', async () => {
+  it('restores a saved session and tells listeners, saying while it reads it', async () => {
     const amplify = new FakeAmplify();
     amplify.session = 'resident@example.com';
     const auth = new AmplifyAuthService(amplify.api());
     const changes: string[] = [];
-    auth.subscribe(() => changes.push(auth.currentUser()?.email ?? 'none'));
+    auth.subscribe(() => changes.push(`${auth.currentUser()?.email ?? 'none'}${auth.restoring() ? ' (restoring)' : ''}`));
+    expect(auth.restoring()).toBe(false);
     await auth.restore();
-    expect(changes).toEqual(['resident@example.com']);
+    expect(changes).toEqual(['none (restoring)', 'resident@example.com (restoring)', 'resident@example.com']);
+    expect(auth.restoring()).toBe(false);
   });
 
   it('signs out and stops giving a token', async () => {
