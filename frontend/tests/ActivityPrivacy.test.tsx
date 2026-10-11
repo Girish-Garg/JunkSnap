@@ -30,7 +30,7 @@ describe('Activity on an install from before this release (no list token)', () =
 
   it('shows no sent row in the sheet until the list is confirmed for this account', async () => {
     const api = new FakeReportApi();
-    api.hold();
+    api.holdList();
     const store = new MemoryReportStore();
     await store.put(sentRow(1).data);
     const services = testServices(new MemoryStore(), { api, store });

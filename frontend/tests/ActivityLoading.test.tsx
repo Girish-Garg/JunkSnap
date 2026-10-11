@@ -13,7 +13,7 @@ describe('Activity on a cold start', () => {
   it('shows a loading skeleton, not the empty state, while the first sync is on its way', async () => {
     const api = new FakeReportApi();
     api.pages_ = [[listed(1)]];
-    const release = api.hold();
+    const release = api.holdList();
     const services = testServices(new MemoryStore(), { api });
     await signIn(services.auth as MockAuthService, 'resident@example.com');
     await renderApp(<AppRoutes />, { route: '/activity', services });
@@ -39,7 +39,7 @@ describe('a sync still running at sign-out', () => {
     const { snap, api, auth, meta } = await activityRig();
     await snap.activity.settled();
     api.pages_ = [[listed(1)]];
-    const release = api.hold();
+    const release = api.holdList();
     const sync = snap.activity.revalidate();
     await waitFor(() => expect(api.count('mine')).toBe(1));
     await auth.signOut();

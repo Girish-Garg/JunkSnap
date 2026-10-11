@@ -54,7 +54,9 @@ describe('cleanup status after a new claim', () => {
     act(() => setSite(withCleanup(before, 'accepted', OURS)));
     expect(screen.getByText('Cleared')).toBeInTheDocument();
   });
+});
 
+describe('cleanup status when an earlier photo already counts', () => {
   it('reads a rejected photo as not accepted when an earlier photo keeps the site pending', async () => {
     const before = withCleanup(await fixtureSite('site_jdh_1'), 'pending_confirmation', EARLIER);
     let setSite: SetSite = () => undefined;

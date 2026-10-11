@@ -19,7 +19,7 @@ export class FakeReportApi implements ReportApi {
   #held: Promise<void> = Promise.resolve();
 
   /** Holds GET /me/reports answers until the returned release is called, as on a slow network. */
-  hold(): () => void {
+  holdList(): () => void {
     let release = (): void => undefined;
     this.#held = new Promise<void>((resolve) => {
       release = resolve;
