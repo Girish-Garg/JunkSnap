@@ -12,6 +12,7 @@ import { CoreSettings } from "../src/settings/CoreSettings.js";
 import { LogSink } from "./LogSink.js";
 import { InMemoryScores } from "./scores/InMemoryScores.js";
 import { readContract } from "./scores/siteBuilder.js";
+import { AREA_LIST } from "./defaults.js";
 
 // Each body carries a counter, so a test can change what a route answers between requests.
 const state = { version: 1 };
@@ -116,7 +117,7 @@ describe("GET /areas/{kind} with the real route", () => {
   it("answers 304 to the ETag of the stored listing", async () => {
     const scores = new InMemoryScores();
     await scores.save(readContract<WardScores>("fixtures/ward_scores.jdh-1.json"), ["rajasthan-jodhpur", "jodhpur-mc"]);
-    const api = await start(areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores) }));
+    const api = await start(areaScoresRoutes({ scores: new AreaScoresQuery(scores), list: new AreaListQuery(scores, AREA_LIST) }));
     const url = "/areas/assembly?within=rajasthan-jodhpur";
     const first = await api.inject({ url });
     expect(first.json().total).toBe(1);

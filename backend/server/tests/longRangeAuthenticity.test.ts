@@ -8,6 +8,7 @@ import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
 import { Report } from "../src/domain/Report.js";
 import { ReportPlacement } from "../src/domain/ReportPlacement.js";
 import { fixture } from "./reportFakes.js";
+import { RULES } from "./defaults.js";
 
 // Decision 20261011-0400: authenticity stays on the phone's GPS fix; only the site uses the long-range target.
 const RECEIVED = "2026-10-11T03:40:30Z";
@@ -26,7 +27,7 @@ function index(): { index: DynamoHashIndex; queried: string[] } {
       return { Items: [{ report_id: "rpt_earlier", gps, moderation_result: { phash: "c4e1b3a59d0f2687" } }] };
     },
   );
-  return { index: new DynamoHashIndex(new DynamoReader(client), { reports: "reports", sites: "sites" }), queried };
+  return { index: new DynamoHashIndex(new DynamoReader(client), { reports: "reports", sites: "sites" }, RULES.siteMergeRadiusM + RULES.targetMaxM), queried };
 }
 
 describe("long-range authenticity uses the phone's GPS", () => {

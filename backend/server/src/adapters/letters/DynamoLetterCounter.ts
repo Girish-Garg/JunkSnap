@@ -8,9 +8,6 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { ExternalServiceError } from "../../domain/errors.js";
 import type { CountRequest, LetterCounter } from "../../ports/letters/LetterCounter.js";
 
-const ATTEMPTS = 5;
-// Random pause between conditional misses, so racing requests stop colliding in step.
-const MAX_JITTER_MS = 25;
 const CONDITION_FAILED = "ConditionalCheckFailedException";
 
 export interface CounterClient {
@@ -26,6 +23,12 @@ export interface CounterTable {
   readonly prefix?: "letter" | "note" | "withdraw" | "flag" | "confirm";
 }
 
+// COUNTER_ATTEMPTS, and COUNTER_JITTER_MS: a random pause between conditional misses, so racing requests stop colliding in step.
+export interface CounterRetry {
+  readonly attempts: number;
+  readonly jitterMs: number;
+}
+
 interface Window {
   // ISO time as stored, or null before the first letter.
   readonly start: string | null;
@@ -38,10 +41,12 @@ export class DynamoLetterCounter implements LetterCounter {
   readonly #table: CounterTable;
   readonly #start: string;
   readonly #count: string;
+  readonly #retry: CounterRetry;
 
-  constructor(client: CounterClient, table: CounterTable) {
+  constructor(client: CounterClient, table: CounterTable, retry: CounterRetry) {
     this.#client = client;
     this.#table = table;
+    this.#retry = retry;
     this.#start = `${table.prefix ?? "letter"}_window_start`;
     this.#count = `${table.prefix ?? "letter"}_count`;
   }
@@ -52,7 +57,7 @@ export class DynamoLetterCounter implements LetterCounter {
   }
 
   async take(request: CountRequest): Promise<boolean> {
-    for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
+    for (let attempt = 0; attempt < this.#retry.attempts; attempt += 1) {
       const window = await this.#read(request.key);
       const expired = DynamoLetterCounter.#expired(window, request);
       if (!expired && window.count >= request.limit) {
@@ -62,7 +67,7 @@ export class DynamoLetterCounter implements LetterCounter {
       if (await this.#write(command)) {
         return true;
       }
-      await sleep(Math.random() * MAX_JITTER_MS);
+      await sleep(Math.random() * this.#retry.jitterMs);
     }
     // Still contended after every attempt: refuse (429) rather than fail the request.
     return false;

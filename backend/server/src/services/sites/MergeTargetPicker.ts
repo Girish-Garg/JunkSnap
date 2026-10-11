@@ -3,8 +3,6 @@ import type { MergeableReport } from "../../domain/sites/MergeableReport.js";
 import type { Site } from "../../domain/sites/Site.js";
 import type { EmbeddingStore } from "../../ports/sites/EmbeddingStore.js";
 
-// SigLIP 2 vectors: keeps 95% of second shots of one pile, lets 15% of other piles through (docs/ml/eval.md).
-export const DEFAULT_MIN_COSINE = 0.88;
 const ME_TOO_RANK = -1;
 
 // Picks the site a report merges into: the Me too site when it qualifies, else the nearest that does.
@@ -12,7 +10,9 @@ export class MergeTargetPicker {
   readonly #embeddings: EmbeddingStore;
   readonly #minCosine: number;
 
-  constructor(embeddings: EmbeddingStore, minCosine: number = DEFAULT_MIN_COSINE) {
+  // minCosine: MERGE_MIN_COSINE; at 0.88 SigLIP 2 vectors keep 95% of second shots of one pile and let 15% of other
+  // piles through (docs/ml/eval.md).
+  constructor(embeddings: EmbeddingStore, minCosine: number) {
     this.#embeddings = embeddings;
     this.#minCosine = minCosine;
   }

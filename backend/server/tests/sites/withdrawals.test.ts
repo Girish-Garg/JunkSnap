@@ -15,16 +15,17 @@ import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { afterPhoto, BASE_LAT, BASE_LON, BASE_URL, DEVICE_A, DEVICE_B, DEVICE_C, NO_VOTES, northOf, report, siteFixture, userOf } from "./builders.js";
 import { FixedClock } from "./fakes.js";
 import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
+import { PAGING, RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const LATER = "2026-10-10T03:00:00Z";
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const requester = (device: string) => ({ userId: userOf(device), deviceToken: device });
 
 // Founds site_jdh_1 from DEVICE_A's photo and merges one more photo per extra report.
 function seeded(rig: WithdrawalRig, extra: readonly MergeableReport[] = []): Site {
   const founder = report({ device: DEVICE_A });
-  const site = Site.found(founder);
+  const site = Site.found(founder, RULES);
   rig.rows.add(SITE, founder);
   for (const added of extra) {
     site.merge(added);
@@ -49,8 +50,8 @@ describe("withdrawing the only report", () => {
     expect(stored).toMatchObject({ status: "removed", removed_reason: "withdrawn", removed_at: "2026-10-10T06:00:00.000Z", report_count: 1 });
     expect(rig.sites.internals(SITE)).toMatchObject({ reports: [], withdrawnReports: ["rpt_jdh_1"] });
     expect(rig.withdrawer.withdrawn.get("rpt_jdh_1")).toBe("2026-10-10T06:00:00.000Z");
-    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toEqual([]);
-    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.photo_urls).toEqual([]);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).inBox(AROUND)).toEqual([]);
+    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).byId(SITE)).properties.photo_urls).toEqual([]);
     expect(stored.photo_urls).toEqual([`${BASE_URL}/media/reports/rpt_jdh_1.jpg`]);
   });
 
@@ -101,14 +102,14 @@ describe("withdrawing when other people back the site", () => {
       reporterIds: [userOf(DEVICE_B)],
       withdrawnReports: ["rpt_jdh_1"],
     });
-    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toHaveLength(1);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).inBox(AROUND)).toHaveLength(1);
   });
 
   it("re-centres a no-bin zone on the reports that stay", async () => {
     const rig = withdrawalRig();
     const zone = (id: string, device: string, lat: number) => report({ id, device, lat, reportType: "no_bin", context: "no_bin" });
     const founder = zone("nb_1", DEVICE_A, BASE_LAT);
-    const site = Site.found(founder);
+    const site = Site.found(founder, RULES);
     const other = zone("nb_2", DEVICE_B, northOf(200));
     site.merge(other);
     rig.rows.add("site_nb_1", founder);
@@ -171,7 +172,7 @@ describe("refusals", () => {
     const rig = withdrawalRig(undefined, 1);
     seeded(rig);
     const other = report({ id: "jdh_9", device: DEVICE_A, lat: 26.3 });
-    rig.sites.put(Site.found(other));
+    rig.sites.put(Site.found(other, RULES));
     rig.rows.add("site_jdh_9", other);
     const outcomes = await Promise.allSettled([SITE, "site_jdh_9"].map((id) => rig.service.withdraw(id, requester(DEVICE_A))));
     expect(outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []))).toEqual([expect.any(RateLimitedError)]);
@@ -185,10 +186,10 @@ describe("refusals", () => {
 describe("scores after removal", () => {
   it("leave a removed site out of every area count and never call it cleared", () => {
     const item = { ...siteFixture("jdh-5").properties, lat: 26.2934, lon: 73.0312 };
-    const removed = new SiteItemParser().parse(item);
+    const removed = new SiteItemParser(RULES.ttlDays).parse(item);
     expect(removed.isCounted()).toBe(false);
     expect(removed.everCleared()).toBe(false);
-    const open = new SiteItemParser().parse({ ...siteFixture("jdh-1").properties, lat: 26.26, lon: 73.0 });
+    const open = new SiteItemParser(RULES.ttlDays).parse({ ...siteFixture("jdh-1").properties, lat: 26.26, lon: 73.0 });
     expect(new AreaSites([removed, open]).counts()).toMatchObject({ sites: 1, open_sites: 1, cleaned_sites: 0 });
   });
 });

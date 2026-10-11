@@ -5,6 +5,7 @@ import type { CleanupRequest } from "../../domain/sites/Cleanup.js";
 import { GeoPoint } from "../../domain/sites/GeoPoint.js";
 import { SiteNotFoundError } from "../../domain/sites/SiteErrors.js";
 import type { Ballot } from "../../services/sites/VoteService.js";
+import { PagingSettings } from "../../settings/PagingSettings.js";
 
 const SITE_ID = /^site_[a-z0-9_]{1,40}$/;
 const DEVICE_TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -37,6 +38,13 @@ const CleanupBody = z.strictObject({
 
 // Request shapes from contracts/README.md; a bad shape is 400 bad_request, a malformed site id 404.
 export class SiteRequests {
+  readonly #bboxMaxDegrees: number;
+
+  // bboxMaxDegrees: BBOX_MAX_DEGREES.
+  constructor(bboxMaxDegrees = PagingSettings.fromEnv({}).bboxMaxDegrees) {
+    this.#bboxMaxDegrees = bboxMaxDegrees;
+  }
+
   siteId(params: unknown): string {
     const parsed = SiteParams.safeParse(params);
     if (!parsed.success || !SITE_ID.test(parsed.data.id)) {
@@ -46,7 +54,7 @@ export class SiteRequests {
   }
 
   bbox(query: unknown): BoundingBox {
-    return BoundingBox.parse(SiteRequests.#parse(BboxQuery, query, "query").bbox);
+    return BoundingBox.parse(SiteRequests.#parse(BboxQuery, query, "query").bbox, this.#bboxMaxDegrees);
   }
 
   ballot(body: unknown, userId: string | null): Ballot {

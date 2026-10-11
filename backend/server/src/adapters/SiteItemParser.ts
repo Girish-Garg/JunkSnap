@@ -12,11 +12,18 @@ const SITE_FIELDS = Object.keys(siteSchema.properties.properties.properties);
 
 // A sites-table item is the site properties plus lat, lon and private fields; it must pass the site contract.
 export class SiteItemParser {
+  readonly #ttlDays: number;
+
+  // ttlDays: SITE_TTL_DAYS, for rows written before expires_at was stored.
+  constructor(ttlDays: number) {
+    this.#ttlDays = ttlDays;
+  }
+
   parse(stored: Record<string, unknown>): AreaSite {
     const item = new LegacySiteFields().upgrade(stored);
     const properties = Object.fromEntries(SITE_FIELDS.filter((field) => field in item).map((field) => [field, item[field]]));
     const feature = { type: "Feature", geometry: { type: "Point", coordinates: [item.lon, item.lat] }, properties };
-    return SiteItemParser.#toSite(SiteItemParser.#checked(feature, String(item.site_id)));
+    return this.#toSite(SiteItemParser.#checked(feature, String(item.site_id)));
   }
 
   static #checked(feature: object, siteId: string): Site {
@@ -28,7 +35,7 @@ export class SiteItemParser {
     }
   }
 
-  static #toSite({ geometry, properties: site }: Site): AreaSite {
+  #toSite({ geometry, properties: site }: Site): AreaSite {
     const [lon, lat] = geometry.coordinates;
     return new AreaSite({
       siteId: site.site_id,
@@ -39,7 +46,7 @@ export class SiteItemParser {
       verifiedCount: site.verified_count,
       firstReportedAt: site.first_reported_at,
       cleanedAt: site.cleaned_at,
-      expiresAt: expiryOf(site),
+      expiresAt: expiryOf(site, this.#ttlDays),
       pilot: site.pilot,
       burning: site.burning,
       point: new GeoPoint(lat, lon),

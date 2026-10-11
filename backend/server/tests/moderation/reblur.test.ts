@@ -10,6 +10,7 @@ import { PhotoId } from "../../src/domain/moderation/PhotoId.js";
 import { PhotoLoader } from "../../src/services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../src/services/moderation/PrivacyBlur.js";
 import { box, FakeFinder, FakeImageStore, FakeSubjectFinder, testJpeg } from "./fakes.js";
+import { MODERATION } from "../defaults.js";
 
 const BUCKETS = { originals: "junksnap-dev-originals-1", public: "junksnap-dev-public-1" };
 const KEY = "media/reports/rpt_jdh_1.jpg";
@@ -33,7 +34,7 @@ function setUp(options: Partial<ReblurOptions> = {}) {
   const subjects = new FakeSubjectFinder();
   subjects.subjects = [{ kind: "two_wheeler", box: box(0.3, 0.4, 0.3, 0.5), confidence: 90 }];
   const blur = new PrivacyBlur({ faces: new FakeFinder("DetectFaces", null), plates: new FakeFinder("DetectText", "3.0"), subjects, blurrer: new SharpBlurrer(), store });
-  const reblur = new PublicReblur({ objects, loader: new PhotoLoader(store, new SharpImageCodec()), blur, buckets: BUCKETS }, { dryRun: false, force: false, ...options });
+  const reblur = new PublicReblur({ objects, loader: new PhotoLoader(store, new SharpImageCodec(), MODERATION.maxUploadBytes), blur, buckets: BUCKETS }, { dryRun: false, force: false, ...options });
   return { objects, store, reblur };
 }
 

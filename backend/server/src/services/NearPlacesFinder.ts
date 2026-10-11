@@ -1,18 +1,19 @@
 import type { MapFeature, MapLayer } from "../domain/MapLayer.js";
 import type { NearPlace } from "../domain/sites/SiteTypes.js";
 
-export const NEAR_RADIUS_M = 100;
 const METRES_PER_DEGREE_LAT = 110_574;
 const METRES_PER_DEGREE_LON_AT_EQUATOR = 111_320;
 
 type Xy = readonly [number, number];
 
-// Sensitive places within 100 m of a site, nearest first; distance to the nearest vertex or edge.
+// Sensitive places within radiusM (NEAR_PLACES_RADIUS_M) of a site, nearest first; distance to the nearest vertex or edge.
 export class NearPlacesFinder {
   readonly #layers: readonly MapLayer[];
+  readonly #radiusM: number;
 
-  constructor(layers: readonly MapLayer[]) {
+  constructor(layers: readonly MapLayer[], radiusM: number) {
     this.#layers = layers;
+    this.#radiusM = radiusM;
   }
 
   near(lat: number, lon: number): NearPlace[] {
@@ -24,7 +25,7 @@ export class NearPlacesFinder {
         source: layer.source,
       })),
     );
-    return places.filter((place) => place.distance_m <= NEAR_RADIUS_M).sort((a, b) => a.distance_m - b.distance_m);
+    return places.filter((place) => place.distance_m <= this.#radiusM).sort((a, b) => a.distance_m - b.distance_m);
   }
 
   // A local flat projection is exact enough within a few hundred metres.

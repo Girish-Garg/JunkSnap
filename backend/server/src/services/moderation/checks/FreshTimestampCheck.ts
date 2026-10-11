@@ -1,14 +1,17 @@
 import { CheckOutcome } from "../../../domain/moderation/CheckOutcome.js";
 import { formatDuration } from "../../../domain/moderation/utils.js";
+import type { ModerationRules } from "../../../domain/moderation/ModerationRules.js";
 import type { Check, CheckSubject } from "./Check.js";
 
-// Room for the phone's offline queue, and for a phone clock running a little fast.
-const MAX_AGE_S = 72 * 3600;
-const MAX_AHEAD_S = 5 * 60;
-
+// PHOTO_MAX_AGE_HOURS and PHOTO_MAX_AHEAD_MINUTES.
 export class FreshTimestampCheck implements Check {
   readonly key = "fresh_timestamp";
   readonly reason = "stale_timestamp";
+  readonly #rules: Pick<ModerationRules, "maxAgeS" | "maxAheadS">;
+
+  constructor(rules: Pick<ModerationRules, "maxAgeS" | "maxAheadS">) {
+    this.#rules = rules;
+  }
 
   async run({ submission }: CheckSubject): Promise<CheckOutcome> {
     const { capturedAt, receivedAt } = submission.fields;
@@ -16,11 +19,12 @@ export class FreshTimestampCheck implements Check {
     if (Number.isNaN(ageS)) {
       return CheckOutcome.fail("capture time missing or unreadable");
     }
+    const { maxAgeS, maxAheadS } = this.#rules;
     if (ageS < 0) {
-      const detail = `captured ${formatDuration(ageS)} after upload; limit 5 min`;
-      return -ageS > MAX_AHEAD_S ? CheckOutcome.fail(detail) : CheckOutcome.pass(detail);
+      const detail = `captured ${formatDuration(ageS)} after upload; limit ${formatDuration(maxAheadS)}`;
+      return -ageS > maxAheadS ? CheckOutcome.fail(detail) : CheckOutcome.pass(detail);
     }
-    const detail = `captured ${formatDuration(ageS)} before upload; limit 72 h`;
-    return ageS > MAX_AGE_S ? CheckOutcome.fail(detail) : CheckOutcome.pass(detail);
+    const detail = `captured ${formatDuration(ageS)} before upload; limit ${formatDuration(maxAgeS)}`;
+    return ageS > maxAgeS ? CheckOutcome.fail(detail) : CheckOutcome.pass(detail);
   }
 }

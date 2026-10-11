@@ -5,7 +5,6 @@ import type { ShownNote } from "../../domain/notes/Community.js";
 import type { ReportNoteReader } from "../../ports/notes/NoteStore.js";
 
 const BY_SITE_INDEX = "by-site";
-const MAX_PAGES = 5;
 
 type Client = Pick<DynamoDBDocumentClient, "send">;
 
@@ -13,16 +12,19 @@ type Client = Pick<DynamoDBDocumentClient, "send">;
 export class DynamoReportNotes implements ReportNoteReader {
   readonly #client: Client;
   readonly #table: string;
+  readonly #maxPages: number;
 
-  constructor(client: Client, table: string) {
+  // maxPages: NOTES_MAX_PAGES.
+  constructor(client: Client, table: string, maxPages: number) {
     this.#client = client;
     this.#table = table;
+    this.#maxPages = maxPages;
   }
 
   async shownFor(siteId: string): Promise<ShownNote[]> {
     const notes: ShownNote[] = [];
     let startKey: Record<string, unknown> | undefined;
-    for (let page = 0; page < MAX_PAGES; page += 1) {
+    for (let page = 0; page < this.#maxPages; page += 1) {
       const output = await this.#query(siteId, startKey);
       notes.push(...(output.Items ?? []).flatMap(DynamoReportNotes.#shown));
       startKey = output.LastEvaluatedKey;

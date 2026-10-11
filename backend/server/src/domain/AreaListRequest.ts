@@ -1,8 +1,11 @@
 import { AREA_KINDS, type AreaKind } from "./AreaKey.js";
 import { ValidationError } from "./errors.js";
 
-export const DEFAULT_AREA_LIMIT = 50;
-export const MAX_AREA_LIMIT = 200;
+// AREA_LIST_DEFAULT_LIMIT and AREA_LIST_MAX_LIMIT.
+export interface AreaListLimits {
+  readonly defaultLimit: number;
+  readonly maxLimit: number;
+}
 
 const PLACE_ID = /^[a-z0-9-]{1,64}$/;
 const WHOLE_NUMBER = /^[0-9]{1,6}$/;
@@ -28,7 +31,7 @@ export class AreaListRequest {
     this.limit = limit;
   }
 
-  static parse(params: AreaListParams): AreaListRequest {
+  static parse(params: AreaListParams, limits: AreaListLimits): AreaListRequest {
     const kind = AREA_KINDS.find((candidate) => candidate === params.kind);
     if (kind === undefined) {
       throw new ValidationError(`kind must be one of ${AREA_KINDS.join(", ")}`);
@@ -37,16 +40,16 @@ export class AreaListRequest {
     if (typeof within !== "string" || !PLACE_ID.test(within)) {
       throw new ValidationError("within must be one district or local body id of 1 to 64 characters of a-z, 0-9 and -");
     }
-    return new AreaListRequest(kind, within, AreaListRequest.#limit(params.limit));
+    return new AreaListRequest(kind, within, AreaListRequest.#limit(params.limit, limits));
   }
 
-  static #limit(raw: QueryValue): number {
+  static #limit(raw: QueryValue, { defaultLimit, maxLimit }: AreaListLimits): number {
     if (raw === undefined) {
-      return DEFAULT_AREA_LIMIT;
+      return defaultLimit;
     }
     if (typeof raw !== "string" || !WHOLE_NUMBER.test(raw) || Number(raw) < 1) {
-      throw new ValidationError(`limit must be a whole number from 1; above ${MAX_AREA_LIMIT} it is capped`);
+      throw new ValidationError(`limit must be a whole number from 1; above ${maxLimit} it is capped`);
     }
-    return Math.min(Number(raw), MAX_AREA_LIMIT);
+    return Math.min(Number(raw), maxLimit);
   }
 }

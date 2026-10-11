@@ -5,6 +5,7 @@ import type { MergeableReport, MergeEvidence } from "../../domain/sites/Mergeabl
 import type { MergeableReportFactory } from "../../domain/sites/MergeableReportFactory.js";
 import { mergeRadiusM } from "../../domain/sites/NoBinZone.js";
 import { Site } from "../../domain/sites/Site.js";
+import type { SiteRules } from "../../domain/sites/SiteRules.js";
 import { StaleSiteError } from "../../domain/sites/SiteErrors.js";
 import { VoteTally } from "../../domain/sites/VoteTally.js";
 import type { Verification } from "../../domain/sites/SiteTypes.js";
@@ -29,10 +30,10 @@ export interface SiteMergerDeps {
   readonly clock: Clock;
   readonly reportFactory: MergeableReportFactory;
   readonly retry: ConflictRetry;
+  readonly rules: SiteRules;
+  // MIN_VERIFIED_REPORTS, written on the zero-count rows of a new site's areas.
+  readonly minVerifiedReports: number;
 }
-
-// The worker merges up to 10 reports at once (one SQS batch), so in each round of conflicts at least one writer wins.
-export const MERGE_ATTEMPTS = 11;
 
 type Outcome = "founded" | "merged" | "unchanged";
 
@@ -66,7 +67,7 @@ export class SiteMerger {
 
   // The holder check runs first: a redelivered scan frame that joined a neighbour site must not join its spot's site too.
   async #attempt(report: MergeableReport): Promise<Merged> {
-    const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType));
+    const nearby = await this.#nearby(report.point, mergeRadiusM(report.reportType, this.#deps.rules));
     const holder = nearby.find((site) => site.holds(report.reportId));
     if (holder !== undefined) {
       return { site: holder, outcome: "unchanged" };
@@ -111,8 +112,8 @@ export class SiteMerger {
 
   // Seeds before creating, so a retry that finds the site already merged needs no seeding.
   async #found(report: MergeableReport): Promise<Merged> {
-    const site = Site.found(report);
-    const zero = new ZeroScoreRows(site.toFeature());
+    const site = Site.found(report, this.#deps.rules);
+    const zero = new ZeroScoreRows(site.toFeature(), this.#deps.minVerifiedReports);
     const within = zero.within();
     await Promise.all(zero.rows(this.#deps.clock.now().toISOString()).map((row) => this.#deps.scores.seedIfMissing(row, within)));
     if (await this.#deps.sites.create(site)) {

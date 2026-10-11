@@ -15,6 +15,7 @@ import type { EmbeddingStore } from "../../src/ports/sites/EmbeddingStore.js";
 import type { ReportStatusWriter } from "../../src/ports/sites/ReportStatusWriter.js";
 import type { SiteRepository } from "../../src/ports/sites/SiteRepository.js";
 import type { VoteRepository } from "../../src/ports/sites/VoteRepository.js";
+import { RULES } from "../defaults.js";
 
 export const NOW = "2026-10-10T06:00:00.000Z";
 
@@ -54,11 +55,11 @@ export class FakeSiteRepository implements SiteRepository {
 
   async get(siteId: string): Promise<Site | null> {
     const state = this.#states.get(siteId);
-    return state === undefined ? null : Site.restore(state);
+    return state === undefined ? null : Site.restore(state, RULES);
   }
 
   async inCell(cell: string): Promise<Site[]> {
-    const sites = [...this.#states.values()].map((state) => Site.restore(state));
+    const sites = [...this.#states.values()].map((state) => Site.restore(state, RULES));
     return sites.filter((site) => this.#cells.cellOf(site.point) === cell);
   }
 

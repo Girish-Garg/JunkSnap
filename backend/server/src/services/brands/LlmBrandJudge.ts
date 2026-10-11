@@ -13,12 +13,13 @@ const SYSTEM = [
   "text_seen is the exact text you read, in its own script. confidence (0 to 1) is how sure you are that this text is printed there.",
   'Answer {"verdicts": [{"case_id": "...", "brand": "<one offered brand name>" or null, "confidence": 0.0, "text_seen": "..."}]}, one verdict per case.',
 ].join("\n");
-const MAX_TOKENS = 600;
 
 export interface LlmBrandJudgeParts {
   readonly router: Pick<ProviderRouter, "completeJson">;
   readonly images: BlurredImageStore;
   readonly schema: AnswerSchema<JudgeAnswer>;
+  // BRAND_JUDGE_MAX_TOKENS.
+  readonly maxTokens: number;
 }
 
 // Task "brands" through the LLM layer's router (Bedrock first); the model sees only the blurred copy.
@@ -26,11 +27,13 @@ export class LlmBrandJudge implements BrandJudge {
   readonly #router: Pick<ProviderRouter, "completeJson">;
   readonly #images: BlurredImageStore;
   readonly #schema: AnswerSchema<JudgeAnswer>;
+  readonly #maxTokens: number;
 
   constructor(parts: LlmBrandJudgeParts) {
     this.#router = parts.router;
     this.#images = parts.images;
     this.#schema = parts.schema;
+    this.#maxTokens = parts.maxTokens;
   }
 
   async judge(image: BlurredImage, cases: readonly JudgeCase[]): Promise<readonly JudgeVerdict[]> {
@@ -41,7 +44,7 @@ export class LlmBrandJudge implements BrandJudge {
       userText: cases.map((judgeCase) => LlmBrandJudge.#describe(judgeCase)).join("\n"),
       images: [{ bytes, format: "jpeg" }],
       jsonSchemaName: "brand_verdicts",
-      maxTokens: MAX_TOKENS,
+      maxTokens: this.#maxTokens,
     });
     const response = await this.#router.completeJson(request, this.#schema);
     const source = { provider: response.provider, model: response.model, version: response.version };

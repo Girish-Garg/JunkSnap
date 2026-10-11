@@ -10,15 +10,17 @@ const AREA_FIELDS: readonly (readonly [AreaKind, AreaField])[] = [
   ["loksabha", "loksabha_seat"],
   ["district", "district"],
 ];
-const MIN_VERIFIED_REPORTS = 10;
 const FORMULA_VERSION = "scores-v3";
 
 // First scores row for each area of a new site: zero counts, every score withheld (contracts/README.md).
 export class ZeroScoreRows {
   readonly #feature: SiteFeature;
+  readonly #minVerifiedReports: number;
 
-  constructor(feature: SiteFeature) {
+  // minVerifiedReports: MIN_VERIFIED_REPORTS, as the scores CronJob writes it.
+  constructor(feature: SiteFeature, minVerifiedReports: number) {
     this.#feature = feature;
+    this.#minVerifiedReports = minVerifiedReports;
   }
 
   rows(computedAt: string): WardScores[] {
@@ -41,7 +43,7 @@ export class ZeroScoreRows {
     return {
       area,
       counts: { verified_reports: 0, no_bin_reports: 0, sites: 0, open_sites: 0, cleaned_sites: 0, reopened_sites: 0, sites_without_bin_within_3km: 0 },
-      min_verified_reports: MIN_VERIFIED_REPORTS,
+      min_verified_reports: this.#minVerifiedReports,
       scores: { city: withheld, citizen: withheld, bin_access: withheld },
       metrics: {
         median_days_to_clear: null,

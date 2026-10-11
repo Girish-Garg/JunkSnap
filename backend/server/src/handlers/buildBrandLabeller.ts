@@ -14,7 +14,9 @@ import { BrandSettings } from "../settings/BrandSettings.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import type { Env } from "../settings/utils.js";
 import { buildProviderRouter } from "./LlmModule.js";
-import { AWS_TIMEOUTS, awsClientConfig } from "./utils.js";
+import { ModelLimitSettings } from "../settings/ModelLimitSettings.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
+import { awsClientConfig } from "./utils.js";
 
 export interface BrandStepContext {
   readonly core: CoreSettings;
@@ -25,12 +27,14 @@ export interface BrandStepContext {
 // The worker's brands step, built once per process; the judge uses LLM task "brands" (Bedrock only in the worker).
 export function buildBrandLabeller({ core, env, logger }: BrandStepContext): BrandLabeller {
   const settings = BrandSettings.fromEnv(env);
-  const rekognition = new RekognitionClient(awsClientConfig(core.awsRegion, AWS_TIMEOUTS.wait));
+  const aws = TimeoutSettings.fromEnv(env).aws;
+  const rekognition = new RekognitionClient(awsClientConfig(core.awsRegion, aws.wait));
   const images = new PublicBucketImageSource(settings.publicBucket);
   const judge = new LlmBrandJudge({
     router: buildProviderRouter(env, core, logger),
-    images: new S3BlurredImageStore(new S3Client(awsClientConfig(core.awsRegion, AWS_TIMEOUTS.transfer)), settings.publicBucket),
+    images: new S3BlurredImageStore(new S3Client(awsClientConfig(core.awsRegion, aws.transfer)), settings.publicBucket),
     schema: JUDGE_ANSWER_SCHEMA,
+    maxTokens: ModelLimitSettings.fromEnv(env).brandJudgeMaxTokens,
   });
   return new BrandLabeller({
     reader: new RekognitionTextReader(rekognition, images),

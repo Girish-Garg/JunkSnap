@@ -14,6 +14,8 @@ import { SharpBlurrer } from "../src/adapters/moderation/SharpBlurrer.js";
 import { SharpImageCodec } from "../src/adapters/moderation/SharpImageCodec.js";
 import { PhotoLoader } from "../src/services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../src/services/moderation/PrivacyBlur.js";
+import { CacheSettings } from "../src/settings/CacheSettings.js";
+import { ModerationRuleSettings } from "../src/settings/ModerationRuleSettings.js";
 import { PublicReblur } from "./reblur/PublicReblur.js";
 import { parseReblurArgs, type ReblurRun } from "./reblur/ReblurArgs.js";
 import { S3Objects } from "./reblur/S3Objects.js";
@@ -23,7 +25,7 @@ const PREFIXES = ["media/reports/", "media/cleanups/"];
 
 function reblurFor(run: ReblurRun, s3: S3Client): PublicReblur {
   const rekognition = new RekognitionClient({ region: REGION });
-  const store = new S3ImageStore(s3, run.buckets);
+  const store = new S3ImageStore(s3, run.buckets, CacheSettings.fromEnv(process.env).mediaMaxAgeSeconds);
   const blur = new PrivacyBlur({
     faces: new RekognitionFaceFinder(rekognition),
     plates: new RekognitionPlateFinder(rekognition),
@@ -31,7 +33,7 @@ function reblurFor(run: ReblurRun, s3: S3Client): PublicReblur {
     blurrer: new SharpBlurrer(),
     store,
   });
-  return new PublicReblur({ objects: new S3Objects(s3), loader: new PhotoLoader(store, new SharpImageCodec()), blur, buckets: run.buckets }, run.options);
+  return new PublicReblur({ objects: new S3Objects(s3), loader: new PhotoLoader(store, new SharpImageCodec(), ModerationRuleSettings.fromEnv(process.env).maxUploadBytes), blur, buckets: run.buckets }, run.options);
 }
 
 async function* keysOf(run: ReblurRun, objects: S3Objects): AsyncGenerator<string> {

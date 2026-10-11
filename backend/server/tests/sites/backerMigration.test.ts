@@ -12,9 +12,10 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { report, siteFixture } from "./builders.js";
 import { FakeReportStatus, FakeSiteRepository, FakeVoteRepository, NOW, RecordingLogger } from "./fakes.js";
 import { ScriptedClient } from "./ScriptedClient.js";
+import { RETRY, RULES } from "../defaults.js";
 
 function oldVerifiedSite(id: string, photos: number): Site {
-  const site = Site.found(report({ id: `${id}_0`, device: `${id}-dev-0`, user: `${id}-user-0` }));
+  const site = Site.found(report({ id: `${id}_0`, device: `${id}-dev-0`, user: `${id}-user-0` }), RULES);
   for (let n = 1; n < photos; n += 1) {
     site.merge(report({ id: `${id}_${n}`, device: `${id}-dev-${n}`, user: `${id}-user-${n}` }));
   }
@@ -22,7 +23,7 @@ function oldVerifiedSite(id: string, photos: number): Site {
   const reports = internals.reports.map((merged) => ({ ...merged, verified: true }));
   const properties = { ...feature.properties, verification: "verified" as const, verified_count: photos };
   // A row from before the backers count: the mapper marks it needsBackerCount.
-  return Site.restore({ feature: { ...feature, properties }, internals: { ...internals, reports, needsBackerCount: true } });
+  return Site.restore({ feature: { ...feature, properties }, internals: { ...internals, reports, needsBackerCount: true } }, RULES);
 }
 
 function voteOn(votes: FakeVoteRepository, siteId: string) {
@@ -41,7 +42,7 @@ describe("BackerMigration", () => {
       await voteOn(votes, "site_site_b_0")(n, n < 2 ? "same-user" : null);
     }
     await voteOn(votes, "site_site_b_0")(9, "site_b-user-1");
-    const migration = new BackerMigration({ sites, votes, reports, retry: new ConflictRetry() });
+    const migration = new BackerMigration({ sites, votes, reports, retry: new ConflictRetry(RETRY.saveAttempts) });
     expect(await migration.run()).toEqual({ sites: 2, migrated: 2, skipped: 0, verified: 0, rejected: 0 });
     expect(sites.feature("site_site_a_0").properties).toMatchObject({
       verification: "unverified",
@@ -56,11 +57,11 @@ describe("BackerMigration", () => {
     const sites = new FakeSiteRepository();
     const votes = new FakeVoteRepository();
     sites.put(oldVerifiedSite("site_c", 3));
-    sites.put(Site.found(report({ id: "new_1", lat: 26.4 })));
+    sites.put(Site.found(report({ id: "new_1", lat: 26.4 }), RULES));
     for (let n = 0; n < 7; n += 1) {
       await voteOn(votes, "site_site_c_0")(n, null);
     }
-    const migration = new BackerMigration({ sites, votes, reports: new FakeReportStatus(), retry: new ConflictRetry() });
+    const migration = new BackerMigration({ sites, votes, reports: new FakeReportStatus(), retry: new ConflictRetry(RETRY.saveAttempts) });
     expect(await migration.run()).toEqual({ sites: 2, migrated: 1, skipped: 1, verified: 1, rejected: 0 });
     await votes.put({ siteId: "site_site_c_0", deviceToken: "site_site_c_0-voter-0", userId: null, choice: "reject", votedAt: NOW });
     const live = await sites.get("site_site_c_0");
@@ -85,7 +86,7 @@ describe("older site items", () => {
 
   it("read community_check as unverified with the photo people as provisional backers", () => {
     expect(_gone).toBeDefined();
-    const mapper = new SiteItemMapper(new NgeohashCells(), new RecordingLogger());
+    const mapper = new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES);
     const site = mapper.toSite(legacy);
     expect(site.needsBackerCount).toBe(true);
     expect(mapper.toSite(mapper.toItem(site)).needsBackerCount).toBe(false);
@@ -93,7 +94,7 @@ describe("older site items", () => {
       verification: "unverified",
       backers: { count: 1, needed: 10, photo_people: 1, vote_people: 0 },
     });
-    expect(new SiteItemParser().parse(legacy).isVerified()).toBe(false);
+    expect(new SiteItemParser(RULES.ttlDays).parse(legacy).isVerified()).toBe(false);
   });
 
   it("are listed by the id scan, page by page", async () => {
@@ -101,7 +102,7 @@ describe("older site items", () => {
       () => ({ Items: [{ site_id: "site_a" }], LastEvaluatedKey: { site_id: "site_a" } }),
       () => ({ Items: [{ site_id: "site_b" }] }),
     ]);
-    const mapper = new SiteItemMapper(new NgeohashCells(), new RecordingLogger());
+    const mapper = new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES);
     const repository = new DynamoSiteRepository(client.as<DynamoDBDocumentClient>(), "sites", mapper, new AwsCalls());
     expect(await repository.allIds()).toEqual(["site_a", "site_b"]);
     expect(client.sent[1]?.input).toMatchObject({ ProjectionExpression: "site_id", ExclusiveStartKey: { site_id: "site_a" } });

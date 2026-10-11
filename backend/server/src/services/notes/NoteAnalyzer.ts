@@ -49,11 +49,14 @@ export class NoteAnalyzer {
   readonly #router: AnalysisRouter;
   readonly #wording: WordingCheck;
   readonly #logger: Logger;
+  readonly #maxTokens: number;
 
-  constructor(router: AnalysisRouter, wording: WordingCheck, logger: Logger) {
+  // maxTokens: NOTE_ANALYSIS_MAX_TOKENS.
+  constructor(router: AnalysisRouter, wording: WordingCheck, logger: Logger, maxTokens: number) {
     this.#router = router;
     this.#wording = wording;
     this.#logger = logger;
+    this.#maxTokens = maxTokens;
   }
 
   // Null when the model gave no usable answer, so the caller keeps what it had.
@@ -63,7 +66,7 @@ export class NoteAnalyzer {
       system: SYSTEM,
       userText: NoteAnalyzer.#input(notes, people, photoReports),
       jsonSchemaName: "community_signals",
-      maxTokens: 500,
+      maxTokens: this.#maxTokens,
     });
     try {
       const response = await this.#router.completeJson(request, new CommunityAnswer());

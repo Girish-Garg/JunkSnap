@@ -6,7 +6,6 @@ import type { ModerationResult, VerificationResult } from "../../src/contracts/i
 import { validateSite } from "../../src/contracts/index.gen.js";
 import { AreaSites } from "../../src/domain/AreaSites.js";
 import { BoundingBox } from "../../src/domain/sites/BoundingBox.js";
-import { CLEANED_QUORUM } from "../../src/domain/sites/Clearance.js";
 import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
 import { PublicMedia } from "../../src/domain/sites/PublicMedia.js";
 import { Site } from "../../src/domain/sites/Site.js";
@@ -22,10 +21,11 @@ import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, fixture, northOf, report } from "./builders.js";
 import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, RecordingLogger } from "./fakes.js";
+import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const MODERATION = fixture<ModerationResult>("moderation_result.jdh-3.json");
 const VERIFICATION = fixture<VerificationResult>("verification_result.jdh-3.json");
 
@@ -45,12 +45,12 @@ class StepClock implements Clock {
 
 function setup() {
   const sites = new FakeSiteRepository();
-  sites.put(Site.found(report()));
-  const [votes, cleanups, clock, retry] = [new FakeVoteRepository(), new FakeCleanups(), new StepClock(), new ConflictRetry()];
+  sites.put(Site.found(report(), RULES));
+  const [votes, cleanups, clock, retry] = [new FakeVoteRepository(), new FakeCleanups(), new StepClock(), new ConflictRetry(RETRY.saveAttempts)];
   const voting = new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry });
   const intake = new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry });
   const service = new CleanupService({ sites, cleanups, votes, media: new PublicMedia(BASE_URL), retry });
-  const finder = new SiteFinder(sites, new NgeohashCells(), clock);
+  const finder = new SiteFinder(sites, new NgeohashCells(), clock, PAGING.mapMaxSites);
   let uploads = 0;
   // A person's after-photo that the models pass; the person is their user id.
   const photo = async (person: string, passes = true) => {
@@ -66,12 +66,14 @@ function setup() {
     sites,
     votes,
     cells: new NgeohashCells(),
-    picker: new MergeTargetPicker(new FakeEmbeddings()),
+    picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock,
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
     retry,
+    rules: RULES,
+    minVerifiedReports: SCORES.minVerifiedReports,
   });
   // A waste photo from another person, taken at the given time, merged by the worker.
   const wastePhoto = (id: string, capturedAt: string) =>
@@ -81,7 +83,7 @@ function setup() {
 
 describe("cleared by several people (decision 20261010-1855)", () => {
   it("needs 3 people", () => {
-    expect(CLEANED_QUORUM).toBe(3);
+    expect(RULES.cleanedQuorum).toBe(3);
   });
 
   it("keeps the site on the map after one after-photo, pending 1 of 3", async () => {
@@ -160,8 +162,8 @@ describe("cleared by several people (decision 20261010-1855)", () => {
     await photo("p2");
     await photo("p3");
     const stored = await sites.get(SITE);
-    const item = stored === null ? {} : new SiteItemMapper(new NgeohashCells(), new RecordingLogger()).toItem(stored);
-    const area = new SiteItemParser().parse(item);
+    const item = stored === null ? {} : new SiteItemMapper(new NgeohashCells(), new RecordingLogger(), RULES).toItem(stored);
+    const area = new SiteItemParser(RULES.ttlDays).parse(item);
     expect(area.everCleared()).toBe(true);
     expect(new AreaSites([area]).counts()).toMatchObject({ sites: 1, cleaned_sites: 1, open_sites: 0, verified_reports: 1 });
   });

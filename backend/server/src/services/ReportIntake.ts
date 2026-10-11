@@ -9,8 +9,12 @@ import type { ReportQueue } from "../ports/ReportQueue.js";
 import type { ReportRepository } from "../ports/ReportRepository.js";
 import type { SnapLimit } from "./SnapLimit.js";
 
-// The queue's visibility timeout: before it passes, the first message may still be in flight or being handled.
-const REQUEUE_AFTER_MS = 300_000;
+export interface IntakeLimits {
+  // TARGET_MAX_M: the farthest a long-range target may be from the reporter's fix.
+  readonly targetMaxM: number;
+  // The queue's visibility timeout (QUEUE_VISIBILITY_SECONDS): before it passes, the first message may still be in flight.
+  readonly requeueAfterMs: number;
+}
 
 export interface IntakePorts {
   readonly reports: ReportRepository;
@@ -28,16 +32,18 @@ export interface AcceptedReport {
 // POST /reports: snap photos only (the worker writes scan frames), idempotent per upload id.
 export class ReportIntake {
   readonly #ports: IntakePorts;
+  readonly #limits: IntakeLimits;
 
-  constructor(ports: IntakePorts) {
+  constructor(ports: IntakePorts, limits: IntakeLimits) {
     this.#ports = ports;
+    this.#limits = limits;
   }
 
   async submit(upload: ReportUpload, userId: string): Promise<AcceptedReport> {
     if (upload.capture_mode !== "snap") {
       throw new ValidationError("POST /reports takes snap photos only; the worker makes scan frames");
     }
-    ReportPlacement.of(upload).assertWithinCap();
+    ReportPlacement.of(upload).assertWithinCap(this.#limits.targetMaxM);
     const reportId = ReportId.fromUpload(upload.upload_id).value;
     const existing = await this.#ports.reports.get(reportId);
     if (existing !== undefined) {
@@ -58,7 +64,7 @@ export class ReportIntake {
     if (!report.isOwnedBy({ deviceToken: upload.device_token, userId })) {
       throw new ValidationError("upload_id was already used for another report");
     }
-    const cutoff = isoSeconds(new Date(this.#ports.clock.now().getTime() - REQUEUE_AFTER_MS));
+    const cutoff = isoSeconds(new Date(this.#ports.clock.now().getTime() - this.#limits.requeueAfterMs));
     if (report.isQueuedSince(cutoff)) {
       await this.#ports.queue.sendReport(report.id);
     }

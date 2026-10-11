@@ -6,20 +6,21 @@ import type { Clock } from "../../ports/sites/Clock.js";
 import type { GeoCells } from "../../ports/sites/GeoCells.js";
 import type { SiteRepository } from "../../ports/sites/SiteRepository.js";
 
-const MAX_SITES = 500;
-
 export class SiteFinder {
   readonly #sites: SiteRepository;
   readonly #cells: GeoCells;
   readonly #clock: Clock;
+  readonly #maxSites: number;
 
-  constructor(sites: SiteRepository, cells: GeoCells, clock: Clock) {
+  // maxSites: MAP_MAX_SITES.
+  constructor(sites: SiteRepository, cells: GeoCells, clock: Clock, maxSites: number) {
     this.#sites = sites;
     this.#cells = cells;
     this.#clock = clock;
+    this.#maxSites = maxSites;
   }
 
-  // Newest first, at most 500; rejected, removed, cleaned and expired sites left out (contracts/README.md).
+  // Newest first, at most maxSites; rejected, removed, cleaned and expired sites left out (contracts/README.md).
   async inBox(box: BoundingBox): Promise<SiteFeature[]> {
     const cells = this.#cells.covering(box);
     const perCell = await Promise.all(cells.map((cell) => this.#sites.inCell(cell)));
@@ -28,7 +29,7 @@ export class SiteFinder {
       .map((site) => this.#current(site))
       .filter((site) => site.isListed() && box.contains(site.point))
       .sort(SiteFinder.#newestFirst)
-      .slice(0, MAX_SITES)
+      .slice(0, this.#maxSites)
       .map((site) => site.toFeature());
   }
 

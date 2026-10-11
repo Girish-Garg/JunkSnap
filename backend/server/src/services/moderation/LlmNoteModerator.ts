@@ -27,9 +27,12 @@ export type NoteRouter = Pick<ProviderRouter, "completeJson">;
 export class LlmNoteModerator implements NoteModerator {
   readonly #router: NoteRouter;
   readonly #schema = new NoteFlagsSchema();
+  readonly #maxTokens: number;
 
-  constructor(router: NoteRouter) {
+  // maxTokens: NOTE_MODERATION_MAX_TOKENS.
+  constructor(router: NoteRouter, maxTokens: number) {
     this.#router = router;
+    this.#maxTokens = maxTokens;
   }
 
   async review(note: string): Promise<NoteVerdict> {
@@ -38,7 +41,7 @@ export class LlmNoteModerator implements NoteModerator {
       system: SYSTEM,
       userText: `Note:\n<<<\n${note}\n>>>`,
       jsonSchemaName: "note_flags",
-      maxTokens: 60,
+      maxTokens: this.#maxTokens,
     });
     try {
       return this.#verdict(await this.#router.completeJson(request, this.#schema));

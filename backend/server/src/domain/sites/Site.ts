@@ -4,9 +4,9 @@ import { GeoPoint } from "./GeoPoint.js";
 import { InsightMerge } from "./InsightMerge.js";
 import { mergeRadiusM, publishedPoint } from "./NoBinZone.js";
 import type { MergeableReport } from "./MergeableReport.js";
-import { AlreadyCleanedError, InvalidTransitionError, OwnSiteError, SiteExpiredError } from "./SiteErrors.js";
-import { SiteRejectedError, SiteRemovedError, SiteVerifiedError, TooFarError } from "./SiteErrors.js";
+import * as Errors from "./SiteErrors.js";
 import type { PhotoFlagState } from "../flags/PhotoFlag.js";
+import type { SiteRules } from "./SiteRules.js";
 import type { PhotoUrls, SiteFeature, SiteInternals, SiteProperties, SiteState, Verification, VoteChoice, Voter, VoteResult } from "./SiteTypes.js";
 import { SiteAddition } from "./SiteAddition.js";
 import { SiteCleanup, type AfterPhoto, type SiteParts } from "./SiteCleanup.js";
@@ -14,31 +14,31 @@ import { SitePhotoFlags, type PhotoFlagCount } from "./SitePhotoFlags.js";
 import { ReportedPhotoRemoval } from "./ReportedPhotoRemoval.js";
 import { SiteTemplate } from "./SiteTemplate.js";
 import { SiteWithdrawal } from "./SiteWithdrawal.js";
-import { reportedBy } from "./utils.js";
+import { distanceText, reportedBy } from "./utils.js";
 import type { VoteTally } from "./VoteTally.js";
 import type { Withdrawal, WithdrawalResult } from "./Withdrawal.js";
 
-const VOTE_RADIUS_M = 1000;
-
-// Lifecycle: open -> cleaned (3 people: after-photos or cleared votes) -> reopened (a new photo merges in); removed when withdrawn;
-// expired after 90 days without activity (decision 20261010-1855).
+// Lifecycle: open -> cleaned (CLEANED_QUORUM people: after-photos or cleared votes) -> reopened (a new photo merges in);
+// removed when withdrawn; expired after SITE_TTL_DAYS without activity (decision 20261010-1855).
 // Verification: unverified -> verified at 10 backers, or rejected by the no-vote valve (decision 20261010-1530).
 export class Site {
   #point!: GeoPoint;
   #props!: SiteProperties;
   #internals!: SiteInternals;
+  readonly #rules: SiteRules;
 
-  private constructor(state: SiteState) {
+  private constructor(state: SiteState, rules: SiteRules) {
+    this.#rules = rules;
     this.#adopt(state);
   }
 
-  static restore(state: SiteState): Site {
-    return new Site(state);
+  static restore(state: SiteState, rules: SiteRules): Site {
+    return new Site(state, rules);
   }
 
-  static found(report: MergeableReport): Site {
+  static found(report: MergeableReport, rules: SiteRules): Site {
     const template = new SiteTemplate(report);
-    const site = new Site({ feature: template.feature(), internals: template.internals() });
+    const site = new Site({ feature: template.feature(), internals: template.internals() }, rules);
     site.merge(report);
     return site;
   }
@@ -93,19 +93,19 @@ export class Site {
 
   // Lazy expiry on read: the stored row may not be marked yet; the scores CronJob writes the status.
   expireIfLapsed(now: Date): void {
-    if (isLapsed(this.#props, now)) {
+    if (isLapsed(this.#props, now, this.#rules.ttlDays)) {
       this.#props = { ...this.#props, status: "expired" };
     }
   }
 
-  // Same type, within 40 m, not rejected, removed or expired when the photo was taken; the models already passed it.
+  // Same type, within the merge radius, not rejected, removed or expired when the photo was taken; the models already passed it.
   accepts(report: MergeableReport): boolean {
     const { report_type, verification, status } = this.#props;
     if (report_type !== report.reportType || verification === "rejected" || status === "removed") {
       return false;
     }
-    const lapsed = isLapsed(this.#props, new Date(report.reportedAt));
-    return !lapsed && this.#point.distanceTo(report.point) <= mergeRadiusM(report_type);
+    const lapsed = isLapsed(this.#props, new Date(report.reportedAt), this.#rules.ttlDays);
+    return !lapsed && this.#point.distanceTo(report.point) <= mergeRadiusM(report_type, this.#rules);
   }
 
   merge(report: MergeableReport): void {
@@ -113,7 +113,7 @@ export class Site {
       return;
     }
     if (!this.accepts(report)) {
-      throw new InvalidTransitionError(`${report.reportId} cannot merge into ${this.siteId}`);
+      throw new Errors.InvalidTransitionError(`${report.reportId} cannot merge into ${this.siteId}`);
     }
     this.#adopt(new SiteAddition(this.snapshot(), report).apply());
     this.#apply(this.#cleanup().reopen());
@@ -126,16 +126,16 @@ export class Site {
   admitVoter(voter: Voter, from: GeoPoint, choice: VoteChoice, at: Date): void {
     this.assertActive(at);
     if (this.#props.verification === "rejected") {
-      throw new SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
+      throw new Errors.SiteRejectedError("This site was hidden after a neighbour check and takes no more votes");
     }
     if (choice === "cleaned" && this.#props.status === "cleaned") {
-      throw new AlreadyCleanedError("This site is already marked cleared");
+      throw new Errors.AlreadyCleanedError("This site is already marked cleared");
     }
     if (reportedBy(this.#internals, voter)) {
-      throw new OwnSiteError("You reported this site, so a neighbour has to check it");
+      throw new Errors.OwnSiteError("You reported this site, so a neighbour has to check it");
     }
-    if (this.#point.distanceTo(from) > VOTE_RADIUS_M) {
-      throw new TooFarError("You need to be within 1 km of the site to vote");
+    if (this.#point.distanceTo(from) > this.#rules.voteRadiusM) {
+      throw new Errors.TooFarError(`You need to be within ${distanceText(this.#rules.voteRadiusM)} of the site to vote`);
     }
   }
 
@@ -156,7 +156,7 @@ export class Site {
   // Decision 20261010-1700: the reporter takes their reports back while the site is not verified.
   withdraw(request: Withdrawal): WithdrawalResult {
     if (this.#props.verification === "verified") {
-      throw new SiteVerifiedError("Ten people have verified this site, so your report stays");
+      throw new Errors.SiteVerifiedError("Ten people have verified this site, so your report stays");
     }
     const withdrawal = new SiteWithdrawal(this.snapshot(), request);
     const ids = withdrawal.withdrawnIds();
@@ -164,7 +164,7 @@ export class Site {
     if (ids.length > 0) {
       this.#adopt(withdrawal.apply());
       this.#resettle();
-      this.#adopt(new ReportedPhotoRemoval(this.snapshot()).apply(request.at));
+      this.#adopt(new ReportedPhotoRemoval(this.snapshot(), this.#rules.flags).apply(request.at));
     }
     const { site_id, status, verification, backers } = this.#props;
     return { site_id, withdrawn_report_ids: ids, site_removed: status === "removed", status, verification, backers };
@@ -172,7 +172,7 @@ export class Site {
 
   // Decision 20261011-0310-hem-photo-flags: a photo many people reported is warned, then hidden; see SitePhotoFlags.
   recordPhotoFlags(count: PhotoFlagCount): PhotoFlagState {
-    const flags = new SitePhotoFlags(this.snapshot(), count);
+    const flags = new SitePhotoFlags(this.snapshot(), count, this.#rules.flags);
     this.#adopt(flags.apply());
     return flags.photo();
   }
@@ -195,7 +195,7 @@ export class Site {
     return this.#cleanup().awaits(cleanupId);
   }
 
-  // One person's word that it is cleared; the site is cleaned only once 3 people say so (decision 20261010-1855).
+  // One person's word that it is cleared; the site is cleaned only once CLEANED_QUORUM people say so (decision 20261010-1855).
   // Only an accepted photo refreshes the expiry, so rejected junk photos cannot keep a site alive.
   acceptCleanup(photo: AfterPhoto, tally: VoteTally): void {
     this.#assertNotRemoved();
@@ -218,7 +218,7 @@ export class Site {
   toFeature(): SiteFeature {
     const shown = publishedPoint(this.#point, this.#props);
     const hidden = { photo_urls: [] as PhotoUrls, cleanup_photo_url: null };
-    const dated = { ...this.#props, expires_at: expiryOf(this.#props) };
+    const dated = { ...this.#props, expires_at: expiryOf(this.#props, this.#rules.ttlDays) };
     const properties = this.isRemoved() ? { ...dated, ...hidden } : dated;
     return { type: "Feature", geometry: { type: "Point", coordinates: shown.coordinates() }, properties };
   }
@@ -230,7 +230,7 @@ export class Site {
   }
 
   #cleanup(): SiteCleanup {
-    return new SiteCleanup({ props: this.#props, internals: this.#internals });
+    return new SiteCleanup({ props: this.#props, internals: this.#internals }, this.#rules);
   }
 
   #apply({ props, internals }: SiteParts): void {
@@ -242,14 +242,14 @@ export class Site {
   #touch(at: string | null): void {
     const { status } = this.#props;
     if (at !== null && status !== "removed" && status !== "expired") {
-      this.#props = { ...this.#props, expires_at: refreshedExpiry(this.#props, at) };
+      this.#props = { ...this.#props, expires_at: refreshedExpiry(this.#props, at, this.#rules.ttlDays) };
     }
   }
 
   // Backers are the photo people plus the yes voters; settling happens only while unverified.
   #settle(): void {
     const { reporterIds, yesVoters, noVoters, verifiedBackers } = this.#internals;
-    const backers = new Backers(reporterIds, yesVoters, noVoters);
+    const backers = new Backers(reporterIds, yesVoters, noVoters, this.#rules.rejectMargin);
     const outcome = this.#props.verification === "unverified" ? backers.outcome() : null;
     const verification = outcome ?? this.#props.verification;
     const frozen = verification === "verified" ? backers.frozenAt(verifiedBackers) : null;
@@ -296,15 +296,15 @@ export class Site {
 
   #assertNotRemoved(): void {
     if (this.#props.status === "removed") {
-      throw new SiteRemovedError("This site was withdrawn by its reporter");
+      throw new Errors.SiteRemovedError("This site was withdrawn by its reporter");
     }
   }
 
   // Votes and cleanups need a site that is neither removed nor expired at this time (decision 20261010-1855).
   assertActive(at: Date): void {
     this.#assertNotRemoved();
-    if (isLapsed(this.#props, at)) {
-      throw new SiteExpiredError("This site expired after 90 days without a new report, vote or after-photo");
+    if (isLapsed(this.#props, at, this.#rules.ttlDays)) {
+      throw new Errors.SiteExpiredError(`This site expired after ${this.#rules.ttlDays} days without a new report, vote or after-photo`);
     }
   }
 

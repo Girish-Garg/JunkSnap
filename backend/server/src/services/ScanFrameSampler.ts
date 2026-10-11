@@ -2,6 +2,7 @@ import type { ScanSession } from "../contracts/index.gen.js";
 import { InternalDataError } from "../domain/errors.js";
 import type { ScanFrameCounts } from "../domain/ScanRecord.js";
 import type { CandidateFrame, LocatedFrame, PlannedFrame } from "../domain/ScanFrame.js";
+import type { ScanGpsLimits } from "../domain/scanLimits.js";
 import type { FrameHasher } from "../ports/FrameHasher.js";
 import type { ExtractedFrame, VideoFrameReader } from "../ports/VideoFrameReader.js";
 import type { FramePlanner } from "./FramePlanner.js";
@@ -13,6 +14,7 @@ export interface FrameTools {
   readonly hasher: FrameHasher;
   readonly planner: FramePlanner;
   readonly selector: FrameSelector;
+  readonly gps: ScanGpsLimits;
 }
 
 export interface VideoFile {
@@ -36,7 +38,7 @@ export class ScanFrameSampler {
   async sample(scan: ScanSession, video: VideoFile, workDir: string): Promise<SampledFrames> {
     const durationMs = Math.min(scan.duration_ms, video.lastFrameMs + 1);
     const planned = this.#tools.planner.plan(durationMs, scan.hints?.detections ?? []);
-    const located = ScanFrameSampler.#locate(planned, new GpsInterpolator(scan.gps_track));
+    const located = ScanFrameSampler.#locate(planned, new GpsInterpolator(scan.gps_track, this.#tools.gps));
     const times = located.map((frame) => frame.tMs);
     const extracted = await this.#tools.reader.extract(video.path, times, workDir);
     const frames = this.#tools.selector.select(await this.#hash(located, extracted));

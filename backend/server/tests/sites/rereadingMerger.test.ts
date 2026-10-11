@@ -9,6 +9,7 @@ import { RereadingReportMerger } from "../../src/services/wiring/RereadingReport
 import { upload } from "../reportFakes.js";
 import { report } from "./builders.js";
 import { FakeSiteRepository, NOW } from "./fakes.js";
+import { RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const confirm = (n: number): Vote => ({ siteId: SITE, deviceToken: `d${n}`, userId: null, choice: "confirm", votedAt: NOW });
@@ -39,7 +40,7 @@ function processing(): Report {
 describe("RereadingReportMerger", () => {
   it("gives the report the site's verification as it stands after the merge, so a vote landing meanwhile is kept", async () => {
     const sites = new FakeSiteRepository();
-    sites.put(Site.found(report()));
+    sites.put(Site.found(report(), RULES));
     const merger = new RereadingReportMerger(new VoteAfterMerge(sites), sites);
     const merged = processing();
     await new MergeStep(merger).run(merged);

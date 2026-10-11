@@ -1,7 +1,7 @@
+import { ZONE_RADIUS_M } from "../sites/NoBinZone.js";
 import type { LetterSite } from "./LetterSite.js";
 
-// Each no-bin report or yes vote says no dustbin within this radius (decision 20261010-1630).
-const ZONE_RADIUS_M = 1000;
+// Each no-bin report or yes vote says no dustbin within ZONE_RADIUS_M (decision 20261010-1630).
 
 // near: a mapped bin inside the zone; within: one past the zone but inside the radius; none: none mapped within the radius.
 type BinKind = "near" | "within" | "none";

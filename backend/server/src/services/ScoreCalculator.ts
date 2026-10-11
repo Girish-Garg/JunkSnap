@@ -13,7 +13,12 @@ import { CityScore, type CityMeasure } from "./CityScore.js";
 import { Diagnoser } from "./Diagnoser.js";
 
 export const FORMULA_VERSION = "scores-v3";
-export const MIN_VERIFIED_REPORTS = 10;
+
+// MIN_VERIFIED_REPORTS and MIN_BIN_SERVICE_SITES.
+export interface ScoreRules {
+  readonly minVerifiedReports: number;
+  readonly minBinServiceSites: number;
+}
 
 export interface AreaInput {
   readonly area: AreaRef;
@@ -23,6 +28,7 @@ export interface AreaInput {
 }
 
 export interface ScoreParts {
+  readonly minVerifiedReports: number;
   readonly city: CityScore;
   readonly citizen: CitizenScore;
   readonly binAccess: BinAccessScore;
@@ -41,9 +47,10 @@ export class ScoreCalculator {
     this.#parts = parts;
   }
 
-  static standard(): ScoreCalculator {
+  static standard(rules: ScoreRules): ScoreCalculator {
     return new ScoreCalculator({
-      city: new CityScore(),
+      minVerifiedReports: rules.minVerifiedReports,
+      city: new CityScore(rules.minBinServiceSites),
       citizen: new CitizenScore(),
       binAccess: new BinAccessScore(),
       diagnoser: new Diagnoser(),
@@ -55,11 +62,12 @@ export class ScoreCalculator {
     const sites = new AreaSites(list);
     const window = DataWindow.over(sites, now);
     const counts = sites.counts();
-    const enough = counts.verified_reports >= MIN_VERIFIED_REPORTS;
+    const { minVerifiedReports } = this.#parts;
+    const enough = counts.verified_reports >= minVerifiedReports;
     return {
       area: { kind: area.kind, id: area.id, name: area.name },
       counts,
-      min_verified_reports: MIN_VERIFIED_REPORTS,
+      min_verified_reports: minVerifiedReports,
       ...(enough ? this.#score(sites, window, facts) : ScoreCalculator.#withheld()),
       formula_version: FORMULA_VERSION,
       pilot: sites.isPilot(),

@@ -35,6 +35,11 @@ export function reportedBy(site: Pick<SiteInternals, "reporterDevices" | "report
   return sameUser || site.reporterDevices.includes(voter.deviceToken);
 }
 
+// For messages: 1000 reads "1 km", 40 reads "40 m".
+export function distanceText(metres: number): string {
+  return metres % 1000 === 0 ? `${metres / 1000} km` : `${metres} m`;
+}
+
 // A person is a user id, else a device token (decision 20261010-1530).
 export function personOf(voter: Voter): string {
   return voter.userId ?? voter.deviceToken;

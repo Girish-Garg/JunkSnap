@@ -13,6 +13,9 @@ import { AreaTemplateLetter } from "../../services/letters/AreaTemplateLetter.js
 import type { Logger } from "../../ports/Logger.js";
 import { BinSettings } from "../../settings/BinSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
+import { ScoreSettings } from "../../settings/ScoreSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import type { Env } from "../../settings/utils.js";
 import type { LetterStamp } from "../../ports/letters/LetterStamp.js";
 import type { LetterWriter } from "../../ports/letters/LetterWriter.js";
 import type { SiteReader } from "../../ports/letters/SiteReader.js";
@@ -44,18 +47,34 @@ export interface AreaLettersAdapters {
   readonly stamp: LetterStamp;
 }
 
+// The tunable numbers letters take, each read once from its variable.
+export interface LetterTunables {
+  readonly bins: BinSettings;
+  // LETTERS_PER_HOUR, shared by site and area letters.
+  readonly perHour: number;
+  // SITE_TTL_DAYS: expired sites take no letter.
+  readonly ttlDays: number;
+  // MIN_VERIFIED_REPORTS: an area letter's guardrail.
+  readonly minVerifiedReports: number;
+}
+
 export class LettersAssembly {
   readonly #rulesDir: string;
   readonly #logger: Logger;
   readonly #bins: BinSettings;
-  readonly #perHour: number;
+  readonly #tunables: LetterTunables;
 
-  // perHour: LETTERS_PER_HOUR, shared by site and area letters.
-  constructor(rulesDir: string, logger: Logger, bins = BinSettings.fromEnv({}), perHour = RateLimitSettings.fromEnv({}).lettersPerHour) {
+  constructor(rulesDir: string, logger: Logger, tunables = LettersAssembly.tunables({})) {
     this.#rulesDir = rulesDir;
     this.#logger = logger;
-    this.#bins = bins;
-    this.#perHour = perHour;
+    this.#bins = tunables.bins;
+    this.#tunables = tunables;
+  }
+
+  static tunables(env: Env): LetterTunables {
+    const bins = BinSettings.fromEnv(env);
+    const { minVerifiedReports } = ScoreSettings.fromEnv(env);
+    return { bins, perHour: RateLimitSettings.fromEnv(env).lettersPerHour, ttlDays: SiteRuleSettings.fromEnv(env).ttlDays, minVerifiedReports };
   }
 
   async service(adapters: LettersAdapters): Promise<LetterService> {
@@ -67,10 +86,11 @@ export class LettersAssembly {
       router: new LetterRouter(routing),
       picker: new ClausePicker(book),
       quotes,
-      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#perHour),
+      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#tunables.perHour),
       drafter: new ProseDrafter(adapters.writer, new DraftVerifier(quotes, book, new WordingCheck()), template, this.#logger),
       stamp: adapters.stamp,
       noBin: new NoBinEligibility(this.#bins.radiusM),
+      ttlDays: this.#tunables.ttlDays,
     });
   }
 
@@ -85,10 +105,11 @@ export class LettersAssembly {
       router: new AreaLetterRouter(),
       picker: new ClausePicker(book),
       quotes,
-      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#perHour),
+      limiter: new LetterRateLimiter(adapters.counters, this.#logger, this.#tunables.perHour),
       drafter: new ProseDrafter<AreaLetterBrief>(adapters.writer, verifier, template, this.#logger),
       stamp: adapters.stamp,
       logger: this.#logger,
+      rules: { minVerifiedReports: this.#tunables.minVerifiedReports, ttlDays: this.#tunables.ttlDays },
     });
   }
 

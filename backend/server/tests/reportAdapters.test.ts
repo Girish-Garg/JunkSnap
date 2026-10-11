@@ -14,6 +14,7 @@ import { Report } from "../src/domain/Report.js";
 import type { VerifyRequest } from "../src/domain/VerifyRequest.js";
 import { IntakeSettings } from "../src/settings/IntakeSettings.js";
 import { upload, verification } from "./reportFakes.js";
+import { TIMEOUTS } from "./defaults.js";
 
 const conditionFailed = () => Object.assign(new Error("The conditional request failed"), { name: "ConditionalCheckFailedException" });
 
@@ -187,7 +188,7 @@ describe("HttpMlVerifyClient", () => {
       calls.push([String(url), init]);
       return answer();
     };
-    return { calls, verifier: new HttpMlVerifyClient("http://ml/", fetchFunction) };
+    return { calls, verifier: new HttpMlVerifyClient("http://ml/", TIMEOUTS.mlVerifyMs, fetchFunction) };
   }
 
   it("posts the verify request with only the blurred key and returns the result", async () => {

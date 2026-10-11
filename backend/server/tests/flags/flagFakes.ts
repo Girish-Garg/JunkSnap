@@ -13,6 +13,7 @@ import { memoryCounters, RecordingLogger } from "../letters/support.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report } from "../sites/builders.js";
 import { FakeSiteRepository, FixedClock } from "../sites/fakes.js";
 import { FakeSiteReports } from "../sites/withdrawalFakes.js";
+import { RETRY, RULES } from "../defaults.js";
 
 export const SITE = "site_jdh_1";
 export const FIRST_PHOTO = "rpt_jdh_1";
@@ -73,14 +74,14 @@ export function flagRig(limit = 10, flags = new MemoryFlags()): FlagRig {
   const parts = { sites: new FakeSiteRepository(), rows: new FakeSiteReports(), flags };
   const checks = { moderator: new FakeModerator(), community: new RecordingTrigger() };
   const limiter = new LetterRateLimiter(memoryCounters(), new RecordingLogger(), limit, "photo reports");
-  const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry() });
+  const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts), radiusM: RULES.flags.radiusM });
   return { service, ...parts, ...checks };
 }
 
 // Founds site_jdh_1 from DEVICE_A's photo; with second, DEVICE_B's photo 10 m north joins it.
 export function seeded(rig: FlagRig, second = false): Site {
   const founder = report({ device: DEVICE_A });
-  const site = Site.found(founder);
+  const site = Site.found(founder, RULES);
   rig.rows.add(SITE, founder);
   if (second) {
     const added: MergeableReport = { ...report({ id: "jdh_1b", device: DEVICE_B, lat: northOf(10), capturedAt: "2026-10-10T03:00:00Z" }), brands: [] };

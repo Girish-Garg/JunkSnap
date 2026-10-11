@@ -1,16 +1,22 @@
 import type { ScanSession } from "../contracts/index.gen.js";
 import { ValidationError } from "../domain/errors.js";
-import { SCAN_GPS_LIMITS } from "../domain/scanLimits.js";
 
 const MS_PER_SECOND = 1_000;
 
 // Checks a posted session for what its JSON schema cannot express.
 export class ScanSessionRules {
+  readonly #minFixesPerSecond: number;
+
+  // minFixesPerSecond: SCAN_MIN_FIXES_PER_SECOND.
+  constructor(minFixesPerSecond: number) {
+    this.#minFixesPerSecond = minFixesPerSecond;
+  }
+
   check(session: ScanSession): void {
     ScanSessionRules.#checkVideoKey(session);
     ScanSessionRules.#checkTimes(session);
     ScanSessionRules.#checkTrackOrder(session);
-    ScanSessionRules.#checkTrackRate(session);
+    this.#checkTrackRate(session);
   }
 
   static #checkVideoKey({ scan_id, video_key }: ScanSession): void {
@@ -33,8 +39,8 @@ export class ScanSessionRules {
   }
 
   // At least one fix per whole second of video, so a 1 Hz watchPosition always passes.
-  static #checkTrackRate({ gps_track, duration_ms }: ScanSession): void {
-    const needed = Math.max(1, Math.floor((duration_ms / MS_PER_SECOND) * SCAN_GPS_LIMITS.minFixesPerSecond));
+  #checkTrackRate({ gps_track, duration_ms }: ScanSession): void {
+    const needed = Math.max(1, Math.floor((duration_ms / MS_PER_SECOND) * this.#minFixesPerSecond));
     if (gps_track.length < needed) {
       const message = `gps_track needs at least ${needed} fixes for ${duration_ms} ms of video; it has ${gps_track.length}`;
       throw new ValidationError(message);

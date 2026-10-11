@@ -21,7 +21,7 @@ const DISTRICT: CrawlDistrict = { id: "rajasthan-jodhpur", name: "Jodhpur" };
 const counted = (...ids: string[]) => () => ({ Attributes: { district_id: DISTRICT.id, verified_report_ids: new Set(ids) } });
 
 function activator(client: ScriptedClient, activateAfter = 1): DynamoCrawlActivator {
-  const crawls = { table: TABLE, activateAfter };
+  const crawls = { table: TABLE, activateAfter, expectedWithinMs: CrawlSettings.fromEnv({}).expectedWithinMs };
   return new DynamoCrawlActivator(client.as<DynamoDBDocumentClient>(), crawls, new FixedClock(NOW), new AwsCalls());
 }
 

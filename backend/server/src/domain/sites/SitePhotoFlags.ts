@@ -1,6 +1,7 @@
 import type { FlagAuthor, PhotoFlagState } from "../flags/PhotoFlag.js";
 import { PhotoFlagPolicy } from "../flags/PhotoFlagPolicy.js";
 import { ReportedPhotoRemoval } from "./ReportedPhotoRemoval.js";
+import type { PhotoFlagRules } from "./SiteRules.js";
 import type { SiteProperties, SiteState } from "./SiteTypes.js";
 import { newestPhotos } from "./utils.js";
 
@@ -22,11 +23,14 @@ export interface PhotoFlagCount {
 export class SitePhotoFlags {
   readonly #state: SiteState;
   readonly #count: PhotoFlagCount;
-  readonly #policy = new PhotoFlagPolicy();
+  readonly #rules: PhotoFlagRules;
+  readonly #policy: PhotoFlagPolicy;
 
-  constructor(state: SiteState, count: PhotoFlagCount) {
+  constructor(state: SiteState, count: PhotoFlagCount, rules: PhotoFlagRules) {
     this.#state = state;
     this.#count = count;
+    this.#rules = rules;
+    this.#policy = new PhotoFlagPolicy(rules);
   }
 
   photo(): PhotoFlagState {
@@ -43,7 +47,7 @@ export class SitePhotoFlags {
     const kept = feature.properties.photo_urls.filter((url) => !photo.hidden || url !== this.#count.photoUrl);
     const properties = { ...feature.properties, photo_flags: photoFlags, photo_urls: newestPhotos(kept) };
     const flagged = { ...this.#state, feature: { ...feature, properties } };
-    return new ReportedPhotoRemoval(flagged).apply(this.#count.at);
+    return new ReportedPhotoRemoval(flagged, this.#rules).apply(this.#count.at);
   }
 
   // Backers other than the photo's reporter: the photo people and the yes voters.

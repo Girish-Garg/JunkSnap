@@ -17,6 +17,7 @@ import { NoteRouterBuilder } from "../../src/handlers/moderation/NoteRouterBuild
 import { LlmNoteModerator } from "../../src/services/moderation/LlmNoteModerator.js";
 import { LogSink } from "../LogSink.js";
 import { reportSubmission, testJpeg } from "./fakes.js";
+import { CACHE, MODELS, RETRY, RULES, TIMEOUTS } from "../defaults.js";
 
 // Thin read-only checks against the real services: RUN_AWS_TESTS=1 with AWS_PROFILE set.
 const region = "ap-south-1";
@@ -39,21 +40,21 @@ describe.skipIf(process.env.RUN_AWS_TESTS !== "1")("moderation adapters on AWS",
   it("queries the stage's sites and reports indexes", async () => {
     const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region }));
     const reader = new DynamoReader(client);
-    const index = new DynamoHashIndex(reader, { reports: `junksnap-${stage}-reports`, sites: `junksnap-${stage}-sites` });
+    const index = new DynamoHashIndex(reader, { reports: `junksnap-${stage}-reports`, sites: `junksnap-${stage}-sites` }, RULES.siteMergeRadiusM + RULES.targetMaxM);
     expect(Array.isArray(await index.earlierPhotos(reportSubmission(new Uint8Array()), 100))).toBe(true);
   });
 
   // On 10 Oct the Claude models still needed the Anthropic use-case form, so Nova Pro answered.
   it("removes a note with a phone number through Bedrock and keeps a plain one", async () => {
     const logger = new JsonLoggerFactory(new LogSink()).create({ service: "worker", stage });
-    const moderator = new LlmNoteModerator(new NoteRouterBuilder(new BedrockRuntimeClient({ region })).build(logger));
+    const moderator = new LlmNoteModerator(new NoteRouterBuilder(new BedrockRuntimeClient({ region }), TIMEOUTS.notes, RETRY.jsonRetries).build(logger), MODELS.noteModerationMaxTokens);
     const phone = await moderator.review("Call 98290 12345 about this dump");
     expect(phone).toMatchObject({ result: "removed", reasons: ["personal_data"], provider: "bedrock" });
     expect(await moderator.review("Rotting vegetables dumped here every evening")).toMatchObject({ result: "clean", reasons: [] });
   });
 
   it("reports a missing original as ExternalServiceError", async () => {
-    const store = new S3ImageStore(new S3Client({ region }), { originals: `junksnap-${stage}-no-such-bucket`, public: "unused" });
+    const store = new S3ImageStore(new S3Client({ region }), { originals: `junksnap-${stage}-no-such-bucket`, public: "unused" }, CACHE.mediaMaxAgeSeconds);
     await expect(store.readOriginal("reports/upl_missing.jpg", 10)).rejects.toThrow(ExternalServiceError);
   });
 });

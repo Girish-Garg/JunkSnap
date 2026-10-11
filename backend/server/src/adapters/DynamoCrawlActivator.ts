@@ -5,12 +5,13 @@ import type { CrawlActivator, CrawlDistrict } from "../ports/CrawlActivator.js";
 import type { AwsCalls } from "./sites/AwsCalls.js";
 
 // The hourly crawler CronJob picks the district up within the hour, and a crawl takes under one more.
-const EXPECTED_WITHIN_MS = 2 * 60 * 60 * 1000;
 const NOT_QUEUED_YET = "attribute_not_exists(#status)";
 
 export interface CrawlsTable {
   readonly table: string;
   readonly activateAfter: number;
+  // CRAWL_EXPECTED_HOURS in ms, for expected_by.
+  readonly expectedWithinMs: number;
 }
 
 // crawls row keyed by district_id: report ids gather in a string set until the threshold, then the row turns queued.
@@ -64,7 +65,7 @@ export class DynamoCrawlActivator implements CrawlActivator {
       ExpressionAttributeValues: {
         ":queued": "queued",
         ":now": isoSeconds(now),
-        ":expected": isoSeconds(new Date(now.getTime() + EXPECTED_WITHIN_MS)),
+        ":expected": isoSeconds(new Date(now.getTime() + this.#crawls.expectedWithinMs)),
       },
     });
     await this.#calls.conditional("DynamoDB queue crawl", () => this.#client.send(request));

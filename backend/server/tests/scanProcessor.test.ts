@@ -28,6 +28,7 @@ import {
   testLogger,
   USER_ID,
 } from "./scanFakes.js";
+import { SCAN } from "./defaults.js";
 
 // The reports table becomes unreachable right after the first row is written.
 class ReportsLostAfterFirstWrite extends FakeFrameReportRepository {
@@ -75,9 +76,9 @@ function processor(setup: Setup = {}): VideoScanProcessor {
   media = new FakeMediaStore(setup.video);
   reader = new FakeVideoFrameReader(setup.info, setup.failAt);
   const now = (): Date => NOW;
-  const tools = { reader, hasher: new FakeFrameHasher(setup.bitsFor), planner: new FramePlanner(), selector: new FrameSelector() };
-  const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now);
-  const loader = new ScanVideoLoader(media, reader);
+  const tools = { reader, hasher: new FakeFrameHasher(setup.bitsFor), planner: new FramePlanner(SCAN.frames), selector: new FrameSelector(SCAN.frames), gps: SCAN.gps };
+  const publisher = new ScanFramePublisher({ media, reports, queue, scratch }, now, SCAN.frames.spotRadiusM);
+  const loader = new ScanVideoLoader(media, reader, SCAN.video);
   const sampler = new ScanFrameSampler(tools);
   return new VideoScanProcessor({ scans, scratch, loader, sampler, publisher, logger: testLogger(sink), now });
 }

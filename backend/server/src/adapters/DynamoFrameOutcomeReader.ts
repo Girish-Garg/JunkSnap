@@ -3,24 +3,31 @@ import { ExternalServiceError } from "../domain/errors.js";
 import type { FrameOutcome } from "../domain/scout/ScanFindings.js";
 import type { FrameOutcomeReader } from "../ports/FrameOutcomeReader.js";
 
-const BATCH = 100;
-const ATTEMPTS = 3;
 type Key = Record<string, unknown>;
+
+// BATCH_GET_SIZE keys per call (at most 100), and BATCH_READ_ATTEMPTS calls for keys DynamoDB left unprocessed.
+export interface BatchReads {
+  readonly size: number;
+  readonly attempts: number;
+}
 
 // BatchGetItem over the frame reports; a scan has at most 60, so one batch in practice.
 export class DynamoFrameOutcomeReader implements FrameOutcomeReader {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
+  readonly #reads: BatchReads;
 
-  constructor(client: DynamoDBDocumentClient, table: string) {
+  constructor(client: DynamoDBDocumentClient, table: string, batch: BatchReads) {
     this.#client = client;
     this.#table = table;
+    this.#reads = batch;
   }
 
   async outcomes(reportIds: readonly string[]): Promise<FrameOutcome[]> {
     const found: FrameOutcome[] = [];
-    for (let start = 0; start < reportIds.length; start += BATCH) {
-      const keys = reportIds.slice(start, start + BATCH).map((report_id) => ({ report_id }));
+    const { size } = this.#reads;
+    for (let start = 0; start < reportIds.length; start += size) {
+      const keys = reportIds.slice(start, start + size).map((report_id) => ({ report_id }));
       found.push(...(await this.#batch(keys)));
     }
     return found;
@@ -30,7 +37,7 @@ export class DynamoFrameOutcomeReader implements FrameOutcomeReader {
   async #batch(keys: readonly Key[]): Promise<FrameOutcome[]> {
     const items: FrameOutcome[] = [];
     let pending = [...keys];
-    for (let attempt = 0; attempt < ATTEMPTS && pending.length > 0; attempt += 1) {
+    for (let attempt = 0; attempt < this.#reads.attempts && pending.length > 0; attempt += 1) {
       const answer = await this.#send(pending);
       items.push(...this.#rows(answer.Responses));
       pending = this.#unprocessed(answer.UnprocessedKeys);

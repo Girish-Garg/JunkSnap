@@ -19,6 +19,7 @@ import type { ReportUpload } from "../src/contracts/index.gen.js";
 import { ExternalServiceError } from "../src/domain/errors.js";
 import { InvalidVideoError } from "../src/domain/scanErrors.js";
 import { queuedRecord } from "./scanFakes.js";
+import { PAGING, RETRY } from "./defaults.js";
 
 // Records each command's input and answers with whatever the test queued up.
 class FakeAwsClient {
@@ -193,7 +194,7 @@ describe("DynamoFrameOutcomeReader", () => {
     const dynamo = new FakeAwsClient()
       .reply(() => ({ Responses: { t: [{ report_id: "rpt_a", status: "queued" }] }, UnprocessedKeys: { t: { Keys: [key("rpt_b")] } } }))
       .reply(() => ({ Responses: { t: [{ report_id: "rpt_b", status: "verified" }] } }));
-    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t");
+    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t", { size: PAGING.batchGetSize, attempts: RETRY.batchReadAttempts });
     expect(await reader.outcomes(["rpt_a", "rpt_b"])).toEqual([
       { report_id: "rpt_a", status: "queued" },
       { report_id: "rpt_b", status: "verified" },
@@ -207,7 +208,7 @@ describe("DynamoFrameOutcomeReader", () => {
     const dynamo = new FakeAwsClient().reply(stuck).reply(stuck).reply(stuck).reply(() => {
       throw new Error("throttled");
     });
-    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t");
+    const reader = new DynamoFrameOutcomeReader(dynamo.as<DynamoDBDocumentClient>(), "t", { size: PAGING.batchGetSize, attempts: RETRY.batchReadAttempts });
     expect(await reader.outcomes([])).toEqual([]);
     await expect(reader.outcomes(["rpt_a"])).rejects.toThrow(ExternalServiceError);
     await expect(reader.outcomes(["rpt_a"])).rejects.toThrow(ExternalServiceError);

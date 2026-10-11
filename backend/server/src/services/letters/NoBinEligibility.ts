@@ -1,7 +1,6 @@
 import { NotVerifiedError } from "../../domain/letters/errors.js";
 import type { LetterSite } from "../../domain/letters/LetterSite.js";
-
-const PEOPLE_NEEDED = 10;
+import { BACKERS_NEEDED as PEOPLE_NEEDED } from "../../domain/sites/Backers.js";
 
 // Decision 20261010-1630: a no-bin letter needs a verified zone (10 people); a mapped bin is evidence, never a gate.
 export class NoBinEligibility {

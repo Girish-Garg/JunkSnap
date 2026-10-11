@@ -12,6 +12,7 @@ import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { acceptPhoto, afterPhoto, BASE_URL, DEVICE_A, DEVICE_B, fixture, northOf, report, userOf } from "./builders.js";
 import { FakeCleanups, FakeQueue, FakeVoteRepository, FixedClock } from "./fakes.js";
 import { withdrawalRig } from "./withdrawalFakes.js";
+import { PAGING, RETRY, RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const LATER = "2026-10-10T03:00:00.000Z";
@@ -33,7 +34,7 @@ function soleReporter() {
   const rig = withdrawalRig();
   const founder = report({ device: DEVICE_A });
   rig.rows.add(SITE, founder);
-  return { rig, site: Site.found(founder) };
+  return { rig, site: Site.found(founder, RULES) };
 }
 
 describe("a removed site", () => {
@@ -42,7 +43,7 @@ describe("a removed site", () => {
     acceptPhoto(site, afterPhoto("cleaner-1", LATER, "cln_x"));
     rig.sites.put(site);
     await rig.service.withdraw(SITE, requester(DEVICE_A));
-    const shown = validateSite(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties;
+    const shown = validateSite(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).byId(SITE)).properties;
     expect(shown).toMatchObject({ status: "removed", photo_urls: [], cleanup_photo_url: null });
     expect(rig.sites.feature(SITE).properties.cleanup_photo_url).toBe(AFTER_PHOTO);
   });
@@ -51,7 +52,7 @@ describe("a removed site", () => {
     const { rig, site } = soleReporter();
     rig.sites.put(site);
     const cleanups = new FakeCleanups();
-    const retry = new ConflictRetry();
+    const retry = new ConflictRetry(RETRY.saveAttempts);
     await new CleanupIntake({ sites: rig.sites, cleanups, queue: new FakeQueue(), clock: new FixedClock(), retry }).submit(SITE, CLEANUP, null);
     await rig.service.withdraw(SITE, requester(DEVICE_A));
     const service = new CleanupService({ sites: rig.sites, cleanups, votes: new FakeVoteRepository(), media: new PublicMedia(BASE_URL), retry });
@@ -79,7 +80,7 @@ describe("withdrawing while a site report has no row in the by-site index yet", 
     const rig = withdrawalRig();
     const founder = report({ device: DEVICE_A });
     const unindexed = { ...report({ id: "jdh_1b", device: DEVICE_B, lat: northOf(10), capturedAt: LATER }), brands: [] };
-    const site = Site.found(founder);
+    const site = Site.found(founder, RULES);
     site.merge(unindexed);
     rig.rows.add(SITE, founder);
     rig.sites.put(site);
@@ -96,7 +97,7 @@ describe("withdrawing while a site report has no row in the by-site index yet", 
   it("ignores index rows that are not reports of this site", async () => {
     const rig = withdrawalRig();
     const founder = report({ device: DEVICE_A });
-    rig.sites.put(Site.found(founder));
+    rig.sites.put(Site.found(founder, RULES));
     rig.rows.add(SITE, report({ id: "jdh_stray", device: DEVICE_A }));
     await expect(rig.service.withdraw(SITE, requester(DEVICE_A))).rejects.toMatchObject({ status: 404 });
   });

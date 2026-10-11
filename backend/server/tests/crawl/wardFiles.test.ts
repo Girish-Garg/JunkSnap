@@ -14,6 +14,7 @@ import { CrawledWardSettings } from "../../src/settings/CrawledWardSettings.js";
 import { LogSink } from "../LogSink.js";
 import { TempDirs } from "../TempDirs.js";
 import { failure, ScriptedClient, type SentCommand } from "../sites/ScriptedClient.js";
+import { TIMEOUTS } from "../defaults.js";
 
 const BUCKET = "junksnap-dev-originals-123456789012";
 const temp = new TempDirs();
@@ -148,12 +149,12 @@ describe("NewestWardFiles", () => {
 
 describe("WardFilesFactory", () => {
   it("reads only the image's folder without an originals bucket", () => {
-    const places = { assetsDir: "/app/data", originalsBucket: null, awsRegion: "ap-south-1" };
+    const places = { assetsDir: "/app/data", originalsBucket: null, awsRegion: "ap-south-1", timeouts: TIMEOUTS.aws.transfer };
     expect(new WardFilesFactory().create(places, logger(new LogSink()))).toBeInstanceOf(DirectoryWardFiles);
   });
 
   it("adds the crawled files with an originals bucket", () => {
-    const places = { assetsDir: "/app/data", originalsBucket: BUCKET, awsRegion: "ap-south-1" };
+    const places = { assetsDir: "/app/data", originalsBucket: BUCKET, awsRegion: "ap-south-1", timeouts: TIMEOUTS.aws.transfer };
     expect(new WardFilesFactory().create(places, logger(new LogSink()))).toBeInstanceOf(NewestWardFiles);
   });
 

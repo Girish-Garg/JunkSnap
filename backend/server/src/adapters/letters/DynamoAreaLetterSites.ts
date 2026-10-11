@@ -11,7 +11,6 @@ const PROPERTY_KEYS = Object.keys(siteSchema.properties.properties.properties);
 const PROJECTED = [...PROPERTY_KEYS, "lat", "lon", "reporter_ids", "reporter_devices"];
 const PROJECTION_NAMES = Object.fromEntries(PROJECTED.map((name, index) => [`#p${index}`, name]));
 // A filtered scan still reads the whole table; past this many pages the letter fails loudly instead of running long.
-const MAX_PAGES = 20;
 
 // site.location field that holds each area kind's ref.
 const LOCATION_FIELD: Readonly<Record<AreaKind, string>> = {
@@ -29,10 +28,13 @@ export interface SiteScanner {
 export class DynamoAreaLetterSites implements AreaLetterSites {
   readonly #client: SiteScanner;
   readonly #table: string;
+  readonly #maxPages: number;
 
-  constructor(client: SiteScanner, table: string) {
+  // maxPages: AREA_LETTER_MAX_PAGES.
+  constructor(client: SiteScanner, table: string, maxPages: number) {
     this.#client = client;
     this.#table = table;
+    this.#maxPages = maxPages;
   }
 
   async sitesIn(area: AreaKey): Promise<AreaSiteBatch> {
@@ -42,8 +44,8 @@ export class DynamoAreaLetterSites implements AreaLetterSites {
     let pages = 0;
     do {
       pages += 1;
-      if (pages > MAX_PAGES) {
-        throw new ExternalServiceError(`Scan of ${this.#table} for ${area.toString()} passed ${MAX_PAGES} pages`);
+      if (pages > this.#maxPages) {
+        throw new ExternalServiceError(`Scan of ${this.#table} for ${area.toString()} passed ${this.#maxPages} pages`);
       }
       const page = await this.#scan(area, startKey);
       for (const item of page.Items ?? []) {

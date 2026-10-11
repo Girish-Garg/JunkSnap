@@ -29,6 +29,8 @@ import { AssetSettings } from "../../settings/AssetSettings.js";
 import { BinSettings } from "../../settings/BinSettings.js";
 import { CrawledWardSettings } from "../../settings/CrawledWardSettings.js";
 import { CrawlSettings } from "../../settings/CrawlSettings.js";
+import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
+import { TimeoutSettings } from "../../settings/TimeoutSettings.js";
 import { buildBrandLabeller } from "../buildBrandLabeller.js";
 import { LocationServiceFactory } from "../LocationServiceFactory.js";
 import { WardFilesFactory } from "../WardFilesFactory.js";
@@ -52,7 +54,7 @@ export class ReportStepsFactory {
     return [
       // A no_bin report may have no photo, and a no_bin photo is never judged as waste (decision 20261010-1630).
       new ConditionalStep(new ModerateStep(new ServiceReportModerator(moderation)), (report) => report.hasPhoto()),
-      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder()), window), wasteCheck),
+      new ConditionalStep(new VerifyStep(verifier, reputation, new SiteNearbyCounter(sites.finder(), SiteRuleSettings.fromEnv(env).siteMergeRadiusM), window), wasteCheck),
       new ConditionalStep(new BrandsStep(new LabellerBrandReader(buildBrandLabeller({ core, env, logger }))), wasteCheck),
       new LocateStep(new ServiceReportLocator(located)),
       new MergeStep(this.#merger(places, bins)),
@@ -66,11 +68,11 @@ export class ReportStepsFactory {
   }
 
   #activator(): CrawlActivator {
-    const { crawlsTable, activateAfter } = CrawlSettings.fromEnv(this.#deps.context.env);
+    const { crawlsTable, activateAfter, expectedWithinMs } = CrawlSettings.fromEnv(this.#deps.context.env);
     if (crawlsTable === null) {
       return new DisabledCrawlActivator();
     }
-    const crawls = { table: crawlsTable, activateAfter };
+    const crawls = { table: crawlsTable, activateAfter, expectedWithinMs };
     return new DynamoCrawlActivator(this.#deps.documents, crawls, new SystemClock(), new AwsCalls());
   }
 
@@ -78,10 +80,10 @@ export class ReportStepsFactory {
     const { settings: core, env, logger } = this.#deps.context;
     const { assetsDir } = AssetSettings.fromEnv(env);
     const { originalsBucket } = CrawledWardSettings.fromEnv(env);
-    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion }, logger);
+    const files = new WardFilesFactory().create({ assetsDir, originalsBucket, awsRegion: core.awsRegion, timeouts: TimeoutSettings.fromEnv(env).aws.transfer }, logger);
     const layers = await new FileMapLayerSource(files).layers();
     logger.info({ layers: layers.length }, "nearby-place layers loaded");
-    return new NearPlacesFinder(layers);
+    return new NearPlacesFinder(layers, SiteRuleSettings.fromEnv(this.#deps.context.env).nearPlacesRadiusM);
   }
 
   async #bins(): Promise<BinLocator> {

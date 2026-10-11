@@ -10,7 +10,10 @@ import { SystemClock } from "../adapters/sites/SystemClock.js";
 import { BackerMigration } from "../services/sites/BackerMigration.js";
 import { ConflictRetry } from "../services/sites/ConflictRetry.js";
 import { BackerMigrationSettings } from "../settings/BackerMigrationSettings.js";
+import { RetrySettings } from "../settings/RetrySettings.js";
+import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
+import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 
 // Run once, locally, with your own AWS sign-in (the worker role cannot scan the sites table):
@@ -18,14 +21,14 @@ import { awsClientConfig } from "./utils.js";
 export function buildBackerMigration({ settings, env, logger }: EntryContext): BackerMigration {
   const tables = BackerMigrationSettings.fromEnv(settings.stage, env);
   const marshallOptions = { removeUndefinedValues: true };
-  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion)), { marshallOptions });
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion, TimeoutSettings.fromEnv(env).aws.quick)), { marshallOptions });
   const calls = new AwsCalls();
-  const mapper = new SiteItemMapper(new NgeohashCells(), logger);
+  const mapper = new SiteItemMapper(new NgeohashCells(), logger, SiteRuleSettings.fromEnv(env));
   return new BackerMigration({
     sites: new DynamoSiteRepository(client, tables.sitesTable, mapper, calls),
     votes: new DynamoVoteRepository(client, tables.votesTable, calls),
     reports: new DynamoReportStatusWriter(client, tables.reportsTable, new SystemClock(), calls),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RetrySettings.fromEnv(env).saveAttempts),
   });
 }
 

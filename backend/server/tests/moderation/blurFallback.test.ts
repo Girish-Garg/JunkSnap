@@ -18,6 +18,7 @@ import type { ImageStore } from "../../src/ports/moderation/ImageStore.js";
 import { PhotoLoader } from "../../src/services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../src/services/moderation/PrivacyBlur.js";
 import { box, FakeImageStore, meanDiff, testJpeg } from "./fakes.js";
+import { MODERATION } from "../defaults.js";
 
 type Fixture = Record<"DetectFaces" | "DetectText" | "DetectLabels", unknown>;
 
@@ -64,7 +65,7 @@ async function nightJpeg(): Promise<Uint8Array> {
 }
 
 async function loaded(jpeg: Uint8Array) {
-  const load = await new PhotoLoader(new FakeImageStore(), new SharpImageCodec()).decode(jpeg);
+  const load = await new PhotoLoader(new FakeImageStore(), new SharpImageCodec(), MODERATION.maxUploadBytes).decode(jpeg);
   if (!("photo" in load)) {
     throw new Error(`test image did not load: ${load.invalid}`);
   }

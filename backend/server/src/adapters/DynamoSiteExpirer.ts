@@ -14,15 +14,18 @@ const NAMES = { "#status": "status" };
 export class DynamoSiteExpirer implements SiteExpirer {
   readonly #client: DynamoDBDocumentClient;
   readonly #table: string;
+  readonly #ttlDays: number;
 
-  constructor(client: DynamoDBDocumentClient, table: string) {
+  // ttlDays: SITE_TTL_DAYS, for rows written before expires_at was stored.
+  constructor(client: DynamoDBDocumentClient, table: string, ttlDays: number) {
     this.#client = client;
     this.#table = table;
+    this.#ttlDays = ttlDays;
   }
 
   async expire(siteId: string, now: Date): Promise<boolean> {
     const row = await this.#read(siteId);
-    if (row === null || !isLapsed(row, now)) {
+    if (row === null || !isLapsed(row, now, this.#ttlDays)) {
       return false;
     }
     const request = new UpdateCommand({

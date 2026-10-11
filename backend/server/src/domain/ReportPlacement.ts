@@ -2,9 +2,6 @@ import type { ReportUpload } from "../contracts/index.gen.js";
 import { GeoPoint } from "./sites/GeoPoint.js";
 import { TargetTooFarError } from "./TargetTooFarError.js";
 
-// Decision 20261011-0400-hem-long-range-target: the farthest the waste may be from the reporter's GPS fix.
-export const TARGET_MAX_M = 500;
-
 type Placed = Pick<ReportUpload, "gps" | "target">;
 
 // Where the reporter stood (authenticity evidence, never public) and where the waste is (the site's spot).
@@ -33,12 +30,11 @@ export class ReportPlacement {
     return Math.round(this.reporter.distanceTo(this.spot));
   }
 
-  assertWithinCap(): void {
+  // Decision 20261011-0400-hem-long-range-target: maxM (TARGET_MAX_M) is the farthest the waste may be from the fix.
+  assertWithinCap(maxM: number): void {
     const distance = this.distanceM();
-    if (distance > TARGET_MAX_M) {
-      throw new TargetTooFarError(
-        `The marked spot is ${distance} m from you. Mark waste you can see within ${TARGET_MAX_M} m.`,
-      );
+    if (distance > maxM) {
+      throw new TargetTooFarError(`The marked spot is ${distance} m from you. Mark waste you can see within ${maxM} m.`);
     }
   }
 

@@ -4,7 +4,7 @@ import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { validateSite } from "../../src/contracts/index.gen.js";
 import { ExternalServiceError, NotFoundError } from "../../src/domain/errors.js";
-import { isLapsed, SITE_TTL_DAYS } from "../../src/domain/SiteExpiry.js";
+import { isLapsed } from "../../src/domain/SiteExpiry.js";
 import { BoundingBox } from "../../src/domain/sites/BoundingBox.js";
 import { GeoPoint } from "../../src/domain/sites/GeoPoint.js";
 import { MergeableReportFactory } from "../../src/domain/sites/MergeableReportFactory.js";
@@ -24,11 +24,12 @@ import { VoteService } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, evidence, fixture, northOf, report, siteFixture } from "./builders.js";
 import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository } from "./fakes.js";
 import { conditionFailed, failure, ScriptedClient } from "./ScriptedClient.js";
+import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 // The jdh-1 report's capture time, the site's last activity.
 const FOUNDED = Date.parse("2026-10-10T02:14:05Z");
-const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`);
+const AROUND = BoundingBox.parse(`${BASE_LON - 0.01},${BASE_LAT - 0.01},${BASE_LON + 0.01},${BASE_LAT + 0.01}`, PAGING.bboxMaxDegrees);
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
 const day = (days: number, from = FOUNDED) => new Date(from + days * 86_400_000);
 
@@ -42,10 +43,10 @@ class SetClock implements Clock {
 
 function setup() {
   const sites = new FakeSiteRepository();
-  sites.put(Site.found(report()));
+  sites.put(Site.found(report(), RULES));
   const clock = new SetClock();
-  const retry = new ConflictRetry();
-  const finder = new SiteFinder(sites, new NgeohashCells(), clock);
+  const retry = new ConflictRetry(RETRY.saveAttempts);
+  const finder = new SiteFinder(sites, new NgeohashCells(), clock, PAGING.mapMaxSites);
   const [ballots, cleanups] = [new FakeVoteRepository(), new FakeCleanups()];
   const votes = new VoteService({ sites, votes: ballots, reports: new FakeReportStatus(), clock, retry });
   const intake = new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry });
@@ -93,7 +94,7 @@ class CronRacingVotes extends FakeVoteRepository {
 
 describe("site expiry (decision 20261010-1855)", () => {
   it("is 90 days", () => {
-    expect(SITE_TTL_DAYS).toBe(90);
+    expect(RULES.ttlDays).toBe(90);
   });
 
   it("keeps a site on the map 89 days after its last activity and drops it at 91, while its page says expired", async () => {
@@ -143,10 +144,10 @@ describe("site expiry (decision 20261010-1855)", () => {
 
   it("answers 404 to a vote whose site the CronJob marked expired before the vote was counted", async () => {
     const sites = new FakeSiteRepository();
-    sites.put(Site.found(report()));
+    sites.put(Site.found(report(), RULES));
     const clock = new SetClock();
     clock.at = day(89);
-    const voting = new VoteService({ sites, votes: new CronRacingVotes(sites), reports: new FakeReportStatus(), clock, retry: new ConflictRetry() });
+    const voting = new VoteService({ sites, votes: new CronRacingVotes(sites), reports: new FakeReportStatus(), clock, retry: new ConflictRetry(RETRY.saveAttempts) });
     const cast = voting.cast(SITE, { deviceToken: DEVICE_B, userId: "voter", choice: "confirm", point: NEARBY });
     await expect(cast).rejects.toThrow(SiteExpiredError);
     expect(sites.feature(SITE).properties.status).toBe("expired");
@@ -167,12 +168,14 @@ describe("site expiry (decision 20261010-1855)", () => {
       sites,
       votes: new FakeVoteRepository(),
       cells: new NgeohashCells(),
-      picker: new MergeTargetPicker(new FakeEmbeddings()),
+      picker: new MergeTargetPicker(new FakeEmbeddings(), RULES.mergeMinCosine),
       reports: new FakeReportStatus(),
       scores: new FakeScoreSeeder(),
       clock: new SetClock(),
       reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-      retry: new ConflictRetry(),
+      retry: new ConflictRetry(RETRY.saveAttempts),
+      rules: RULES,
+      minVerifiedReports: SCORES.minVerifiedReports,
     });
     const early = await merger.merge(evidence({ id: "jdh_2", device: DEVICE_B, capturedAt: day(89).toISOString() }));
     expect(early.siteId).toBe(SITE);
@@ -184,12 +187,12 @@ describe("site expiry (decision 20261010-1855)", () => {
   it("never expires a cleaned, removed or rejected site, and an expired one stays expired", () => {
     const base = { verification: "unverified", last_reported_at: "2026-01-01T00:00:00Z" };
     const now = new Date("2026-10-10T00:00:00Z");
-    expect(isLapsed({ ...base, status: "open" }, now)).toBe(true);
-    expect(isLapsed({ ...base, status: "reopened" }, now)).toBe(true);
-    expect(isLapsed({ ...base, status: "cleaned" }, now)).toBe(false);
-    expect(isLapsed({ ...base, status: "removed" }, now)).toBe(false);
-    expect(isLapsed({ ...base, status: "open", verification: "rejected" }, now)).toBe(false);
-    expect(isLapsed({ ...base, status: "expired", expires_at: "2027-01-01T00:00:00Z" }, now)).toBe(true);
+    expect(isLapsed({ ...base, status: "open" }, now, RULES.ttlDays)).toBe(true);
+    expect(isLapsed({ ...base, status: "reopened" }, now, RULES.ttlDays)).toBe(true);
+    expect(isLapsed({ ...base, status: "cleaned" }, now, RULES.ttlDays)).toBe(false);
+    expect(isLapsed({ ...base, status: "removed" }, now, RULES.ttlDays)).toBe(false);
+    expect(isLapsed({ ...base, status: "open", verification: "rejected" }, now, RULES.ttlDays)).toBe(false);
+    expect(isLapsed({ ...base, status: "expired", expires_at: "2027-01-01T00:00:00Z" }, now, RULES.ttlDays)).toBe(true);
   });
 });
 
@@ -201,7 +204,7 @@ describe("DynamoSiteExpirer", () => {
   it("marks the site expired only while it is still lapsed, and bumps its version", async () => {
     const row = { status: "open", verification: "unverified", last_reported_at: "2026-07-01T00:00:00Z", expires_at: "2026-09-29T00:00:00.000Z" };
     const client = new ScriptedClient([() => ({ Item: row })]);
-    expect(await new DynamoSiteExpirer(client.as<DynamoDBDocumentClient>(), "junksnap-dev-sites").expire(SITE, now)).toBe(true);
+    expect(await new DynamoSiteExpirer(client.as<DynamoDBDocumentClient>(), "junksnap-dev-sites", RULES.ttlDays).expire(SITE, now)).toBe(true);
     expect(client.sent.map((command) => command.name)).toEqual(["GetCommand", "UpdateCommand"]);
     expect(client.sent[0]?.input).toMatchObject({ TableName: "junksnap-dev-sites", Key: { site_id: SITE } });
     const input = client.sent[1]?.input;
@@ -214,22 +217,22 @@ describe("DynamoSiteExpirer", () => {
   it("judges a row without expires_at by Date.parse, so an offset in last_reported_at neither delays nor hastens it", async () => {
     // 05:00+05:30 on 22 Jul is 23:30Z on 21 Jul, past the 22 Jul 00:00Z cutoff, though it sorts after it as text.
     const lapsed = new ScriptedClient([legacyRow("2026-07-22T05:00:00+05:30")]);
-    expect(await new DynamoSiteExpirer(lapsed.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(true);
+    expect(await new DynamoSiteExpirer(lapsed.as<DynamoDBDocumentClient>(), "t", RULES.ttlDays).expire(SITE, now)).toBe(true);
     const update = lapsed.sent.find((command) => command.name === "UpdateCommand")?.input;
     expect(update?.ConditionExpression).toContain("attribute_not_exists(expires_at) AND last_reported_at = :seen");
     expect(update?.ExpressionAttributeValues).toMatchObject({ ":seen": "2026-07-22T05:00:00+05:30" });
     // 22:00-04:00 on 21 Jul is 02:00Z on 22 Jul, not lapsed yet, though it sorts before the cutoff as text.
     const fresh = new ScriptedClient([legacyRow("2026-07-21T22:00:00-04:00")]);
-    expect(await new DynamoSiteExpirer(fresh.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(false);
+    expect(await new DynamoSiteExpirer(fresh.as<DynamoDBDocumentClient>(), "t", RULES.ttlDays).expire(SITE, now)).toBe(false);
     expect(fresh.sent.map((command) => command.name)).toEqual(["GetCommand"]);
   });
 
   it("answers false when a vote refreshed the site meanwhile, and wraps other failures", async () => {
     const refreshed = new ScriptedClient([legacyRow("2026-07-01T00:00:00Z"), conditionFailed]);
-    expect(await new DynamoSiteExpirer(refreshed.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).toBe(false);
+    expect(await new DynamoSiteExpirer(refreshed.as<DynamoDBDocumentClient>(), "t", RULES.ttlDays).expire(SITE, now)).toBe(false);
     const down = new ScriptedClient([legacyRow("2026-07-01T00:00:00Z"), failure("InternalServerError")]);
-    await expect(new DynamoSiteExpirer(down.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).rejects.toThrow(ExternalServiceError);
+    await expect(new DynamoSiteExpirer(down.as<DynamoDBDocumentClient>(), "t", RULES.ttlDays).expire(SITE, now)).rejects.toThrow(ExternalServiceError);
     const unreadable = new ScriptedClient([failure("InternalServerError")]);
-    await expect(new DynamoSiteExpirer(unreadable.as<DynamoDBDocumentClient>(), "t").expire(SITE, now)).rejects.toThrow(ExternalServiceError);
+    await expect(new DynamoSiteExpirer(unreadable.as<DynamoDBDocumentClient>(), "t", RULES.ttlDays).expire(SITE, now)).rejects.toThrow(ExternalServiceError);
   });
 });

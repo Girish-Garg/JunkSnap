@@ -1,5 +1,6 @@
-import { CLEANED_QUORUM, Clearance, type ClearanceView } from "./Clearance.js";
+import { Clearance, type ClearanceView } from "./Clearance.js";
 import { AlreadyCleanedError, CleanupPendingError, InvalidTransitionError } from "./SiteErrors.js";
+import type { ClearanceRules } from "./SiteRules.js";
 import type { CleanupConfirmation, SiteInternals, SiteProperties } from "./SiteTypes.js";
 import type { VoteTally } from "./VoteTally.js";
 
@@ -16,14 +17,15 @@ export interface AfterPhoto extends CleanupConfirmation {
 
 // Sites already off the active map take no cleared words.
 const SETTLED: ReadonlySet<string> = new Set(["cleaned", "removed", "expired"]);
-const NO_CLEARANCE: ClearanceView = { count: 0, needed: CLEANED_QUORUM, still_there: 0 };
 
 // The cleanup half of a site's lifecycle (decision 20261010-1855): one after-photo is one person's word; 3 people clear it.
 export class SiteCleanup {
   readonly #parts: SiteParts;
+  readonly #rules: ClearanceRules;
 
-  constructor(parts: SiteParts) {
+  constructor(parts: SiteParts, rules: ClearanceRules) {
     this.#parts = parts;
+    this.#rules = rules;
   }
 
   awaits(cleanupId: string): boolean {
@@ -57,7 +59,7 @@ export class SiteCleanup {
       props: { ...props, cleanup_status: cleanupStatus, cleanup_photo_url: photo.photoUrl },
       internals: { ...internals, cleanupPeople, pendingCleanupId: null },
     };
-    return new SiteCleanup(pending).settle(tally);
+    return new SiteCleanup(pending, this.#rules).settle(tally);
   }
 
   // An earlier person's photo still counts, so the site stays pending rather than rejected.
@@ -75,7 +77,7 @@ export class SiteCleanup {
     if (SETTLED.has(props.status)) {
       return this.#parts;
     }
-    const clearance = Clearance.of(tally, internals.cleanupPeople, props.last_reported_at);
+    const clearance = Clearance.of(tally, internals.cleanupPeople, props.last_reported_at, this.#rules);
     const shown = clearance.count > 0 || props.clearance !== undefined ? { clearance: clearance.view() } : {};
     const at = clearance.clearedAt();
     if (at === null) {
@@ -98,7 +100,8 @@ export class SiteCleanup {
     if (props.status !== "cleaned") {
       return this.#parts;
     }
-    const reset = props.clearance === undefined ? {} : { clearance: NO_CLEARANCE };
+    const none: ClearanceView = { count: 0, needed: this.#rules.cleanedQuorum, still_there: 0 };
+    const reset = props.clearance === undefined ? {} : { clearance: none };
     // Cleared votes may have cleaned the site mid-check; that after-photo stays checking, so its result still lands.
     const checking = props.cleanup_status === "checking" && internals.pendingCleanupId !== null;
     return { props: { ...props, ...reset, status: "reopened", cleanup_status: checking ? "checking" : "none" }, internals };
