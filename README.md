@@ -2,6 +2,7 @@
 
 **Snap the junk. Prove it. Get it cleared.** Residents photograph waste; JunkSnap blurs it, checks it with stacked models, maps it to the ward, MLA and MP, and drafts a cited letter for the resident to file.
 
+[![Demo video](https://img.shields.io/badge/demo-video-ff0000?logo=youtube&logoColor=white)](https://youtu.be/cdspylgoFm4)
 [![Live web app](https://img.shields.io/badge/live-web%20app-0b7a6f)](https://junksnap.coehemang.dev)
 [![Android APK](https://img.shields.io/badge/Android-APK-3ddc84?logo=android&logoColor=white)](https://github.com/Girish-Garg/JunkSnap/releases/latest)
 [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
@@ -45,6 +46,7 @@ Anyone in India can photograph waste with the in-app camera. JunkSnap blurs face
 
 Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 11 October 2026, Waste and Energy track.
 
+- Demo video (under 3 minutes): https://youtu.be/cdspylgoFm4
 - Web app: https://junksnap.coehemang.dev (on AWS Amplify Hosting)
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
 - Android app: the APK is a release-signed GitHub Release built by the `android-release` workflow; get the latest at https://github.com/Girish-Garg/JunkSnap/releases/latest. Share links (`https://junksnap.coehemang.dev/share/...`) and site and area links open the installed app (verified App Links), else the browser. App Links cover both web hosts, `junksnap.coehemang.dev` and the original Amplify address `demo.d3iec0rb3f75jm.amplifyapp.com`, and the API's `/share/` links; see [docs/android.md](docs/android.md).
