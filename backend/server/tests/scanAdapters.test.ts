@@ -122,6 +122,24 @@ describe("DynamoScanRepository", () => {
     });
   });
 
+  it("records frame report ids without touching status, and only while the scan is unfinished", async () => {
+    const dynamo = new FakeAwsClient().reply(() => ({})).reply(conditionFailed).reply(() => {
+      throw new Error("throttled");
+    });
+    const scans = new DynamoScanRepository(dynamo.as<DynamoDBDocumentClient>(), "t");
+    expect(await scans.recordReports("scn_x", ["rpt_a"], "2026-10-10T04:03:00Z")).toBe(true);
+    expect(await scans.recordReports("scn_x", ["rpt_a"], "2026-10-10T04:03:00Z")).toBe(false);
+    await expect(scans.recordReports("scn_x", ["rpt_a"], "2026-10-10T04:03:00Z")).rejects.toThrow(ExternalServiceError);
+    expect(dynamo.inputs[0]).toEqual({
+      TableName: "t",
+      Key: { scan_id: "scn_x" },
+      UpdateExpression: "SET report_ids = :ids, updated_at = :at",
+      ConditionExpression: "attribute_exists(scan_id) AND NOT (#status IN (:done, :failed))",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: { ":ids": ["rpt_a"], ":at": "2026-10-10T04:03:00Z", ":done": "done", ":failed": "failed" },
+    });
+  });
+
   it("returns undefined for an unknown scan and wraps SDK failures", async () => {
     const dynamo = new FakeAwsClient().reply(() => ({})).reply(() => {
       throw new Error("throttled");
