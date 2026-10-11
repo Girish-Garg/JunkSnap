@@ -5,6 +5,7 @@ import { validateReportList, type ReportUpload, type VerificationResult } from "
 import { UnauthorizedError } from "../src/domain/errors.js";
 import { Report } from "../src/domain/Report.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ReportConfirmEndpoint } from "../src/handlers/ReportConfirmEndpoint.js";
 import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
 import { createApp } from "../src/handlers/web.js";
@@ -50,7 +51,7 @@ beforeEach(async () => {
   reports = new FakeReportRepository();
   queue = new FakeReportQueue();
   counters = memoryCounters();
-  const guard = new RouteGuard(new AnyUser());
+  const guard = new RouteGuard(new AnyUser(), new FakeUserStanding());
   const snapLimit = new SnapLimit(new FakeSnapCounter(reports));
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue, clock });

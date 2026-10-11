@@ -20,6 +20,7 @@ import { NearPlacesFinder } from "../../services/NearPlacesFinder.js";
 import { VerifyStep } from "../../services/VerifyStep.js";
 import { ActivatingReportMerger } from "../../services/wiring/ActivatingReportMerger.js";
 import { LabellerBrandReader } from "../../services/wiring/LabellerBrandReader.js";
+import { RereadingReportMerger } from "../../services/wiring/RereadingReportMerger.js";
 import { ServiceReportLocator } from "../../services/wiring/ServiceReportLocator.js";
 import { ServiceReportModerator } from "../../services/wiring/ServiceReportModerator.js";
 import { SiteNearbyCounter } from "../../services/wiring/SiteNearbyCounter.js";
@@ -60,7 +61,8 @@ export class ReportStepsFactory {
 
   #merger(places: NearPlacesFinder, bins: BinLocator): ReportMerger {
     const merger = new SiteReportMerger(this.#deps.sites.merger(), places, bins);
-    return new ActivatingReportMerger(merger, this.#activator(), this.#deps.context.logger);
+    const activating = new ActivatingReportMerger(merger, this.#activator(), this.#deps.context.logger);
+    return new RereadingReportMerger(activating, this.#deps.sites.repository());
   }
 
   #activator(): CrawlActivator {

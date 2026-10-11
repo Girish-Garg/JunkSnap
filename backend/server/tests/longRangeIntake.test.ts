@@ -7,6 +7,7 @@ import { Report } from "../src/domain/Report.js";
 import { ReportPlacement, TARGET_MAX_M } from "../src/domain/ReportPlacement.js";
 import { TargetTooFarError } from "../src/domain/TargetTooFarError.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
 import { createApp } from "../src/handlers/web.js";
 import type { AuthUser, Authenticator } from "../src/ports/Authenticator.js";
@@ -94,7 +95,7 @@ describe("POST /reports with a long-range target", () => {
     const intake = new ReportIntake({ reports, snapLimit, queue, clock });
     const statuses = new ReportStatusReader(reports, "https://cdn.example", clock);
     const mine = fakeMine(reports, "https://cdn.example", clock);
-    const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new AnyUser())).plugin();
+    const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new AnyUser(), new FakeUserStanding())).plugin();
     const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
     app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
   });

@@ -13,7 +13,7 @@ import { AuthSettings } from "../../src/settings/AuthSettings.js";
 import { FakeJwksFetcher } from "./FakeJwksFetcher.js";
 import { CLIENT_ID, ISSUER, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
 
-const ENV = { COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID };
+const ENV = { COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID, USERS_TABLE: "junksnap-dev-users" };
 const pool = { userPoolId: POOL_ID, clientId: CLIENT_ID };
 const minter = new TokenMinter();
 const authenticator = new CognitoAuthenticator(pool, new FakeJwksFetcher(minter.jwks()).cache());

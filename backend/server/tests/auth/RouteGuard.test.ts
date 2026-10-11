@@ -9,19 +9,24 @@ import { AuthSettings } from "../../src/settings/AuthSettings.js";
 import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { FakeJwksFetcher } from "./FakeJwksFetcher.js";
+import { FakeUserStanding } from "./FakeUserStanding.js";
 import { CLIENT_ID, POOL_ID, TokenMinter, USER_SUB } from "./TokenMinter.js";
 
-const ENV = { JUNKSNAP_STAGE: "dev", COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID };
+const ENV = { JUNKSNAP_STAGE: "dev", COGNITO_USER_POOL_ID: POOL_ID, COGNITO_CLIENT_ID: CLIENT_ID, USERS_TABLE: "junksnap-dev-users" };
 const settings = AuthSettings.fromEnv(ENV);
 const minter = new TokenMinter();
-const guard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache()));
-const offlineGuard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher().cache()));
+const standing = new FakeUserStanding();
+const guard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache()), standing);
+const offlineGuard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher().cache()), standing);
+const blockedGuard = new RouteGuard(new CognitoAuthenticator(settings, new FakeJwksFetcher(minter.jwks()).cache()), new FakeUserStanding([USER_SUB]));
 
 // The way a route module uses the guard: required for writes, optional for browsing.
 const guardedRoutes: FastifyPluginAsync = async (app) => {
   app.post("/reports", async (request) => ({ user_id: (await guard.requireUser(request)).userId }));
   app.get("/sites", async (request) => ({ user_id: (await guard.optionalUser(request))?.userId ?? null }));
   app.get("/offline", async (request) => ({ user_id: (await offlineGuard.optionalUser(request))?.userId ?? null }));
+  app.post("/blocked", async (request) => ({ user_id: (await blockedGuard.requireUser(request)).userId }));
+  app.get("/blocked", async (request) => ({ user_id: (await blockedGuard.optionalUser(request))?.userId ?? null }));
 };
 
 let app: FastifyInstance;
@@ -66,6 +71,33 @@ describe("RouteGuard.requireUser", () => {
     const headers = { authorization: `bearer ${minter.idToken()}` };
     const response = await app.inject({ method: "POST", url: "/reports", headers });
     expect(response.statusCode).toBe(200);
+  });
+
+  it("returns 403 forbidden for a valid token whose user is blocked in the users table", async () => {
+    const response = await app.inject({ method: "POST", url: "/blocked", headers: bearer(minter.idToken()) });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: "forbidden", message: "This account is blocked." });
+  });
+
+  it("checks the token's own user, and lets one without a users row through", async () => {
+    const before = standing.reads.length;
+    const response = await app.inject({ method: "POST", url: "/reports", headers: bearer(minter.idToken()) });
+    expect(response.statusCode).toBe(200);
+    expect(standing.reads.slice(before)).toEqual([USER_SUB]);
+  });
+
+  it("never reads the users table without a valid token", async () => {
+    const before = standing.reads.length;
+    await app.inject({ method: "POST", url: "/reports", headers: bearer("not-a-jwt") });
+    expect(standing.reads.length).toBe(before);
+  });
+});
+
+describe("RouteGuard for a blocked user on GET /reports/{id}", () => {
+  it("answers 403, never treating the blocked user as a guest", async () => {
+    const response = await app.inject({ url: "/blocked", headers: bearer(minter.idToken()) });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: "forbidden" });
   });
 });
 

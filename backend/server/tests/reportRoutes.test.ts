@@ -5,6 +5,7 @@ import type { ReportUpload } from "../src/contracts/index.gen.js";
 import { Report } from "../src/domain/Report.js";
 import { UnauthorizedError } from "../src/domain/errors.js";
 import { RouteGuard } from "../src/handlers/auth/RouteGuard.js";
+import { FakeUserStanding } from "./auth/FakeUserStanding.js";
 import { ReportEndpoints } from "../src/handlers/ReportEndpoints.js";
 import { createApp } from "../src/handlers/web.js";
 import type { AuthUser, Authenticator } from "../src/ports/Authenticator.js";
@@ -89,7 +90,7 @@ beforeEach(async () => {
   const intake = new ReportIntake({ reports, snapLimit, queue, clock });
   const statuses = new ReportStatusReader(reports, PUBLIC_BASE_URL, clock);
   const mine = fakeMine(reports, PUBLIC_BASE_URL, clock);
-  const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new FakeAuthenticator())).plugin();
+  const plugin = new ReportEndpoints({ presigner, intake, statuses, mine }, new RouteGuard(new FakeAuthenticator(), new FakeUserStanding())).plugin();
   const logger = new JsonLoggerFactory(new LogSink()).create({ service: "api", stage: "dev" });
   app = await createApp(CoreSettings.fromEnv({ JUNKSNAP_STAGE: "dev" }), [plugin], logger);
 });
