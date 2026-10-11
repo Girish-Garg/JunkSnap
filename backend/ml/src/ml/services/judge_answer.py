@@ -58,6 +58,11 @@ def tri_state(value: object) -> TriState:
     return TriState.NO if text in FALSY else TriState.UNCERTAIN
 
 
+def stated(value: object) -> TriState | None:
+    """Burning only: None when the judge said nothing (no key, null, a number), else its state."""
+    return tri_state(value) if isinstance(value, str | bool) else None
+
+
 def unit_number(value: object) -> float:
     """A number clamped to 0..1; anything unreadable is 0.5, an unsure answer."""
     try:
@@ -102,7 +107,8 @@ class JudgeAnswer(BaseModel):
     bin_overflowing_or_broken: Tri = TriState.UNCERTAIN
     water_contamination: Tri = TriState.UNCERTAIN
     construction_debris: Tri = TriState.UNCERTAIN
-    burning: Tri = TriState.UNCERTAIN
+    # None: the judge said nothing, which decides no burning (judge_v1's examples omit it).
+    burning: Annotated[TriState | None, BeforeValidator(stated)] = None
     photo_usable: Tri = TriState.UNCERTAIN
     context: Annotated[str | None, BeforeValidator(known_context)] = None
     user_verdict: Tri = TriState.UNCERTAIN
@@ -124,7 +130,8 @@ class JudgeAnswer(BaseModel):
             garbage=self.garbage, bin=self.bin,
             bin_overflowing_or_broken=self.bin_overflowing_or_broken,
             water_contamination=self.water_contamination,
-            construction_debris=self.construction_debris, burning=self.burning,
+            construction_debris=self.construction_debris,
+            burning=self.burning or TriState.UNCERTAIN,
             photo_usable=self.photo_usable, user_verdict=self.user_verdict,
             user_verdict_confidence=self.user_verdict_confidence, prompt=prompt,
         )
@@ -154,8 +161,8 @@ class JudgeAnswer(BaseModel):
             composition=MaterialShare.from_weights(weights, source),
             size_class=size,
             hazards=self._sightings(source),
-            # Only a yes or no replaces the detectors' burning; an unsure judge keeps theirs.
-            decides_burning=self.burning in (TriState.YES, TriState.NO),
+            # An answer of uncertain keeps the detectors' burning; yes, no or silence replaces it.
+            decides_burning=self.burning is not TriState.UNCERTAIN,
         )
 
     @model_validator(mode="before")

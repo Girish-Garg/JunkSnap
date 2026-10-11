@@ -57,20 +57,57 @@ def test_unknown_items_are_dropped_and_known_ones_kept() -> None:
     assert insights.hazards == (HazardSighting("dead_animal", 0.7, JUDGE),)
 
 
-def test_smoke_is_read_as_burning_as_decision_0202_lists_it() -> None:
-    parsed = answer(burning="uncertain", hazards=[{"hazard": "smoke", "confidence": 0.8}])
+@pytest.mark.parametrize("word", ["burning", "smoke", "fire", "Flame", "bonfire"])
+def test_only_fire_words_are_burning(word: str) -> None:
+    """Decision 0202 lists "burning or smoke"; a confident listed hazard wins over a no."""
+    parsed = answer(burning="no", hazards=[{"hazard": word, "confidence": 0.8}])
 
     assert parsed.to_insights(JUDGE).hazards == (HazardSighting("burning", 0.8, JUDGE),)
     assert parsed.to_verdict().burning is True
 
 
-def test_shares_given_as_percentages_are_read_as_fractions() -> None:
-    composition = [{"material": "plastic", "share": 60}, {"material": "organic", "share": 0.3}]
+@pytest.mark.parametrize("word", ["ash", "mask", "barrel"])
+def test_ash_mask_and_barrel_name_no_hazard_and_no_material(word: str) -> None:
+    parsed = answer(burning="no", hazards=[{"hazard": word, "confidence": 0.7}],
+                    composition=[{"material": word, "share": 0.5}])
+
+    insights = parsed.to_insights(JUDGE)
+
+    assert parsed.to_verdict().burning is False
+    assert (insights.hazards, insights.composition) == ((), ())
+
+
+@pytest.mark.parametrize("word", ["medicine", "pill", "syringe", "bandage"])
+def test_medical_words_still_read_as_medical(word: str) -> None:
+    insights = answer(hazards=[{"hazard": word, "confidence": 0.7}],
+                      composition=[{"material": word, "share": 0.5}]).to_insights(JUDGE)
+
+    assert [sighting.hazard for sighting in insights.hazards] == ["medical_waste"]
+    assert [share.material for share in insights.composition] == ["medical"]
+
+
+def test_one_value_above_1_makes_the_whole_list_percent() -> None:
+    shares = [("plastic", 70), ("paper", 29), ("glass", 1)]
+    insights = answer(
+        composition=[{"material": m, "share": s} for m, s in shares],
+        hazards=[{"hazard": "e_waste", "confidence": 80}, {"hazard": "burning", "confidence": 1}],
+        burning=...,
+    ).to_insights(JUDGE)
+
+    assert [(s.material, s.share) for s in insights.composition] == [
+        ("plastic", pytest.approx(0.7)), ("paper", pytest.approx(0.29)),
+        ("glass", pytest.approx(0.01)),
+    ]
+    assert [(h.hazard, h.confidence) for h in insights.hazards] == [("e_waste", 0.8)]
+
+
+def test_a_list_of_fractions_stays_as_given() -> None:
+    composition = [{"material": "plastic", "share": 0.6}, {"material": "paper", "share": 1}]
 
     insights = answer(composition=composition).to_insights(JUDGE)
 
     assert [(s.material, s.share) for s in insights.composition] == [
-        ("plastic", pytest.approx(0.6)), ("organic", pytest.approx(0.3))
+        ("paper", pytest.approx(0.625)), ("plastic", pytest.approx(0.375))  # capped to 100%
     ]
 
 
@@ -141,14 +178,24 @@ def verified(script: str | Exception) -> VerificationResult:
     return verifier.verify(make_case(claim=CLAIM))
 
 
-@pytest.mark.parametrize("burning", ["uncertain", ..., "yes"])
-def test_an_unsure_judge_keeps_the_burning_yolo_saw(burning: object) -> None:
+@pytest.mark.parametrize("burning", ["uncertain", "yes"])  # a yes with no hazard reads uncertain
+def test_an_unsure_judge_keeps_the_burning_yolo_saw(burning: str) -> None:
     result = verified(judge_json(burning=burning, hazards=[]))
 
     assert result.judge is not None and result.judge.attributes.burning == "uncertain"
     assert [(h.hazard, h.confidence, h.source.signal) for h in result.insights.hazards] == [
         ("burning", 0.92, "yolo")
     ]
+
+
+@pytest.mark.parametrize("burning", [..., None])
+def test_a_silent_judge_does_not_keep_the_burning_yolo_saw(burning: object) -> None:
+    """judge_v1's examples leave burning out; silence is no burning, as before (false burning
+    is worse than a missed one). The contract still shows the attribute as uncertain."""
+    result = verified(judge_json(burning=burning, hazards=[]))
+
+    assert result.judge is not None and result.judge.attributes.burning == "uncertain"
+    assert result.insights.burning is False
 
 
 def test_a_judge_no_still_replaces_the_burning_yolo_saw() -> None:
