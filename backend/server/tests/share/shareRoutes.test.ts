@@ -123,6 +123,21 @@ describe("GET /share/sites/{id}", () => {
     expect(html).not.toContain("Jodhpur");
   });
 
+  // Decision 20261011-1730-hem-merged-sites: an old link to a merged duplicate leads to the site it merged into.
+  it("shows the surviving site's card for a merged site and sends people there", async () => {
+    const { response, html } = await page("/share/sites/site_jdh_merged", [siteFixture("jdh-merged"), siteFixture("jdh-1")]);
+    expect(response.statusCode).toBe(200);
+    expect(meta(html, "og:url")).toBe(`${BASE_URL}/share/sites/site_jdh_1`);
+    expect(meta(html, "og:image")).toBe(`${BASE_URL}/media/reports/rpt_jdh_1.jpg`);
+    expect(html).toContain(`location.replace("${WEB}/sites/site_jdh_1");`);
+  });
+
+  it("shows the generic card for a merged site whose survivor is gone", async () => {
+    const { response, html } = await page("/share/sites/site_jdh_merged", [siteFixture("jdh-merged")]);
+    expect(response.statusCode).toBe(404);
+    expect(meta(html, "og:image")).toBe(LOGO);
+  });
+
   it.each(["site_unknown", "<script>alert(1)</script>", "site_%22%3E%3Cb%3E"])("answers 404 with the generic card for %s", async (id) => {
     const { response, html } = await page(`/share/sites/${encodeURIComponent(id)}`, [siteFixture("jdh-1")]);
     expect(response.statusCode).toBe(404);

@@ -4,6 +4,7 @@ import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import { useParams } from 'react-router';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import { useMapContext } from '../../map/useMapContext';
+import { useMergedSiteRedirect } from '../hooks/useMergedSiteRedirect';
 import { useSite } from '../hooks/useSite';
 import { SITE_TITLE_ID, SitePanel } from './SitePanel';
 import { SitePanelPending } from './SitePanelPending';
@@ -14,6 +15,8 @@ export function SitePanelRoute() {
   const sheets = useSheetNavigation();
   const { userLocation, showSite, refreshSites } = useMapContext();
   const { site, failed, missing, reload } = useSite(siteId);
+  // A merged duplicate opens the site it merged into instead (decision 20261011-1730).
+  const merged = useMergedSiteRedirect(site);
   const close = useCallback(() => sheets.close('/'), [sheets]);
   // A vote can clear or reject the site, so the map fetches again too.
   const changed = useCallback(() => {
@@ -32,7 +35,7 @@ export function SitePanelRoute() {
       onClose={close}
       focusKey={site?.properties.site_id ?? failed}
     >
-      {site ? <SitePanel site={site} userLocation={userLocation} onChanged={changed} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} missing={missing} onRetry={reload} />}
+      {site && !merged ? <SitePanel site={site} userLocation={userLocation} onChanged={changed} /> : <SitePanelPending titleId={SITE_TITLE_ID} failed={failed} missing={missing} onRetry={reload} />}
     </BottomSheet>
   );
 }

@@ -67,9 +67,13 @@ export interface Site {
       still_there: number;
     };
     /**
-     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid.
+     * Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). merged (contracts v1.18, decision 20261011-1730-hem-merged-sites): a duplicate of an older site at the same spot; its reports, photos and backers moved to merged_into. Null otherwise. Not in required so older rows stay valid; readers treat an unknown value as plain removed.
      */
-    removed_reason?: "withdrawn" | "photos_reported" | null;
+    removed_reason?: "withdrawn" | "photos_reported" | "merged" | null;
+    /**
+     * Contracts v1.18 (decision 20261011-1730-hem-merged-sites): the site this one merged into, set exactly when removed_reason is merged, so an old link leads there. Null or absent otherwise.
+     */
+    merged_into?: string | null;
     /**
      * When the site was removed; null otherwise. Not in required so older rows stay valid.
      */
@@ -1213,9 +1217,18 @@ export const siteSchema = {
           "enum": [
             "withdrawn",
             "photos_reported",
+            "merged",
             null
           ],
-          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). Null otherwise. Not in required so older rows stay valid."
+          "description": "Decision 20261010-1700: why a removed site left the map; withdrawn means its only reporter withdrew. photos_reported (contracts v1.15, decision 20261011-0310-hem-photo-flags): every report left on an unverified site is a hidden photo, and the people who reported a hidden photo exceed all its backers by PHOTO_FLAG_SURPLUS (5). merged (contracts v1.18, decision 20261011-1730-hem-merged-sites): a duplicate of an older site at the same spot; its reports, photos and backers moved to merged_into. Null otherwise. Not in required so older rows stay valid; readers treat an unknown value as plain removed."
+        },
+        "merged_into": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^site_[a-z0-9_]{1,40}$",
+          "description": "Contracts v1.18 (decision 20261011-1730-hem-merged-sites): the site this one merged into, set exactly when removed_reason is merged, so an old link leads there. Null or absent otherwise."
         },
         "removed_at": {
           "type": [

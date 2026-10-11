@@ -5,6 +5,7 @@ import { SiteLifecycle } from '../../domain/SiteLifecycle';
 export type ClosedReason =
   | 'removed'
   | 'photosReported'
+  | 'merged'
   | 'expired'
   | 'rejected'
   | 'rejectedNoBin'
@@ -31,6 +32,8 @@ export class SiteClosure {
     if (site.status === 'cleaned') return SiteClosure.#cleaned(site);
     // Decision 20261011-0310-hem-photo-flags: many people reported every photo of an unverified site.
     if (site.removed_reason === 'photos_reported') return 'photosReported';
+    // Decision 20261011-1730-hem-merged-sites: a same-spot duplicate merged into a nearby site.
+    if (site.removed_reason === 'merged') return 'merged';
     return BY_STATUS.get(site.status) ?? 'other';
   }
 

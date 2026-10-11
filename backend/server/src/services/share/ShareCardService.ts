@@ -2,6 +2,7 @@ import { NotFoundError, ValidationError } from "../../domain/errors.js";
 import type { AreaCardWriter } from "../../domain/share/AreaCardWriter.js";
 import type { ShareCard } from "../../domain/share/ShareCard.js";
 import type { SiteCardWriter } from "../../domain/share/SiteCardWriter.js";
+import type { SiteFeature } from "../../domain/sites/SiteTypes.js";
 import type { ShareAreaSource, ShareSiteSource } from "../../ports/share/ShareSources.js";
 
 export interface ShareCardDeps {
@@ -22,9 +23,16 @@ export class ShareCardService {
   async site(siteId: string): Promise<ShareCard> {
     const { sites, siteCards } = this.#deps;
     return ShareCardService.#orUnknown(
-      async () => siteCards.card(await sites.byId(siteId)),
+      async () => siteCards.card(await this.#survivor(await sites.byId(siteId))),
       () => siteCards.unknown(siteId),
     );
+  }
+
+  // A merged duplicate shows, and leads on to, the site it merged into (decision 20261011-1730-hem-merged-sites);
+  // one step only, so no chain of ids can loop.
+  async #survivor(site: SiteFeature): Promise<SiteFeature> {
+    const into = site.properties.merged_into;
+    return typeof into === "string" ? this.#deps.sites.byId(into) : site;
   }
 
   async area(kind: string, areaId: string): Promise<ShareCard> {
