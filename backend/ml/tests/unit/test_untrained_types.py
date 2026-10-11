@@ -20,6 +20,7 @@ from ml.domain.case import VerificationResult
 from ml.domain.label_insights import LabelInsights
 from ml.domain.verification import Claim, Thresholds
 from ml.ports.signal import Signal
+from ml.services.combiner import FixedWeightCombiner
 from ml.services.embedding_signal import EmbeddingSignal
 from ml.services.label_signal import RekognitionLabelSignal
 from ml.services.meta_combiner import MetaLearnerCombiner
@@ -132,3 +133,21 @@ def test_meta_v2_without_report_types_covers_only_what_it_was_fitted_on() -> Non
     model = meta_v2()
     assert {t for t in ("waste_dump", "no_bin", "open_construction", "contaminated_water",
                         "overflowing_bin") if model.covers(t)} == {"waste_dump", "no_bin"}
+
+
+@pytest.mark.parametrize(
+    ("claim", "labels"),
+    [(FLYOVER, {"Construction": 0.3113}), (Claim("contaminated_water", "sewage"), {"Water": 0.5})],
+)
+def test_without_trained_models_or_the_judge_an_untrained_type_goes_to_community_check(
+    claim: Claim, labels: dict[str, float]
+) -> None:
+    """Decision 0005 holds on the v0 graph too (no model files): 0.5, not Rekognition alone."""
+    judge, _ = scripted_judge(provider_error())
+    detectors: list[Signal] = [RekognitionLabelSignal(FakeDetector(labels), LabelInsights())]
+    verifier = StackedVerifier(detectors, judge, FixedWeightCombiner(Thresholds()), FixedClock())
+
+    result = verifier.verify(make_case(claim=claim))
+
+    assert (result.outcome.probability, result.outcome.decision) == (0.5, "community_check")
+    assert result.combiner.reason == f"no trained model for {claim.report_type}; judge decides"

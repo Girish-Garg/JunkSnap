@@ -9,6 +9,8 @@ MATERIALS = (
 )
 HAZARDS = ("burning", "medical_waste", "e_waste", "dead_animal", "chemicals")
 SIZE_CLASSES = ("small", "medium", "large")
+# The least confidence at which YOLO, the embedding head or the judge reports a hazard.
+HAZARD_MIN = 0.5
 
 
 @dataclass(frozen=True)

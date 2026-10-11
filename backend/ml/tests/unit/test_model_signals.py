@@ -45,7 +45,9 @@ def test_embedding_signal_scores_waste_and_burning_but_no_composition() -> None:
     signal = EmbeddingSignal(FakeEmbedder((1.0, 0.0)), two_dim_heads())
     result = signal.measure(make_case())
     assert result.score > 0.95
-    assert result.to_contract()["version"] == "amazon.titan-embed-image-v1/clf-test"
+    # The exact embedder file (its pinned version) and the heads, as every model decision needs.
+    assert result.to_contract()["version"] == "amazon.titan-embed-image-v1@v1/clf-test"
+    assert result.insights.hazards[0].source.version == "amazon.titan-embed-image-v1@v1/clf-test"
     assert result.insights.composition == ()  # decision 0202: shares must be measured
     assert result.insights.hazards[0].source.signal == "embedding_classifier"
     assert [h.hazard for h in result.insights.hazards] == ["burning"]

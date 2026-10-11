@@ -6,6 +6,7 @@ from typing import override
 
 from ml.domain.case import CombinerInfo
 from ml.domain.errors import ConfigError
+from ml.domain.linear import TRAINED_REPORT_TYPES
 from ml.domain.purposes import Purpose
 from ml.domain.verification import Claim, Outcome, SignalResult, Thresholds
 from ml.services.combiner_base import Combiner
@@ -43,9 +44,15 @@ class FixedWeightCombiner(Combiner):
 
     @override
     def for_claim(self, claim: Claim, signals: Sequence[SignalResult] = ()) -> Combiner:
-        """Hand-set weights fit every report type; an auto claim also needs the judge's answer."""
+        """An auto claim, or a type no model was trained on, needs the judge's answer.
+
+        Without it such a claim gets 0.5 (decision 0005), as on the meta-learner's path.
+        """
         if claim.judge_required:
             return JudgeDecidesCombiner(self, AUTO_CLAIM_REASON)
+        if claim.report_type not in TRAINED_REPORT_TYPES:
+            reason = f"no trained model for {claim.report_type}; judge decides"
+            return JudgeDecidesCombiner(self, reason)
         return self
 
     def probability(self, signals: Sequence[SignalResult]) -> float:
