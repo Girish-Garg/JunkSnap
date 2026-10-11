@@ -133,6 +133,15 @@ def test_endpoint_values_stay_with_the_deploy_scripts() -> None:
         build(DEFAULTS, "VITE_API_URL=https://example.org\n", "dev")
 
 
+@pytest.mark.parametrize("value", ["https://downloads.example/junksnap.apk", ""])
+def test_a_stage_may_move_or_hide_the_android_app_link(value: str) -> None:
+    """Not an endpoint: a stage file may point the desktop dialog's app link elsewhere, or blank it."""
+    assert "VITE_ANDROID_APP_URL" not in stage_config.ENDPOINT_KEYS
+    defaults = (stage_config.CONFIG_DIR / "defaults.env").read_text(encoding="utf-8")
+    config = build(defaults, f"VITE_ANDROID_APP_URL={value}\n", "demo")
+    assert config.vite["VITE_ANDROID_APP_URL"] == value
+
+
 @pytest.mark.parametrize("line, message", [
     ("SNAP_PER_HOUR 100", "expected KEY=value"),
     ("export SNAP_PER_HOUR=100", "expected KEY=value"),

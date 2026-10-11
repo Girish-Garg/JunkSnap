@@ -9,7 +9,8 @@ export type Warn = (message: string) => void;
 
 /**
  * Reads VITE_ variables. Unset or blank takes the default; a value that does not parse also takes the default and
- * warns, so a typo in a build variable never stops the app from starting.
+ * warns, so a typo in a build variable never stops the app from starting. A variable a stage may switch off (EnvVar
+ * `off`, such as a link) is the exception: set blank, or to a value that does not parse, it is off.
  */
 export class EnvReader {
   readonly #env: EnvSource;
@@ -28,11 +29,22 @@ export class EnvReader {
 
   read<T>(variable: EnvVar<T>): T {
     const text = this.text(variable.name);
-    if (text === '') return variable.fallback;
+    if (text === '') return this.#blank(variable);
     const value = variable.parse(text);
-    if (value !== null) return value;
-    this.#warn(`[config] ${variable.name}="${text}" is not valid; using the default ${EnvReader.#show(variable.fallback)}`);
-    return variable.fallback;
+    return value === null ? this.#invalid(variable, text) : value;
+  }
+
+  // Blank is the same as unset, except that a variable a stage may switch off is off when it is set blank.
+  #blank<T>(variable: EnvVar<T>): T {
+    const set = typeof this.#env[variable.name] === 'string';
+    return set && variable.off ? variable.off.value : variable.fallback;
+  }
+
+  #invalid<T>(variable: EnvVar<T>, text: string): T {
+    const { off, fallback } = variable;
+    const instead = off ? 'switching it off' : `using the default ${EnvReader.#show(fallback)}`;
+    this.#warn(`[config] ${variable.name}="${text}" is not valid; ${instead}`);
+    return off ? off.value : fallback;
   }
 
   /** Every variable of a group, as one frozen settings object; a combination a check refuses takes its defaults. */

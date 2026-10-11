@@ -117,6 +117,9 @@ interface ImportMetaEnv {
   readonly VITE_MAILTO_MAX_LENGTH?: string;
   readonly VITE_SEARCH_RESULTS?: string;
   readonly VITE_LIST_PAGE_SIZE?: string;
+
+  // Links out of the app (src/config/LinkSettings.ts)
+  readonly VITE_ANDROID_APP_URL?: string;
 }
 
 interface ImportMeta {

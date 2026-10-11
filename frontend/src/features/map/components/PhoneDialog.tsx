@@ -7,6 +7,7 @@ import { useHistoryLayer } from '../../../ui/useHistoryLayer';
 import { useInertOutside } from '../../../ui/useInertOutside';
 import { useSheetFocus } from '../../../ui/useSheetFocus';
 import { AppQr } from './AppQr';
+import { PhoneDialogFooter } from './PhoneDialogFooter';
 
 const TITLE_ID = 'phone-title';
 
@@ -41,7 +42,7 @@ export function PhoneDialog({ task, onClose }: PhoneDialogProps) {
         <p className="sheet-text">{t(`desktop.${task}Text`)}</p>
         <AppQr />
         <p className="dialog__url">{window.location.host}</p>
-        <p className="form__note">{t('desktop.steps')}</p>
+        <PhoneDialogFooter />
       </div>
     </div>
   );

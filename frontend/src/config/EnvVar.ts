@@ -4,6 +4,11 @@ export interface EnvVar<T> {
   readonly fallback: T;
   /** The value the text stands for, or null when the text is not a valid value. */
   readonly parse: (text: string) => T | null;
+  /**
+   * Only for something a stage may switch off, such as a link: set blank, or to text that is not valid, the variable
+   * takes this value instead of the fallback. Unset still takes the fallback.
+   */
+  readonly off?: { readonly value: T };
 }
 
 /** One VITE_ variable per field of a settings group. */

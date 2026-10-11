@@ -24,12 +24,13 @@ export class EnvParsers {
 
   /** An absolute http or https URL. */
   static url(text: string): string | null {
-    try {
-      const { protocol } = new URL(text);
-      return protocol === 'https:' || protocol === 'http:' ? text : null;
-    } catch {
-      return null;
-    }
+    const protocol = EnvParsers.#protocol(text);
+    return protocol === 'https:' || protocol === 'http:' ? text : null;
+  }
+
+  /** An absolute https URL: what a link out of the app may open. */
+  static httpsUrl(text: string): string | null {
+    return EnvParsers.#protocol(text) === 'https:' ? text : null;
   }
 
   /** A folder under the app's base URL, such as "boundaries/"; never absolute and never climbing out with "..". */
@@ -58,6 +59,14 @@ export class EnvParsers {
 
   static #ordered([minLon, minLat]: LonLat, [maxLon, maxLat]: LonLat): BBox | null {
     return minLon < maxLon && minLat < maxLat ? new BBox(minLon, minLat, maxLon, maxLat) : null;
+  }
+
+  static #protocol(text: string): string | null {
+    try {
+      return new URL(text).protocol;
+    } catch {
+      return null;
+    }
   }
 
   static #decimal(text: string): number | null {

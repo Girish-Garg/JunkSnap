@@ -36,6 +36,11 @@ export class Vars {
     return { name, fallback, parse: (text) => EnvParsers.url(text) };
   }
 
+  /** An https link a stage may switch off: set blank, or to anything but an https URL, it is null (hidden). */
+  static link(name: string, fallback: string): EnvVar<string | null> {
+    return { name, fallback, parse: (text) => EnvParsers.httpsUrl(text), off: { value: null } };
+  }
+
   static folder(name: string, fallback: string): EnvVar<string> {
     return { name, fallback, parse: (text) => EnvParsers.folder(text) };
   }

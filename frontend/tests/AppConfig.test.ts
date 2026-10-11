@@ -4,6 +4,7 @@ import { CACHE_VARS } from '../src/config/CacheSettings';
 import { CAPTURE_VARS } from '../src/config/CaptureSettings';
 import { EnvReader } from '../src/config/EnvReader';
 import type { EnvVar } from '../src/config/EnvVar';
+import { LINK_VARS } from '../src/config/LinkSettings';
 import { LIMIT_VARS } from '../src/config/ListLimits';
 import { MAP_VARS } from '../src/config/MapSettings';
 import { NETWORK_VARS } from '../src/config/NetworkSettings';
@@ -19,7 +20,7 @@ const fs = (await import('node:fs' as string)) as FileReader;
 const envExample = fs.readFileSync('.env.example', 'utf8');
 const viteEnv = fs.readFileSync('src/vite-env.d.ts', 'utf8');
 
-const GROUPS: readonly Group[] = [SITE_RULE_VARS, MAP_VARS, CAPTURE_VARS, NETWORK_VARS, CACHE_VARS, UI_VARS, LIMIT_VARS];
+const GROUPS: readonly Group[] = [SITE_RULE_VARS, MAP_VARS, CAPTURE_VARS, NETWORK_VARS, CACHE_VARS, UI_VARS, LIMIT_VARS, LINK_VARS];
 const NAMES = GROUPS.flatMap((group) => Object.values(group).map((variable) => variable.name));
 
 function read(env: Record<string, string>) {
@@ -45,6 +46,7 @@ describe('AppConfig defaults', () => {
     expect(config.cache).toMatchObject({ areaListTtlMs: 300_000, boundaryIndexTtlMs: 600_000, activityTtlMs: 60_000, activitySyncMs: 15_000, reportPollMs: 4_000 });
     expect(config.ui).toMatchObject({ toastMs: 4_500, stepToastMs: 60_000, copiedMs: 2_500, checkLimitMs: 8_000 });
     expect(config.limits).toEqual({ mailtoMaxLength: 1800, searchResults: 6, listPageSize: 30 });
+    expect(config.links).toEqual({ androidAppUrl: 'https://github.com/Girish-Garg/JunkSnap/releases/latest' });
   });
 
   it('keeps the capture and network timings the app had', () => {
@@ -64,7 +66,7 @@ describe('AppConfig defaults', () => {
 describe('AppConfig variables', () => {
   it('gives each group its declared defaults, frozen', () => {
     const { config } = read({});
-    const groups = [config.site, config.map, config.capture, config.network, config.cache, config.ui, config.limits];
+    const groups = [config.site, config.map, config.capture, config.network, config.cache, config.ui, config.limits, config.links];
     groups.forEach((group, index) => expect(group).toEqual(EnvReader.defaults(GROUPS[index] as Group)));
     expect(Object.isFrozen(config.map)).toBe(true);
   });
@@ -101,6 +103,29 @@ describe('AppConfig parsing', () => {
   it('takes blank as unset, so an empty line in .env.local changes nothing', () => {
     expect(read({ VITE_TOAST_MS: '', VITE_PILOT_CENTRE: '   ' })).toEqual(read({}));
   });
+});
+
+describe('AppConfig links a stage may switch off', () => {
+  it('reads an https URL for the Android app', () => {
+    const { config, warnings } = read({ VITE_ANDROID_APP_URL: ' https://downloads.example.test/junksnap.apk ' });
+    expect(warnings).toEqual([]);
+    expect(config.links.androidAppUrl).toBe('https://downloads.example.test/junksnap.apk');
+  });
+
+  it('switches the link off when the variable is set blank, without a warning', () => {
+    for (const blank of ['', '   ']) {
+      expect(read({ VITE_ANDROID_APP_URL: blank })).toMatchObject({ config: { links: { androidAppUrl: null } }, warnings: [] });
+    }
+  });
+
+  it.each(['http://downloads.example.test/junksnap.apk', 'releases/latest', 'javascript:alert(1)'])(
+    'switches the link off, with a warning, for %s (not an https URL)',
+    (value) => {
+      const { config, warnings } = read({ VITE_ANDROID_APP_URL: value });
+      expect(config.links.androidAppUrl).toBeNull();
+      expect(warnings).toEqual([`[config] VITE_ANDROID_APP_URL="${value}" is not valid; switching it off`]);
+    },
+  );
 });
 
 const BAD_VALUES: readonly (readonly [string, string])[] = [

@@ -921,7 +921,9 @@
     "scanTitle": "Scan from your phone",
     "scanText": "A scan is a short video of a street, recorded on your phone as you walk. Point your phone at this code to open JunkSnap there.",
     "qrLabel": "QR code that opens JunkSnap on your phone",
-    "steps": "Works in any phone browser. No app store needed."
+    "steps": "Works in any phone browser. No app store needed.",
+    "stepsApp": "Works in any phone browser, or install the Android app.",
+    "androidApp": "Get the Android app"
   },
   "panel": {
     "title": "In view",
