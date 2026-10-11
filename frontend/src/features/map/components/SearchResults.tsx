@@ -12,7 +12,14 @@ interface SearchResultsProps {
 export function SearchResults({ sites, query, onPick }: SearchResultsProps) {
   const { t } = useTranslation();
   const places = usePlaceSearch(sites, query);
-  if (places.length === 0) return <p className="search-results search-results--empty">{t('search.noResults')}</p>;
+  if (places.length === 0) {
+    return (
+      <p className="search-results search-results--empty">
+        {t('search.noResults')}
+        <span className="search-results__meta search-results__hint">{t('search.noResultsHint')}</span>
+      </p>
+    );
+  }
   return (
     <ul className="search-results" aria-label={t('search.results')}>
       {/* Two seats can share a name, so the position keeps keys apart. */}
