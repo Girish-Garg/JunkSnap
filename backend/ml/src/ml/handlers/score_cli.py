@@ -8,12 +8,13 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ml.adapters.local_images import LocalBlurredImageStore
-from ml.adapters.pillow_fitter import PillowImageFitter
 from ml.domain.errors import JunkSnapError
 from ml.handlers.score_graph import ScoreGraph, ScoreOptions
 from ml.logging_setup import JsonLogging
 from ml.services.case_scorer import CaseScorer, LabelledPhoto, UsageCost
 from ml.services.vision_judge import VisionJudge
+from ml.settings.core import CoreSettings
+from ml.settings.tuning import Tuning
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +89,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     photos, files = CaseFile.read(args.cases)
     signals = tuple(s for s in args.signals.split(",") if s)
     options = ScoreOptions(signals, args.yolo, args.heads, args.embedder)
-    graph = ScoreGraph(options)
-    scorer = CaseScorer(LocalBlurredImageStore(files), PillowImageFitter(), graph.signals())
+    graph = ScoreGraph(options, CoreSettings.load().aws_region, Tuning.load())
+    scorer = CaseScorer(LocalBlurredImageStore(files), graph.fitter(), graph.signals())
     return ScoreRun(scorer, graph.judge(args.judge), graph.cost()).run(photos, args.out)
 
 

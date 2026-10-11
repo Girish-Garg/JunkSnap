@@ -72,10 +72,8 @@ class Purpose(ABC):
 
     @staticmethod
     def named(name: str) -> "Purpose":
-        purpose = PURPOSES.get(name)
-        if purpose is None:
-            raise InvalidClaimError(f"unknown purpose: {name}")
-        return purpose
+        """With the default report rules; VerifyService gets the configured Purposes."""
+        return PURPOSES.named(name)
 
 
 class ReportPurpose(Purpose):
@@ -163,6 +161,19 @@ class CleanupPurpose(Purpose):
         return outcome
 
 
-PURPOSES: Mapping[str, Purpose] = MappingProxyType(
-    {"report": ReportPurpose(), "cleanup": CleanupPurpose()}
-)
+class Purposes:
+    """The purposes by verify-request name, with the report rules in use (VetoLimits)."""
+
+    def __init__(self, report_vetoes: Sequence[VetoRule] = REPORT_VETOES) -> None:
+        self._by_name: Mapping[str, Purpose] = MappingProxyType(
+            {"report": ReportPurpose(report_vetoes), "cleanup": CleanupPurpose()}
+        )
+
+    def named(self, name: str) -> Purpose:
+        purpose = self._by_name.get(name)
+        if purpose is None:
+            raise InvalidClaimError(f"unknown purpose: {name}")
+        return purpose
+
+
+PURPOSES = Purposes()

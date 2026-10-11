@@ -1,4 +1,4 @@
-"""ML web app (uvicorn ml.handlers.web:app --port 8000); routes come from handlers/routers.py."""
+"""ML web app (uvicorn ml.handlers.web:app, port UVICORN_PORT); routes in handlers/routers.py."""
 
 from collections.abc import Sequence
 
