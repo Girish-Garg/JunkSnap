@@ -1,3 +1,4 @@
+import { NameQuery } from './NameQuery';
 import type { LonLat, SiteFeature, SiteProperties } from './Site';
 
 export type PlaceKind = 'ward' | 'assembly' | 'loksabha' | 'local_body' | 'town';
@@ -60,17 +61,19 @@ export class PlaceSearch {
     this.#places = [...byKey.values()];
   }
 
-  /** Names that start with the text first, then places with sites on the map, then the smaller kinds. */
+  /**
+   * Names that start with the text first, then places with sites on the map, then the smaller kinds. Text in
+   * Devanagari matches the Latin names by sound (NameQuery), so जोधपुर finds Jodhpur.
+   */
   find(query: string): readonly Place[] {
-    const needle = query.trim().toLocaleLowerCase();
-    if (needle.length === 0) return [];
+    const text = NameQuery.of(query);
+    if (text.empty) return [];
     const rank = (place: Place) => {
-      const name = place.name.toLocaleLowerCase();
-      const start = name.startsWith(needle) ? 0 : 1;
+      const start = text.starts(place.name) ? 0 : 1;
       return start * 100 + (place.sites.length > 0 ? 0 : 10) + KIND_ORDER.indexOf(place.kind);
     };
     return this.#places
-      .filter((place) => place.name.toLocaleLowerCase().includes(needle))
+      .filter((place) => text.matches(place.name))
       .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
       .slice(0, MAX_RESULTS);
   }
