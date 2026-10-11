@@ -81,6 +81,9 @@ jobs:
           DEMO_COGNITO_CLIENT_ID: ${{ vars.DEMO_COGNITO_CLIENT_ID }}
           DEMO_WEB_URL: ${{ vars.DEMO_WEB_URL }}
           DEMO_UPLOADS_BUCKET: ${{ vars.DEMO_UPLOADS_BUCKET }}
+          # Optional: where share links point (a host proxying the api's /share/* previews); unset, the api.
+          DEV_SHARE_URL: ${{ vars.DEV_SHARE_URL }}
+          DEMO_SHARE_URL: ${{ vars.DEMO_SHARE_URL }}
         run: |
           prefix="${STAGE^^}"
           # repository variable suffix -> env var read by scripts/android_stage.py
@@ -89,6 +92,8 @@ jobs:
             [COGNITO_CLIENT_ID]=VITE_COGNITO_CLIENT_ID [WEB_URL]=VITE_WEB_URL
             [UPLOADS_BUCKET]=JUNKSNAP_UPLOADS_BUCKET
           )
+          share_name="${prefix}_SHARE_URL"
+          echo "VITE_SHARE_URL=${!share_name}" >> "$GITHUB_ENV"
           missing=0
           for suffix in "${!targets[@]}"; do
             source_name="${prefix}_${suffix}"

@@ -1,4 +1,7 @@
 {
+  "splash": {
+    "builtOn": "AWS पर बना"
+  },
   "app": {
     "name": "JunkSnap"
   },

@@ -46,7 +46,7 @@
                 <data android:host="activity" />
             </intent-filter>
             <!-- JunkSnap: https links. Share links on the demo api (CloudFront) and page links on the demo
-                 web app (Amplify). Android verifies each host through its /.well-known/assetlinks.json
+                 web app (Amplify: junksnap.coehemang.dev and its original amplifyapp.com address). Android verifies each host through its /.well-known/assetlinks.json
                  (docs/android.md). Until a host verifies, Android 11 and older offer "Open with JunkSnap",
                  and Android 12+ opens the links in the browser unless they are allowed under the app's
                  "Open by default" settings. -->
@@ -64,7 +64,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
+                <data android:host="junksnap.coehemang.dev" />
                 <data android:host="demo.d3iec0rb3f75jm.amplifyapp.com" />
+                <data android:pathPrefix="/share/" />
                 <data android:pathPrefix="/sites/" />
                 <data android:pathPrefix="/areas/" />
                 <data android:pathPrefix="/activity/reports/" />
