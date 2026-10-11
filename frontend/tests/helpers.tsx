@@ -1,7 +1,7 @@
 import { render, screen, within, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { MemoryRouter } from 'react-router';
+import { BrowserRouter, MemoryRouter } from 'react-router';
 import { AppConfig } from '../src/app/AppConfig';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { ServicesContext } from '../src/app/ServicesContext';
@@ -45,6 +45,13 @@ export interface RenderOptions {
   readonly language?: Language;
   readonly route?: string;
   readonly services?: ServiceContainer;
+  /** 'browser' routes through window.history like the app (and Android's back button); 'memory' by default. */
+  readonly history?: 'memory' | 'browser';
+}
+
+function TestRouter({ options, children }: { readonly options: RenderOptions; readonly children: ReactElement }) {
+  if (options.history === 'browser') return <BrowserRouter>{children}</BrowserRouter>;
+  return <MemoryRouter initialEntries={[options.route ?? '/']}>{children}</MemoryRouter>;
 }
 
 export function testServices(store: KeyValueStore = new MemoryStore(), snap: Partial<SnapTestOptions> = {}): ServiceContainer {
@@ -68,16 +75,18 @@ export function testServices(store: KeyValueStore = new MemoryStore(), snap: Par
   });
 }
 
-/** Renders inside the same providers App uses, with an in-memory router. */
+/** Renders inside the same providers App uses, with an in-memory router (or the browser's history). */
 export async function renderApp(ui: ReactElement, options: RenderOptions = {}): Promise<RenderResult> {
   const services = options.services ?? testServices();
   await services.localization.i18n.changeLanguage(options.language ?? 'en');
+  // A fresh entry, so nothing an earlier test left in this window's history leaks in.
+  if (options.history === 'browser') window.history.pushState(null, '', options.route ?? '/');
   return render(
     <ServicesContext.Provider value={services}>
       <I18nextProvider i18n={services.localization.i18n}>
-        <MemoryRouter initialEntries={[options.route ?? '/']}>
+        <TestRouter options={options}>
           <AuthFlowProvider>{ui}</AuthFlowProvider>
-        </MemoryRouter>
+        </TestRouter>
       </I18nextProvider>
     </ServicesContext.Provider>,
   );
