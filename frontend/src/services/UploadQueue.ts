@@ -25,6 +25,7 @@ export abstract class UploadQueue<Item extends QueueItem<Item, Data>, Data exten
   readonly #listeners = new Set<() => void>();
   #items: readonly Item[] = [];
   #loaded: Promise<void> | null = null;
+  #ready = false;
   #flushing: Promise<void> | null = null;
   #timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -38,6 +39,11 @@ export abstract class UploadQueue<Item extends QueueItem<Item, Data>, Data exten
   load(): Promise<void> {
     this.#loaded ??= this.#reload();
     return this.#loaded;
+  }
+
+  /** True once the stored rows have been read, so an empty snapshot really is empty. */
+  ready(): boolean {
+    return this.#ready;
   }
 
   /** Newest first; a new array after every change, for useSyncExternalStore. */
@@ -143,6 +149,7 @@ export abstract class UploadQueue<Item extends QueueItem<Item, Data>, Data exten
 
   async #reload(): Promise<void> {
     const rows = await this.ports.store.all();
+    this.#ready = true;
     this.#replace(rows.map((row) => this.revive(row)));
   }
 

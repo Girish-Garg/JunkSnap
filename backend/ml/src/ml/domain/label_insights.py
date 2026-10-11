@@ -36,7 +36,7 @@ HAZARD_LABELS: Mapping[str, frozenset[str]] = MappingProxyType(
         "chemicals": frozenset({"chemical", "barrel", "oil spill"}),
     }
 )
-HAZARD_MIN_CONFIDENCE = 0.6
+HAZARD_MIN_CONFIDENCE = 0.6  # ML_LABEL_HAZARD_MIN
 
 
 class LabelInsights:
@@ -44,9 +44,11 @@ class LabelInsights:
         self,
         materials: Mapping[str, frozenset[str]] = MATERIAL_LABELS,
         hazards: Mapping[str, frozenset[str]] = HAZARD_LABELS,
+        hazard_min: float = HAZARD_MIN_CONFIDENCE,
     ) -> None:
         self._materials = dict(materials)
         self._hazards = dict(hazards)
+        self._hazard_min = hazard_min
 
     def read(self, labels: tuple[DetectedLabel, ...], source: InsightSource) -> Insights:
         """Relative shares of the materials seen (best label each); no size class from labels."""
@@ -71,6 +73,6 @@ class LabelInsights:
         best: dict[str, float] = {}
         for label in labels:
             for hazard, names in self._hazards.items():
-                if label.name.lower() in names and label.confidence >= HAZARD_MIN_CONFIDENCE:
+                if label.name.lower() in names and label.confidence >= self._hazard_min:
                     best[hazard] = max(best.get(hazard, 0.0), label.confidence)
         return tuple(HazardSighting(hazard, conf, source) for hazard, conf in best.items())

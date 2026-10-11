@@ -16,6 +16,11 @@ export interface UiTimings {
   readonly cooldownMs: number;
   /** "2 min ago" labels tick this often while a sheet is open. */
   readonly clockTickMs: number;
+  /**
+   * An action waits at most this long on something still loading (the saved sign-in, this person's reports) from when
+   * the sheet opens or the sign-in changes; then the api's own answer decides.
+   */
+  readonly checkLimitMs: number;
   /** The splash mark flies into the logo in this long (after splash.css's 800 ms of parts). */
   readonly splashFlyMs: number;
   /** With reduced motion, the still splash shows this long. */
@@ -31,6 +36,7 @@ export const UI_VARS: EnvVars<UiTimings> = {
   copiedMs: Vars.ms('VITE_COPIED_MS', 2_500, MINUTE_MS),
   cooldownMs: Vars.ms('VITE_RATE_LIMIT_COOLDOWN_MS', MINUTE_MS),
   clockTickMs: Vars.ms('VITE_CLOCK_TICK_MS', 30_000, 10 * MINUTE_MS),
+  checkLimitMs: Vars.ms('VITE_CHECK_LIMIT_MS', 8_000, 5 * MINUTE_MS),
   splashFlyMs: Vars.ms('VITE_SPLASH_FLY_MS', 350, 5_000),
   splashStillMs: Vars.ms('VITE_SPLASH_STILL_MS', 450, 5_000),
 };

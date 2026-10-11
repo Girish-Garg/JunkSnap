@@ -8,13 +8,14 @@ from ml.adapters.onnx_yolo import OnnxYoloDetector
 from ml.adapters.s3_model_store import S3ModelStore
 from ml.domain.errors import ConfigError, ExternalServiceError
 from ml.domain.model_files import ModelPins, PinnedModel
-from ml.domain.verification import Thresholds
 from ml.handlers.trained_graph import TrainedModels
+from ml.handlers.tuned_parts import TunedParts
 from ml.handlers.verify_graph import VerifierBuilder
 from ml.ports.model_store import ModelStore
 from ml.settings.core import CoreSettings
 from ml.settings.llm import LlmSettings
 from ml.settings.models import ModelSettings
+from ml.settings.tuning import Tuning
 
 META = {"version": "meta-t", "base": {"signals": ["yolo"], "weights": [1.0], "bias": 0.0},
         "judged": {"signals": ["yolo"], "weights": [1.0], "bias": 0.0}}
@@ -38,11 +39,13 @@ def models(tmp_path: Path) -> TrainedModels:
         path.write_text(json.dumps(content))
         pins[name] = {"key": f"models/{name}.json", "sha256": "0" * 64, "size_bytes": 1,
                       "version": "t"}
-    return TrainedModels(FolderStore(tmp_path), ModelPins.from_json({"models": pins}), None)  # type: ignore[arg-type]
+    pinned = ModelPins.from_json({"models": pins})
+    parts = TunedParts(Tuning.load())
+    return TrainedModels(FolderStore(tmp_path), pinned, None, parts)  # type: ignore[arg-type]
 
 
 def test_the_meta_learner_comes_from_its_pinned_file(tmp_path: Path) -> None:
-    combiner = models(tmp_path).combiner(Thresholds())
+    combiner = models(tmp_path).combiner()
     assert combiner.info().kind == "meta_learner" and combiner.info().version == "meta-t"
 
 

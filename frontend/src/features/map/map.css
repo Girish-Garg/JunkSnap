@@ -195,20 +195,27 @@
   color: var(--text);
 }
 
-/* The status toast: one slim line, never a card. */
+/*
+  The status toast: a slim pill, never wider than the content width. A long line wraps (three lines at most,
+  icon on the first); the radius stops at --radius-l, so one line stays a pill and a wrapped one a soft card.
+*/
 .map-status .notice {
   max-width: 100%;
   padding: var(--s-2) var(--s-4);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-l);
   font-size: var(--text-small);
   line-height: var(--leading-small);
   animation: pop-in var(--dur-3) var(--spring);
 }
 
-.map-status .notice span {
+.map-status .notice__text {
+  display: -webkit-box;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .filters__label {
@@ -339,7 +346,8 @@
     top: 0;
     left: calc(var(--panel-width) + var(--edge));
     width: max-content;
-    max-width: 480px;
+    /* Within the map, clear of its right edge on a narrow desktop window. */
+    max-width: min(480px, calc(100vw - var(--panel-width) - 2 * var(--edge)));
   }
 
   .map-controls {
@@ -402,12 +410,16 @@
   }
 }
 
-/* The toast's one action ("Show the nearest report"), beside it or on the line below on narrow phones. */
+/*
+  The toast's buttons ("Show the nearest report", Retry, or List, Areas and Report while the map is slow), beside
+  it or on the line below on narrow phones. Never wider than its column, so the line wraps instead of running off.
+*/
 .map-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
+  max-width: 100%;
 }
 
 .map-status__action {

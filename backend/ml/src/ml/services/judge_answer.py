@@ -11,7 +11,15 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Annotated, Any, Literal, get_args
 
-from pydantic import AliasChoices, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    model_validator,
+)
 
 from ml.domain.insights import (
     HazardSighting,
@@ -167,16 +175,17 @@ class JudgeAnswer(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _normalised(cls, raw: Any) -> Any:
+    def _normalised(cls, raw: Any, info: ValidationInfo) -> Any:
         """An object that judges nothing is no answer; the router moves to the next model.
 
-        Every hazard confidence is the judge's own: a burning hazard at HAZARD_MIN or more
-        means burning yes; a weaker one is dropped and never overrides a "no". Burning "yes"
-        without such a hazard has no confidence, so it becomes uncertain.
+        Every hazard confidence is the judge's own: a burning hazard at the hazard floor
+        (JudgeFieldLimits) or more means burning yes; a weaker one is dropped and never
+        overrides a "no". Burning "yes" without such a hazard has no confidence: uncertain.
         """
         if not isinstance(raw, dict) or not JUDGED_FIELDS & raw.keys():
             raise ValueError("not a structured judge answer")
-        if "burning" in JudgeInsightFields.sure(raw.get("hazards")):
+        floor = JudgeInsightFields.limits(info).hazard_min
+        if "burning" in JudgeInsightFields.sure(raw.get("hazards"), floor):
             return {**raw, "burning": "yes"}
         if tri_state(raw.get("burning")) is TriState.YES:
             return {**raw, "burning": "uncertain"}

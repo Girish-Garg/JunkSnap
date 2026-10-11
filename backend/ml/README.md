@@ -1,6 +1,6 @@
 # junksnap-ml
 
-One image, one workload: `ml` (default command, uvicorn on port 8000). It serves only `POST /internal/verify`; run the verifier on local photos with `uv run python -m ml.handlers.verify_cli <photos>`.
+One image, one workload: `ml` (default command, uvicorn on `UVICORN_PORT`, 8000 in the image). It serves only `POST /internal/verify`; run the verifier on local photos with `uv run python -m ml.handlers.verify_cli <photos>`.
 
 How a task adds to it without editing shared files:
 

@@ -60,3 +60,16 @@ describe('BasemapTheme on the dark map and with placeholder names', () => {
     expect(text('Ratanada')).toBe('Ratanada');
   });
 });
+
+// Vitest hands CSS imports back empty, so the stylesheet is read from disk (the app has no Node types).
+type FileReader = { readFileSync(path: string, encoding: 'utf8'): string };
+const fs = (await import('node:fs' as string)) as FileReader;
+const tokensCss = fs.readFileSync('src/ui/tokens.css', 'utf8');
+
+describe('the map area before the basemap arrives', () => {
+  it("paints the basemap's own land colour, light and both dark blocks, so a slow load looks like a map", () => {
+    const values = [...tokensCss.matchAll(/--map-bg: (#[0-9a-f]{6});/g)].map((match) => match[1]);
+    const land = (dark: boolean) => BasemapTheme.paint({ id: 'background', type: 'background' }, dark)['background-color'];
+    expect(values).toEqual([land(false), land(true), land(true)]);
+  });
+});

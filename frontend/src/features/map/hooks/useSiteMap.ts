@@ -4,6 +4,7 @@ import { useTheme } from '../../../app/useTheme';
 import type { MapMode } from '../../../domain/MapMode';
 import type { LonLat, SiteFeature } from '../../../domain/Site';
 import type { AreaMarker } from '../AreaMarkers';
+import type { BasemapSignal } from '../BasemapWatch';
 import type { AreaHit, BoundaryView } from '../BoundaryOverlay';
 import type { CameraRequest } from '../CameraRequest';
 import type { MapView } from '../SiteMap';
@@ -31,6 +32,10 @@ export interface SiteMapBindings {
   readonly onPickArea: (area: AreaHit) => void;
   readonly onViewChange: (view: MapView) => void;
   readonly onFail: (error: unknown) => void;
+  /** What the basemap is doing; useBasemapStatus turns it into the toast. */
+  readonly onBasemap: (signal: BasemapSignal) => void;
+  /** Goes up by one for each Retry after a failed load; the map then fetches its style again. */
+  readonly basemapRetries: number;
 }
 
 /** Keeps the imperative SiteMap in step with React state. */
@@ -49,6 +54,9 @@ export function useSiteMap(container: RefObject<HTMLDivElement | null>, bindings
   useEffect(() => mapRef.current?.focusArea(bindings.focusArea), [mapRef, bindings.focusArea]);
   useEffect(() => mapRef.current?.moveTo(bindings.camera?.points ?? [], bindings.camera?.zoom), [mapRef, bindings.camera]);
   useEffect(() => mapRef.current?.setAttributionLabel(t('map.attribution')), [mapRef, t]);
+  useEffect(() => {
+    if (bindings.basemapRetries > 0) mapRef.current?.reloadBasemap();
+  }, [mapRef, bindings.basemapRetries]);
   useEffect(() => {
     if (bindings.userLocation) mapRef.current?.showUser(bindings.userLocation);
   }, [mapRef, bindings.userLocation]);

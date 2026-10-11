@@ -1,4 +1,4 @@
-import { ActionGate, blocked, type Availability, type AvailabilityRule } from './ActionAvailability';
+import { ActionGate, blocked, CHECKING, waiting, type Availability, type AvailabilityRule } from './ActionAvailability';
 import type { IssueCount } from './AreaIssueTally';
 import { GateRules, type SessionFacts } from './GateRules';
 import type { SiteProperties } from './Site';
@@ -18,10 +18,14 @@ export interface SiteReach {
 
 export interface SiteActionFacts extends SessionFacts {
   readonly site: Pick<SiteProperties, 'verification' | 'status' | 'cleanup_status'>;
-  /** This phone sent a report that the api merged into the site; the api refuses its votes (403 own_site). */
+  /** This phone or this account sent a report that the api merged into the site, or the api said so (403 own_site). */
   readonly ownSite: boolean;
+  /** Not known yet whether ownSite: this phone's reports, the saved sign-in or GET /me/reports are still loading. */
+  readonly checkingOwner?: boolean;
   /** Metres between the person and the site from a fix under 2 minutes old (FreshFix); null when there is none. */
   readonly distanceM: number | null;
+  /** The first fix is on its way, so a null distanceM means not known yet rather than none to be had. */
+  readonly locating?: boolean;
   /** The browser said no to location, and a vote sends a fresh fix. */
   readonly locationDenied: boolean;
   /** The farthest a photo can still join this site from, up high (SitePhotoPreset.limitM); Send checks the photo's own fix. */
@@ -39,11 +43,11 @@ type Rule = AvailabilityRule<SiteActionFacts>;
 type Limit = (facts: SiteActionFacts) => number;
 
 // A tap takes a fresh fix first and goes through when that one is in range (remedy relocate). The reason gets the
-// limit as {{limit}} for wording that names it.
+// limit as {{limit}} for wording that names it. Until the first fix arrives the action waits, never looks open.
 const tooFar = (limit: Limit, reason: string): Rule => (facts) => {
+  if (facts.distanceM === null) return facts.locating ? waiting(CHECKING) : null;
   const limitM = limit(facts);
-  const far = facts.distanceM !== null && facts.distanceM > limitM + facts.reach.distanceMarginM;
-  return far ? blocked(reason, { limit: limitM }, 'relocate') : null;
+  return facts.distanceM > limitM + facts.reach.distanceMarginM ? blocked(reason, { limit: limitM }, 'relocate') : null;
 };
 const voteRadius: Limit = (facts) => facts.reach.voteRadiusM;
 
@@ -53,6 +57,7 @@ const offMap = (reason = 'gate.siteClosed'): Rule => GateRules.when((facts) => !
 const VOTE: readonly Rule[] = [
   GateRules.busy(),
   GateRules.when((facts) => facts.ownSite, 'vote.errors.own_site'),
+  GateRules.waitWhile((facts) => facts.checkingOwner === true, CHECKING),
   tooFar(voteRadius, 'vote.errors.too_far'),
   GateRules.when((facts) => facts.locationDenied, 'vote.errors.location'),
   GateRules.cooling('vote', 'vote.errors.rate_limited'),

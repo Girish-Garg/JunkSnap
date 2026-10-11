@@ -26,6 +26,7 @@ import { EdgeHints, type DetectorFactory } from '../services/EdgeHints';
 import { EdgeHintsPreference } from '../services/EdgeHintsPreference';
 import { Sharer, type ShareApi } from '../services/Sharer';
 import { ActionCooldowns } from '../services/ActionCooldowns';
+import { OwnSiteMemory } from '../services/OwnSiteMemory';
 import { ErrorReporter } from '../services/ErrorReporter';
 import { Notifier } from '../services/Notifier';
 import { WINDOW_TIMER } from '../services/Timer';
@@ -90,6 +91,8 @@ export interface Services {
   readonly notifier?: Notifier;
   readonly errors?: ErrorReporter;
   readonly cooldowns?: ActionCooldowns;
+  /** Sites the api answered 403 own_site for in this sign-in. */
+  readonly ownSites?: OwnSiteMemory;
 }
 
 /** Composition root: the only place that builds services. */
@@ -110,6 +113,7 @@ export class ServiceContainer implements Services {
   readonly notifier: Notifier;
   readonly errors: ErrorReporter;
   readonly cooldowns: ActionCooldowns;
+  readonly ownSites: OwnSiteMemory;
 
   constructor(services: Services) {
     this.config = services.config;
@@ -128,6 +132,7 @@ export class ServiceContainer implements Services {
     this.notifier = services.notifier ?? new Notifier();
     this.errors = services.errors ?? new ErrorReporter(console, () => navigator.onLine);
     this.cooldowns = services.cooldowns ?? new ActionCooldowns(WINDOW_TIMER, () => Date.now(), services.config.ui.cooldownMs);
+    this.ownSites = services.ownSites ?? OwnSiteMemory.following(services.auth);
   }
 
   static build(config: AppConfig, browser: BrowserApis): ServiceContainer {

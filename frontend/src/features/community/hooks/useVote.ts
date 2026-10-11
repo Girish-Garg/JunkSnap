@@ -9,11 +9,12 @@ import { useAuthFlow } from '../../auth/hooks/useAuthFlow';
 const KNOWN_ERRORS: ReadonlySet<string> = new Set(['own_site', 'too_far', 'rate_limited', 'site_rejected', 'already_cleaned', 'not_found', 'location']);
 
 /**
- * A community vote: sign in first, then send with a fresh GPS fix; onVoted refreshes the site.
+ * A community vote: sign in first, then send with a fresh GPS fix; onVoted refreshes the site. A 403 own_site is
+ * remembered until the sign-in changes (OwnSiteMemory), so the site's votes turn off at once and stay off.
  * gated: whether this person can vote here (useSiteGates); `action` adds the wait while a vote is on its way.
  */
 export function useVote(siteId: string, onVoted: () => void, gated: GatedAction) {
-  const { snap } = useServices();
+  const { snap, ownSites } = useServices();
   const { requireAuth } = useAuthFlow();
   const handle = useActionErrors('vote', KNOWN_ERRORS);
   const [busy, setBusy] = useState(false);
@@ -26,7 +27,9 @@ export function useVote(siteId: string, onVoted: () => void, gated: GatedAction)
       setResult(await snap.siteActions.vote(siteId, choice));
       onVoted();
     } catch (error) {
-      setProblem(handle(error, reauthed ? null : () => void send(choice, true)));
+      const problem = handle(error, reauthed ? null : () => void send(choice, true));
+      if (problem === 'own_site') ownSites.learn(siteId);
+      setProblem(problem);
     } finally {
       setBusy(false);
     }

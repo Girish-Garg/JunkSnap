@@ -15,7 +15,7 @@ afterEach(() => {
 describe('legend caveat', () => {
   it('keeps "scores need 10 verified reports" visible while the legend is folded', async () => {
     await renderApp(<AppRoutes />);
-    expect(await screen.findByText('Scores show after 10 verified reports')).toBeInTheDocument();
+    expect(await screen.findByText('Scores after 10 verified reports')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Legend' })).toHaveAttribute('aria-expanded', 'false');
   });
 });

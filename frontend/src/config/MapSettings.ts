@@ -39,6 +39,14 @@ export interface MapSettings {
   readonly fitMinFree: number;
   /** How long a one-line message over the map stays, for example after a report is withdrawn. */
   readonly flashMs: number;
+  /** A basemap still loading after this says it is loading (nothing shows before, so a quick load never flickers). */
+  readonly loadingAfterMs: number;
+  /** A basemap still loading after this says the network is slow. */
+  readonly slowAfterMs: number;
+  /** Sites closer than this many metres share one pin (a stack) at every zoom. */
+  readonly pinStackRadiusM: number;
+  /** Sites whose pins or n/10 badges would come closer than this on screen share a pin at that zoom. */
+  readonly pinStackOverlapPx: number;
 }
 
 const zoom = (name: string, fallback: number) => Vars.number(name, fallback, { min: 0, max: 22 });
@@ -61,6 +69,10 @@ export const MAP_VARS: EnvVars<MapSettings> = {
   fitTightPx: Vars.count('VITE_MAP_FIT_TIGHT_PX', 16, 500, 0),
   fitMinFree: Vars.fraction('VITE_MAP_FIT_MIN_FREE', 0.25),
   flashMs: Vars.ms('VITE_MAP_FLASH_MS', 4000, 60_000),
+  loadingAfterMs: Vars.ms('VITE_MAP_LOADING_AFTER_MS', 600, 60_000),
+  slowAfterMs: Vars.ms('VITE_MAP_SLOW_AFTER_MS', 8000, 300_000),
+  pinStackRadiusM: Vars.number('VITE_PIN_STACK_RADIUS_M', 20, { min: 0, max: 1000 }),
+  pinStackOverlapPx: Vars.count('VITE_PIN_STACK_OVERLAP_PX', 40, 500, 0),
 };
 
 export const MAP_DEFAULTS: MapSettings = EnvReader.defaults(MAP_VARS);

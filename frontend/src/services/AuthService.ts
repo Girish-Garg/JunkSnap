@@ -8,6 +8,8 @@ export interface AuthService {
   available(): boolean;
   /** Reads a saved session once at start. */
   restore(): Promise<void>;
+  /** True while restore() reads the saved session, so currentUser() may still turn from null to the account. */
+  restoring(): boolean;
   currentUser(): AuthUser | null;
   /** Returns an unsubscribe function. */
   subscribe(listener: () => void): () => void;

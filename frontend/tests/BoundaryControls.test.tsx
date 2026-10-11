@@ -21,7 +21,7 @@ describe('Map areas', () => {
   it('draws one areas layer filled from the area lists, with a one-line legend and the marker key', async () => {
     await renderApp(<AppRoutes />);
     // The honesty pill stays visible beside the Legend chip; the legend opens from the chip.
-    expect(await screen.findByText('Scores show after 10 verified reports')).toBeInTheDocument();
+    expect(await screen.findByText('Scores after 10 verified reports')).toBeInTheDocument();
     await waitFor(() => expect(seen.last?.areaMarkers.size).toBeGreaterThan(0));
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Legend' }));
     const legend = await screen.findByRole('region', { name: 'Map legend' });

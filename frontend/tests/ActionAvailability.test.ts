@@ -62,6 +62,18 @@ describe('site action gates', () => {
   });
 });
 
+describe('site action gates while their facts load', () => {
+  it('waits, never looks open, while what it rests on is loading: own site, the first fix, the saved sign-in', () => {
+    const vote = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.vote.decide(site(patch)));
+    expect(vote({ checkingOwner: true })).toEqual(waiting('gate.checking'));
+    expect(lookOf(vote({ checkingOwner: true }))).toEqual({ disabled: true, blocked: false });
+    expect(vote({ checkingOwner: true, ownSite: true })).toEqual(blocked('vote.errors.own_site'));
+    expect(vote({ distanceM: null, locating: true })).toEqual(waiting('gate.checking'));
+    expect(seen(SITE_GATES.cleanup.decide(site({ distanceM: null, locating: true })))).toEqual(waiting('gate.checking'));
+    expect(vote({ signedIn: false, restoring: true })).toEqual(waiting('gate.checking'));
+  });
+});
+
 describe('site action gates: cleanup and letters', () => {
   it('a cleanup photo: off while one is checked or from more than 50 m away', () => {
     const cleanup = (patch: Partial<SiteActionFacts>) => seen(SITE_GATES.cleanup.decide(site(patch)));

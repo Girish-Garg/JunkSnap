@@ -11,7 +11,7 @@ import { ToastHost } from '../src/features/actions/components/ToastHost';
 import { MapNotice } from '../src/features/map/MapNotice';
 import { ReportProgress } from '../src/features/snap/ReportProgress';
 import { FakeSiteActionsApi } from './FakeSiteActionsApi';
-import { MemoryStore, renderApp, testServices } from './helpers';
+import { findEnabledButton, MemoryStore, renderApp, testServices } from './helpers';
 import { MemoryReportStore, sampleDraft } from './snapFakes';
 
 vi.mock('../src/features/map/components/SiteMapView', () => ({ SiteMapView: () => null }));
@@ -95,7 +95,7 @@ describe('cleared vote', () => {
     const user = userEvent.setup();
     const api = new FakeSiteActionsApi();
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1', services: await signedIn([], api) });
-    await user.click(await screen.findByRole('button', { name: "It's cleared now" }));
+    await user.click(await findEnabledButton("It's cleared now"));
     await waitFor(() => expect(api.calls.map((call) => call.body)).toEqual([expect.objectContaining({ vote: 'cleaned' })]));
   });
 });

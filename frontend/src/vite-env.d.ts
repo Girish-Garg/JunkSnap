@@ -44,6 +44,10 @@ interface ImportMetaEnv {
   readonly VITE_MAP_FIT_TIGHT_PX?: string;
   readonly VITE_MAP_FIT_MIN_FREE?: string;
   readonly VITE_MAP_FLASH_MS?: string;
+  readonly VITE_MAP_LOADING_AFTER_MS?: string;
+  readonly VITE_MAP_SLOW_AFTER_MS?: string;
+  readonly VITE_PIN_STACK_RADIUS_M?: string;
+  readonly VITE_PIN_STACK_OVERLAP_PX?: string;
 
   // Capture (src/config/CaptureSettings.ts)
   readonly VITE_CAPTURE_FIX_MAX_AGE_MS?: string;
@@ -104,6 +108,7 @@ interface ImportMetaEnv {
   readonly VITE_COPIED_MS?: string;
   readonly VITE_RATE_LIMIT_COOLDOWN_MS?: string;
   readonly VITE_CLOCK_TICK_MS?: string;
+  readonly VITE_CHECK_LIMIT_MS?: string;
   readonly VITE_SPLASH_FLY_MS?: string;
   readonly VITE_SPLASH_STILL_MS?: string;
 
