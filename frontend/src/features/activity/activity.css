@@ -8,6 +8,13 @@
   line-height: var(--leading-small);
 }
 
+.activity-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
 .activity-list {
   display: flex;
   flex-direction: column;

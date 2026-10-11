@@ -1,5 +1,6 @@
 import { ActivityMerge, type ActivityListing } from '../domain/ActivityMerge';
 import { ApiError } from '../domain/ApiError';
+import { AuthError } from '../domain/AuthError';
 import type { ReportStatusView } from '../domain/ReportStatus';
 import type { AccountKey } from './AccountKey';
 import type { ActivityFreshness } from './ActivityFreshness';
@@ -25,6 +26,18 @@ export interface ActivitySyncPorts {
 // 10 pages of 50: a listing longer than that is merged but never used to drop rows.
 const MAX_PAGES = 10;
 
+export interface ActivityState {
+  /** This phone's sent rows are confirmed to be the signed-in account's. */
+  readonly trusted: boolean;
+  /** No sync has finished since start or the last sign-in change, so an empty list may not be empty yet. */
+  readonly loading: boolean;
+}
+
+interface Run {
+  readonly generation: number;
+  readonly done: Promise<void>;
+}
+
 /**
  * Activity shows this phone's rows at once; this brings them in line with the signed-in user's reports
  * on the server when the list token is missing, stale or another account's. Sent rows are shown only once
@@ -36,8 +49,10 @@ const MAX_PAGES = 10;
 export class ActivitySync {
   readonly #ports: ActivitySyncPorts;
   readonly #listeners = new Set<() => void>();
-  #running: Promise<void> | null = null;
-  #trusted = false;
+  #running: Run | null = null;
+  #state: ActivityState = { trusted: false, loading: true };
+  /** Bumped at every sign-in change; a sync started before it drops what it brought back. */
+  #generation = 0;
   /** The claim or forget that sign-in or sign-out started; a sync waits for it. */
   #owning: Promise<void> = Promise.resolve();
 
@@ -47,7 +62,12 @@ export class ActivitySync {
 
   /** True once this phone's sent rows are confirmed to be the signed-in account's. */
   trusted(): boolean {
-    return this.#trusted;
+    return this.#state.trusted;
+  }
+
+  /** The same object until something changes, for useSyncExternalStore. */
+  state(): ActivityState {
+    return this.#state;
   }
 
   subscribe(listener: () => void): () => void {
@@ -66,7 +86,8 @@ export class ActivitySync {
       const next = auth.currentUser()?.email ?? null;
       if (next === email) return;
       email = next;
-      this.#setTrusted(false);
+      this.#generation += 1;
+      this.#setState({ trusted: false, loading: true });
       this.#own(() => (next === null ? this.#ports.ownership.forget() : this.#ports.ownership.claim(true)));
     });
   }
@@ -76,35 +97,53 @@ export class ActivitySync {
     return this.#owning;
   }
 
-  /** One sync at a time; offline or refused leaves the phone's copy as it is. */
+  /** One sync at a time per sign-in; offline or refused leaves the phone's copy as it is. */
   revalidate(): Promise<void> {
-    this.#running ??= this.#run().finally(() => {
-      this.#running = null;
+    const generation = this.#generation;
+    if (this.#running?.generation === generation) return this.#running.done;
+    const done: Promise<void> = this.#run(generation).finally(() => {
+      if (this.#running?.done === done) this.#running = null;
     });
-    return this.#running;
+    this.#running = { generation, done };
+    return done;
   }
 
+  // A claim or clean-up waits for a sync in flight, so it never interleaves with that sync's writes.
   #own(step: () => Promise<void>): void {
-    this.#owning = this.#owning.then(step).catch(() => undefined);
+    const running = this.#running?.done.catch(() => undefined);
+    this.#owning = this.#owning.then(() => running).then(step).catch(() => undefined);
   }
 
-  async #run(): Promise<void> {
+  async #run(generation: number): Promise<void> {
+    let trusted: boolean | null = null;
+    try {
+      trusted = await this.#check(generation);
+    } finally {
+      if (generation === this.#generation) this.#setState({ trusted: trusted ?? this.#state.trusted, loading: false });
+    }
+  }
+
+  /** Whether the sent rows are the signed-in account's; a token that names it and is still fresh is trusted at once. */
+  async #check(generation: number): Promise<boolean> {
     await this.#owning;
     const owner = await this.#ports.account.current();
-    if (owner === null) return this.#setTrusted(false);
+    if (owner === null) return false;
     const token = await this.#ports.freshness.read();
-    if (this.#ports.freshness.isStale(token, owner)) await this.#sync(owner, token?.owner !== owner);
-    this.#setTrusted((await this.#ports.freshness.read())?.owner === owner);
+    if (!this.#ports.freshness.isStale(token, owner)) return true;
+    await this.#sync(owner, token?.owner !== owner, generation);
+    return (await this.#ports.freshness.read())?.owner === owner;
   }
 
   /** ownerChanged: the token was missing or another account's. */
-  async #sync(owner: string, ownerChanged: boolean): Promise<void> {
+  async #sync(owner: string, ownerChanged: boolean, generation: number): Promise<void> {
     const { freshness, queue, dismissed, clock } = this.#ports;
     const listing = await this.#list();
     if (listing === null) return;
     await queue.load();
     const ownedSince = await this.#ports.ownership.since();
     const context = { now: clock.now(), ownerChanged, ownedSince, dismissed: await dismissed.all() };
+    // The sign-in changed while the list was on its way: it is the previous account's, so nothing of it lands.
+    if (generation !== this.#generation) return;
     const plan = ActivityMerge.plan(queue.snapshot(), listing, context);
     for (const row of plan.save) await queue.save(row);
     for (const id of plan.remove) await queue.remove(id);
@@ -121,7 +160,8 @@ export class ActivitySync {
         views.push(...result.reports);
         cursor = result.next_cursor;
       } catch (error) {
-        if (error instanceof ApiError) return null;
+        // Offline, refused, or a sign-in that cannot be refreshed: the phone's copy stays.
+        if (error instanceof ApiError || error instanceof AuthError) return null;
         throw error;
       }
       if (cursor === null) return { views, complete: true };
@@ -129,9 +169,9 @@ export class ActivitySync {
     return { views, complete: false };
   }
 
-  #setTrusted(trusted: boolean): void {
-    if (trusted === this.#trusted) return;
-    this.#trusted = trusted;
+  #setState(next: ActivityState): void {
+    if (next.trusted === this.#state.trusted && next.loading === this.#state.loading) return;
+    this.#state = next;
     for (const listener of this.#listeners) listener();
   }
 

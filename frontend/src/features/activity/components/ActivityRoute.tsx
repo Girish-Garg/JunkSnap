@@ -15,14 +15,14 @@ export function ActivityRoute() {
   const { t } = useTranslation();
   const sheets = useSheetNavigation();
   const close = useCallback(() => sheets.close('/'), [sheets]);
-  const { reports, scans } = useActivity();
+  const { reports, scans, loading } = useActivity();
   return (
     <BottomSheet labelledBy={TITLE_ID} closeLabel={t('activity.close')} resizeLabel={t('sheet.resize')} onClose={close}>
       <h2 id={TITLE_ID} className="sheet-title" tabIndex={-1}>
         {t('activity.title')}
       </h2>
       <p className="activity-subtitle">{t('activity.text')}</p>
-      <ActivityLists reports={reports} scans={scans} />
+      <ActivityLists reports={reports} scans={scans} loading={loading} />
     </BottomSheet>
   );
 }

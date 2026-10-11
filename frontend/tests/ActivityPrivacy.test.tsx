@@ -30,13 +30,14 @@ describe('Activity on an install from before this release (no list token)', () =
 
   it('shows no sent row in the sheet until the list is confirmed for this account', async () => {
     const api = new FakeReportApi();
-    api.failNext('mine', 0, 'network_error');
+    api.hold();
     const store = new MemoryReportStore();
     await store.put(sentRow(1).data);
     const services = testServices(new MemoryStore(), { api, store });
     await signIn(services.auth as MockAuthService, 'resident@example.com');
     await renderApp(<AppRoutes />, { route: '/activity', services });
-    expect(await screen.findByRole('button', { name: 'Take your first photo' })).toBeInTheDocument();
+    // While GET /me/reports is on its way the sheet says it is loading, never "Nothing sent yet".
+    expect(await screen.findByText('Loading your reports')).toBeInTheDocument();
     expect(screen.queryByText('Waste dump')).not.toBeInTheDocument();
   });
 });

@@ -21,7 +21,11 @@ async function signedIn(siteApi = new FakeSiteActionsApi()): Promise<ServiceCont
   return services;
 }
 
-const withCleanup = (site: SiteFeature, cleanup_status: CleanupState): SiteFeature => ({ ...site, properties: { ...site.properties, cleanup_status } });
+const withCleanup = (site: SiteFeature, cleanup_status: CleanupState, cleanup_photo_url: string | null = null): SiteFeature => ({ ...site, properties: { ...site.properties, cleanup_status, cleanup_photo_url } });
+
+// The blurred copy of an after-photo that passed, as the worker names it (contracts/README.md, S3 key layout).
+const OURS = 'https://cdn.test/media/cleanups/cln_test_b.jpg';
+const EARLIER = 'https://cdn.test/media/cleanups/cln_test_a.jpg';
 
 type SetSite = (site: SiteFeature) => void;
 
@@ -34,7 +38,7 @@ interface HarnessProps {
 function Harness({ first, reload, onReady }: HarnessProps) {
   const [site, set] = useState(first);
   useEffect(() => onReady(set), [onReady, set]);
-  return <CleanupStatus site={site} siteId={first.properties.site_id} reload={reload} />;
+  return <CleanupStatus site={site} siteId={first.properties.site_id} cleanupId="cln_test_b" reload={reload} />;
 }
 
 describe('cleanup status after a new claim', () => {
@@ -47,8 +51,26 @@ describe('cleanup status after a new claim', () => {
     expect(reload).toHaveBeenCalled();
     act(() => setSite(withCleanup(before, 'checking')));
     expect(screen.getByText('Being checked')).toBeInTheDocument();
-    act(() => setSite(withCleanup(before, 'accepted')));
+    act(() => setSite(withCleanup(before, 'accepted', OURS)));
     expect(screen.getByText('Cleared')).toBeInTheDocument();
+  });
+
+  it('reads a rejected photo as not accepted when an earlier photo keeps the site pending', async () => {
+    const before = withCleanup(await fixtureSite('site_jdh_1'), 'pending_confirmation', EARLIER);
+    let setSite: SetSite = () => undefined;
+    await renderApp(<Harness first={before} reload={vi.fn()} onReady={(set) => (setSite = set)} />);
+    act(() => setSite(withCleanup(before, 'checking', EARLIER)));
+    expect(screen.getByText('Being checked')).toBeInTheDocument();
+    act(() => setSite(withCleanup(before, 'pending_confirmation', EARLIER)));
+    expect(screen.getByText('Not accepted')).toBeInTheDocument();
+  });
+
+  it('counts this photo once the site shows its blurred copy', async () => {
+    const before = withCleanup(await fixtureSite('site_jdh_1'), 'pending_confirmation', EARLIER);
+    let setSite: SetSite = () => undefined;
+    await renderApp(<Harness first={before} reload={vi.fn()} onReady={(set) => (setSite = set)} />);
+    act(() => setSite(withCleanup(before, 'pending_confirmation', OURS)));
+    expect(screen.getByText('Counted')).toBeInTheDocument();
   });
 });
 
