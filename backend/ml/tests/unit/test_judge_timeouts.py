@@ -4,6 +4,7 @@ import socket
 import threading
 import time
 from collections.abc import Iterator
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -12,16 +13,24 @@ import httpx
 import pytest
 from botocore import UNSIGNED
 from botocore.config import Config
-from fakes import JUDGE_JSON, FakeBuilder, FakeProvider
+from fakes import FIXED_NOW, JUDGE_JSON, FakeBuilder, FakeProvider
 
 from ml.adapters.bedrock_converse import BedrockConverseProvider
 from ml.adapters.s3_model_store import S3ModelStore
-from ml.domain.errors import ExternalServiceError
-from ml.domain.llm import LlmRequest, ModelChoice, TaskConfig
+from ml.domain.errors import ExternalServiceError, NoProviderAnsweredError
+from ml.domain.llm import LlmRequest, LlmResponse, ModelChoice, TaskConfig
 from ml.domain.model_files import PinnedModel
 from ml.domain.pricing import PriceTable
-from ml.handlers.judge_timeouts import DETECTORS_S, WORKER_BUDGET_S, JudgeTimeouts
+from ml.handlers.judge_timeouts import (
+    ATTEMPTS,
+    DETECTORS_S,
+    READ_TIMEOUT_S,
+    WORKER_BUDGET_S,
+    JudgeTimeouts,
+)
 from ml.handlers.verify_graph import VerifierBuilder
+from ml.ports.clock import Clock
+from ml.services.attempt_window import AttemptWindow
 from ml.services.judge_answer import JudgeAnswer
 from ml.services.provider_factory import ProviderFactory
 from ml.services.provider_router import JsonJob, ProviderRouter
@@ -117,6 +126,67 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
     assert all(c.read_timeout == 7.5 and c.connect_timeout == 2.5 for c in bedrock)
     assert all(c.retries["total_max_attempts"] == 2 for c in bedrock)
     assert [c.timeout.read for c in clients] == [7.5]
+
+
+def test_the_detector_clients_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rekognition and the S3 reads: one resend at most, both inside the detectors' 10 s."""
+    configs: dict[str, Any] = {}
+    real_client = boto3.session.Session.client
+
+    def client(self: boto3.session.Session, name: str, **kwargs: Any) -> Any:
+        configs.setdefault(name, kwargs.get("config"))
+        return real_client(self, name, **kwargs)  # type: ignore[call-overload]
+
+    monkeypatch.setattr(boto3.session.Session, "client", client)
+    builder = VerifierBuilder(CoreSettings(), LlmSettings(), ModelSettings())
+    builder.verifier()
+    builder.image_store("bucket")
+
+    for name in ("rekognition", "s3"):
+        assert configs[name].retries == {"total_max_attempts": 2, "mode": "standard"}
+        assert configs[name].connect_timeout <= 2
+        assert 2 * configs[name].read_timeout <= DETECTORS_S
+
+
+def test_the_last_judge_attempt_starts_in_time_to_end_inside_the_budget() -> None:
+    t = JudgeTimeouts()
+    assert t.last_start_s + t.attempts * t.read_s <= WORKER_BUDGET_S - DETECTORS_S
+    assert t.last_start_s > 2 * t.attempts * t.read_s  # Lite and Pro hung: OpenAI still runs
+
+
+class SteppingClock(Clock):
+    def __init__(self) -> None:
+        self.at = FIXED_NOW
+
+    def now(self) -> datetime:
+        return self.at
+
+
+class SlowInvalidProvider(FakeProvider):
+    """Answers invalid JSON as late as a resent Bedrock call can (2 x 8 s)."""
+
+    def __init__(self, name: str, clock: SteppingClock) -> None:
+        super().__init__(name, ["not json"] * 4)
+        self._clock = clock
+
+    def complete(self, request: LlmRequest) -> LlmResponse:
+        self._clock.at += timedelta(seconds=ATTEMPTS * READ_TIMEOUT_S)
+        return super().complete(request)
+
+
+def test_no_judge_attempt_starts_after_the_window_so_retries_fit_the_budget() -> None:
+    clock = SteppingClock()
+    lite, pro = SlowInvalidProvider(LITE, clock), SlowInvalidProvider(PRO, clock)
+    task = TaskConfig("bedrock", LITE, (ModelChoice("bedrock", PRO),))
+    factory = ProviderFactory({"bedrock": FakeBuilder({LITE: lite, PRO: pro})})
+    window = AttemptWindow(clock, JudgeTimeouts().last_start_s)
+    router = ProviderRouter({"judge": task}, factory, PriceTable(), window)
+
+    with pytest.raises(NoProviderAnsweredError):
+        router.complete_json(JsonJob("judge", LlmRequest("system", "judge"), JudgeAnswer))
+
+    assert (len(lite.requests), len(pro.requests)) == (2, 1)
+    assert (clock.at - FIXED_NOW).total_seconds() <= WORKER_BUDGET_S - DETECTORS_S
 
 
 def test_a_hung_bedrock_model_is_retried_once_then_the_next_answers(hung: HungServer) -> None:

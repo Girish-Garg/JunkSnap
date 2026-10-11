@@ -10,6 +10,7 @@ from ml.domain.errors import ConfigError, NoProviderAnsweredError, ProviderError
 from ml.domain.llm import LlmRequest, LlmResponse, ModelChoice, TaskConfig
 from ml.domain.pricing import PriceTable
 from ml.ports.llm_provider import LlmProvider
+from ml.services.attempt_window import AttemptWindow, OpenWindow
 from ml.services.provider_factory import ProviderFactory
 from ml.utils import json_object_text
 
@@ -36,21 +37,30 @@ class JsonJob[M: BaseModel]:
 
 
 class ProviderRouter:
-    """A call error moves on at once; an invalid answer is retried once, then moves on."""
+    """A call error moves on at once; an invalid answer is retried once, then moves on.
+
+    With a window, no attempt (first call or retry) starts after it closes.
+    """
 
     def __init__(
-        self, tasks: Mapping[str, TaskConfig], factory: ProviderFactory, prices: PriceTable
+        self,
+        tasks: Mapping[str, TaskConfig],
+        factory: ProviderFactory,
+        prices: PriceTable,
+        window: AttemptWindow | None = None,  # None: no time limit (offline scoring)
     ) -> None:
         self._tasks = dict(tasks)
         self._factory = factory
         self._prices = prices
+        self._window = window
 
     def complete_json[M: BaseModel](self, job: JsonJob[M]) -> RoutedAnswer[M]:
+        window = None if self._window is None else self._window.open()
         for choice in self._config(job.task).choices():
             provider = self._provider(job.task, choice)
             if provider is None:
                 continue
-            answer = self._ask(job, choice, provider)
+            answer = self._ask(job, choice, provider, window)
             if answer is not None:
                 return answer
         raise NoProviderAnsweredError(f"no provider gave a valid answer for task {job.task!r}")
@@ -72,10 +82,13 @@ class ProviderRouter:
         return provider
 
     def _ask[M: BaseModel](
-        self, job: JsonJob[M], choice: ModelChoice, provider: LlmProvider
+        self, job: JsonJob[M], choice: ModelChoice, provider: LlmProvider, window: OpenWindow | None
     ) -> RoutedAnswer[M] | None:
         request = job.request
         for _ in range(1 + RETRIES_ON_INVALID_JSON):
+            if window is not None and window.closed():
+                self._log("llm_out_of_time", job.task, choice, "the attempt window has closed")
+                return None
             try:
                 response = provider.complete(request)
             except ProviderError as error:

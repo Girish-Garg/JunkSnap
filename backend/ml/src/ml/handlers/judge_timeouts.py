@@ -21,6 +21,12 @@ class JudgeTimeouts:
     connect_s: float = CONNECT_TIMEOUT_S
     attempts: int = ATTEMPTS
 
+    @property
+    def last_start_s(self) -> float:
+        """No judge attempt starts later (34 s by default), so even an invalid answer retried
+        per model ends in the budget: the longest attempt, a resent Bedrock call, takes 16 s."""
+        return WORKER_BUDGET_S - DETECTORS_S - self.attempts * self.read_s
+
     def aws_config(self) -> Config:
         """bedrock-runtime (judge and Titan): a timeout is resent once; the total counts both."""
         return Config(

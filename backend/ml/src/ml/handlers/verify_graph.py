@@ -25,6 +25,7 @@ from ml.handlers.trained_graph import TrainedModels
 from ml.ports.image_store import BlurredImageStore
 from ml.ports.llm_provider import ProviderBuilder
 from ml.ports.signal import Signal
+from ml.services.attempt_window import AttemptWindow
 from ml.services.combiner import FixedWeightCombiner
 from ml.services.combiner_base import Combiner
 from ml.services.judge_answer import PROMPT_VERSION
@@ -39,8 +40,11 @@ from ml.settings.llm import LlmSettings
 from ml.settings.models import ModelSettings
 
 JUDGE_PROMPT = f"{PROMPT_VERSION}.txt"  # the version judge.attributes.prompt records
-# Few retries: a throttled provider should hand over to the next one quickly.
-AWS_CONFIG = Config(retries={"max_attempts": 2, "mode": "standard"}, read_timeout=60)
+# Rekognition, S3 and Secrets Manager: one resend at most and short reads, so a hung call
+# fails fast; Rekognition's 2 x 4 s fits the detectors' 10 s (judge_timeouts).
+AWS_CONFIG = Config(
+    retries={"total_max_attempts": 2, "mode": "standard"}, connect_timeout=2.0, read_timeout=4.0
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +108,8 @@ class VerifierBuilder:
 
     def provider_router(self) -> ProviderRouter:
         factory = ProviderFactory(self._provider_builders())
-        return ProviderRouter(self._llm.task_configs(), factory, PriceTable())
+        window = AttemptWindow(SystemClock(), self._timeouts.last_start_s)
+        return ProviderRouter(self._llm.task_configs(), factory, PriceTable(), window)
 
     def _provider_builders(self) -> dict[str, ProviderBuilder]:
         secrets = SecretsManagerSecretReader(
