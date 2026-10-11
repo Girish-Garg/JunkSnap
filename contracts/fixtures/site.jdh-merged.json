@@ -1,0 +1,52 @@
+{
+  "type": "Feature",
+  "geometry": { "type": "Point", "coordinates": [73.0035, 26.26185] },
+  "properties": {
+    "site_id": "site_jdh_merged",
+    "report_type": "waste_dump",
+    "context": "vacant_plot",
+    "status": "removed",
+    "removed_reason": "merged",
+    "merged_into": "site_jdh_1",
+    "removed_at": "2026-10-11T12:00:00Z",
+    "cleaned_by": null,
+    "verification": "unverified",
+    "report_count": 1,
+    "verified_count": 0,
+    "corroborations": 0,
+    "backers": { "count": 1, "needed": 10, "photo_people": 1, "vote_people": 0 },
+    "votes": { "confirm": 0, "reject": 0, "cleaned": 0 },
+    "photo_urls": [],
+    "cleanup_status": "none",
+    "cleanup_photo_url": null,
+    "burning": false,
+    "location": {
+      "state": "Rajasthan",
+      "district": { "id": "rajasthan-jodhpur", "name": "Jodhpur" },
+      "town": "Jodhpur",
+      "local_body": { "id": "jodhpur-mc", "name": "Jodhpur Municipal Corporation", "head_office": "Commissioner" },
+      "ward": null,
+      "assembly_seat": { "id": "s20-ac-128", "name": "Jodhpur" },
+      "loksabha_seat": { "id": "s20-pc-16", "name": "Jodhpur", "status": "current" },
+      "representatives": [
+        { "office": "mla", "seat_id": "s20-ac-128", "as_of": "2026-10-01", "source": "https://eci.gov.in/" },
+        { "office": "mp", "seat_id": "s20-pc-16", "as_of": "2026-10-01", "source": "https://sansad.in/ls" }
+      ]
+    },
+    "brands": [],
+    "first_reported_at": "2026-10-10T02:14:08Z",
+    "last_reported_at": "2026-10-10T02:14:08Z",
+    "cleaned_at": null,
+    "pilot": true,
+    "reporters": 1,
+    "insights": {
+      "reports": 0,
+      "composition": [],
+      "size_class": null,
+      "hazards": [],
+      "near": [],
+      "nearest_bin": null,
+      "no_bin_within_3km": null
+    }
+  }
+}

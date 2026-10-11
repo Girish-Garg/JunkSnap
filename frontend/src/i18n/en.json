@@ -105,6 +105,7 @@
     "reopened": "Reopened",
     "removed": "Withdrawn",
     "removedReported": "Removed after reports",
+    "removedMerged": "Merged with a nearby site",
     "expired": "Expired",
     "rejected": "Rejected",
     "clearing": "{{count}} of {{needed}} say cleared"
@@ -122,6 +123,7 @@
     "reopened": "This spot was cleared once, but a new photo shows waste here again, so it is back on the map.",
     "removed": "Its reporter withdrew the report before it was verified, so it left the map.",
     "removedReported": "Several people reported its photos, so it left the map.",
+    "removedMerged": "It was the same spot as a nearby site, so its photos and backers moved there.",
     "expired": "Nobody added a photo or a vote here for 90 days, so it left the map. If the waste is still there, report it again.",
     "rejected": "At least 3 more neighbours said no than backed it, so it was hidden from the map."
   },
@@ -255,6 +257,7 @@
       "title": "No longer on the map",
       "removed": "Its reporter withdrew the report, so this site left the map. It takes no more votes, photos or letters.",
       "photosReported": "Several people reported its photos, so this site left the map. It takes no more votes, photos or letters.",
+      "merged": "This was the same spot as a nearby site, so it was merged with that site. Its photos and backers count there now.",
       "expired": "This site expired and left the map. If the waste is still there, report it again with a new photo.",
       "rejected": "Neighbours said this is not a waste site, so it was hidden from the map. It takes no more votes or letters.",
       "rejectedNoBin": "Neighbours said there is a bin within {{zoneKm}} km, so this no-bin zone was hidden from the map. It takes no more votes or letters.",

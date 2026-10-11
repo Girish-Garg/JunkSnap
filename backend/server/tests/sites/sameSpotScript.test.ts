@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APPLY_NEEDS_CONTRACT, parseSameSpotArgs } from "../../scripts/sameSpot/SameSpotArgs.js";
+import { APPLY_NEEDS_BASE_URL, SameSpotArgs } from "../../scripts/sameSpot/SameSpotArgs.js";
 import { SameSpotGrouper, type SameSpotGroup } from "../../scripts/sameSpot/SameSpotGrouper.js";
 import { SameSpotLines } from "../../scripts/sameSpot/SameSpotLines.js";
 import { SameSpotScan } from "../../scripts/sameSpot/SameSpotScan.js";
@@ -120,19 +120,23 @@ describe("mergeSameSpotSites output and arguments", () => {
       "dev: 2 sites read, 2 open photo sites, SITE_SAME_SPOT_M 20 m",
       "group 1 waste_dump: keep site_first (2 reports, 2 of 10 backers, unverified, first 2026-10-09T05:00:00Z)",
       "  absorb site_second (1 report, 1 of 10 backers, unverified, first 2026-10-10T05:00:00Z) at 0.8 m",
-      "dry run: 1 groups, 1 sites would merge into the oldest site of their group; nothing was written",
+      "found: 1 groups, 1 sites to merge into the oldest site of their group",
     ]);
   });
 
-  it("reads one stage's own table and refuses anything else", () => {
-    expect(parseSameSpotArgs(["demo"])).toEqual({ stage: "demo", sitesTable: "junksnap-demo-sites" });
-    expect(() => parseSameSpotArgs([])).toThrow(/usage/);
-    expect(() => parseSameSpotArgs(["prod"])).toThrow(/usage/);
-    expect(() => parseSameSpotArgs(["dev", "demo"])).toThrow(/usage/);
+  it("reads one stage's own tables and refuses anything else", () => {
+    const tables = { sites: "junksnap-dev-sites", reports: "junksnap-dev-reports", votes: "junksnap-dev-votes", notes: "junksnap-dev-notes" };
+    expect(new SameSpotArgs({}).parse(["dev"])).toEqual({ stage: "dev", tables, apply: null });
+    expect(() => new SameSpotArgs({}).parse([])).toThrow(/usage/);
+    expect(() => new SameSpotArgs({}).parse(["prod"])).toThrow(/usage/);
+    expect(() => new SameSpotArgs({}).parse(["dev", "demo"])).toThrow(/usage/);
+    expect(() => new SameSpotArgs({}).parse(["--apply"])).toThrow(/usage/);
   });
 
-  it("refuses --apply until the site contract has a removed_reason for a merged site", () => {
-    expect(() => parseSameSpotArgs(["dev", "--apply"])).toThrow(APPLY_NEEDS_CONTRACT);
-    expect(APPLY_NEEDS_CONTRACT).toMatch(/withdrawn and photos_reported/);
+  it("takes --apply only with an https PUBLIC_BASE_URL", () => {
+    const apply = new SameSpotArgs({ PUBLIC_BASE_URL: "https://d111111abcdef8.cloudfront.net/" }).parse(["dev", "--apply"]).apply;
+    expect(apply).toEqual({ publicBaseUrl: "https://d111111abcdef8.cloudfront.net" });
+    expect(() => new SameSpotArgs({}).parse(["dev", "--apply"])).toThrow(APPLY_NEEDS_BASE_URL);
+    expect(() => new SameSpotArgs({ PUBLIC_BASE_URL: "http://example.com" }).parse(["dev", "--apply"])).toThrow(APPLY_NEEDS_BASE_URL);
   });
 });

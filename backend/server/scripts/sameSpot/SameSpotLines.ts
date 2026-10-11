@@ -20,7 +20,7 @@ export class SameSpotLines {
       ...group.absorb.map(({ site, distanceM }) => `  absorb ${SameSpotLines.#site(site)} at ${distanceM} m`),
     ]);
     const absorbed = findings.groups.reduce((total, group) => total + group.absorb.length, 0);
-    const tail = `dry run: ${findings.groups.length} groups, ${absorbed} sites would merge into the oldest site of their group; nothing was written`;
+    const tail = `found: ${findings.groups.length} groups, ${absorbed} sites to merge into the oldest site of their group`;
     return [head, ...body, tail];
   }
 

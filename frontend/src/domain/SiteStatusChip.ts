@@ -34,8 +34,10 @@ export class SiteStatusChip {
     // People say it is cleared and it waits for enough of them (decision 20261010-1855): "1 of 3 say cleared".
     const clearing = new SiteLifecycle(site).pendingClearance();
     if (clearing) return { key: 'chip.clearing', params: { count: clearing.count, needed: clearing.needed }, tone: 'cleared' };
-    // Removed because people reported its photos, not withdrawn by its reporter (removed_reason).
+    // Removed because people reported its photos, or merged into a nearby site (removed_reason); any other reason,
+    // including one this app does not know yet, reads as plain removed.
     if (site.status === 'removed' && site.removed_reason === 'photos_reported') return { key: 'chip.removedReported', tone: 'closed' };
+    if (site.status === 'removed' && site.removed_reason === 'merged') return { key: 'chip.removedMerged', tone: 'closed' };
     const byStatus = BY_STATUS[site.status];
     if (byStatus) return byStatus;
     if (site.verification === 'rejected') return { key: 'chip.rejected', tone: 'closed' };

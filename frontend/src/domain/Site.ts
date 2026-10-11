@@ -130,8 +130,13 @@ export interface SiteProperties {
   readonly expires_at?: string;
   /** What set the last cleaned status; absent on older rows. */
   readonly cleaned_by?: 'after_photo' | 'votes' | null;
-  /** Why a removed site left the map, and when; absent on older rows. */
-  readonly removed_reason?: 'withdrawn' | 'photos_reported' | null;
+  /**
+   * Why a removed site left the map, and when; absent on older rows. merged (v1.18): a same-spot duplicate merged into
+   * merged_into. Values added later must still read as plain removed, so code compares, never switches exhaustively.
+   */
+  readonly removed_reason?: 'withdrawn' | 'photos_reported' | 'merged' | null;
+  /** v1.18 (decision 20261011-1730-hem-merged-sites): the site a merged duplicate's reports moved to. */
+  readonly merged_into?: string | null;
   readonly removed_at?: string | null;
   readonly pilot: boolean;
   /** v1.4: distinct people who reported the site (user id, else device); absent on older rows. */
