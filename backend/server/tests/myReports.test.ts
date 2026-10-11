@@ -38,7 +38,7 @@ let reports: FakeReportRepository;
 beforeEach(async () => {
   const clock = new FixedClock(NOW);
   reports = new FakeReportRepository();
-  const snapLimit = new SnapLimit(new FakeSnapCounter(reports));
+  const snapLimit = new SnapLimit(new FakeSnapCounter(reports), 20);
   const presigner = new UploadPresigner({ signer: { sign: async () => "" }, ids: { next: () => "x" }, clock, snapLimit }, 300);
   const intake = new ReportIntake({ reports, snapLimit, queue: new FakeReportQueue(), clock });
   const services = { presigner, intake, statuses: new ReportStatusReader(reports, BASE, clock), mine: fakeMine(reports, BASE, clock) };

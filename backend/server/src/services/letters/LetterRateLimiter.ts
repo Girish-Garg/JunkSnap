@@ -3,7 +3,6 @@ import type { Requester } from "../../domain/letters/types.js";
 import type { LetterCounter } from "../../ports/letters/LetterCounter.js";
 import type { Logger } from "../../ports/Logger.js";
 
-const LETTERS_PER_HOUR = 5;
 const HOUR_MS = 3_600_000;
 
 export interface LetterCounters {
@@ -17,7 +16,8 @@ export class LetterRateLimiter {
   readonly #noun: string;
   readonly #logger: Logger;
 
-  constructor(counters: LetterCounters, logger: Logger, limit: number = LETTERS_PER_HOUR, noun = "letters") {
+  // limit: this action's per-hour setting (LETTERS_PER_HOUR, CONFIRMATIONS_PER_HOUR, ...).
+  constructor(counters: LetterCounters, logger: Logger, limit: number, noun = "letters") {
     this.#counters = counters;
     this.#logger = logger;
     this.#limit = limit;
