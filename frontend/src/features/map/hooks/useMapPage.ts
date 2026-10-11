@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useLocation } from 'react-router';
 import type { MapMode } from '../../../domain/MapMode';
 import { SiteFilter } from '../../../domain/SiteFilter';
+import type { BasemapPhase } from '../MapNotice';
 import type { MapView } from '../SiteMap';
 import { useLocate } from './useLocate';
 import { useOpeningFit, useOpeningSettled } from './useMapDiscovery';
@@ -24,8 +25,8 @@ function settledState(loaded: SitesLoad, partial: boolean) {
   return { empty: settled && loaded.sites.length === 0, found: settled && loaded.sites.length > 0 };
 }
 
-/** Everything the map screen shows, gathered from the smaller hooks. */
-export function useMapPage() {
+/** Everything the map screen shows, gathered from the smaller hooks; `basemap` is idle without a map. */
+export function useMapPage(basemap: BasemapPhase) {
   const { pathname } = useLocation();
   const [view, setView] = useState<MapView | null>(null);
   const [filter, setFilter] = useState(() => new SiteFilter());
@@ -43,7 +44,7 @@ export function useMapPage() {
   const browser = useSiteBrowser({ ...browserInput, openingWants: !settled && empty });
   useOpeningFit({ settled, view, empty, pilot: browser.pilot.sites, frame: selection.frame });
   const thin = useThinView({ view, loaded, partial, nearest, pilot: browser.pilot.sites, camera: selection.camera, opening: settled });
-  const notice = useMapNotice({ loaded, shown: sites.length, partial, locationProblem: location.problem, nearby: nearest, flash: flash.key });
+  const notice = useMapNotice({ loaded, shown: sites.length, partial, locationProblem: location.problem, nearby: nearest, flash: flash.key, basemap });
   const moves = useMapMoves({ view, setView, selection, location, browser });
   const { showPlace } = selection;
   const showNearest = useCallback(() => showPlace({ sites: nearest?.slice(0, 1) ?? [], point: null }), [showPlace, nearest]);

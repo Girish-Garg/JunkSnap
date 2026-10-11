@@ -19,17 +19,27 @@
   gap: var(--s-2);
 }
 
+/*
+  The hint sits beside the chip, or on its own line just above it when the two do not fit (most phones up to
+  390 px); the row stops 64 px short of the edge, so neither reaches the map buttons.
+*/
 .legend-toggle__row {
   display: flex;
+  flex-wrap: wrap-reverse;
   align-items: center;
   gap: var(--s-2);
   max-width: calc(100vw - 2 * var(--edge) - 64px);
 }
 
-/* Always visible, open or folded: scores are never shown on thin evidence. */
+.legend-toggle__chip {
+  flex: none;
+}
+
+/* Always visible, open or folded: scores are never shown on thin evidence. A pill on one line, soft if it wraps. */
 .legend-toggle__caveat {
+  min-width: 0;
   padding: var(--s-1) var(--s-3);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-s);
   background: var(--surface);
   box-shadow: var(--shadow-1);
   color: var(--text-secondary);

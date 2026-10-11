@@ -82,7 +82,11 @@
     "capped": "Showing the newest 500 sites here. Zoom in to see them all.",
     "empty": "No reports here yet.",
     "offScreen": "No reports in this view.",
-    "showNearest": "Show the nearest report"
+    "showNearest": "Show the nearest report",
+    "mapLoading": "Loading the map…",
+    "mapSlow": "Slow connection: the map is still loading. The list, Areas and Report work now.",
+    "mapFailed": "The map could not load.",
+    "mapRetry": "Try again"
   },
   "sheet": {
     "resize": "Show more or less"
@@ -827,7 +831,7 @@
     "keyCount": "Marker: number of verified reports",
     "areasLine": "Seats with 10+ verified reports are coloured by score instead.",
     "legendChip": "Legend",
-    "caveat": "Scores show after 10 verified reports",
+    "caveat": "Scores after 10 verified reports",
     "outdated": "Dashed outline: seat boundary out of date",
     "tooltipScorePilot": "{{name}}: score {{n}} of 100, from {{reports}} verified reports. Pilot city",
     "keyPilot": "Flag: pilot city data",
