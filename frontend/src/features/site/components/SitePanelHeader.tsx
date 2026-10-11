@@ -5,7 +5,7 @@ import { useSiteDistance } from '../hooks/useSiteDistance';
 import type { SitePresenter } from '../SitePresenter';
 import { SiteBadges } from './SiteBadges';
 import { SiteLocationLine } from './SiteLocationLine';
-import { StatusChip } from './StatusChip';
+import { StatusChipButton } from './StatusChipButton';
 
 interface SitePanelHeaderProps {
   readonly site: SiteFeature;
@@ -32,7 +32,7 @@ export function SitePanelHeader({ site, titleId, userLocation, presenter }: Site
         {t(`reportType.${details.report_type}`)}
       </h2>
       <p className="site-header__meta">
-        <StatusChip site={details} />
+        <StatusChipButton site={details} />
         {presenter.showsVerification() && <span>{t(`verification.${details.verification}`)}</span>}
         {distance && <span>{distance.label}</span>}
       </p>

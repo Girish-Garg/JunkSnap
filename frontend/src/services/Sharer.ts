@@ -14,13 +14,14 @@ export class Sharer {
     return this.#navigator.clipboard.writeText(text);
   }
 
-  async share(title: string, url: string): Promise<ShareResult> {
+  /** `text` is a message to send with the link; without a share sheet the copy holds both. */
+  async share(title: string, url: string, text?: string): Promise<ShareResult> {
     if (!this.#navigator.share) {
-      await this.#navigator.clipboard.writeText(url);
+      await this.#navigator.clipboard.writeText(text ? `${text} ${url}` : url);
       return 'copied';
     }
     try {
-      await this.#navigator.share({ title, url });
+      await this.#navigator.share(text ? { title, text, url } : { title, url });
       return 'shared';
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';

@@ -39,7 +39,7 @@ export function SitePanel({ site, userLocation, onChanged }: SitePanelProps) {
     <article className="site-panel">
       <SitePanelHeader site={site} titleId={SITE_TITLE_ID} userLocation={userLocation} presenter={presenter} />
       {closed ? <SiteClosedNote reason={closed} /> : <SiteOpenActions site={site} presenter={presenter} gates={gates} onChanged={changed} />}
-      {presenter.showsBackers() && <SiteBackersBar backers={details.backers} />}
+      {presenter.showsBackers() && <SiteBackersBar site={details} />}
       {!closed && <SiteClearance site={details} vote={gates.vote} onChanged={changed} />}
       {!closed && <SiteExpiryNote site={details} />}
       <SitePhotos siteId={details.site_id} photos={presenter.photos()} gates={gates} reportable={!closed} onChanged={changed} />
