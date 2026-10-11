@@ -39,6 +39,8 @@
     "report_count": 7,
     "reporters": 5,
     "verified_count": 6,
+    "verification": "verified",
+    "backers": { "count": 10, "needed": 10 },
     "first_reported_at": "2026-10-09T03:40:00Z",
     "last_reported_at": "2026-10-10T02:14:05Z",
     "photo_urls": [

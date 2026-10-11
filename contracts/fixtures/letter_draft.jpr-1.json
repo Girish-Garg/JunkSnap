@@ -1,0 +1,52 @@
+{
+  "letter_id": "ltr_jpr_1",
+  "site_id": "site_jpr_1",
+  "channel": "local_body",
+  "to": { "office": "Commissioner", "body": "Jaipur Municipal Corporation" },
+  "cc": [
+    { "office": "mla", "seat": { "id": "s20-ac-54", "name": "Malviya Nagar" }, "marking": "for attention" },
+    { "office": "mp", "seat": { "id": "s20-pc-7", "name": "Jaipur" }, "marking": "for attention" }
+  ],
+  "subject": "Request for action on uncovered construction debris in Jaipur (JunkSnap site site_jpr_1)",
+  "body": "To the Commissioner, Jaipur Municipal Corporation.\n\nResidents have reported uncovered construction debris in Jaipur, at 26.8530 N, 75.8156 E. Reports since 10 October 2026: 1. Reported by 1 resident; community verification in progress (2 of 10 people confirmed so far).\nBlurred photos: https://d111111abcdef8.cloudfront.net/media/reports/rpt_jpr_1.jpg\n\nThe relevant provisions read:\n\nEnvironment (Construction and Demolition) Waste Management Rules, 2025 (G.S.R. 219(E), 2 April 2025, in force 1 April 2026), rule 17(1):\n\"SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.\"\n\nEnvironment (Construction and Demolition) Waste Management Rules, 2025 (G.S.R. 219(E), 2 April 2025, in force 1 April 2026), rule 9(1)(d):\n\"SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.\"\n\nWe request that the debris be covered or removed and that dust control measures be enforced.\n\nThis letter is filed by a resident. Copies go for attention to the MLA for Malviya Nagar and the MP for Jaipur.",
+  "language": "en",
+  "citations": [
+    {
+      "rule_id": "cnd-2025-17-1",
+      "document": "Environment (Construction and Demolition) Waste Management Rules, 2025 (G.S.R. 219(E), 2 April 2025, in force 1 April 2026)",
+      "clause": "17(1)",
+      "quote": "SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.",
+      "source_sha256": "201e29b8d1c3aba64c41c95fcacc3aa82c7bc201135d3242d6471c7a73a5a184",
+      "verified": true
+    },
+    {
+      "rule_id": "cnd-2025-9-1-d",
+      "document": "Environment (Construction and Demolition) Waste Management Rules, 2025 (G.S.R. 219(E), 2 April 2025, in force 1 April 2026)",
+      "clause": "9(1)(d)",
+      "quote": "SAMPLE QUOTE for mock mode; the real text comes from the hashed official copy.",
+      "source_sha256": "201e29b8d1c3aba64c41c95fcacc3aa82c7bc201135d3242d6471c7a73a5a184",
+      "verified": true
+    }
+  ],
+  "verifier": { "verified": 2, "total": 2 },
+  "template_fallback": true,
+  "filing_url": null,
+  "provider": "junksnap",
+  "model": "letter-template",
+  "version": "1",
+  "created_at": "2026-10-10T04:30:00Z",
+  "evidence": {
+    "report_count": 1,
+    "reporters": 1,
+    "verified_count": 0,
+    "verification": "unverified",
+    "backers": { "count": 2, "needed": 10 },
+    "first_reported_at": "2026-10-10T04:02:10Z",
+    "last_reported_at": "2026-10-10T04:02:10Z",
+    "photo_urls": ["https://d111111abcdef8.cloudfront.net/media/reports/rpt_jpr_1.jpg"],
+    "insights": { "reports": 0, "composition": [], "size_class": null, "hazards": [], "near": [] },
+    "nearest_bin": null,
+    "no_bin_within_3km": null,
+    "residents": null
+  }
+}
