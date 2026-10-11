@@ -155,6 +155,8 @@ jobs:
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
+      # build_android.py adds every VITE_ tunable from config/defaults.env and config/$STAGE.env
+      # (docs/config.md); the endpoints above still come from the repository variables.
       - name: Build the APK (arm64 and armv7)
         shell: bash
         env:

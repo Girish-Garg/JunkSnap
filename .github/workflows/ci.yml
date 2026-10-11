@@ -17,6 +17,13 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Validate fixtures against schemas
         run: uv run scripts/validate_contracts.py
+      - name: Check config/ against the documented variables (docs/config.md)
+        run: uv run scripts/check_config.py
+      - name: Test the config loader, drift check and deploy scripts (no AWS)
+        run: >-
+          uv run --with pytest pytest -q scripts/tests/test_stage_config.py
+          scripts/tests/test_check_config.py scripts/tests/test_deploy.py
+          scripts/tests/test_android_stage.py
 
   frontend:
     runs-on: ubuntu-latest

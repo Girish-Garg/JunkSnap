@@ -2,7 +2,10 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""Deploy a stage (stacks, images, overlay, CloudFront): uv run scripts/deploy.py dev"""
+"""Deploy a stage (stacks, images, overlay, CloudFront): uv run scripts/deploy.py dev
+
+The stage's tunables come from config/defaults.env and config/<stage>.env (docs/config.md).
+"""
 
 import argparse
 import base64
@@ -14,6 +17,8 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+
+from stage_config import StageConfig, load_or_exit
 
 ROOT = Path(__file__).resolve().parent.parent
 REGION = "ap-south-1"
@@ -101,9 +106,10 @@ def build_image(name: str, folders: tuple[str, ...], image: str) -> None:
 class StageDeployer:
     """Deploys one stage end to end."""
 
-    def __init__(self, stage: str, origins: str | None) -> None:
+    def __init__(self, stage: str, origins: str | None, config: StageConfig) -> None:
         self._stage = stage
         self._origins = origins
+        self._config = config
         self._namespace = f"junksnap-{stage}"
         # Generated, gitignored layer over the committed overlay: keeps account ids out of git.
         self._layer = ROOT / "infra" / "k8s" / "deploy" / stage
@@ -157,10 +163,14 @@ class StageDeployer:
         return tag
 
     def _write_layer(self, repos: dict[str, str], tag: str, outputs: dict[str, str]) -> None:
-        """Write infra/k8s/deploy/<stage>/kustomization.yaml (JSON is valid YAML)."""
+        """Write infra/k8s/deploy/<stage>/kustomization.yaml (JSON is valid YAML).
+
+        Its ConfigMap literals: the stack outputs, CORS_ORIGINS and every server and ml tunable.
+        """
         literals = [f"{key}={outputs[name]}" for key, name in CONFIG_FROM_OUTPUTS.items()]
         if self._origins:
             literals.append(f"CORS_ORIGINS={self._origins}")
+        literals += self._config.literals()
         images = [
             {"name": name, "newName": repos[output], "newTag": tag}
             for name, (_, output) in IMAGES.items()
@@ -211,8 +221,9 @@ def main() -> None:
     parser.add_argument("--origins", help="comma-separated browser origins; required for demo")
     args = parser.parse_args()
     refuse_unsafe(args.stage, args.human_approved, args.origins)
+    config = load_or_exit(args.stage)  # a typo in config/ stops here, before any AWS call
     os.environ.setdefault("AWS_PROFILE", "junksnap")
-    url = StageDeployer(args.stage, args.origins).deploy()
+    url = StageDeployer(args.stage, args.origins, config).deploy()
     print(f"\nCloudFront URL: {url}\nCheck: curl {url}/healthz")
 
 
