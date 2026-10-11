@@ -7,6 +7,7 @@ import { ESCAPE_LAYER, useEscapeKey } from '../../../ui/useEscapeKey';
 import { useInertOutside } from '../../../ui/useInertOutside';
 import { useSheetFocus } from '../../../ui/useSheetFocus';
 import { useCardDeck } from '../hooks/useCardDeck';
+import { useSeenOnLeave } from '../hooks/useSeenOnLeave';
 import '../onboarding.css';
 import { CARD_COUNT, OnboardingCards } from './OnboardingCards';
 import { OnboardingFooter } from './OnboardingFooter';
@@ -20,11 +21,12 @@ export function OnboardingRoute() {
   const sheets = useSheetNavigation();
   const [track, deck] = useCardDeck(CARD_COUNT);
   const layer = useRef<HTMLElement>(null);
-  // Seen only once the reader closes the cards (Explore, Skip, the close button or Escape), not when they open.
+  // Seen only once the reader leaves the cards (Explore, Skip, the close button, Escape or back), not when they open.
   const close = useCallback(() => {
     onboarding.markSeen();
     sheets.close('/');
   }, [onboarding, sheets]);
+  useSeenOnLeave(onboarding);
   useEscapeKey(close, layer);
   useInertOutside(layer);
   useSheetFocus(TITLE_ID, null);

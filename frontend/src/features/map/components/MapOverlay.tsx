@@ -1,5 +1,6 @@
 import { DESKTOP_QUERY, useMediaQuery } from '../../../ui/useMediaQuery';
 import type { MapPageState } from '../hooks/useMapPage';
+import { usePickLayer } from '../hooks/usePickLayer';
 import { LegendKeys } from '../LegendKeys';
 import { BoundaryLegend } from './BoundaryLegend';
 import { DesktopActions } from './DesktopActions';
@@ -20,11 +21,12 @@ interface MapOverlayProps {
 export function MapOverlay({ page, listMode }: MapOverlayProps) {
   const { selection, boundary, areaCard } = page;
   const desktop = useMediaQuery(DESKTOP_QUERY);
+  const dismiss = usePickLayer(page);
   return (
     <>
       <MapSearchArea page={page} listMode={listMode} desktop={desktop} />
-      <PickedPin selection={selection} userLocation={page.location.position} browser={page.browser} />
-      {!listMode && <PickedArea card={areaCard} tints={boundary.tints} />}
+      <PickedPin selection={selection} userLocation={page.location.position} browser={page.browser} dismiss={dismiss} />
+      {!listMode && <PickedArea card={areaCard} tints={boundary.tints} dismiss={dismiss} />}
       {!listMode && !desktop && <SiteBrowserLayer page={page} />}
       {!listMode && <LegendToggle><BoundaryLegend keys={LegendKeys.of(boundary.view !== null, boundary.markers)} /></LegendToggle>}
       {!listMode && <MapControls onLocate={page.locateMe} />}
