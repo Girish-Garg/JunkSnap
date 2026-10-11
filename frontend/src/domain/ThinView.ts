@@ -5,8 +5,8 @@ import { SiteTiles } from './SiteTiles';
 
 /** Up to this many sites, the map and the list say plainly that sites are still few here. */
 export const THIN_MAX = 2;
-// How much wider than the points the landing view is (the card, the search stack and the edges take room).
-const LANDING_ROOM = 2.5;
+// How much wider than the points the landing view can be: FitPadding leaves at least a quarter of the map free.
+const LANDING_ROOM = 4;
 
 export interface ThinInput {
   /** The map's view; its sites finished loading (not pending, failed, only its middle, or mid-move). */

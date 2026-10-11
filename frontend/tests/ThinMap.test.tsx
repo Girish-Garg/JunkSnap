@@ -107,6 +107,18 @@ describe('few-reports card over other cards', () => {
   });
 });
 
+describe('few-reports card with a filter on', () => {
+  it('steps aside, so its count never disagrees with the pins', async () => {
+    const user = await showMap(ONE);
+    expect(await findCard(ONE_CARD)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.click(screen.getByRole('switch', { name: /Waste dump/ }));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Filters · 1' })).toBeInTheDocument());
+    expect(thinCard()).not.toBeInTheDocument();
+  });
+});
+
 describe('few-reports card actions', () => {
   it('Report the first one asks a signed-out person to sign in first', async () => {
     const user = await showMap(ELSEWHERE);

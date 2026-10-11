@@ -4,7 +4,7 @@ import { BrowserStore } from '../../../services/BrowserStore';
 import { MapNotice } from '../MapNotice';
 import type { MapPageState } from './useMapPage';
 
-type CardSources = Pick<MapPageState, 'thin' | 'sheetOpen' | 'selection' | 'areaCard' | 'notice'>;
+type CardSources = Pick<MapPageState, 'thin' | 'sheetOpen' | 'selection' | 'areaCard' | 'notice' | 'filters'>;
 
 export type ThinCardState = ReturnType<typeof useThinCard>;
 
@@ -19,7 +19,7 @@ function useFirstShow(shown: boolean): boolean {
 
 /**
  * The few-reports card on phones: the thin view while nothing covers the map foot (a pin card, an area card, a
- * sheet or the list), until it is dismissed for the browser session. While it is up, the toast leaves "no reports
+ * sheet or the list) and no filter is on, until it is dismissed for the browser session. While it is up, the toast leaves "no reports
  * here" to it; on desktop and once dismissed the toast says it as before.
  */
 export function useThinCard(page: CardSources, phone: boolean) {
@@ -29,7 +29,8 @@ export function useThinCard(page: CardSources, phone: boolean) {
     store.setItem(DISMISSED_KEY, 'dismissed');
     setDismissed(true);
   }, [store]);
-  const covered = page.sheetOpen || page.selection.preview !== null || Boolean(page.areaCard.area);
+  // With a filter on, the card's count (sites before filters) would disagree with the pins; the filtered toast speaks.
+  const covered = page.sheetOpen || page.selection.preview !== null || Boolean(page.areaCard.area) || page.filters.filter.activeCount() > 0;
   const shown: ThinState | null = !phone || dismissed || covered ? null : page.thin;
   const enter = useFirstShow(shown !== null);
   return { shown, enter, dismiss, notice: shown ? MapNotice.besideCard(page.notice) : page.notice };
