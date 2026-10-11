@@ -19,6 +19,7 @@ const OPENS: readonly (readonly [string, string])[] = [
   [`${WEB}/sites/site_jdh_1?utm_source=x#top`, '/sites/site_jdh_1'],
   [`${WEB}/areas/district/rajasthan-jodhpur`, '/areas/district/rajasthan-jodhpur'],
   [`${WEB}/activity/reports/rpt_jdh_1`, '/activity/reports/rpt_jdh_1'],
+  ['https://junksnap.coehemang.dev/sites/site_jdh_1', '/sites/site_jdh_1'],
 ];
 
 const IGNORES: readonly string[] = [
