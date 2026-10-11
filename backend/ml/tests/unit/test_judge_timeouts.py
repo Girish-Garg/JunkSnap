@@ -113,10 +113,7 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
         clients.append(real_http(self))
         return clients[-1]
 
-    store_reads: list[float] = []
-
     def refuse(self: S3ModelStore, model: PinnedModel) -> Path:
-        store_reads.append(self._client.meta.config.read_timeout)
         raise ExternalServiceError("offline test")  # after the Titan client is made
 
     monkeypatch.setattr(boto3.session.Session, "client", client)
@@ -130,7 +127,21 @@ def test_the_verify_graph_gives_every_bedrock_client_and_openai_the_timeouts(
     assert all(c.read_timeout == 7.5 and c.connect_timeout == 2.5 for c in bedrock)
     assert all(c.retries["total_max_attempts"] == 2 for c in bedrock)
     assert [c.timeout.read for c in clients] == [7.5]
-    assert store_reads == [30.0]  # model files (SigLIP 371 MB) keep a long read timeout
+
+
+def test_model_downloads_keep_a_long_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Model files (SigLIP 371 MB, YOLO 38 MB) are not held to the detectors' 4 s read."""
+    reads: list[float] = []
+
+    def refuse(self: S3ModelStore, model: PinnedModel) -> Path:
+        reads.append(self._client.meta.config.read_timeout)
+        raise ExternalServiceError("offline test")
+
+    monkeypatch.setattr(S3ModelStore, "fetch", refuse)
+    models = ModelSettings(ORIGINALS_BUCKET="bucket")
+    VerifierBuilder(CoreSettings(), LlmSettings(), models).verifier()
+
+    assert reads == [30.0]
 
 
 def test_the_detector_clients_fail_fast(monkeypatch: pytest.MonkeyPatch) -> None:
