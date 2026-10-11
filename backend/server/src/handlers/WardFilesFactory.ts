@@ -6,6 +6,7 @@ import { NewestWardFiles } from "../adapters/wards/NewestWardFiles.js";
 import { S3CrawledWardFiles } from "../adapters/wards/S3CrawledWardFiles.js";
 import type { Logger } from "../ports/Logger.js";
 import type { WardFileSource } from "../ports/WardFileSource.js";
+import { AWS_TIMEOUTS, awsClientConfig } from "./utils.js";
 
 export interface WardFilePlaces {
   readonly assetsDir: string;
@@ -22,7 +23,7 @@ export class WardFilesFactory {
     if (places.originalsBucket === null) {
       return image;
     }
-    const s3 = new S3Client({ region: places.awsRegion });
+    const s3 = new S3Client(awsClientConfig(places.awsRegion, AWS_TIMEOUTS.transfer));
     return new NewestWardFiles([image, new S3CrawledWardFiles(s3, places.originalsBucket, DOWNLOAD_DIR, logger)]);
   }
 }

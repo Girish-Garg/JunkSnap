@@ -55,7 +55,7 @@ export class ProviderRouter {
     const route = { request, check, budget: AbortSignal.timeout(this.#budgetMs) };
     for (const choice of this.#config(request.task).choices()) {
       this.#guard(route);
-      const provider = await this.#provider(request, choice);
+      const provider = await this.#provider(route, choice);
       const answer = provider === null ? null : await this.#ask(route, choice, provider);
       if (answer !== null) {
         return answer;
@@ -75,19 +75,27 @@ export class ProviderRouter {
 
   #guard<J>(route: Route<J>): void {
     if (route.budget.aborted) {
-      throw new ExternalServiceError(`LLM time budget of ${String(this.#budgetMs)} ms spent for task ${route.request.task}`);
+      throw this.#spent(route);
     }
   }
 
-  async #provider(request: LlmRequest, choice: ModelChoice): Promise<LlmProvider | null> {
+  #spent<J>(route: Route<J>): ExternalServiceError {
+    return new ExternalServiceError(`LLM time budget of ${String(this.#budgetMs)} ms spent for task ${route.request.task}`);
+  }
+
+  // Building a provider reads its API key, so it runs inside the budget too.
+  async #provider<J>(route: Route<J>, choice: ModelChoice): Promise<LlmProvider | null> {
+    const spent = new Promise<never>((_resolve, reject) => {
+      route.budget.addEventListener("abort", () => reject(this.#spent(route)), { once: true });
+    });
     try {
-      const provider = await this.#factory.build(choice);
+      const provider = await Promise.race([this.#factory.build(choice), spent]);
       if (provider === null) {
-        this.#log.missed(request, choice, { outcome: "skipped", reason: "no usable API key", latencyMs: null });
+        this.#log.missed(route.request, choice, { outcome: "skipped", reason: "no usable API key", latencyMs: null });
       }
       return provider;
     } catch (error) {
-      return this.#missed(request, choice, error, null);
+      return this.#missed(route.request, choice, error, null);
     }
   }
 

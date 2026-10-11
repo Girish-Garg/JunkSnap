@@ -4,10 +4,13 @@ import {
   type GetCommandOutput,
   type UpdateCommandOutput,
 } from "@aws-sdk/lib-dynamodb";
+import { setTimeout as sleep } from "node:timers/promises";
 import { ExternalServiceError } from "../../domain/errors.js";
 import type { CountRequest, LetterCounter } from "../../ports/letters/LetterCounter.js";
 
-const ATTEMPTS = 3;
+const ATTEMPTS = 5;
+// Random pause between conditional misses, so racing requests stop colliding in step.
+const MAX_JITTER_MS = 25;
 const CONDITION_FAILED = "ConditionalCheckFailedException";
 
 export interface CounterClient {
@@ -59,8 +62,29 @@ export class DynamoLetterCounter implements LetterCounter {
       if (await this.#write(command)) {
         return true;
       }
+      await sleep(Math.random() * MAX_JITTER_MS);
     }
-    throw new ExternalServiceError(`Letter counter in ${this.#table.name} kept changing during ${ATTEMPTS} attempts`);
+    // Still contended after every attempt: refuse (429) rather than fail the request.
+    return false;
+  }
+
+  // Decrements only the window it read: start unchanged and count above zero, so racing increments are kept.
+  // A window that starts after request.now was restarted by another request and never held this slot.
+  async release(request: CountRequest): Promise<void> {
+    const window = await this.#read(request.key);
+    const restarted = window.start !== null && Date.parse(window.start) > request.now.getTime();
+    if (restarted || DynamoLetterCounter.#expired(window, request) || window.count < 1) {
+      return;
+    }
+    await this.#write(
+      new UpdateCommand({
+        TableName: this.#table.name,
+        Key: { [this.#table.keyName]: request.key },
+        UpdateExpression: `SET ${this.#count} = ${this.#count} - :one`,
+        ConditionExpression: `${this.#start} = :seen AND ${this.#count} > :zero`,
+        ExpressionAttributeValues: { ":one": 1, ":seen": window.start, ":zero": 0 },
+      }),
+    );
   }
 
   async #read(key: string): Promise<Window> {

@@ -362,7 +362,7 @@ A public URL is `PUBLIC_BASE_URL + "/" + key`. CloudFront serves `/media/*` from
 - Report message: `{"kind": "report", "report_id": "rpt_jdh_1"}`.
 - Cleanup message: `{"kind": "cleanup", "cleanup_id": "cln_jdh_3c", "site_id": "site_jdh_3", "upload_id": "upl_jdh_3c", "device_token": "<uuid>", "user_id": "<sub>", "sha256": "<64 hex>", "gps": {...}, "captured_at": "...", "received_at": "..."}`.
 - Scan message: `{"kind": "scan", "scan_id": "scn_jpr_1"}`. The worker reads the session from the `scans` table and sends one report message per kept frame.
-- When `ApproximateReceiveCount` reaches 3, the worker marks the report `needs_review` (the cleanup `rejected`, the scan `failed` with `retries_exhausted`) before the message moves to the dead-letter queue (decision 0131).
+- When `ApproximateReceiveCount` reaches 3, the worker marks the report `needs_review` (the cleanup `rejected`, the scan `failed` with `retries_exhausted`) before the message moves to the dead-letter queue (decision 0131). The exceptions: a delivery that lost a save race to another delivery of the same report does not give up, a scan already `done` or `failed` is left alone, and a handler abandoned at the worker's 240 s per-message deadline leaves the message for SQS to deliver again.
 
 ## Environment variables
 

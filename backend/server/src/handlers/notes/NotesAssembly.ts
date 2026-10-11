@@ -57,7 +57,7 @@ export class NotesAssembly {
     const logger = this.#logger;
     return new NoteService({
       sites: adapters.sites,
-      limiter: new LetterRateLimiter(adapters.counters, this.#notesPerHour, "notes"),
+      limiter: new LetterRateLimiter(adapters.counters, logger, this.#notesPerHour, "notes"),
       moderator: adapters.moderator,
       notes: adapters.notes,
       refresher,

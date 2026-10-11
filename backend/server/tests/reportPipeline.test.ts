@@ -56,14 +56,24 @@ interface Wiring {
   readonly verified?: VerificationResult;
   readonly merge?: MergeOutcome | null;
   readonly moderated?: ReturnType<typeof moderation>;
+  readonly pauseMs?: number;
 }
 
-function wire({ verified = verification(), merge = null, moderated = moderation() }: Wiring = {}) {
+// Holds a step back so a racing delivery can save in between.
+const paused = (step: PipelineStep, ms: number): PipelineStep => ({
+  name: step.name,
+  run: async (report) => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    await step.run(report);
+  },
+});
+
+function wire({ verified = verification(), merge = null, moderated = moderation(), pauseMs = 0 }: Wiring = {}) {
   const moderator = new FakeModerator(journal, moderated);
   const verifier = new FakeVerifier(journal, verified);
   const merger = merge === null ? undefined : new FakeMerger(journal, merge);
   const steps: PipelineStep[] = [
-    new ModerateStep(moderator),
+    paused(new ModerateStep(moderator), pauseMs),
     new VerifyStep(verifier, new ReporterReputation(reputations), new FakeNearbyCounter(), confirmWindow()),
     new BrandsStep(new FakeBrandReader(journal)),
     new LocateStep(new FakeLocator(journal)),
@@ -196,7 +206,7 @@ describe("ReportPipeline", () => {
     expect(journal.calls).toEqual(ALL_STEPS);
   });
 
-  it("marks needs_review when the last receive loses a save race and the report is still processing", async () => {
+  it("leaves the report to the delivery that won a save race, even on the last receive", async () => {
     const raced: PipelineStep = {
       name: "brands",
       run: async () => {
@@ -208,7 +218,15 @@ describe("ReportPipeline", () => {
     const clock = new FixedClock("2026-10-10T02:15:10Z");
     const pipeline = new ReportPipeline({ steps: [raced], reports, clock, logger });
     await expect(pipeline.handle(delivery(3))).rejects.toThrow(ConcurrentUpdateError);
-    expect(reports.stored("rpt_jdh_1").status).toBe("needs_review");
+    expect(reports.stored("rpt_jdh_1").status).toBe("processing");
+    expect(sink.records().some((record) => record.message === "report needs review")).toBe(false);
+  });
+
+  it("never clobbers a healthy run when a duplicate on its last receive loses the save race", async () => {
+    const { pipeline } = wire({ merge: { siteId: "site_jdh_1", verification: "verified" }, pauseMs: 5 });
+    const results = await Promise.allSettled([pipeline.handle(delivery(2)), pipeline.handle(delivery(3))]);
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+    expect(reports.stored("rpt_jdh_1")).toMatchObject({ status: "verified", completed_steps: ALL_STEPS });
   });
 
   it("keeps a lost save race open for SQS to retry before the last receive", async () => {

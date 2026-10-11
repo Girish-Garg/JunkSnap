@@ -26,6 +26,7 @@ import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import type { EntryContext } from "../EntryPoint.js";
+import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 import { NoteRouterBuilder } from "./NoteRouterBuilder.js";
 
 // About 2 km: absorbs the outline's 500 m simplification and GPS drift at coasts and borders.
@@ -56,8 +57,8 @@ export class ModerationServiceFactory {
 
   create(wiring: ModerationWiring): ModerationService {
     const settings = this.#settings;
-    const rekognition = new RekognitionClient({ region: settings.awsRegion });
-    const store = new S3ImageStore(new S3Client({ region: settings.awsRegion }), {
+    const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.wait));
+    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, AWS_TIMEOUTS.transfer)), {
       originals: settings.originalsBucket,
       public: settings.publicBucket,
     });
@@ -80,7 +81,7 @@ export class ModerationServiceFactory {
 
   #checks(devices: DeviceRegistry): CheckFactory {
     const settings = this.#settings;
-    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient({ region: settings.awsRegion })));
+    const reader = new DynamoReader(DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion))));
     return new CheckFactory({
       india: TurfGeofence.fromFile(settings.indiaOutlinePath(), INDIA_BUFFER_DEG),
       reportHashes: new DynamoHashIndex(reader, { reports: settings.reportsTable, sites: settings.sitesTable }),

@@ -32,6 +32,7 @@ import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
 import { SitesSettings } from "../../settings/SitesSettings.js";
 import type { Env } from "../../settings/utils.js";
+import { AWS_TIMEOUTS, awsClientConfig } from "../utils.js";
 
 // Decision 20261010-1700: withdrawals an hour, per user and per device.
 const WITHDRAWALS_PER_HOUR = 10;
@@ -53,18 +54,21 @@ export class SiteServiceFactory {
   readonly #cells = new NgeohashCells();
   readonly #calls = new AwsCalls();
   readonly #retry = new ConflictRetry();
+  readonly #logger: Logger;
 
   constructor(settings: SitesSettings, clients: SiteClients, logger: Logger) {
     this.#settings = settings;
     this.#clients = clients;
+    this.#logger = logger;
     this.#mapper = new SiteItemMapper(this.#cells, logger);
   }
 
   static fromEnv(core: CoreSettings, env: Env, logger: Logger): SiteServiceFactory {
     const region = core.awsRegion;
     const marshallOptions = { removeUndefinedValues: true };
-    const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({ region }), { marshallOptions });
-    const clients = { dynamo, s3: new S3Client({ region }), sqs: new SQSClient({ region }) };
+    const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(region)), { marshallOptions });
+    const s3 = new S3Client(awsClientConfig(region, AWS_TIMEOUTS.transfer));
+    const clients = { dynamo, s3, sqs: new SQSClient(awsClientConfig(region)) };
     return new SiteServiceFactory(SitesSettings.fromEnv(env), clients, logger);
   }
 
@@ -119,7 +123,7 @@ export class SiteServiceFactory {
       rows: new DynamoSiteReportReader(dynamo, tables.reports, this.#media(), this.#calls),
       withdrawer: new DynamoReportWithdrawer(dynamo, tables.reports, this.#calls),
       reports: this.#reports(),
-      limiter: new LetterRateLimiter(counters, WITHDRAWALS_PER_HOUR, "withdrawals"),
+      limiter: new LetterRateLimiter(counters, this.#logger, WITHDRAWALS_PER_HOUR, "withdrawals"),
       clock: this.#clock,
       retry: this.#retry,
     });

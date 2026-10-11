@@ -9,6 +9,7 @@ import { ReportWorkerSettings } from "../../settings/ReportWorkerSettings.js";
 import type { EntryContext } from "../EntryPoint.js";
 import { ModerationServiceFactory } from "../moderation/ModerationServiceFactory.js";
 import { SiteServiceFactory } from "../sites/SiteServiceFactory.js";
+import { awsClientConfig } from "../utils.js";
 
 // What the report, cleanup and scan handlers share; built once per worker process.
 export class WorkerDeps {
@@ -25,7 +26,7 @@ export class WorkerDeps {
     this.context = context;
     this.settings = ReportWorkerSettings.fromEnv(env);
     const marshallOptions = { removeUndefinedValues: true };
-    this.documents = DynamoDBDocumentClient.from(new DynamoDBClient({ region: core.awsRegion }), { marshallOptions });
+    this.documents = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(core.awsRegion)), { marshallOptions });
     this.sites = SiteServiceFactory.fromEnv(core, env, logger);
     const tables = { reports: this.settings.reportsTable, devices: this.settings.devicesTable, users: this.settings.usersTable };
     this.moderation = ModerationServiceFactory.forWorker(context, new DynamoDeviceRegistry(this.documents, tables));

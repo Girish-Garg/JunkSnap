@@ -60,8 +60,15 @@ const sqsMessage = (id: string, body: string, receiveCount = "1"): Message => ({
   Attributes: { ApproximateReceiveCount: receiveCount },
 });
 
-function poller(sqs: FakeSqs, handler: MessageHandler = new KindRecorder(), sink = new LogSink()) {
-  return new SqsQueuePoller(sqs.client(), { queueUrl: QUEUE_URL, maxReceiveCount: 3 }, handler, logger(sink));
+function poller(sqs: FakeSqs, handler: MessageHandler = new KindRecorder(), sink = new LogSink(), messageDeadlineMs?: number) {
+  return new SqsQueuePoller(sqs.client(), { queueUrl: QUEUE_URL, maxReceiveCount: 3, messageDeadlineMs }, handler, logger(sink));
+}
+
+// Never settles for report rpt_hung; records the rest.
+class HangingHandler extends KindRecorder {
+  override async handle(message: QueueMessage): Promise<void> {
+    return message.field("report_id") === "rpt_hung" ? new Promise(() => undefined) : super.handle(message);
+  }
 }
 
 describe("SqsQueuePoller", () => {
@@ -109,12 +116,28 @@ describe("SqsQueuePoller", () => {
     await expect(poller(sqs).pollOnce(new AbortController().signal)).rejects.toThrow(ExternalServiceError);
   });
 
-  it("rethrows a failed delete as a transport failure after handling the batch", async () => {
+  it("logs a failed delete and keeps polling: SQS redelivers the handled message", async () => {
+    const sink = new LogSink();
     const handler = new KindRecorder();
     const sqs = new FakeSqs([sqsMessage("m1", JSON.stringify({ kind: "report", report_id: "rpt_a" }))]);
     sqs.failDelete = true;
-    await expect(poller(sqs, handler).pollOnce(new AbortController().signal)).rejects.toThrow(ExternalServiceError);
+    await expect(poller(sqs, handler, sink).pollOnce(new AbortController().signal)).resolves.toBeUndefined();
     expect(handler.seen).toHaveLength(1);
+    const warned = sink.records().filter((record) => record.message === "could not delete a handled message; SQS will redeliver it");
+    expect(warned.map((record) => [record.level, record.message_id])).toEqual([["WARN", "m1"]]);
+  });
+
+  it("abandons a message that runs past its deadline without deleting it, and finishes the rest", async () => {
+    const sink = new LogSink();
+    const handler = new HangingHandler();
+    const sqs = new FakeSqs([
+      sqsMessage("m1", JSON.stringify({ kind: "report", report_id: "rpt_hung" })),
+      sqsMessage("m2", JSON.stringify({ kind: "report", report_id: "rpt_b" })),
+    ]);
+    await expect(poller(sqs, handler, sink, 20).pollOnce(new AbortController().signal)).resolves.toBeUndefined();
+    expect(sqs.deleted).toEqual(["receipt-m2"]);
+    const failed = sink.records().filter((record) => record.message === "message failed; SQS will retry it");
+    expect(failed.map((record) => record.message_id)).toEqual(["m1"]);
   });
 });
 

@@ -11,13 +11,14 @@ import { BackerMigration } from "../services/sites/BackerMigration.js";
 import { ConflictRetry } from "../services/sites/ConflictRetry.js";
 import { BackerMigrationSettings } from "../settings/BackerMigrationSettings.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
+import { awsClientConfig } from "./utils.js";
 
 // Run once, locally, with your own AWS sign-in (the worker role cannot scan the sites table):
 // cd backend/server; AWS_PROFILE=junksnap JUNKSNAP_STAGE=dev npm run migrate:backers
 export function buildBackerMigration({ settings, env, logger }: EntryContext): BackerMigration {
   const tables = BackerMigrationSettings.fromEnv(settings.stage, env);
   const marshallOptions = { removeUndefinedValues: true };
-  const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: settings.awsRegion }), { marshallOptions });
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(settings.awsRegion)), { marshallOptions });
   const calls = new AwsCalls();
   const mapper = new SiteItemMapper(new NgeohashCells(), logger);
   return new BackerMigration({

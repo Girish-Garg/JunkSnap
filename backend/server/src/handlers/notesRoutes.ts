@@ -18,14 +18,15 @@ import { NotesAssembly, TimerScheduler } from "./notes/NotesAssembly.js";
 import { NotesEndpoint } from "./notes/NotesEndpoint.js";
 import type { RouteBuilder } from "./RouteBuilder.js";
 import { SiteServiceFactory } from "./sites/SiteServiceFactory.js";
+import { awsClientConfig } from "./utils.js";
 
 // Notes and photo reports hold personal text, so moderation and analysis use the Bedrock-only note router, never the shared one.
 export const buildNotesRoutes: RouteBuilder = (context) => async (app) => {
   const settings = NotesSettings.fromEnv(context.env);
   const guard = RouteGuard.fromEnv(context.env);
-  const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.core.awsRegion }));
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient(awsClientConfig(context.core.awsRegion)));
   const router = new NoteRouterBuilder(new BedrockRuntimeClient({ region: context.core.awsRegion })).build(app.log);
-  const flags = new PhotoFlagsAssembly(settings, client);
+  const flags = new PhotoFlagsAssembly(settings, client, app.log);
   const moderator = new LlmNoteModerator(router);
   const scheduler = new TimerScheduler(app.log);
   const assembly = new NotesAssembly(settings.notesPerHour, app.log);
