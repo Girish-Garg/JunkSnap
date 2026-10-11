@@ -24,7 +24,7 @@ export interface ScanProcessorContext {
 // The worker calls this once at startup and routes every kind scan message to the result.
 export function buildScanProcessor({ core, env, logger }: ScanProcessorContext): VideoScanProcessor {
   const timeouts = TimeoutSettings.fromEnv(env);
-  const adapters = new ScanAdapterFactory(ScanSettings.fromEnv(env), core.awsRegion, timeouts.aws);
+  const adapters = new ScanAdapterFactory(ScanSettings.fromEnv(env), core.awsRegion, timeouts.aws, ScanAdapterFactory.batchReads(env));
   const media = adapters.mediaStore();
   const reader = new FfmpegVideoFrameReader({ timeoutMs: timeouts.ffmpegMs });
   const scratch = new TempScratchSpace();

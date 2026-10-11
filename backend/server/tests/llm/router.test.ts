@@ -12,7 +12,7 @@ import { ProviderFactory } from "../../src/services/llm/ProviderFactory.js";
 import { ProviderRouter } from "../../src/services/llm/ProviderRouter.js";
 import { LogSink } from "../LogSink.js";
 import { errorReply, FakeFetch, FakeLlmProvider, FakeProviderBuilder, FakeSecretReader, HANG, llmLines, testLogger } from "./fakes.js";
-import { TIMEOUTS } from "../defaults.js";
+import { RETRY, TIMEOUTS } from "../defaults.js";
 
 const SONNET = "global.anthropic.claude-sonnet-4-6";
 const HAIKU = "in.anthropic.claude-haiku-4-5-20251001-v1:0";
@@ -23,7 +23,7 @@ const accessDenied = () => new ExternalServiceError(`bedrock ${SONNET}: AccessDe
 
 function routerFor(config: TaskConfig, builders: ProviderBuilder[], sink: LogSink, budgetMs = TIMEOUTS.llm.budgetMs): ProviderRouter {
   const tasks = new Map<LlmTask, TaskConfig>([["letters", config]]);
-  return new ProviderRouter(tasks, new ProviderFactory(builders), testLogger(sink), { budgetMs });
+  return new ProviderRouter(tasks, new ProviderFactory(builders), testLogger(sink), { budgetMs, jsonRetries: RETRY.jsonRetries });
 }
 
 function bedrockOnly(providers: Record<string, FakeLlmProvider>, sink: LogSink, budgetMs?: number): ProviderRouter {

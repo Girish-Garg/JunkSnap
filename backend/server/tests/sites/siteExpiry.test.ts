@@ -24,7 +24,7 @@ import { VoteService } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, BASE_URL, DEVICE_B, evidence, fixture, northOf, report, siteFixture } from "./builders.js";
 import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository } from "./fakes.js";
 import { conditionFailed, failure, ScriptedClient } from "./ScriptedClient.js";
-import { RULES, SCORES } from "../defaults.js";
+import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 // The jdh-1 report's capture time, the site's last activity.
@@ -45,8 +45,8 @@ function setup() {
   const sites = new FakeSiteRepository();
   sites.put(Site.found(report(), RULES));
   const clock = new SetClock();
-  const retry = new ConflictRetry();
-  const finder = new SiteFinder(sites, new NgeohashCells(), clock);
+  const retry = new ConflictRetry(RETRY.saveAttempts);
+  const finder = new SiteFinder(sites, new NgeohashCells(), clock, PAGING.mapMaxSites);
   const [ballots, cleanups] = [new FakeVoteRepository(), new FakeCleanups()];
   const votes = new VoteService({ sites, votes: ballots, reports: new FakeReportStatus(), clock, retry });
   const intake = new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry });
@@ -147,7 +147,7 @@ describe("site expiry (decision 20261010-1855)", () => {
     sites.put(Site.found(report(), RULES));
     const clock = new SetClock();
     clock.at = day(89);
-    const voting = new VoteService({ sites, votes: new CronRacingVotes(sites), reports: new FakeReportStatus(), clock, retry: new ConflictRetry() });
+    const voting = new VoteService({ sites, votes: new CronRacingVotes(sites), reports: new FakeReportStatus(), clock, retry: new ConflictRetry(RETRY.saveAttempts) });
     const cast = voting.cast(SITE, { deviceToken: DEVICE_B, userId: "voter", choice: "confirm", point: NEARBY });
     await expect(cast).rejects.toThrow(SiteExpiredError);
     expect(sites.feature(SITE).properties.status).toBe("expired");
@@ -173,7 +173,7 @@ describe("site expiry (decision 20261010-1855)", () => {
       scores: new FakeScoreSeeder(),
       clock: new SetClock(),
       reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-      retry: new ConflictRetry(),
+      retry: new ConflictRetry(RETRY.saveAttempts),
       rules: RULES,
       minVerifiedReports: SCORES.minVerifiedReports,
     });

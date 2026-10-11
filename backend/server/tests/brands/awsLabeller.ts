@@ -12,6 +12,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import type { LogSink } from "../LogSink.js";
 import type { BytesImageSource } from "./BytesImageSource.js";
 import { brandLogger } from "./fakes.js";
+import { MODELS } from "../defaults.js";
 
 // The worker's object graph with local bytes in place of the public bucket: Rekognition, then the Bedrock judge.
 export function awsLabeller(images: BytesImageSource, brandMapPath: string, sink: LogSink): BrandLabeller {
@@ -19,7 +20,7 @@ export function awsLabeller(images: BytesImageSource, brandMapPath: string, sink
   const core = CoreSettings.fromEnv(env);
   const logger = brandLogger(sink);
   const rekognition = new RekognitionClient({ region: core.awsRegion });
-  const judge = new LlmBrandJudge({ router: buildProviderRouter(env, core, logger), images, schema: JUDGE_ANSWER_SCHEMA });
+  const judge = new LlmBrandJudge({ router: buildProviderRouter(env, core, logger), images, schema: JUDGE_ANSWER_SCHEMA, maxTokens: MODELS.brandJudgeMaxTokens });
   return new BrandLabeller({
     reader: new RekognitionTextReader(rekognition, images),
     map: new FileBrandMap(brandMapPath),

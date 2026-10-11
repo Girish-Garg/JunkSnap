@@ -30,8 +30,10 @@ import { SiteMerger } from "../../services/sites/SiteMerger.js";
 import { VoteService } from "../../services/sites/VoteService.js";
 import { WithdrawalService } from "../../services/sites/WithdrawalService.js";
 import type { CoreSettings } from "../../settings/CoreSettings.js";
+import { PagingSettings } from "../../settings/PagingSettings.js";
 import { QueueSettings } from "../../settings/QueueSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
+import { RetrySettings } from "../../settings/RetrySettings.js";
 import { ScoreSettings } from "../../settings/ScoreSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
 import { SitesSettings } from "../../settings/SitesSettings.js";
@@ -47,6 +49,8 @@ export interface SiteTunables {
   readonly rules: SiteRuleSettings;
   readonly scores: ScoreSettings;
   readonly queue: QueueSettings;
+  readonly retry: RetrySettings;
+  readonly paging: PagingSettings;
 }
 
 export interface SiteClients {
@@ -63,7 +67,7 @@ export class SiteServiceFactory {
   readonly #clock = new SystemClock();
   readonly #cells = new NgeohashCells();
   readonly #calls = new AwsCalls();
-  readonly #retry = new ConflictRetry();
+  readonly #retry: ConflictRetry;
   readonly #logger: Logger;
   readonly #tunables: SiteTunables;
 
@@ -72,6 +76,7 @@ export class SiteServiceFactory {
     this.#clients = clients;
     this.#logger = logger;
     this.#tunables = tunables;
+    this.#retry = new ConflictRetry(tunables.retry.saveAttempts);
     this.#mapper = new SiteItemMapper(this.#cells, logger, tunables.rules);
   }
 
@@ -81,6 +86,8 @@ export class SiteServiceFactory {
       rules: SiteRuleSettings.fromEnv(env),
       scores: ScoreSettings.fromEnv(env),
       queue: QueueSettings.fromEnv(env),
+      retry: RetrySettings.fromEnv(env),
+      paging: PagingSettings.fromEnv(env),
     };
   }
 
@@ -100,7 +107,7 @@ export class SiteServiceFactory {
   }
 
   finder(): SiteFinder {
-    return new SiteFinder(this.#sites(), this.#cells, this.#clock);
+    return new SiteFinder(this.#sites(), this.#cells, this.#clock, this.#tunables.paging.mapMaxSites);
   }
 
   voteService(): VoteService {
@@ -141,7 +148,7 @@ export class SiteServiceFactory {
   withdrawalService(): WithdrawalService {
     const { dynamo } = this.#clients;
     const { tables } = this.#settings;
-    const counter = (name: string, keyName: string) => new DynamoLetterCounter(dynamo, { name, keyName, prefix: "withdraw" });
+    const counter = (name: string, keyName: string) => new DynamoLetterCounter(dynamo, { name, keyName, prefix: "withdraw" }, this.#tunables.retry.counter);
     const counters = { devices: counter(tables.devices, "device_token"), users: counter(tables.users, "user_id") };
     return new WithdrawalService({
       sites: this.#sites(),

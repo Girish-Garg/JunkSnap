@@ -4,12 +4,14 @@ import type { LlmResponse } from "../../domain/llm/LlmResponse.js";
 import type { AnswerCheck, Rejection } from "./AnswerCheck.js";
 
 export class JsonAnswer<T> implements AnswerCheck<T> {
-  readonly retries = 1;
+  readonly retries: number;
   readonly rejection: Rejection = "invalid_json";
   readonly #schema: AnswerSchema<T>;
 
-  constructor(schema: AnswerSchema<T>) {
+  // retries: LLM_JSON_RETRIES.
+  constructor(schema: AnswerSchema<T>, retries: number) {
     this.#schema = schema;
+    this.retries = retries;
   }
 
   accept(response: LlmResponse): LlmResponse<T> | null {

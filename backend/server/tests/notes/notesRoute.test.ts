@@ -15,6 +15,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { LogSink } from "../LogSink.js";
 import { DEVICE, USER } from "../letters/support.js";
 import { CLEAN, notesWorld } from "./notesSupport.js";
+import { PAGING } from "../defaults.js";
 
 const guard: UserGuard = {
   async requireUser(request) {
@@ -79,7 +80,7 @@ describe("POST /sites/{id}/notes", () => {
 describe("notes adapters", () => {
   it("stores a hidden note without its text and a shown one with only the author hash", async () => {
     const commands: PutCommand[] = [];
-    const store = new DynamoNoteStore({ send: async (command: PutCommand) => (commands.push(command), { $metadata: {} }) } as never, "notes");
+    const store = new DynamoNoteStore({ send: async (command: PutCommand) => (commands.push(command), { $metadata: {} }) } as never, "notes", PAGING.notesMaxPages);
     const base = { noteId: "note_1", siteId: "site_jdh_1", authorHash: authorHash(USER), language: "en", moderation: CLEAN, createdAt: "2026-10-10T10:00:00Z" } as const;
     await store.add({ ...base, text: null });
     await store.add({ ...base, noteId: "note_2", text: "Smoke at night" });
@@ -92,7 +93,7 @@ describe("notes adapters", () => {
   it("reads shown notes newest first", async () => {
     const commands: QueryCommand[] = [];
     const items = [{ text: "a", author_hash: "h1" }, { author_hash: "h2" }];
-    const store = new DynamoNoteStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: items }) } as never, "notes");
+    const store = new DynamoNoteStore({ send: async (command: QueryCommand) => (commands.push(command), { $metadata: {}, Items: items }) } as never, "notes", PAGING.notesMaxPages);
     expect(await store.shownFor("site_jdh_1")).toEqual([{ text: "a", authorHash: "h1" }]);
     expect(commands[0]?.input).toMatchObject({ ScanIndexForward: false, ExpressionAttributeValues: { ":shown": "shown" } });
   });
@@ -105,7 +106,7 @@ describe("notes adapters", () => {
       { note: "not checked yet", user_id: USER },
       { note: "withdrawn", user_id: USER, status: "withdrawn", moderation_result: { note_moderation: { result: "clean" } } },
     ];
-    const reader = new DynamoReportNotes({ send: async () => ({ $metadata: {}, Items: items }) } as never, "reports");
+    const reader = new DynamoReportNotes({ send: async () => ({ $metadata: {}, Items: items }) } as never, "reports", PAGING.notesMaxPages);
     expect(await reader.shownFor("site_jdh_1")).toEqual([
       { text: "clean, user", authorHash: authorHash(USER) },
       { text: "clean, guest", authorHash: authorHash(DEVICE) },

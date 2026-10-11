@@ -11,7 +11,7 @@ import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_URL, clearByPhotos, DEVICE_B, evidence, fixture, northOf, report } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
-import { RULES, SCORES } from "../defaults.js";
+import { RETRY, RULES, SCORES } from "../defaults.js";
 
 // A geohash index that has not caught up with the table yet.
 class LaggingIndexSites extends FakeSiteRepository {
@@ -33,7 +33,7 @@ function setup(sites = new FakeSiteRepository()) {
     scores,
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
     rules: RULES,
     minVerifiedReports: SCORES.minVerifiedReports,
   });

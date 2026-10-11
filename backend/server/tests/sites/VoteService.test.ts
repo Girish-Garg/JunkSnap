@@ -6,7 +6,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { VoteService, type Ballot } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report, userOf } from "./builders.js";
 import { FakeReportStatus, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
-import { RULES } from "../defaults.js";
+import { RETRY, RULES } from "../defaults.js";
 
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
 
@@ -23,7 +23,7 @@ function setup() {
   sites.put(Site.found(report(), RULES));
   const votes = new FakeVoteRepository();
   const reports = new FakeReportStatus();
-  const service = new VoteService({ sites, votes, reports, clock: new FixedClock(), retry: new ConflictRetry() });
+  const service = new VoteService({ sites, votes, reports, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts) });
   return { sites, votes, reports, service };
 }
 

@@ -25,7 +25,7 @@ import {
   FixedClock,
 } from "./fakes.js";
 import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
-import { RULES } from "../defaults.js";
+import { PAGING, RETRY, RULES } from "../defaults.js";
 
 const JODHPUR = "72.9,26.2,73.1,26.4";
 const VOTE = { device_token: DEVICE_B, vote: "confirm", gps: { lat: 26.853, lon: 75.815, accuracy_m: 10 } };
@@ -74,12 +74,12 @@ async function start(sites = new FakeSiteRepository()): Promise<FastifyInstance>
   const unvoted = variant("jpr-1", "site_jpr_1", { votes: { confirm: 0, reject: 0 }, corroborations: 0 });
   sites.putFeature(unvoted, reporter);
   const clock = new FixedClock();
-  const retry = new ConflictRetry();
+  const retry = new ConflictRetry(RETRY.saveAttempts);
   votes = new FakeVoteRepository();
   cleanups = new FakeCleanups();
   rig = withdrawalRig(sites);
   const routes = new SiteRoutes({
-    finder: new SiteFinder(sites, new NgeohashCells(), clock),
+    finder: new SiteFinder(sites, new NgeohashCells(), clock, PAGING.mapMaxSites),
     votes: new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry }),
     cleanups: new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry }),
     withdrawals: rig.service,

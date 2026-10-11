@@ -11,7 +11,6 @@ import type { ReportQueue } from "../ports/ReportQueue.js";
 import type { ReportRepository } from "../ports/ReportRepository.js";
 import type { LetterRateLimiter } from "./letters/LetterRateLimiter.js";
 
-const ATTEMPTS = 3;
 
 export interface ReportConfirmerDeps {
   readonly reports: ReportRepository;
@@ -20,6 +19,8 @@ export interface ReportConfirmerDeps {
   readonly limiter: LetterRateLimiter;
   readonly clock: Clock;
   readonly publicBaseUrl: string;
+  // SAVE_ATTEMPTS: tries of a conditional save that lost to a concurrent answer.
+  readonly saveAttempts: number;
 }
 
 export interface ConfirmRequest {
@@ -45,7 +46,7 @@ export class ReportConfirmer {
         return await this.#apply(request, isoSeconds(now));
       } catch (error) {
         // A concurrent answer saved first: read again, so a retry of the same answer still gets 200.
-        if (!(error instanceof ConcurrentUpdateError) || attempt >= ATTEMPTS) {
+        if (!(error instanceof ConcurrentUpdateError) || attempt >= this.#deps.saveAttempts) {
           throw error;
         }
       }

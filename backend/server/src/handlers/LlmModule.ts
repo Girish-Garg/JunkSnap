@@ -9,6 +9,7 @@ import { ProviderFactory } from "../services/llm/ProviderFactory.js";
 import { ProviderRouter } from "../services/llm/ProviderRouter.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import { LlmSettings } from "../settings/LlmSettings.js";
+import { RetrySettings } from "../settings/RetrySettings.js";
 import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import type { Env } from "../settings/utils.js";
 import { awsClientConfig } from "./utils.js";
@@ -31,5 +32,6 @@ export function buildProviderRouter(env: Env, core: CoreSettings, logger: Logger
       timeoutMs: timeouts.llm.callMs,
     }),
   ]);
-  return new ProviderRouter(settings.tasks, factory, logger, { budgetMs: timeouts.llm.budgetMs });
+  const options = { budgetMs: timeouts.llm.budgetMs, jsonRetries: RetrySettings.fromEnv(env).jsonRetries };
+  return new ProviderRouter(settings.tasks, factory, logger, options);
 }

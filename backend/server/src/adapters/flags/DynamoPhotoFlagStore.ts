@@ -5,8 +5,6 @@ import type { PhotoFlagStore } from "../../ports/flags/PhotoFlagStore.js";
 
 // Notes sort as note_<ulid>; photo reports as flag#<photo>#<author hash>, so one person has one row per photo.
 const FLAG_PREFIX = "flag#";
-// A site with more photo reports than this reads only the first pages for its community analysis.
-const MAX_TEXT_PAGES = 5;
 
 type Client = Pick<DynamoDBDocumentClient, "send">;
 type Item = Record<string, unknown>;
@@ -15,10 +13,13 @@ type Item = Record<string, unknown>;
 export class DynamoPhotoFlagStore implements PhotoFlagStore {
   readonly #client: Client;
   readonly #table: string;
+  readonly #maxTextPages: number;
 
-  constructor(client: Client, table: string) {
+  // maxTextPages: NOTES_MAX_PAGES; a site with more photo reports reads only the first pages for its community analysis.
+  constructor(client: Client, table: string, maxTextPages: number) {
     this.#client = client;
     this.#table = table;
+    this.#maxTextPages = maxTextPages;
   }
 
   async put(flag: StoredPhotoFlag): Promise<void> {
@@ -45,7 +46,7 @@ export class DynamoPhotoFlagStore implements PhotoFlagStore {
 
   // Every report with its shown description, so the reader can tell which photos several people reported.
   async textsFor(siteId: string): Promise<FlagText[]> {
-    const items = await this.#pages(siteId, FLAG_PREFIX, MAX_TEXT_PAGES);
+    const items = await this.#pages(siteId, FLAG_PREFIX, this.#maxTextPages);
     return items.flatMap(DynamoPhotoFlagStore.#text);
   }
 

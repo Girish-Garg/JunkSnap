@@ -21,8 +21,10 @@ import { SnapLimit } from "../services/SnapLimit.js";
 import { UploadPresigner } from "../services/UploadPresigner.js";
 import { ConfirmSettings } from "../settings/ConfirmSettings.js";
 import { IntakeSettings } from "../settings/IntakeSettings.js";
+import { PagingSettings } from "../settings/PagingSettings.js";
 import { QueueSettings } from "../settings/QueueSettings.js";
 import { RateLimitSettings } from "../settings/RateLimitSettings.js";
+import { RetrySettings } from "../settings/RetrySettings.js";
 import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import type { Env } from "../settings/utils.js";
 import { RouteGuard } from "./auth/RouteGuard.js";
@@ -49,12 +51,13 @@ export function buildReportRoutes({ core, env }: RouteContext): FastifyPluginAsy
     const queue = new SqsReportQueue(new SQSClient(awsClientConfig(region, aws.quick)), settings.reportsQueueUrl);
     const intake = new ReportIntake({ reports, snapLimit, queue, clock }, intakeLimits(env));
     const statuses = new ReportStatusReader(reports, settings.publicBaseUrl, clock);
-    const lister = new DynamoUserReportLister(documents, settings.reportsTable, app.log);
+    const lister = new DynamoUserReportLister(documents, settings.reportsTable, app.log, PagingSettings.fromEnv(env).myReportsMaxRounds);
     const mine = new MyReportsQuery(lister, settings.publicBaseUrl, clock);
     const guard = RouteGuard.fromEnv(env);
     await app.register(new ReportEndpoints({ presigner, intake, statuses, mine }, guard).plugin());
     const limiter = confirmLimiter(documents, env, limits.confirmationsPerHour, app.log);
-    const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: settings.publicBaseUrl });
+    const { saveAttempts } = RetrySettings.fromEnv(env);
+    const confirmer = new ReportConfirmer({ reports, queue, limiter, clock, publicBaseUrl: settings.publicBaseUrl, saveAttempts });
     await app.register(new ReportConfirmEndpoint(confirmer, guard).plugin());
   };
 }
@@ -67,7 +70,8 @@ function intakeLimits(env: Env): IntakeLimits {
 // Windowed counters on confirm_window_start and confirm_count in the devices and users rows.
 function confirmLimiter(documents: DynamoDBDocumentClient, env: Env, perHour: number, logger: Logger): LetterRateLimiter {
   const { devicesTable, usersTable } = ConfirmSettings.fromEnv(env);
-  const counter = (name: string, keyName: string) => new DynamoLetterCounter(documents, { name, keyName, prefix: "confirm" });
+  const retry = RetrySettings.fromEnv(env).counter;
+  const counter = (name: string, keyName: string) => new DynamoLetterCounter(documents, { name, keyName, prefix: "confirm" }, retry);
   const counters = { devices: counter(devicesTable, "device_token"), users: counter(usersTable, "user_id") };
   return new LetterRateLimiter(counters, logger, perHour, "confirmations");
 }

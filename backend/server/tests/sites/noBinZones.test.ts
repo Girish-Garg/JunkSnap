@@ -13,7 +13,7 @@ import { MergeTargetPicker } from "../../src/services/sites/MergeTargetPicker.js
 import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, northOf, siteFixture } from "./builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock, RecordingLogger } from "./fakes.js";
-import { RULES, SCORES } from "../defaults.js";
+import { RETRY, RULES, SCORES } from "../defaults.js";
 
 function fail(): never {
   throw new Error("no stored internals");
@@ -30,7 +30,7 @@ function setup() {
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia(BASE_URL)),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
     rules: RULES,
     minVerifiedReports: SCORES.minVerifiedReports,
   });

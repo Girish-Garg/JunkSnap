@@ -13,7 +13,7 @@ import { memoryCounters, RecordingLogger } from "../letters/support.js";
 import { BASE_LAT, BASE_LON, DEVICE_A, DEVICE_B, northOf, report } from "../sites/builders.js";
 import { FakeSiteRepository, FixedClock } from "../sites/fakes.js";
 import { FakeSiteReports } from "../sites/withdrawalFakes.js";
-import { RULES } from "../defaults.js";
+import { RETRY, RULES } from "../defaults.js";
 
 export const SITE = "site_jdh_1";
 export const FIRST_PHOTO = "rpt_jdh_1";
@@ -74,7 +74,7 @@ export function flagRig(limit = 10, flags = new MemoryFlags()): FlagRig {
   const parts = { sites: new FakeSiteRepository(), rows: new FakeSiteReports(), flags };
   const checks = { moderator: new FakeModerator(), community: new RecordingTrigger() };
   const limiter = new LetterRateLimiter(memoryCounters(), new RecordingLogger(), limit, "photo reports");
-  const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry(), radiusM: RULES.flags.radiusM });
+  const service = new PhotoFlagService({ ...parts, ...checks, limiter, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts), radiusM: RULES.flags.radiusM });
   return { service, ...parts, ...checks };
 }
 

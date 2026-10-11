@@ -15,7 +15,7 @@ import { ProviderRouter } from "../../src/services/llm/ProviderRouter.js";
 import { FakeLlmProvider, FakeProviderBuilder, testLogger } from "../llm/fakes.js";
 import { LogSink } from "../LogSink.js";
 import { ENTRIES, FakeBrandMap, FakeTextPresence, FakeTextReader, line } from "./fakes.js";
-import { TIMEOUTS } from "../defaults.js";
+import { MODELS, RETRY, TIMEOUTS } from "../defaults.js";
 
 const IMAGE = new BlurredImage("rpt_jdh_1");
 const JPEG = new Uint8Array([255, 216, 255]);
@@ -24,9 +24,9 @@ function judgeAnswering(script: string[]) {
   const provider = new FakeLlmProvider("bedrock", "judge-a", script);
   const tasks = new Map<LlmTask, TaskConfig>([["brands", new TaskConfig("bedrock", "judge-a")]]);
   const factory = new ProviderFactory([new FakeProviderBuilder("bedrock", { "judge-a": provider })]);
-  const router = new ProviderRouter(tasks, factory, testLogger(new LogSink()), { budgetMs: TIMEOUTS.llm.budgetMs });
+  const router = new ProviderRouter(tasks, factory, testLogger(new LogSink()), { budgetMs: TIMEOUTS.llm.budgetMs, jsonRetries: RETRY.jsonRetries });
   const images = new BytesImageSource(new Map([[IMAGE.reportId, JPEG]]));
-  return { provider, judge: new LlmBrandJudge({ router, images, schema: JUDGE_ANSWER_SCHEMA }) };
+  return { provider, judge: new LlmBrandJudge({ router, images, schema: JUDGE_ANSWER_SCHEMA, maxTokens: MODELS.brandJudgeMaxTokens }) };
 }
 
 function verdictJson(...verdicts: object[]): string {

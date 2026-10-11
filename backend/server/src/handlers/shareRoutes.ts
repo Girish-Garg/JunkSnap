@@ -10,6 +10,7 @@ import { AreaScoresQuery } from "../services/AreaScoresQuery.js";
 import { ShareCardService } from "../services/share/ShareCardService.js";
 import { AndroidAppSettings } from "../settings/AndroidAppSettings.js";
 import { AreaScoresSettings } from "../settings/AreaScoresSettings.js";
+import { CacheSettings } from "../settings/CacheSettings.js";
 import { ShareSettings } from "../settings/ShareSettings.js";
 import type { RouteContext } from "./RouteBuilder.js";
 import { AppHandoff } from "./share/AppHandoff.js";
@@ -33,6 +34,6 @@ export function buildShareRoutes(context: RouteContext): FastifyPluginAsync {
       areaCards: new AreaCardWriter(urls),
     });
     const handoff = new AppHandoff(new AppIntentUrl(AndroidAppSettings.fromEnv(context.env).packageName));
-    await app.register(new ShareRoutes(cards, handoff).plugin());
+    await app.register(new ShareRoutes(cards, handoff, CacheSettings.fromEnv(context.env).shareMaxAgeSeconds).plugin());
   };
 }

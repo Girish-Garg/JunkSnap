@@ -10,7 +10,7 @@ import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { BASE_URL, DEVICE_A, DEVICE_B, userOf } from "../sites/builders.js";
 import { FixedClock, NOW } from "../sites/fakes.js";
 import { FIRST_PHOTO, flagBy, flagger, flagRig, REMOVED, request, SECOND_PHOTO, seeded, SITE, type FlagRig } from "./flagFakes.js";
-import { RULES } from "../defaults.js";
+import { PAGING, RULES } from "../defaults.js";
 
 const FIRST_URL = `${BASE_URL}/media/reports/${FIRST_PHOTO}.jpg`;
 const SECOND_URL = `${BASE_URL}/media/reports/${SECOND_PHOTO}.jpg`;
@@ -144,7 +144,7 @@ describe("removing a site whose only photo is hidden", () => {
     const stored = validateSite(rig.sites.feature(SITE)).properties;
     expect(stored).toMatchObject({ status: "removed", removed_reason: "photos_reported", removed_at: "2026-10-10T06:00:00Z", photo_urls: [] });
     expect(rig.sites.internals(SITE)?.reports.map((report) => report.reportId)).toEqual([FIRST_PHOTO]);
-    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.status).toBe("removed");
+    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).byId(SITE)).properties.status).toBe("removed");
     await expect(rig.service.flag(request(flagger(7)))).rejects.toThrow(NotFoundError);
   });
 

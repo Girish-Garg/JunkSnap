@@ -15,7 +15,7 @@ import { SiteFinder } from "../../src/services/sites/SiteFinder.js";
 import { afterPhoto, BASE_LAT, BASE_LON, BASE_URL, DEVICE_A, DEVICE_B, DEVICE_C, NO_VOTES, northOf, report, siteFixture, userOf } from "./builders.js";
 import { FixedClock } from "./fakes.js";
 import { withdrawalRig, type WithdrawalRig } from "./withdrawalFakes.js";
-import { RULES } from "../defaults.js";
+import { PAGING, RULES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const LATER = "2026-10-10T03:00:00Z";
@@ -50,8 +50,8 @@ describe("withdrawing the only report", () => {
     expect(stored).toMatchObject({ status: "removed", removed_reason: "withdrawn", removed_at: "2026-10-10T06:00:00.000Z", report_count: 1 });
     expect(rig.sites.internals(SITE)).toMatchObject({ reports: [], withdrawnReports: ["rpt_jdh_1"] });
     expect(rig.withdrawer.withdrawn.get("rpt_jdh_1")).toBe("2026-10-10T06:00:00.000Z");
-    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toEqual([]);
-    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).byId(SITE)).properties.photo_urls).toEqual([]);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).inBox(AROUND)).toEqual([]);
+    expect((await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).byId(SITE)).properties.photo_urls).toEqual([]);
     expect(stored.photo_urls).toEqual([`${BASE_URL}/media/reports/rpt_jdh_1.jpg`]);
   });
 
@@ -102,7 +102,7 @@ describe("withdrawing when other people back the site", () => {
       reporterIds: [userOf(DEVICE_B)],
       withdrawnReports: ["rpt_jdh_1"],
     });
-    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock()).inBox(AROUND)).toHaveLength(1);
+    expect(await new SiteFinder(rig.sites, new NgeohashCells(), new FixedClock(), PAGING.mapMaxSites).inBox(AROUND)).toHaveLength(1);
   });
 
   it("re-centres a no-bin zone on the reports that stay", async () => {

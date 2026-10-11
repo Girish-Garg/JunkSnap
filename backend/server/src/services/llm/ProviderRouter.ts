@@ -16,6 +16,8 @@ import { TextAnswer } from "./TextAnswer.js";
 export interface RouterOptions {
   // LLM_BUDGET_MS or NOTE_LLM_BUDGET_MS: nothing new starts once it is spent.
   readonly budgetMs: number;
+  // LLM_JSON_RETRIES: reminders to a provider whose answer is not the JSON asked for.
+  readonly jsonRetries: number;
 }
 
 interface Route<J> {
@@ -30,12 +32,14 @@ export class ProviderRouter {
   readonly #factory: ProviderFactory;
   readonly #log: LlmCallLog;
   readonly #budgetMs: number;
+  readonly #jsonRetries: number;
 
   constructor(tasks: ReadonlyMap<LlmTask, TaskConfig>, factory: ProviderFactory, logger: Logger, options: RouterOptions) {
     this.#tasks = tasks;
     this.#factory = factory;
     this.#log = new LlmCallLog(logger);
     this.#budgetMs = options.budgetMs;
+    this.#jsonRetries = options.jsonRetries;
   }
 
   complete(request: LlmRequest): Promise<LlmResponse> {
@@ -46,7 +50,7 @@ export class ProviderRouter {
     if (!request.expectsJson()) {
       throw new InternalDataError(`completeJson needs a jsonSchemaName (task ${request.task})`);
     }
-    return this.#route(request, new JsonAnswer(schema));
+    return this.#route(request, new JsonAnswer(schema, this.#jsonRetries));
   }
 
   async #route<J>(request: LlmRequest, check: AnswerCheck<J>): Promise<LlmResponse<J>> {

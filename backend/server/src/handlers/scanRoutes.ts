@@ -45,7 +45,7 @@ export function buildScanRoutes({ core, env }: RouteContext): FastifyPluginAsync
     const settings = ScanSettings.fromEnv(env);
     const limits = ScanLimitSettings.fromEnv(env);
     const guard = RouteGuard.fromEnv(env);
-    const adapters = new ScanAdapterFactory(settings, core.awsRegion, TimeoutSettings.fromEnv(env).aws);
+    const adapters = new ScanAdapterFactory(settings, core.awsRegion, TimeoutSettings.fromEnv(env).aws, ScanAdapterFactory.batchReads(env));
     const now = (): Date => new Date();
     const newScanId = (): string => `scn_${ulid().toLowerCase()}`;
     const presigner = new ScanUploadPresigner(adapters.uploadSigner(), {

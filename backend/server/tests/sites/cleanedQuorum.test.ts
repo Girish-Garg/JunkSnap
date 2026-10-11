@@ -21,7 +21,7 @@ import { SiteMerger } from "../../src/services/sites/SiteMerger.js";
 import { VoteService } from "../../src/services/sites/VoteService.js";
 import { BASE_LAT, BASE_LON, BASE_URL, evidence, fixture, northOf, report } from "./builders.js";
 import { FakeCleanups, FakeEmbeddings, FakeQueue, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, RecordingLogger } from "./fakes.js";
-import { RULES, SCORES } from "../defaults.js";
+import { PAGING, RETRY, RULES, SCORES } from "../defaults.js";
 
 const SITE = "site_jdh_1";
 const NEARBY = new GeoPoint(northOf(200), BASE_LON);
@@ -46,11 +46,11 @@ class StepClock implements Clock {
 function setup() {
   const sites = new FakeSiteRepository();
   sites.put(Site.found(report(), RULES));
-  const [votes, cleanups, clock, retry] = [new FakeVoteRepository(), new FakeCleanups(), new StepClock(), new ConflictRetry()];
+  const [votes, cleanups, clock, retry] = [new FakeVoteRepository(), new FakeCleanups(), new StepClock(), new ConflictRetry(RETRY.saveAttempts)];
   const voting = new VoteService({ sites, votes, reports: new FakeReportStatus(), clock, retry });
   const intake = new CleanupIntake({ sites, cleanups, queue: new FakeQueue(), clock, retry });
   const service = new CleanupService({ sites, cleanups, votes, media: new PublicMedia(BASE_URL), retry });
-  const finder = new SiteFinder(sites, new NgeohashCells(), clock);
+  const finder = new SiteFinder(sites, new NgeohashCells(), clock, PAGING.mapMaxSites);
   let uploads = 0;
   // A person's after-photo that the models pass; the person is their user id.
   const photo = async (person: string, passes = true) => {

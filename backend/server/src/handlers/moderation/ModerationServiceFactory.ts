@@ -24,6 +24,8 @@ import { LlmNoteModerator, type NoteRouter } from "../../services/moderation/Llm
 import { ModerationService } from "../../services/moderation/ModerationService.js";
 import { PhotoLoader } from "../../services/moderation/PhotoLoader.js";
 import { PrivacyBlur } from "../../services/moderation/PrivacyBlur.js";
+import { CacheSettings } from "../../settings/CacheSettings.js";
+import { ModelLimitSettings } from "../../settings/ModelLimitSettings.js";
 import { ModerationSettings } from "../../settings/ModerationSettings.js";
 import { RateLimitSettings } from "../../settings/RateLimitSettings.js";
 import { SiteRuleSettings } from "../../settings/SiteRuleSettings.js";
@@ -49,6 +51,8 @@ export interface ModerationTunables {
   readonly limits: RateLimitSettings;
   readonly rules: SiteRuleSettings;
   readonly timeouts: TimeoutSettings;
+  readonly models: ModelLimitSettings;
+  readonly caches: CacheSettings;
 }
 
 // Builds the moderation object graph once per worker process.
@@ -62,7 +66,13 @@ export class ModerationServiceFactory {
   }
 
   static tunables(env: Env): ModerationTunables {
-    return { limits: RateLimitSettings.fromEnv(env), rules: SiteRuleSettings.fromEnv(env), timeouts: TimeoutSettings.fromEnv(env) };
+    return {
+      limits: RateLimitSettings.fromEnv(env),
+      rules: SiteRuleSettings.fromEnv(env),
+      timeouts: TimeoutSettings.fromEnv(env),
+      models: ModelLimitSettings.fromEnv(env),
+      caches: CacheSettings.fromEnv(env),
+    };
   }
 
   // For the worker's entry point: reads settings when called, never at import.
@@ -70,17 +80,15 @@ export class ModerationServiceFactory {
     const tunables = ModerationServiceFactory.tunables(context.env);
     const factory = new ModerationServiceFactory(ModerationSettings.fromEnv(context.env), tunables);
     const bedrock = new BedrockRuntimeClient({ region: context.settings.awsRegion });
-    return factory.create({ devices, noteRouter: new NoteRouterBuilder(bedrock, tunables.timeouts.notes).build(context.logger) });
+    return factory.create({ devices, noteRouter: NoteRouterBuilder.fromEnv(bedrock, context.env).build(context.logger) });
   }
 
   create(wiring: ModerationWiring): ModerationService {
     const settings = this.#settings;
     const { aws } = this.#tunables.timeouts;
     const rekognition = new RekognitionClient(awsClientConfig(settings.awsRegion, aws.wait));
-    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, aws.transfer)), {
-      originals: settings.originalsBucket,
-      public: settings.publicBucket,
-    });
+    const buckets = { originals: settings.originalsBucket, public: settings.publicBucket };
+    const store = new S3ImageStore(new S3Client(awsClientConfig(settings.awsRegion, aws.transfer)), buckets, this.#tunables.caches.mediaMaxAgeSeconds);
     return new ModerationService({
       loader: new PhotoLoader(store, new SharpImageCodec()),
       gate: new RekognitionImageModerator(rekognition),
@@ -93,7 +101,7 @@ export class ModerationServiceFactory {
         store,
       }),
       authenticity: new AuthenticityService(this.#checks(wiring.devices)),
-      notes: new LlmNoteModerator(wiring.noteRouter),
+      notes: new LlmNoteModerator(wiring.noteRouter, this.#tunables.models.noteModerationMaxTokens),
       clock: new SystemClock(),
     });
   }

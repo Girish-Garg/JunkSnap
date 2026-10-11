@@ -10,6 +10,7 @@ import { SystemClock } from "../adapters/sites/SystemClock.js";
 import { BackerMigration } from "../services/sites/BackerMigration.js";
 import { ConflictRetry } from "../services/sites/ConflictRetry.js";
 import { BackerMigrationSettings } from "../settings/BackerMigrationSettings.js";
+import { RetrySettings } from "../settings/RetrySettings.js";
 import { SiteRuleSettings } from "../settings/SiteRuleSettings.js";
 import { EntryPoint, type EntryContext } from "./EntryPoint.js";
 import { TimeoutSettings } from "../settings/TimeoutSettings.js";
@@ -27,7 +28,7 @@ export function buildBackerMigration({ settings, env, logger }: EntryContext): B
     sites: new DynamoSiteRepository(client, tables.sitesTable, mapper, calls),
     votes: new DynamoVoteRepository(client, tables.votesTable, calls),
     reports: new DynamoReportStatusWriter(client, tables.reportsTable, new SystemClock(), calls),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RetrySettings.fromEnv(env).saveAttempts),
   });
 }
 

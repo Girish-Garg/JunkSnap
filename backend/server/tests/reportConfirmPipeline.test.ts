@@ -42,7 +42,7 @@ import {
 } from "./reportFakes.js";
 import { evidence } from "./sites/builders.js";
 import { FakeEmbeddings, FakeReportStatus, FakeScoreSeeder, FakeSiteRepository, FakeVoteRepository, FixedClock as SiteClock } from "./sites/fakes.js";
-import { RULES, SCORES } from "./defaults.js";
+import { RETRY, RULES, SCORES } from "./defaults.js";
 
 const RECEIVED = "2026-10-10T02:14:52Z";
 const ASKED = "2026-10-10T02:15:10Z";
@@ -70,7 +70,7 @@ function siteMerger(): ReportMerger {
     scores: new FakeScoreSeeder(),
     clock: new SiteClock(),
     reportFactory: new MergeableReportFactory(new PublicMedia("https://cdn.example")),
-    retry: new ConflictRetry(),
+    retry: new ConflictRetry(RETRY.saveAttempts),
     rules: RULES,
     minVerifiedReports: SCORES.minVerifiedReports,
   });

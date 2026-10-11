@@ -10,7 +10,7 @@ import { CleanupService } from "../../src/services/sites/CleanupService.js";
 import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { BASE_URL, DEVICE_B, fixture, report } from "./builders.js";
 import { FakeCleanups, FakeQueue, FakeSiteRepository, FakeVoteRepository, FixedClock, NOW } from "./fakes.js";
-import { RULES } from "../defaults.js";
+import { RETRY, RULES } from "../defaults.js";
 
 const REQUEST: CleanupRequest = {
   upload_id: "upl_jdh_3c",
@@ -67,7 +67,7 @@ function setup() {
   sites.put(Site.found(report(), RULES));
   const cleanups = new FakeCleanups();
   const queue = new FakeQueue();
-  const retry = new ConflictRetry();
+  const retry = new ConflictRetry(RETRY.saveAttempts);
   const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry });
   const service = new CleanupService({ sites, cleanups, votes: new FakeVoteRepository(), media: new PublicMedia(BASE_URL), retry });
   return { sites, cleanups, queue, intake, service };
@@ -118,7 +118,7 @@ describe("CleanupIntake", () => {
   it("leaves the site free when queueing fails, and a retried POST marks it and queues the photo", async () => {
     const { sites, cleanups } = setup();
     const queue = new FlakyQueue();
-    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts) });
     await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow("queue unreachable");
     expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("none");
     expect(await intake.submit("site_jdh_1", REQUEST, USER)).toMatchObject({ cleanup_id: "cln_jdh_3c", status: "checking" });
@@ -128,7 +128,7 @@ describe("CleanupIntake", () => {
 
   it("leaves the site free for the next after-photo when storing the record fails", async () => {
     const { sites, queue } = setup();
-    const intake = new CleanupIntake({ sites, cleanups: new FlakyCleanups(), queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    const intake = new CleanupIntake({ sites, cleanups: new FlakyCleanups(), queue, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts) });
     await expect(intake.submit("site_jdh_1", REQUEST, USER)).rejects.toThrow("cleanups table unreachable");
     expect(sites.feature("site_jdh_1").properties.cleanup_status).toBe("none");
     await expect(intake.submit("site_jdh_1", { ...REQUEST, upload_id: "upl_other" }, USER)).resolves.toMatchObject({ status: "checking" });
@@ -138,7 +138,7 @@ describe("CleanupIntake", () => {
     const { sites, cleanups, service } = setup();
     const passed = (id: string) => ({ moderation: { ...MODERATION, report_id: id }, verification: { ...VERIFICATION, report_id: id } });
     const queue = new EagerWorkerQueue((record) => service.apply(record.cleanup_id, passed(record.cleanup_id)));
-    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry() });
+    const intake = new CleanupIntake({ sites, cleanups, queue, clock: new FixedClock(), retry: new ConflictRetry(RETRY.saveAttempts) });
     await intake.submit("site_jdh_1", REQUEST, USER);
     expect(cleanups.records.get("cln_jdh_3c")?.status).toBe("accepted");
     expect(sites.feature("site_jdh_1").properties.cleanup_status).not.toBe("checking");

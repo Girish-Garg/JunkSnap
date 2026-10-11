@@ -6,6 +6,7 @@ import type { LlmRequest } from "../../src/domain/llm/LlmRequest.js";
 import { LlmResponse } from "../../src/domain/llm/LlmResponse.js";
 import type { LetterModel } from "../../src/ports/letters/LetterModel.js";
 import { DEVICE, USER, letterService, REAL_RULES_DIR, RecordingLogger, siteFixture, wardSite } from "./support.js";
+import { MODELS } from "../defaults.js";
 
 const ANSWER = { provider: "bedrock", model: "apac.amazon.nova-pro-v1:0", version: "v1:0" } as const;
 
@@ -46,7 +47,7 @@ const request = {
 describe("ModelLetterWriter", () => {
   it("asks the letters task for JSON prose with code-picked facts only", async () => {
     const model = new FakeModel(carefulReply);
-    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model), rulesDir: REAL_RULES_DIR });
+    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model, MODELS.letters), rulesDir: REAL_RULES_DIR });
     const letter = await service.draft(request);
     const [sent] = model.requests;
     expect(sent).toMatchObject({ task: "letters", jsonSchemaName: "letter_prose" });
@@ -60,7 +61,7 @@ describe("ModelLetterWriter", () => {
   it("falls back to the template when the model's answer is not prose JSON", async () => {
     const logger = new RecordingLogger();
     const model = new FakeModel(() => ({ letter: "Dear Sir" }));
-    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model), logger });
+    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model, MODELS.letters), logger });
     const letter = await service.draft(request);
     expect(letter).toMatchObject({ template_fallback: true, provider: "junksnap", model: "letter-template" });
     expect(logger.warnings).toEqual([expect.stringContaining("letter writer failed")]);
@@ -72,7 +73,7 @@ describe("ModelLetterWriter", () => {
       const reply = carefulReply(sent) as { subject: string; body: string };
       return { ...reply, body: `${reply.body}\n\n${facts.no_bin_statement} Please ${facts.request}.` };
     });
-    const service = await letterService({ sites: [siteFixture("jdh-2")], writer: new ModelLetterWriter(model), rulesDir: REAL_RULES_DIR });
+    const service = await letterService({ sites: [siteFixture("jdh-2")], writer: new ModelLetterWriter(model, MODELS.letters), rulesDir: REAL_RULES_DIR });
     const letter = await service.draft({ ...request, siteId: "site_jdh_2", language: "en" });
     const facts = JSON.parse(model.requests[0]?.userText ?? "{}") as { no_bin_statement: string; request: string };
     expect(facts.no_bin_statement).toBe("10 people confirmed there is no dustbin within 1 km of this spot. No mapped bin or collection point within 3 km (OpenStreetMap, ward records).");
@@ -86,7 +87,7 @@ describe("ModelLetterWriter", () => {
       const reply = carefulReply(sent) as { subject: string; body: string };
       return { ...reply, body: reply.body.replace("vulnerable", "sensitive") };
     });
-    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model), rulesDir: REAL_RULES_DIR });
+    const service = await letterService({ sites: [wardSite()], writer: new ModelLetterWriter(model, MODELS.letters), rulesDir: REAL_RULES_DIR });
     const letter = await service.draft(request);
     expect(letter.template_fallback).toBe(true);
     expect(letter.body).not.toContain("sensitive");

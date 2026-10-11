@@ -8,6 +8,9 @@ import { WordingCheck } from "../../services/letters/WordingCheck.js";
 import { CommunityRefresher } from "../../services/notes/CommunityRefresher.js";
 import { NoteAnalyzer, type AnalysisRouter } from "../../services/notes/NoteAnalyzer.js";
 import { NoteService } from "../../services/notes/NoteService.js";
+import { ModelLimitSettings } from "../../settings/ModelLimitSettings.js";
+import type { NotesSettings } from "../../settings/NotesSettings.js";
+import type { Env } from "../../settings/utils.js";
 
 export interface NotesAdapters {
   readonly sites: SiteReader;
@@ -38,29 +41,38 @@ export class TimerScheduler implements Scheduler {
   }
 }
 
-export class NotesAssembly {
-  readonly #notesPerHour: number;
-  readonly #logger: Logger;
-  readonly #analysisWindowMs: number;
+// NOTES_PER_HOUR, NOTE_ANALYSIS_INTERVAL_MINUTES (in ms) and NOTE_ANALYSIS_MAX_TOKENS.
+export interface NoteLimits {
+  readonly perHour: number;
+  readonly analysisWindowMs: number;
+  readonly analysisMaxTokens: number;
+}
 
-  // NOTES_PER_HOUR, and NOTE_ANALYSIS_INTERVAL_MINUTES in ms.
-  constructor(notesPerHour: number, logger: Logger, analysisWindowMs: number) {
-    this.#notesPerHour = notesPerHour;
+export class NotesAssembly {
+  readonly #limits: NoteLimits;
+  readonly #logger: Logger;
+
+  constructor(limits: NoteLimits, logger: Logger) {
+    this.#limits = limits;
     this.#logger = logger;
-    this.#analysisWindowMs = analysisWindowMs;
+  }
+
+  static limits(settings: NotesSettings, env: Env): NoteLimits {
+    const analysisMaxTokens = ModelLimitSettings.fromEnv(env).noteAnalysisMaxTokens;
+    return { perHour: settings.notesPerHour, analysisWindowMs: settings.analysisIntervalMs, analysisMaxTokens };
   }
 
   // One refresher per process, shared by notes and photo reports, so its per-site debounce holds for both.
   refresher(adapters: NotesAdapters): CommunityRefresher {
-    const analyzer = new NoteAnalyzer(adapters.router, new WordingCheck(), this.#logger);
-    return new CommunityRefresher({ ...adapters, analyzer, logger: this.#logger, windowMs: this.#analysisWindowMs });
+    const analyzer = new NoteAnalyzer(adapters.router, new WordingCheck(), this.#logger, this.#limits.analysisMaxTokens);
+    return new CommunityRefresher({ ...adapters, analyzer, logger: this.#logger, windowMs: this.#limits.analysisWindowMs });
   }
 
   service(adapters: NotesAdapters, refresher: CommunityRefresher = this.refresher(adapters)): NoteService {
     const logger = this.#logger;
     return new NoteService({
       sites: adapters.sites,
-      limiter: new LetterRateLimiter(adapters.counters, logger, this.#notesPerHour, "notes"),
+      limiter: new LetterRateLimiter(adapters.counters, logger, this.#limits.perHour, "notes"),
       moderator: adapters.moderator,
       notes: adapters.notes,
       refresher,

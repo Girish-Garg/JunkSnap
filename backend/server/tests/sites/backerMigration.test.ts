@@ -12,7 +12,7 @@ import { ConflictRetry } from "../../src/services/sites/ConflictRetry.js";
 import { report, siteFixture } from "./builders.js";
 import { FakeReportStatus, FakeSiteRepository, FakeVoteRepository, NOW, RecordingLogger } from "./fakes.js";
 import { ScriptedClient } from "./ScriptedClient.js";
-import { RULES } from "../defaults.js";
+import { RETRY, RULES } from "../defaults.js";
 
 function oldVerifiedSite(id: string, photos: number): Site {
   const site = Site.found(report({ id: `${id}_0`, device: `${id}-dev-0`, user: `${id}-user-0` }), RULES);
@@ -42,7 +42,7 @@ describe("BackerMigration", () => {
       await voteOn(votes, "site_site_b_0")(n, n < 2 ? "same-user" : null);
     }
     await voteOn(votes, "site_site_b_0")(9, "site_b-user-1");
-    const migration = new BackerMigration({ sites, votes, reports, retry: new ConflictRetry() });
+    const migration = new BackerMigration({ sites, votes, reports, retry: new ConflictRetry(RETRY.saveAttempts) });
     expect(await migration.run()).toEqual({ sites: 2, migrated: 2, skipped: 0, verified: 0, rejected: 0 });
     expect(sites.feature("site_site_a_0").properties).toMatchObject({
       verification: "unverified",
@@ -61,7 +61,7 @@ describe("BackerMigration", () => {
     for (let n = 0; n < 7; n += 1) {
       await voteOn(votes, "site_site_c_0")(n, null);
     }
-    const migration = new BackerMigration({ sites, votes, reports: new FakeReportStatus(), retry: new ConflictRetry() });
+    const migration = new BackerMigration({ sites, votes, reports: new FakeReportStatus(), retry: new ConflictRetry(RETRY.saveAttempts) });
     expect(await migration.run()).toEqual({ sites: 2, migrated: 1, skipped: 1, verified: 1, rejected: 0 });
     await votes.put({ siteId: "site_site_c_0", deviceToken: "site_site_c_0-voter-0", userId: null, choice: "reject", votedAt: NOW });
     const live = await sites.get("site_site_c_0");

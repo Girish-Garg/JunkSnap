@@ -14,6 +14,7 @@ import { BrandSettings } from "../settings/BrandSettings.js";
 import type { CoreSettings } from "../settings/CoreSettings.js";
 import type { Env } from "../settings/utils.js";
 import { buildProviderRouter } from "./LlmModule.js";
+import { ModelLimitSettings } from "../settings/ModelLimitSettings.js";
 import { TimeoutSettings } from "../settings/TimeoutSettings.js";
 import { awsClientConfig } from "./utils.js";
 
@@ -33,6 +34,7 @@ export function buildBrandLabeller({ core, env, logger }: BrandStepContext): Bra
     router: buildProviderRouter(env, core, logger),
     images: new S3BlurredImageStore(new S3Client(awsClientConfig(core.awsRegion, aws.transfer)), settings.publicBucket),
     schema: JUDGE_ANSWER_SCHEMA,
+    maxTokens: ModelLimitSettings.fromEnv(env).brandJudgeMaxTokens,
   });
   return new BrandLabeller({
     reader: new RekognitionTextReader(rekognition, images),

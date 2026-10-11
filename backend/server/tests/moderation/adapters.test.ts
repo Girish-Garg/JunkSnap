@@ -22,7 +22,7 @@ import { CoreSettings } from "../../src/settings/CoreSettings.js";
 import { ModerationSettings } from "../../src/settings/ModerationSettings.js";
 import { LogSink } from "../LogSink.js";
 import { FakeDeviceRegistry, JODHPUR, RECEIVED_AT, reportSubmission } from "./fakes.js";
-import { RULES } from "../defaults.js";
+import { CACHE, RULES } from "../defaults.js";
 
 interface SentCommand {
   readonly constructor: { readonly name: string };
@@ -143,7 +143,7 @@ describe("S3ImageStore", () => {
   it("reads at most one byte over the limit and refuses a larger object", async () => {
     const client = new S3Client({ region: "ap-south-1" });
     const sent = stub(client, () => ({ Body: { transformToByteArray: async () => new Uint8Array(11) } }));
-    const store = new S3ImageStore(client, buckets);
+    const store = new S3ImageStore(client, buckets, CACHE.mediaMaxAgeSeconds);
     expect(await store.readOriginal("reports/upl_x.jpg", 10)).toBeNull();
     expect(await store.readOriginal("reports/upl_x.jpg", 11)).toHaveLength(11);
     expect(sent[0]?.input).toEqual({ Bucket: "originals-bucket", Key: "reports/upl_x.jpg", Range: "bytes=0-10" });
@@ -152,13 +152,13 @@ describe("S3ImageStore", () => {
   it("reads an empty object, which S3 answers with InvalidRange, as no bytes", async () => {
     const client = new S3Client({ region: "ap-south-1" });
     stub(client, () => Object.assign(new Error("The requested range is not satisfiable"), { name: "InvalidRange" }));
-    expect(await new S3ImageStore(client, buckets).readOriginal("reports/upl_x.jpg", 10)).toEqual(new Uint8Array());
+    expect(await new S3ImageStore(client, buckets, CACHE.mediaMaxAgeSeconds).readOriginal("reports/upl_x.jpg", 10)).toEqual(new Uint8Array());
   });
 
   it("writes the blurred copy as a JPEG to the public bucket", async () => {
     const client = new S3Client({ region: "ap-south-1" });
     const sent = stub(client, () => ({}));
-    await new S3ImageStore(client, buckets).writePublic("media/reports/rpt_x.jpg", new Uint8Array([1]));
+    await new S3ImageStore(client, buckets, CACHE.mediaMaxAgeSeconds).writePublic("media/reports/rpt_x.jpg", new Uint8Array([1]));
     expect(sent[0]?.input).toMatchObject({
       Bucket: "public-bucket",
       Key: "media/reports/rpt_x.jpg",

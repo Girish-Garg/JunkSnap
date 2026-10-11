@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ConfigError } from "../src/domain/errors.js";
 import { AreaListSettings } from "../src/settings/AreaListSettings.js";
+import { CacheSettings } from "../src/settings/CacheSettings.js";
+import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
 import { NotesSettings } from "../src/settings/NotesSettings.js";
+import { PagingSettings } from "../src/settings/PagingSettings.js";
 import { QueueSettings } from "../src/settings/QueueSettings.js";
+import { RetrySettings } from "../src/settings/RetrySettings.js";
 import { ScanLimitSettings } from "../src/settings/ScanLimitSettings.js";
 import { ScoreSettings } from "../src/settings/ScoreSettings.js";
 import { SiteRuleSettings } from "../src/settings/SiteRuleSettings.js";
@@ -93,6 +97,35 @@ const TIMEOUT_TUNABLES: readonly Tunable[] = [
   { name: "FFMPEG_TIMEOUT_MS", read: (env) => timeouts(env).ffmpegMs, fallback: 60_000, good: ["30000", 30_000], bad: MS_BAD },
 ];
 
+const retry = (env: Env) => RetrySettings.fromEnv(env);
+const paging = (env: Env) => PagingSettings.fromEnv(env);
+const cache = (env: Env) => CacheSettings.fromEnv(env);
+const models = (env: Env) => ModelLimitSettings.fromEnv(env);
+
+const OPERATIONAL_TUNABLES: readonly Tunable[] = [
+  { name: "SAVE_ATTEMPTS", read: (env) => retry(env).saveAttempts, fallback: 3, good: ["5", 5], bad: [...COUNT_BAD, "21"] },
+  { name: "COUNTER_ATTEMPTS", read: (env) => retry(env).counter.attempts, fallback: 5, good: ["3", 3], bad: COUNT_BAD },
+  { name: "COUNTER_JITTER_MS", read: (env) => retry(env).counter.jitterMs, fallback: 25, good: ["0", 0], bad: ["-1", "1001"] },
+  { name: "BATCH_READ_ATTEMPTS", read: (env) => retry(env).batchReadAttempts, fallback: 3, good: ["4", 4], bad: COUNT_BAD },
+  { name: "LLM_JSON_RETRIES", read: (env) => retry(env).jsonRetries, fallback: 1, good: ["0", 0], bad: ["-1", "6"] },
+  { name: "AREA_LETTER_MAX_PAGES", read: (env) => paging(env).areaLetterMaxPages, fallback: 20, good: ["40", 40], bad: COUNT_BAD },
+  { name: "NOTES_MAX_PAGES", read: (env) => paging(env).notesMaxPages, fallback: 5, good: ["8", 8], bad: COUNT_BAD },
+  { name: "MY_REPORTS_MAX_ROUNDS", read: (env) => paging(env).myReportsMaxRounds, fallback: 10, good: ["4", 4], bad: COUNT_BAD },
+  { name: "BATCH_GET_SIZE", read: (env) => paging(env).batchGetSize, fallback: 100, good: ["25", 25], bad: ["0", "101"] },
+  { name: "MAP_MAX_SITES", read: (env) => paging(env).mapMaxSites, fallback: 500, good: ["300", 300], bad: ["0", "10001"] },
+  { name: "SHARE_CACHE_MAX_AGE_SECONDS", read: (env) => cache(env).shareMaxAgeSeconds, fallback: 300, good: ["0", 0], bad: ["-1", "1.5"] },
+  { name: "ASSETLINKS_CACHE_MAX_AGE_SECONDS", read: (env) => cache(env).assetLinksMaxAgeSeconds, fallback: 3_600, good: ["600", 600], bad: ["-1", "x"] },
+  { name: "MEDIA_CACHE_MAX_AGE_SECONDS", read: (env) => cache(env).mediaMaxAgeSeconds, fallback: 86_400, good: ["3600", 3_600], bad: ["-1", "31536001"] },
+  { name: "CORS_MAX_AGE_SECONDS", read: (env) => cache(env).corsMaxAgeSeconds, fallback: 600, good: ["7200", 7_200], bad: ["-1", "86401"] },
+  { name: "USER_STANDING_CACHE_SECONDS", read: (env) => cache(env).userStandingMs, fallback: 60_000, good: ["30", 30_000], bad: ["0", "3601"] },
+  { name: "LETTER_MAX_TOKENS", read: (env) => models(env).letters.maxTokens, fallback: 1_500, good: ["2500", 2_500], bad: ["9", "16001", "x"] },
+  { name: "AREA_LETTER_MAX_TOKENS", read: (env) => models(env).areaLetters.maxTokens, fallback: 2_000, good: ["3000", 3_000], bad: ["0", "1.5"] },
+  { name: "LETTER_TEMPERATURE", read: (env) => models(env).letters.temperature, fallback: 0, good: ["0.3", 0.3], bad: ["-0.1", "1.1"] },
+  { name: "BRAND_JUDGE_MAX_TOKENS", read: (env) => models(env).brandJudgeMaxTokens, fallback: 600, good: ["800", 800], bad: ["0", "x"] },
+  { name: "NOTE_MODERATION_MAX_TOKENS", read: (env) => models(env).noteModerationMaxTokens, fallback: 60, good: ["80", 80], bad: ["5", "x"] },
+  { name: "NOTE_ANALYSIS_MAX_TOKENS", read: (env) => models(env).noteAnalysisMaxTokens, fallback: 500, good: ["700", 700], bad: ["0", "x"] },
+];
+
 function describeTunables(title: string, tunables: readonly Tunable[]): void {
   describe(title, () => {
     describe.each(tunables)("$name", ({ name, read, fallback, good, bad }) => {
@@ -114,6 +147,7 @@ function describeTunables(title: string, tunables: readonly Tunable[]): void {
 describeTunables("site, score, area list, notes and queue variables", RULE_TUNABLES);
 describeTunables("scan variables", SCAN_TUNABLES);
 describeTunables("timeout variables", TIMEOUT_TUNABLES);
+describeTunables("retry, paging, cache and model limit variables", OPERATIONAL_TUNABLES);
 
 describe("settings that must agree with each other", () => {
   it("refuses photo flag thresholds above PHOTO_FLAG_HIDE", () => {

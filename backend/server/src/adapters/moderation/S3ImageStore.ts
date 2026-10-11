@@ -9,17 +9,19 @@ export interface ImageBuckets {
   readonly public: string;
 }
 
-const PUBLIC_CACHE = "public, max-age=86400";
 // S3 user metadata naming the blur rules a public copy was made under.
 export const BLUR_POLICY_METADATA = "blur-policy";
 
 export class S3ImageStore implements ImageStore {
   readonly #client: S3Client;
   readonly #buckets: ImageBuckets;
+  readonly #publicCache: string;
 
-  constructor(client: S3Client, buckets: ImageBuckets) {
+  // publicMaxAgeSeconds: MEDIA_CACHE_MAX_AGE_SECONDS, the Cache-Control max-age of every blurred public copy.
+  constructor(client: S3Client, buckets: ImageBuckets, publicMaxAgeSeconds: number) {
     this.#client = client;
     this.#buckets = buckets;
+    this.#publicCache = `public, max-age=${publicMaxAgeSeconds}`;
   }
 
   // Asks for one byte more than the limit, so an oversized upload is never downloaded whole.
@@ -51,7 +53,7 @@ export class S3ImageStore implements ImageStore {
       Key: key,
       Body: jpeg,
       ContentType: "image/jpeg",
-      CacheControl: PUBLIC_CACHE,
+      CacheControl: this.#publicCache,
       Metadata: { [BLUR_POLICY_METADATA]: BLUR_POLICY },
     });
     await callService("S3 PutObject", () => this.#client.send(command));

@@ -21,8 +21,8 @@ import { GeoPoint } from "../src/domain/moderation/GeoPoint.js";
 import { PerceptualHash } from "../src/domain/moderation/PerceptualHash.js";
 import { PhotoSubmission } from "../src/domain/moderation/PhotoSubmission.js";
 import { INDIA_BUFFER_DEG } from "../src/handlers/moderation/ModerationServiceFactory.js";
+import { ModelLimitSettings } from "../src/settings/ModelLimitSettings.js";
 import { RateLimitSettings } from "../src/settings/RateLimitSettings.js";
-import { TimeoutSettings } from "../src/settings/TimeoutSettings.js";
 import { NoteRouterBuilder } from "../src/handlers/moderation/NoteRouterBuilder.js";
 import { AuthenticityService } from "../src/services/moderation/AuthenticityService.js";
 import { CheckFactory } from "../src/services/moderation/CheckFactory.js";
@@ -66,7 +66,7 @@ class PhotoRun {
       authenticity: new AuthenticityService(
         new CheckFactory({ india, reportHashes: this.#hashes, cleanupHashes: this.#hashes, devices: this.#devices, snapPerHour: RateLimitSettings.fromEnv(process.env).snapPerHour }),
       ),
-      notes: new LlmNoteModerator(PhotoRun.#noteRouter()),
+      notes: new LlmNoteModerator(PhotoRun.#noteRouter(), ModelLimitSettings.fromEnv(process.env).noteModerationMaxTokens),
       clock: new SystemClock(),
     });
   }
@@ -74,7 +74,7 @@ class PhotoRun {
   static #noteRouter() {
     const core = CoreSettings.fromEnv(process.env);
     const logger = new JsonLoggerFactory().create({ service: "worker", stage: core.stage });
-    return new NoteRouterBuilder(new BedrockRuntimeClient({ region: core.awsRegion }), TimeoutSettings.fromEnv(process.env).notes).build(logger);
+    return NoteRouterBuilder.fromEnv(new BedrockRuntimeClient({ region: core.awsRegion }), process.env).build(logger);
   }
 
   async moderate(name: string, bytes: Uint8Array, note?: string): Promise<ModerationResult> {
