@@ -16,6 +16,6 @@ Decision:
 - Contract text only (contracts/README.md); no schema change.
 - `backend/server/scripts/mergeSameSpotSites.ts <dev|demo>` lists the same-spot duplicates already stored, read only. Merging them would mark each absorbed site removed, and `removed_reason` allows only `withdrawn` and `photos_reported`. A value for merged sites is a contract change left to the human, so `--apply` is refused for now.
 
-Consequences for other lanes: fewer stacked pins at one spot; a later photo at the same spot backs the existing site. Two reports at one spot merged in the same worker batch can still both found a site (a race); the listing finds those too.
+Consequences for other lanes: fewer stacked pins at one spot; a later photo at the same spot backs the existing site. Two reports at one spot merged in the same worker batch could both found a site (a race); decision 20261011-1700-hem-merge-lock closes it, and the listing finds the duplicates made before.
 
 Rejected alternatives: a lower `MERGE_MIN_COSINE` at every distance (merges different piles up to 40 m apart); a smaller `SITE_MERGE_RADIUS_M` (splits large dumps).

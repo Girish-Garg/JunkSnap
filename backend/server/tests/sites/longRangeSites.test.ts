@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NgeohashCells } from "../../src/adapters/sites/NgeohashCells.js";
+import { InProcessMergeLock } from "../../src/adapters/sites/InProcessMergeLock.js";
 import { validateSite, type LocationLookup, type ReportUpload } from "../../src/contracts/index.gen.js";
 import { Report } from "../../src/domain/Report.js";
 import { BoundingBox } from "../../src/domain/sites/BoundingBox.js";
@@ -38,6 +39,7 @@ function setup() {
     votes: new FakeVoteRepository(),
     cells: new NgeohashCells(),
     picker: new MergeTargetPicker(new FakeEmbeddings(), RULES),
+    lock: new InProcessMergeLock(),
     reports: new FakeReportStatus(),
     scores: new FakeScoreSeeder(),
     clock: new FixedClock(),
