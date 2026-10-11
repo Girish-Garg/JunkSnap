@@ -59,7 +59,7 @@ describe("a letter for an unverified site", () => {
 
   it("says verified, with the people who backed it, once 10 have", async () => {
     const letter = await templateFor(verified);
-    expect(letter.body).toContain("Reports since 9 October 2026: 7 (7 verified). 10 people have confirmed this site, so it is verified.");
+    expect(letter.body).toContain("Reports since 9 October 2026: 7 (7 verified). 10 people confirmed this site, so it is verified.");
     expect(letter.evidence).toMatchObject({ verification: "verified", backers: { count: 10, needed: 10 } });
     expect((await templateFor(verified, "hi")).body).toContain("10 लोगों ने इस स्थान की पुष्टि की है, इसलिए यह सत्यापित है।");
   });

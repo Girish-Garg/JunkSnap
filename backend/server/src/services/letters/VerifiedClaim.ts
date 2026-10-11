@@ -3,7 +3,7 @@ import { BACKERS_NEEDED } from "../../domain/sites/Backers.js";
 // Honest ways to say a site is not verified yet; each is removed before looking for a claim.
 const NOT_YET: readonly RegExp[] = [
   /(?:\bnot|n['’]t)\s+(?:yet\s+)?(?:been\s+)?verified\b/giu, // not verified, not yet verified, hasn't been verified
-  /\bto\s+be\s+verified\b/giu, // yet to be verified, needs to be verified
+  /\b(?:yet|still|need(?:s|ed)?|has|have)\s+to\s+be\s+verified\b/giu, // yet to be verified, needs to be verified
   /\bwill\s+be\s+verified\b/giu,
   /\b(?:once|until|before|when)\s+(?:it\s+is\s+)?verified\b/giu,
   /\bverified\s+word\s+for\s+word\b/giu, // the quotes, not the site

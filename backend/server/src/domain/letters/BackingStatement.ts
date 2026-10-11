@@ -1,3 +1,4 @@
+import { CountNoun } from "../CountNoun.js";
 import { BACKERS_NEEDED } from "../sites/Backers.js";
 import type { LetterSite } from "./LetterSite.js";
 
@@ -8,19 +9,25 @@ interface Phrases {
   readonly unverified: Phrase;
 }
 
+const PEOPLE = new CountNoun("person", "people");
+const RESIDENTS = new CountNoun("resident", "residents");
+// Hindi nouns before ने take the oblique plural: "3 लोगों ने", but "1 व्यक्ति ने".
+const PEOPLE_HI = new CountNoun("व्यक्ति", "लोगों");
+const RESIDENTS_HI = new CountNoun("निवासी", "निवासियों");
+
 const ENGLISH: Phrases = {
-  verified: (count) => `${count} people have confirmed this site, so it is verified.`,
+  verified: (count) => `${PEOPLE.of(count)} confirmed this site, so it is verified.`,
   unverified: (count, reporters) => {
-    const who = reporters === null ? "residents" : `${reporters} ${reporters === 1 ? "resident" : "residents"}`;
+    const who = reporters === null ? "residents" : RESIDENTS.of(reporters);
     return `Reported by ${who}; community verification in progress (${count} of ${BACKERS_NEEDED} people confirmed so far).`;
   },
 };
 
 const HINDI: Phrases = {
-  verified: (count) => `${count} लोगों ने इस स्थान की पुष्टि की है, इसलिए यह सत्यापित है।`,
+  verified: (count) => `${PEOPLE_HI.of(count)} ने इस स्थान की पुष्टि की है, इसलिए यह सत्यापित है।`,
   unverified: (count, reporters) => {
-    const who = reporters === null ? "निवासियों" : `${reporters} ${reporters === 1 ? "निवासी" : "निवासियों"}`;
-    return `${who} ने इसकी सूचना दी है; सामुदायिक पुष्टि जारी है (${BACKERS_NEEDED} में से ${count} लोगों ने अब तक पुष्टि की)।`;
+    const who = reporters === null ? "निवासियों" : RESIDENTS_HI.of(reporters);
+    return `${who} ने इसकी सूचना दी है; सामुदायिक पुष्टि जारी है (${BACKERS_NEEDED} में से ${PEOPLE_HI.of(count)} ने अब तक पुष्टि की)।`;
   },
 };
 

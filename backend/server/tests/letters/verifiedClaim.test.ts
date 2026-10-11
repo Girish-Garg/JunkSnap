@@ -10,6 +10,8 @@ describe("VerifiedClaim allows saying a site is not verified yet", () => {
     "It hasn't been verified.",
     "The site is unverified.",
     "It is yet to be verified by residents.",
+    "It still has to be verified by neighbours.",
+    "It needs to be verified by 7 more people.",
     "It is awaiting verification.",
     "Community verification in progress (3 of 10 people confirmed so far).",
     "Verification is pending; 3 of 10 people have confirmed it.",
@@ -40,6 +42,10 @@ describe("VerifiedClaim catches a claim that the site is verified", () => {
     "Residents report a verified site at this spot.",
     "It was verified by 3 people.",
     "Not only reported but verified.",
+    "The site is said to be verified.",
+    "The waste appears to be verified.",
+    "It is known to be verified.",
+    "It is confirmed to be verified.",
   ])("English: %s", (prose) => {
     expect(new VerifiedClaim(prose).affirms()).toBe(true);
   });

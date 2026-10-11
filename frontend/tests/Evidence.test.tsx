@@ -96,6 +96,6 @@ describe('letter evidence for an unverified site (decision 20261011-1750)', () =
     await renderApp(<AppRoutes />, { route: '/sites/site_jpr_1/letter', services: await signedIn(), language: 'hi' });
     await user.click(await screen.findByRole('button', { name: 'पत्र का मसौदा बनाएँ' }));
     const letter = await screen.findByRole('article');
-    expect(within(letter).getByText('सामुदायिक पुष्टि').nextSibling).toHaveTextContent('10 में से 2 लोगों ने अब तक पुष्टि की');
+    expect(within(letter).getByText('सामुदायिक पुष्टि').nextSibling).toHaveTextContent('अब तक 10 में से 2');
   });
 });

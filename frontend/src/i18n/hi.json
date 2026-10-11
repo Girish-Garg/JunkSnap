@@ -775,7 +775,7 @@
       "verified": "सत्यापित रिपोर्ट",
       "backers": "सामुदायिक पुष्टि",
       "backersVerified": "{{count}} लोगों द्वारा सत्यापित",
-      "backersWaiting": "{{needed}} में से {{count}} लोगों ने अब तक पुष्टि की",
+      "backersWaiting": "अब तक {{needed}} में से {{count}}",
       "first": "पहली रिपोर्ट",
       "last": "आख़िरी रिपोर्ट",
       "photoAlt": "धुंधली फ़ोटो {{n}}",

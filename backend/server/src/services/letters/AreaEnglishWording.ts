@@ -1,10 +1,14 @@
 import type { AreaKind, AreaRef } from "../../domain/AreaKey.js";
+import { CountNoun } from "../../domain/CountNoun.js";
 import type { AreaIssue } from "../../domain/letters/AreaIssueSites.js";
 import type { CcLine, Recipient } from "../../domain/letters/types.js";
 import type { AreaLetterBrief } from "../../ports/letters/AreaLetterWriter.js";
 import type { AreaEvidence, AreaWording, WorstSite } from "./AreaTemplateLetter.js";
 import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import { joinList, kilometres, letterDate } from "./utils.js";
+
+const PEOPLE = new CountNoun("person", "people");
+const SITES = new CountNoun("site", "sites");
 
 const KIND: Readonly<Record<AreaKind, (name: string) => string>> = {
   ward: (name) => name,
@@ -60,9 +64,9 @@ export class AreaEnglishWording implements AreaWording {
 
   facts(brief: AreaLetterBrief): string {
     const { reports, reporters, verified_reports, sites, first_reported_at } = brief.evidence;
-    const people = reporters === null ? "" : ` from ${reporters} people`;
+    const people = reporters === null ? "" : ` from ${PEOPLE.of(reporters)}`;
     const where = AreaEnglishWording.areaName(brief.area);
-    return `Residents have reported ${ISSUE[brief.issue]} in ${where}: ${reports} reports${people} at ${sites} sites since ${letterDate(first_reported_at, "en-GB")}, ${verified_reports} of them verified.`;
+    return `Residents have reported ${ISSUE[brief.issue]} in ${where}: ${reports} reports${people} at ${SITES.of(sites)} since ${letterDate(first_reported_at, "en-GB")}, ${verified_reports} of them verified.`;
   }
 
   worstSites(sites: readonly WorstSite[]): string {

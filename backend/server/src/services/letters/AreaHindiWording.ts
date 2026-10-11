@@ -1,10 +1,15 @@
 import type { AreaKind, AreaRef } from "../../domain/AreaKey.js";
+import { CountNoun } from "../../domain/CountNoun.js";
 import type { AreaIssue } from "../../domain/letters/AreaIssueSites.js";
 import type { CcLine, Recipient } from "../../domain/letters/types.js";
 import type { AreaLetterBrief } from "../../ports/letters/AreaLetterWriter.js";
 import type { AreaEvidence, AreaWording, WorstSite } from "./AreaTemplateLetter.js";
 import { CommunityPhrases } from "../../domain/notes/CommunityPhrases.js";
 import { joinList, kilometres, letterDate } from "./utils.js";
+
+// Oblique case before द्वारा and पर: "3 लोगों द्वारा", "3 स्थलों पर", but "1 व्यक्ति द्वारा", "1 स्थल पर".
+const PEOPLE_HI = new CountNoun("व्यक्ति", "लोगों");
+const SITES_HI = new CountNoun("स्थल", "स्थलों");
 
 const KIND: Readonly<Record<AreaKind, (name: string) => string>> = {
   ward: (name) => name,
@@ -60,9 +65,9 @@ export class AreaHindiWording implements AreaWording {
 
   facts(brief: AreaLetterBrief): string {
     const { reports, reporters, verified_reports, sites, first_reported_at } = brief.evidence;
-    const people = reporters === null ? "" : ` (${reporters} लोगों द्वारा)`;
+    const people = reporters === null ? "" : ` (${PEOPLE_HI.of(reporters)} द्वारा)`;
     const since = letterDate(first_reported_at, "hi-IN");
-    return `निवासियों ने ${AreaHindiWording.areaName(brief.area)} में यह सूचना दी है: ${ISSUE[brief.issue]}। ${since} से अब तक ${sites} स्थलों पर ${reports} रिपोर्ट${people}, जिनमें ${verified_reports} सत्यापित हैं।`;
+    return `निवासियों ने ${AreaHindiWording.areaName(brief.area)} में यह सूचना दी है: ${ISSUE[brief.issue]}। ${since} से अब तक ${SITES_HI.of(sites)} पर ${reports} रिपोर्ट${people}, जिनमें ${verified_reports} सत्यापित हैं।`;
   }
 
   worstSites(sites: readonly WorstSite[]): string {
