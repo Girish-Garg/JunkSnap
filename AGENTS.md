@@ -49,9 +49,10 @@ Plan and task list: `docs/handover.md`. Architecture: `docs/architecture.md`. Co
 | `backend/pipeline/` | Retired (decision 20261010-0159); deleted once `backend/server/` lands. Add no code |
 | `infra/` | Infrastructure as code (`junksnap-<stage>` stacks) |
 | `contracts/` | Schemas, fixtures, README: source of truth for shapes and routes |
+| `config/` | Every tunable: `defaults.env`, plus each stage's overrides in `dev.env` and `demo.env` (`docs/config.md`) |
 | `data/` | Boundaries, representatives, labels, ward records and crawler, dataset manifests (small files only) |
 | `docs/` | Handover, architecture, working agreement, decisions, status |
-| `scripts/` | `validate_contracts.py`, `smoke.py`, `check_limits.py` |
+| `scripts/` | `validate_contracts.py`, `smoke.py`, `check_limits.py`, `check_config.py`, the deploy and build scripts |
 
 ## Session protocol
 
@@ -74,6 +75,8 @@ Decision status: `accepted` binds, `proposed` is context only, `superseded` is h
 
 Push to `main` · force-push or rewrite history · commit secrets or `.env` files · use `--no-verify` · type passwords, keys or tokens · name a person in any text
 
+`config/*.env` is the one exception to the `.env` rule: it holds only public tunables, and the loader refuses secret-looking names.
+
 ## Git
 
 - One branch and worktree per task; PRs under about 400 changed lines. PR body: `Closes #n`, evidence, decisions, integration debt.
@@ -89,6 +92,7 @@ Push to `main` · force-push or rewrite history · commit secrets or `.env` file
 - ml: `cd backend/ml; uv sync; uv run ruff check .; uv run mypy --strict src; uv run pytest -q` (in `backend/agent` until the rename lands)
 - contracts: `uv run scripts/validate_contracts.py`; after any schema change also `cd backend/server; npm ci; npm run gen:contracts` and commit the `src/contracts/*.gen.ts` files
 - size limits: `uv run scripts/check_limits.py`
+- config: `uv run scripts/check_config.py` (`config/` against the documented defaults)
 - smoke test: `uv run scripts/smoke.py <url> [<url> ...]`
 
 ## AWS

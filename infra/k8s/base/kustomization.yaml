@@ -11,25 +11,16 @@ resources:
   - crawler.yaml
   - ml.yaml
   - ingress.yaml
-# Names from contracts/README.md; overlays merge in the per-stage values.
+# Names from contracts/README.md; overlays merge in the per-stage values. Infra wiring only:
+# every tunable (rate limits, radii, timeouts, ml thresholds, crawl timing) lives in config/ and
+# scripts/deploy.py writes it into the generated layer (docs/config.md).
 configMapGenerator:
   - name: junksnap-config
     literals:
       - AWS_REGION=ap-south-1
       - AWS_DEFAULT_REGION=ap-south-1
-      - PRESIGN_TTL_SECONDS=300
       - ML_URL=http://ml
-      # Rate limits per hour, each counted per user and per device (contracts/README.md, Rate limit). Edit here or per stage.
-      - SNAP_PER_HOUR=20
-      - CONFIRMATIONS_PER_HOUR=20
-      - LETTERS_PER_HOUR=5
-      - FLAGS_PER_HOUR=10
-      - WITHDRAWALS_PER_HOUR=10
-      - NOTES_PER_HOUR=10
-      # Ward crawls (decision 20261010-1445): queue a district on its first verified report, recrawl monthly.
-      - CRAWL_ACTIVATE_AFTER=1
-      - CRAWL_INTERVAL_DAYS=30
-      - CRAWL_RETRY_HOURS=6
+      # Ward crawl extraction models (decision 20261010-1445).
       - >-
         CRAWL_MODELS=[{"model_id": "apac.amazon.nova-pro-v1:0", "version": "amazon.nova-pro-v1:0",
         "usd_per_million_in": 0.8, "usd_per_million_out": 3.2},

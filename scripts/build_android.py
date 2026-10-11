@@ -7,7 +7,8 @@
 Usage: uv run scripts/build_android.py dev [--target aarch64 x86_64] [--skip-web] [--debug]
        [--settings aws|env] [--version 1.2.3]
 Gets the stage's public values (android_stage.py): from the junksnap-<stage> stack outputs and
-the stage's Amplify app (--settings aws, local), or from env vars (--settings env, CI). Builds
+the stage's Amplify app (--settings aws, local), or from env vars (--settings env, CI), and the
+VITE_ tunables from config/defaults.env and config/<stage>.env (docs/config.md). Builds
 frontend/dist with them and marks it with the stage in dist/.stage, then runs
 `tauri android build --apk` in apps/android-tauri. The stage's api origin and originals bucket
 are added to the CSP in tauri.conf.json for that build only. The release APK is signed with the
@@ -28,6 +29,7 @@ from pathlib import Path
 
 from android_stage import StageSettings
 from deploy import ROOT
+from stage_config import load_or_exit
 
 APP = ROOT / "apps" / "android-tauri"
 FRONTEND = ROOT / "frontend"
@@ -104,8 +106,9 @@ class AndroidBuild:
         self._stage = stage
         self._env = env
 
-    def web(self, settings: StageSettings) -> None:
-        web_env = settings.vite_env()
+    def web(self, settings: StageSettings, tunables: dict[str, str]) -> None:
+        """Endpoints from the stage settings win over the VITE_ tunables from config/."""
+        web_env = {**tunables, **settings.vite_env()}
         print("build env:", web_env, flush=True)  # public values only
         env = {**without_signing(self._env), **web_env}
         stream(["npm", "ci", "--no-audit", "--no-fund"], FRONTEND, env)
@@ -160,12 +163,13 @@ def signing_note() -> str:
 
 def main() -> None:
     args = parse_args()
+    tunables = load_or_exit(args.stage).vite  # a typo in config/ stops here, before any build
     os.environ.setdefault("AWS_PROFILE", "junksnap")
     from_aws = args.settings == "aws"
     settings = StageSettings.from_aws(args.stage) if from_aws else StageSettings.from_env()
     build = AndroidBuild(args.stage, Toolchain().env())
     if not args.skip_web:
-        build.web(settings)
+        build.web(settings, tunables)
     apk = build.apk(args.target, StageConfig(settings, args.version), args.debug)
     size_mb = apk.stat().st_size / 1_000_000
     print(f"\nAPK ({args.stage}, {size_mb:.1f} MB, {signing_note()}): {apk}")
