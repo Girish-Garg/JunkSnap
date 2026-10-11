@@ -7,7 +7,19 @@
 [![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
 [![Built on AWS](https://img.shields.io/badge/built%20on-AWS-ff9900?logo=amazonwebservices&logoColor=white)](#aws-services-and-why)
 
-<img src="docs/media/junksnap-tour.gif" width="360" alt="The live JunkSnap web app on a phone: the Jodhpur map, a reported site and its blurred photo with its MLA and MP seats, then the Areas map and the Soorsagar area page">
+<table>
+  <tr>
+    <td rowspan="2" valign="top"><img src="docs/media/junksnap-tour.gif" width="300" alt="The live JunkSnap web app on a phone: the Jodhpur map, the list of sites, a reported site with its ward, MLA and MP seats and its blurred photo, then the Areas map, the Jodhpur ranking and the Soorsagar area page"></td>
+    <td align="center" valign="top"><img src="docs/media/screens/sample-snap.png" width="136" alt="Snap screen in mock mode: the in-app camera pointed at an overflowing bin, with the GPS accuracy and the shutter"><br><sub>1. Snap in the app camera<br><i>sample data</i></sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/site-photo.png" width="136" alt="Live site sheet: 1 of 10 people confirmed, and the site's photo with faces and number plates blurred"><br><sub>2. Blurred photo,<br>1 of 10 backers</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/site-facts.png" width="136" alt="Live site sheet: the Location card with the local body, district, ward, assembly seat (MLA) and Lok Sabha seat (MP)"><br><sub>3. Ward, MLA and<br>MP seats</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screens/sample-letter.png" width="136" alt="Draft letter in mock mode: To the Commissioner, Jodhpur Municipal Corporation, copied to the MLA and MP seats for attention, with the subject line"><br><sub>4. Cited letter to file<br><i>sample data</i></sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/area.png" width="136" alt="Live area page for the Soorsagar assembly seat: scores withheld until 10 verified reports, with the counts that always show"><br><sub>5. Area report,<br>scores after 10</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/ranking.png" width="136" alt="Live Jodhpur ranking of assembly seats, worst first, with no score shown before 10 verified reports"><br><sub>6. City ranking<br>of seats</sub></td>
+  </tr>
+</table>
 
 Built on AWS, in `ap-south-1` (full diagram under [Architecture](#architecture)):
 
@@ -35,7 +47,32 @@ Built for Environmental Hacks (Bharat Builds Tour by WeMakeDevs and AWS), 8 to 1
 
 - Web app: https://demo.d3iec0rb3f75jm.amplifyapp.com
 - API (through CloudFront): https://d2s7tf4ua41hzf.cloudfront.net/healthz
-- Android app: the APK is a GitHub Release (tag `app-v0.1.0`) built by the `android-release` workflow. It is a debug-signed prerelease until the release key is added; see [docs/android.md](docs/android.md).
+- Android app: the APK is a release-signed GitHub Release built by the `android-release` workflow; the latest is `app-v0.1.4` at https://github.com/Girish-Garg/saboot/releases/latest. Shared links open the installed app (verified App Links), else the browser; see [docs/android.md](docs/android.md).
+
+## Screens
+
+<table>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screens/map.png" width="176" alt="Live map opening on Jodhpur with assembly seat boundaries and one reported site marked 1 of 10"><br><sub>Map opens on Jodhpur</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/list.png" width="176" alt="Live list view: 1 site in view, an overflowing or broken bin in Soorsagar, waiting for 1 of 10 backers"><br><sub>List of sites in view</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/pin-card.png" width="176" alt="Live pin card for the selected site, with its photo, status chip, View site, Add a photo and Share"><br><sub>Pin card</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/site.png" width="176" alt="Live site sheet: type, status, the ward, MLA seat and MP seat line, and the Confirm, Me too, Cleaned, Letter and Share actions"><br><sub>Site: status and seats</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screens/areas-map.png" width="176" alt="Live Areas map of Jodhpur with the Soorsagar, Sardarpura and Jodhpur assembly seats in neutral tints"><br><sub>Areas map</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/onboarding.png" width="176" alt="Live onboarding card: waste piles up for three reasons, and JunkSnap measures all three"><br><sub>How JunkSnap works</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/map-dark.png" width="176" alt="Live map of Jodhpur in dark mode"><br><sub>Dark mode</sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/site-hindi.png" width="176" alt="Live site sheet in Hindi"><br><sub>Hindi</sub></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><img src="docs/media/screens/sample-sent.png" width="176" alt="Report saved screen in mock mode: saved on this phone, photo uploaded, report sent, in line for checking"><br><sub>Report saved<br><i>sample data</i></sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/sample-activity.png" width="176" alt="Activity in mock mode: the report just sent, with What we checked and Open site"><br><sub>Activity<br><i>sample data</i></sub></td>
+    <td align="center" valign="top"><img src="docs/media/screens/sample-account.png" width="176" alt="Account in mock mode, signed in with a placeholder example.test address, with language, appearance and on-device hints settings"><br><sub>Account and settings<br><i>sample data</i></sub></td>
+    <td></td>
+  </tr>
+</table>
+
+<sub>Every image without a label is the live web app, signed out. Images marked <i>sample data</i> show signed-in screens from the web app's mock mode (`VITE_API_MODE=mock`, fixtures in `contracts/fixtures/`); the camera feed in the Snap screen is a blurred public photo from the live app.</sub>
 
 ## How a report flows
 
