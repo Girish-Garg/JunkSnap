@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ServiceContainer } from '../src/app/ServiceContainer';
 import { ToastHost } from '../src/features/actions/components/ToastHost';
@@ -66,15 +67,34 @@ async function renderSite(geo: PromptingGeolocation, source: LocationPermissionS
   await services.auth.signUp('resident@example.com', 'jodhpur2026');
   await services.auth.confirmSignUp('resident@example.com', '123456');
   const site = await fixtureSite('site_jpr_1');
-  await renderApp(<><SitePanel site={site} userLocation={null} /><ToastHost /></>, { services });
+  await renderApp(<><Closable><SitePanel site={site} userLocation={null} /></Closable><ToastHost /></>, { services });
   return api;
 }
 
+// The site sheet with a way to close it while the app toast stays, as when the person closes the sheet.
+function Closable({ children }: { readonly children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      {open && children}
+      <button type="button" onClick={() => setOpen(false)}>
+        Close sheet
+      </button>
+    </>
+  );
+}
+
 const tile = (name: string) => within(screen.getByRole('list', { name: 'Site actions' })).getByRole('button', { name });
+// The tile once it takes taps: natively disabled while the sheet still checks the owner and the first fix.
+const openTile = async (name: string) => {
+  await waitFor(() => expect(tile(name)).toBeEnabled());
+  return tile(name);
+};
 const muted = (name: string) => waitFor(() => expect(tile(name)).toHaveAttribute('aria-disabled', 'true'));
 const open = (name: string) => waitFor(() => expect(tile(name)).not.toHaveAttribute('aria-disabled'));
 const comeBack = () => act(() => void document.dispatchEvent(new Event('visibilitychange')));
 const VOTE_OFF = /Turn on location to vote here\. JunkSnap checks you're within 1 km\./;
+const LOCATION_OFF = "Your phone's location is off. Turn it on and try again.";
 
 afterEach(() => {
   delete (window as { JunkSnapAndroid?: unknown }).JunkSnapAndroid;
@@ -103,15 +123,35 @@ describe('location off or slow', () => {
     const geo = new PromptingGeolocation();
     const query = permissions('prompt');
     await renderSite(geo, new BrowserLocationPermission(query), query);
-    await user.click(await waitFor(() => tile('Me too')));
+    // A tap while the tile still says "Checking…" does nothing, so wait until it takes taps.
+    await user.click(await openTile('Me too'));
+    expect(geo.asked).toBe(1);
     act(() => geo.fail(POSITION_UNAVAILABLE));
-    expect(await screen.findByText("Your phone's location is off. Turn it on and try again.")).toBeInTheDocument();
+    expect(await screen.findByText(LOCATION_OFF)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(geo.asked).toBe(2);
     act(() => geo.fail(TIMEOUT));
     expect(await screen.findByText("Couldn't get your location. Try again.")).toBeInTheDocument();
     // Neither says location is blocked, so the tiles stay open.
     expect(tile('Me too')).not.toHaveAttribute('aria-disabled');
+  });
+});
+
+describe('an answer to the location prompt after the sheet closed', () => {
+  it('shows no help for the closed sheet, so its Try again cannot act for a site that is gone', async () => {
+    const user = userEvent.setup();
+    const geo = new PromptingGeolocation();
+    const query = permissions('prompt');
+    await renderSite(geo, new BrowserLocationPermission(query), query);
+    await user.click(await openTile('Me too'));
+    expect(geo.asked).toBe(1);
+    await user.click(screen.getByRole('button', { name: 'Close sheet' }));
+    // The answer comes later; one macrotask lets every promise behind it settle.
+    await act(async () => {
+      geo.fail(POSITION_UNAVAILABLE);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.queryByText(LOCATION_OFF)).not.toBeInTheDocument();
   });
 });
 
