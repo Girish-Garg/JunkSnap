@@ -388,6 +388,11 @@ Resources:
                   - !GetAtt VotesTable.Arn
                   - !GetAtt DevicesTable.Arn
                   - !GetAtt UsersTable.Arn
+              # POST /areas/{kind}/{id}/letters reads an area's sites with a filtered scan (DynamoAreaLetterSites).
+              - Sid: ScanSitesForAreaLetters
+                Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt SitesTable.Arn
               # POST /sites/{id}/notes writes one note and reads a site's notes; nothing else.
               - Sid: Notes
                 Effect: Allow
