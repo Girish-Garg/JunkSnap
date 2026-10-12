@@ -171,7 +171,7 @@ Letters are built in the `api` (TypeScript).
 
 ## 9. Area scores
 
-City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Ward area, population and legal disposal points come from the crawled ward records in `data/wards/`. Formulas are versioned in `docs/decisions/`. Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history. The same CronJob writes the area insights (section 6).
+City, citizen and bin-access scores are computed per ward, assembly seat, Lok Sabha seat and district. Ward area, population and legal disposal points come from the crawled ward records in `data/wards/`. Formulas are versioned (`formula_version`). Guardrails: area level only, at least 10 verified reports before a score shows, counts always shown, a pilot flag, no invented history. The same CronJob writes the area insights (section 6).
 
 ## 10. Security and privacy
 

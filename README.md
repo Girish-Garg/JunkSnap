@@ -273,7 +273,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 | `contracts/` | Schemas, fixtures and the README of routes, tables and S3 keys |
 | `config/` | Every tuning number: `defaults.env` and one override file per stage |
 | `scripts/` | Deploy, Android build, smoke tests, contract, config and size-limit checks |
-| `docs/` | Architecture, decisions, model evaluation, Android and configuration |
+| `docs/` | Architecture, model evaluation, Android and configuration |
 
 ## What is built
 
@@ -308,7 +308,6 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 - [Model evaluation](docs/ml/eval.md)
 - [Android app](docs/android.md)
 - [Configuration](docs/config.md)
-- [Decisions](docs/decisions/)
 
 ## Team
 
@@ -320,4 +319,4 @@ Claude Code.
 
 ## Licence
 
-AGPL-3.0 (see [LICENSE](LICENSE)). The detector is trained with Ultralytics YOLO (AGPL-3.0), so the server and phone models ship under the same licence (decision 20261010-0400).
+AGPL-3.0 (see [LICENSE](LICENSE)). The detector is trained with Ultralytics YOLO (AGPL-3.0), so the server and phone models ship under the same licence.
