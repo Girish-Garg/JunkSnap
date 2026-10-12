@@ -62,7 +62,7 @@ All services run in one Amazon EKS Auto Mode cluster, `junksnap`, in ap-south-1,
 
 - `backend/server/`: one TypeScript project (TypeScript 6.0.3, Node 24), built into one image, `junksnap-server`, that runs three workloads from three entry files. `api` (`web.ts`) serves every public route, letters included. `worker` (`worker.ts`) runs the report pipeline from SQS. `scores` (`scores.ts`) is the CronJob. They share domain classes and the contract types generated from `contracts/schemas`.
 - `backend/ml/`: the Python service `ml`, image `junksnap-ml`. Its only route besides `/healthz` is the cluster-internal `POST /internal/verify`: stacked verification and insights. Training and dataset tooling sit in `backend/ml/training/`. Python stays only where the ML libraries are.
-- Data tooling (the ward crawler, rule checks) may stay Python. `backend/pipeline` is retired and is deleted once the TS server lands; `backend/agent` is being renamed to `backend/ml`.
+- Data tooling (the ward crawler, rule checks) may stay Python. The first Python `backend/pipeline` skeleton was retired and removed; `backend/agent` became `backend/ml`.
 
 CloudFront serves HTTPS in front of the Application Load Balancer, which sends every public route to `api`. Nothing public reaches `ml`. Pods reach AWS through EKS Pod Identity, so no AWS keys live in pods.
 
