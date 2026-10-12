@@ -42,6 +42,11 @@ docs/handover.md
 docs/working.md
 docs/Parallel coding agents team workflow.md
 docs/Saboot hackathon idea evaluation.md
+docs/research/
+docs/status/
+docs/synopsis/
+docs/features.json
+.worktreeinclude
 
 # Duplicate copies of docs/ made when the session moved here
 reports/

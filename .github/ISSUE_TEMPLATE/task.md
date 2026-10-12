@@ -7,7 +7,7 @@ assignees: ''
 
 **Lane:** fe / data / agent / infra / contract
 **Folders:**
-**Never-cut step:** (feature id from docs/features.json, or "none")
+**Never-cut step:** (the step of the core flow this protects, or "none")
 
 ## Goal
 

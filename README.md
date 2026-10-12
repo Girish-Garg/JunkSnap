@@ -273,7 +273,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 | `contracts/` | Schemas, fixtures and the README of routes, tables and S3 keys |
 | `config/` | Every tuning number: `defaults.env` and one override file per stage |
 | `scripts/` | Deploy, Android build, smoke tests, contract, config and size-limit checks |
-| `docs/` | Architecture, decisions, model evaluation, Android, configuration, status files and early research |
+| `docs/` | Architecture, decisions, model evaluation, Android and configuration |
 
 ## What is built
 
