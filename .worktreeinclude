@@ -2,5 +2,4 @@
 frontend/.env.local
 data/.env
 backend/ml/.env
-backend/pipeline/.env
 infra/.env
