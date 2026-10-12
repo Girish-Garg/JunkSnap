@@ -258,7 +258,7 @@ uv run scripts/smoke_report.py <cloudfront-url>
 uv run scripts/smoke.py <url> [<url> ...]
 ```
 
-`deploy.py` deploys the shared and stage CloudFormation stacks, builds and pushes the images tagged with the git short SHA, renders the Kustomize overlay, applies it and points CloudFront at the ALB. Render with `kubectl kustomize infra/k8s/overlays/dev` and read the output before every apply. The `demo` stage is deployed by a person from a clean `main` only. See [infra/AGENTS.md](infra/AGENTS.md).
+`deploy.py` deploys the shared and stage CloudFormation stacks, builds and pushes the images tagged with the git short SHA, renders the Kustomize overlay, applies it and points CloudFront at the ALB. Render with `kubectl kustomize infra/k8s/overlays/dev` and read the output before every apply. The `demo` stage is deployed by a person from a clean `main` only.
 
 ## Repo layout
 
@@ -273,7 +273,7 @@ uv run scripts/smoke.py <url> [<url> ...]
 | `contracts/` | Schemas, fixtures and the README of routes, tables and S3 keys |
 | `config/` | Every tuning number: `defaults.env` and one override file per stage |
 | `scripts/` | Deploy, Android build, smoke tests, contract, config and size-limit checks |
-| `docs/` | Architecture, decisions, model evaluation, Android, configuration, handover, status files and early research |
+| `docs/` | Architecture, decisions, model evaluation, Android, configuration, status files and early research |
 
 ## What is built
 
@@ -309,8 +309,6 @@ Training images: QR4Change (CC BY 4.0), TACO (CC BY 4.0), garbage_od (CC BY 4.0)
 - [Android app](docs/android.md)
 - [Configuration](docs/config.md)
 - [Decisions](docs/decisions/)
-- [Handover: plan and tasks](docs/handover.md)
-- [Working agreement](docs/working.md) and [rules for every agent](AGENTS.md)
 
 ## Team
 
