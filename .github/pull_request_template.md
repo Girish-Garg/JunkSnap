@@ -6,7 +6,7 @@ Closes #
 (verify command output or screenshot)
 
 ## Decisions
-(cross-task decisions made here, or "none")
+(new files in docs/decisions/, or "none")
 
 ## Conflicts resolved
 (file, and which side was kept; or "none")
