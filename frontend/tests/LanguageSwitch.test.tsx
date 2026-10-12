@@ -19,7 +19,7 @@ function keysOf(value: object, prefix = ''): string[] {
 
 const topOfMap = (
   <>
-    <SearchBar sites={[]} onPickPlace={() => undefined} />
+    <SearchBar sites={[]} onPickPlace={() => undefined} local />
     <FiltersButton activeCount={0} onOpen={() => undefined} />
   </>
 );

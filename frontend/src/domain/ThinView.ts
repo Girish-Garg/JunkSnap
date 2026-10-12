@@ -71,7 +71,9 @@ export class ThinView {
 
   // The view's corners stay in the frame, so the move only ever widens the map; never wider than one load.
   static #zoomOut(view: BBox, known: readonly SiteFeature[], rules: ThinRules): readonly LonLat[] {
-    const outside = known.filter((site) => !view.contains(site.geometry.coordinates));
+    // The search around the view and the pilot city may both hold a site: each counts once.
+    const each = [...new Map(known.map((site) => [site.properties.site_id, site])).values()];
+    const outside = each.filter((site) => !view.contains(site.geometry.coordinates));
     const nearest = NearestSites.of(outside, view.center());
     if (nearest.length === 0) return [];
     const points: readonly LonLat[] = [[view.minLon, view.minLat], [view.maxLon, view.maxLat], ...nearest.map((site) => site.geometry.coordinates)];

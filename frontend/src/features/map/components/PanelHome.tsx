@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { sitePath } from '../../../app/paths';
 import { useSheetNavigation } from '../../../app/useSheetNavigation';
 import type { SiteFeature } from '../../../domain/Site';
-import { EmptyState } from '../../../ui/EmptyState';
 import { DESKTOP_QUERY, useMediaQuery } from '../../../ui/useMediaQuery';
 import { useMapContext } from '../useMapContext';
+import { PanelEmpty } from './PanelEmpty';
 import { SiteListItem } from './SiteListItem';
 
 const TITLE_ID = 'panel-home-title';
@@ -27,7 +27,7 @@ export function PanelHome() {
       </h2>
       <p className="sheet-text">{t('panel.text')}</p>
       {sites.length === 0 ? (
-        <EmptyState art="clean" title={t('panel.emptyTitle')} text={t('panel.emptyText')} />
+        <PanelEmpty />
       ) : (
         <ul className="site-rows stagger">
           {sites.map((site) => (

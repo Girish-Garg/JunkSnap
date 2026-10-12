@@ -6,6 +6,8 @@ export function useMapPageContext(page: MapPageState): MapContext {
   return {
     userLocation: page.location.position,
     showSite: page.selection.showSite,
+    frame: page.selection.frame,
+    showPilot: page.showPilot,
     sites: page.loaded,
     refreshSites: page.refreshSites,
     announce: page.announce,

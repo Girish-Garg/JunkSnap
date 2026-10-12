@@ -22,7 +22,7 @@ interface MapOverlayProps {
   readonly onRetryMap: () => void;
 }
 
-/** Everything floating over the map: search, filters, status, the site list, the pin or area card or stack list, the few-reports card and location. */
+/** Everything floating over the map: search, filters, places, status, the site list, the pin or area card or stack list, the few-reports card and location. */
 export function MapOverlay({ page, listMode, onRetryMap }: MapOverlayProps) {
   const { selection, boundary, areaCard } = page;
   const desktop = useMediaQuery(DESKTOP_QUERY);

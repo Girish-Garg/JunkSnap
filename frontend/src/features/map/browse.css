@@ -33,6 +33,62 @@
   animation: pop-in var(--dur-3) var(--spring);
 }
 
+/*
+  "Reports are in Jodhpur · View", beside the toast or alone in its place: a quiet pill whose last word reads as
+  the action. A long line (a narrow phone, another language) wraps inside it instead of running off the screen.
+*/
+.pilot-chip {
+  height: auto;
+  min-height: 40px;
+  max-width: 100%;
+  padding-block: var(--s-2);
+  text-align: left;
+  animation: pop-in var(--dur-3) var(--spring);
+}
+
+.pilot-chip__view {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+/*
+  The pills under the search field keep their words on one line. Phones let the row wrap rather than push a pill
+  off the screen (a filter count, Hindi); desktop keeps one line, as the panel's list starts right under it.
+*/
+.search-area__row > .pill {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 1023px) {
+  .search-area__row {
+    flex-wrap: wrap;
+  }
+}
+
+/*
+  Phones under 390 px drop the Places pin, so Filters (with its count when a filter is on), Places and the map or
+  list toggle still share a line at 375 px, and at 360 px while no filter is on.
+*/
+@media (max-width: 389px) {
+  .places-pill .icon {
+    display: none;
+  }
+
+  .places-pill {
+    padding-left: var(--s-4);
+  }
+}
+
+/* Desktop with "Go to my location" in the row: the same, so three pills and a filter count fit the panel's width. */
+.search-area__row:has(.go-to-me) .places-pill .icon {
+  display: none;
+}
+
+.search-area__row:has(.go-to-me) .places-pill {
+  padding-left: var(--s-4);
+}
+
 /* The list sheet. */
 .site-list-sheet__count {
   color: var(--text-secondary);

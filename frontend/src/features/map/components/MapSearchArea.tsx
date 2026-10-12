@@ -1,12 +1,11 @@
-import { LanguageToggle } from '../../../ui/LanguageToggle';
 import type { MapPageState } from '../hooks/useMapPage';
+import { usePilotSearch } from '../hooks/usePilotSearch';
 import type { StatusActions } from '../hooks/useStatusActions';
 import type { MapNoticeView } from '../MapNotice';
-import { FiltersButton } from './FiltersButton';
 import { GoToMeButton } from './GoToMeButton';
+import { MapPills } from './MapPills';
 import { MapStatus } from './MapStatus';
 import { SearchBar } from './SearchBar';
-import { ViewToggle } from './ViewToggle';
 
 interface MapSearchAreaProps {
   readonly page: MapPageState;
@@ -20,34 +19,18 @@ interface MapSearchAreaProps {
   readonly actions: StatusActions;
 }
 
-/** The top of the map: search, Filters with the map or list toggle, the status toast and "Go to my location". */
+/** The top of the map: search, the pills (MapPills), the status toast with the way back to the reports, and "Go to my location". */
 export function MapSearchArea({ page, notice, listMode, desktop, actions }: MapSearchAreaProps) {
-  const { filters, browser } = page;
-  const filtersButton = <FiltersButton activeCount={filters.filter.activeCount()} onOpen={() => filters.setOpen(true)} />;
-  if (listMode) {
-    return (
-      <div className="search-area">
-        {/* No search field without the map, but the language stays one tap away. */}
-        <div className="search-area__row">
-          {filtersButton}
-          <LanguageToggle />
-        </div>
-      </div>
-    );
-  }
-  const goToMe = page.away ? <GoToMeButton onGo={page.goToMe} /> : null;
-  // Desktop has no map or list toggle, and the panel's list starts right under this row, so "Go to my location"
-  // sits beside Filters there instead of on a line of its own over the list.
-  const beside = desktop ? goToMe : <ViewToggle listOpen={browser.open} onList={browser.start} />;
+  const local = usePilotSearch(page.offPilot);
+  const pills = <MapPills page={page} listMode={listMode} desktop={desktop} />;
+  // No search field without the map.
+  if (listMode) return <div className="search-area">{pills}</div>;
   return (
     <div className="search-area">
-      <SearchBar sites={page.loaded} onPickPlace={page.selection.showPlace} />
-      <div className="search-area__row">
-        {filtersButton}
-        {beside}
-      </div>
+      <SearchBar sites={page.loaded} onPickPlace={page.selection.showPlace} local={local} />
+      {pills}
       <MapStatus notice={notice} actions={actions} />
-      {!desktop && goToMe}
+      {!desktop && page.away && <GoToMeButton onGo={page.goToMe} />}
     </div>
   );
 }

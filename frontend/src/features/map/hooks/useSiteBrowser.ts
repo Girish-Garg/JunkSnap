@@ -16,6 +16,8 @@ export interface BrowserInput {
   readonly position: LonLat | null;
   /** The opening view is still unsettled and loaded empty, so the opening fit wants the pilot city's sites. */
   readonly openingWants: boolean;
+  /** This view finished loading with no site in it; away from the pilot city, the way back wants the city's sites. */
+  readonly empty: boolean;
   /** The search around an empty view, which also answers for the city when it takes it all in. */
   readonly around: AroundSites | null;
   readonly selection: ReturnType<typeof useMapSelection>;
@@ -52,14 +54,16 @@ export function useSiteBrowser(input: BrowserInput) {
   return { open, visible, rows, sort, setSort, chosen, pilot, choose, step: show, showCity, ...toggles };
 }
 
-// The source follows the loaded view until frozen. Only a list with no rows of its own asks for the pilot city.
+// The source follows the loaded view until frozen. The pilot city is asked for by the opening fit, by a list with
+// no rows of its own, and by an empty view away from the city, so "See Jodhpur's reports" fits its real sites.
 function useBrowseRows(input: BrowserInput, frozen: BrowseSource | null, sort: SiteSort, open: boolean) {
   const { loaded, view, filter, position } = input;
   const { pilot: city } = useConfig();
   const live = useMemo(() => SiteBrowse.source(loaded, view?.bbox ?? null, city), [loaded, view, city]);
   const source = frozen ?? live;
   const own = useMemo(() => SiteBrowse.own({ source, loaded, filter }, sort, position), [source, loaded, filter, sort, position]);
-  const pilot = usePilotSites(input.openingWants || (open && own.length === 0), input.around);
+  const stranded = input.empty && view !== null && !city.shows(view.bbox);
+  const pilot = usePilotSites(input.openingWants || stranded || (open && own.length === 0), input.around);
   const rows = useMemo(
     (): BrowseRows => (own.length > 0 ? { sites: own, fallback: false } : { sites: SiteBrowse.city({ pilot: pilot.sites, city, loaded, filter }, sort, position), fallback: true }),
     [own, pilot.sites, city, loaded, filter, sort, position],

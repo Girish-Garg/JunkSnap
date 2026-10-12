@@ -111,7 +111,7 @@ describe('search', () => {
   it('finds a shipped seat name with no site loaded and flies to its middle', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { services: withLabels() });
-    await user.type(screen.getByRole('searchbox', { name: 'Search wards, seats and places' }), 'luni');
+    await user.type(screen.getByRole('searchbox', { name: 'Search Jodhpur: wards, seats and places' }), 'luni');
     await user.click(await screen.findByRole('button', { name: /Luni/ }));
     expect(seen.last?.camera).toEqual({ points: [[72.98, 26.03]], zoom: 10.5 });
   });
@@ -119,7 +119,7 @@ describe('search', () => {
   it('finds the seat from its Hindi spelling, and says plainly when nothing matches', async () => {
     const user = userEvent.setup();
     await renderApp(<AppRoutes />, { services: withLabels(), language: 'hi' });
-    const field = screen.getByRole('searchbox', { name: 'वार्ड, क्षेत्र और जगहें खोजें' });
+    const field = screen.getByRole('searchbox', { name: 'जोधपुर में खोजें: वार्ड, क्षेत्र और जगहें' });
     await user.type(field, 'लूणी');
     // The app holds no Hindi name for the seat, so the result shows the name it has.
     await user.click(await screen.findByRole('button', { name: /Luni/ }));

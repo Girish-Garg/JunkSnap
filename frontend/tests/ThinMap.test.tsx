@@ -212,6 +212,12 @@ describe('ThinView', () => {
     expect(ThinView.of({ view, settled: true, sites: [], known: [SITES[2] as SiteFeature] }, DEFAULTS.map)?.zoomOut).toHaveLength(3);
   });
 
+  it('counts a site once when the search around the view and the pilot city both hold it', () => {
+    // The no-bin site is the nearest; held twice, it must not take a second place among the nearest sites.
+    const nearest = SITES[1] as SiteFeature;
+    expect(ThinView.of({ view, settled: true, sites: [], known: [nearest, nearest] }, DEFAULTS.map)?.zoomOut).toEqual([[73, 26.25], [73.03, 26.28], [73.04, 26.29]]);
+  });
+
   it("never shows the list note over Jodhpur's rows or a filtered list", () => {
     expect(ThinView.listShows({ rows: 1, fallback: true, filtered: false }, DEFAULTS.map.thinMax)).toBe(false);
     expect(ThinView.listShows({ rows: 1, fallback: false, filtered: true }, DEFAULTS.map.thinMax)).toBe(false);

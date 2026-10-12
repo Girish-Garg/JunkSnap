@@ -18,7 +18,9 @@
   },
   "search": {
     "label": "Search wards, seats and places",
-    "placeholder": "Search Jodhpur",
+    "labelCity": "Search {{city}}: wards, seats and places",
+    "placeholder": "Search a seat or town",
+    "placeholderCity": "Search {{city}}",
     "clear": "Clear search",
     "results": "Places",
     "noResults": "No ward, seat or place by that name.",
@@ -1356,5 +1358,17 @@
     "areas": "See areas",
     "zoomOut": "Zoom out",
     "dismiss": "Hide this tip"
+  },
+  "places": {
+    "button": "Places",
+    "title": "Places with reports",
+    "intro": "The places where people have reported waste so far. Pick one to see its reports on the map.",
+    "close": "Close places",
+    "listLabel": "Places and their site counts",
+    "loading": "Loading counts",
+    "failed": "Some counts could not be loaded.",
+    "chip": "Reports are in {{city}}",
+    "view": "View",
+    "seeCity": "See {{city}}'s reports"
   }
 }

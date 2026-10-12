@@ -40,12 +40,12 @@ export function useMapPage(basemap: BasemapPhase) {
   const { empty, found } = settledState(loaded, partial);
   const { nearest, around } = useNearbySites(view, empty);
   const settled = useOpeningSettled({ view, found, deepLinked: selection.openId !== null, camera: selection.camera });
-  const browserInput = { loaded: loaded.sites, view, filter, position: location.position, selection, around };
+  const browserInput = { loaded: loaded.sites, view, filter, position: location.position, selection, around, empty };
   const browser = useSiteBrowser({ ...browserInput, openingWants: !settled && empty });
   useOpeningFit({ settled, view, empty, pilot: browser.pilot.sites, frame: selection.frame });
   const thin = useThinView({ view, loaded, partial, nearest, pilot: browser.pilot.sites, camera: selection.camera, opening: settled });
   const notice = useMapNotice({ loaded, shown: sites.length, partial, locationProblem: location.problem, nearby: nearest, flash: flash.key, basemap });
-  const moves = useMapMoves({ view, setView, selection, location, browser });
+  const moves = useMapMoves({ view, setView, selection, location, browser, loaded });
   const { showPlace } = selection;
   const showNearest = useCallback(() => showPlace({ sites: nearest?.slice(0, 1) ?? [], point: null }), [showPlace, nearest]);
   const filters = { filter, setFilter, mode, setMode, open: filtersOpen, setOpen: setFiltersOpen, counts };
