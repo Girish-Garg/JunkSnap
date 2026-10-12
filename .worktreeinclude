@@ -1,5 +1,0 @@
-.env
-frontend/.env.local
-data/.env
-backend/ml/.env
-infra/.env
