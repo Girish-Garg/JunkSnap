@@ -33,10 +33,15 @@ data/ward_boundaries/.cache/
 *.tif
 *.parquet
 
-# Agents: per-person and per-worktree files stay local
-.claude/worktrees/
-.claude/settings.local.json
+# Agent rules, settings and the team's working notes stay local
+.claude/
+CLAUDE.md
 CLAUDE.local.md
+AGENTS.md
+docs/handover.md
+docs/working.md
+docs/Parallel coding agents team workflow.md
+docs/Saboot hackathon idea evaluation.md
 
 # Duplicate copies of docs/ made when the session moved here
 reports/
